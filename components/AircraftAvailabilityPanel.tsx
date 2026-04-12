@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { showDarkAlert } from './DarkMessageModal';
+import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatTime, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
 
@@ -9,6 +10,7 @@ interface AircraftAvailabilityPanelProps {
     dayFlyingStart: string; // HH:mm
     dayFlyingEnd: string; // HH:mm
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
+    onUpdateCurrentAvailability?: (count: number) => void; // Syncs with daily schedule line
 }
 
 const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
@@ -17,26 +19,42 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
     plannedAvailability,
     dayFlyingStart,
     dayFlyingEnd,
-    onAvailabilityChange
+    onAvailabilityChange,
+    onUpdateCurrentAvailability
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(plannedAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const [averageAvailability, setAverageAvailability] = useState<number>(0);
     const [isDragging, setIsDragging] = useState(false);
+    // Track last value set by THIS panel to avoid re-syncing our own updates
+    const lastSetByPanel = useRef<number>(plannedAvailability);
 
-    // Load snapshots from localStorage on mount
+    // Sync slider when plannedAvailability changes from OUTSIDE (e.g. schedule line dragged)
+    // NOTE: Only update local display - do NOT call onUpdateCurrentAvailability here
+    // Calling it would create a feedback loop: Overlay -> App -> Panel -> App -> Overlay (bounce-back)
+    useEffect(() => {
+        if (plannedAvailability !== lastSetByPanel.current) {
+            lastSetByPanel.current = plannedAvailability; // Mark as acknowledged to prevent re-fire
+            setCurrentAvailable(plannedAvailability);
+            // DO NOT call onUpdateCurrentAvailability here - that would cause a feedback loop
+        } else {
+        }
+    }, [plannedAvailability]);
+
+    // Load snapshots from localStorage on mount (only when date changes)
     useEffect(() => {
         const dateKey = formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
         if (stored) {
             const data = JSON.parse(stored);
-            setSnapshots(data.snapshots.map((s: any) => ({
+            const loadedSnapshots = data.snapshots.map((s: any) => ({
                 ...s,
                 timestamp: new Date(s.timestamp)
-            })));
-            setCurrentAvailable(data.snapshots[data.snapshots.length - 1]?.available || plannedAvailability);
+            }));
+            setSnapshots(loadedSnapshots);
+            const lastAvailable = loadedSnapshots[loadedSnapshots.length - 1]?.available ?? plannedAvailability;
+            setCurrentAvailable(lastAvailable);
         } else {
-            // Initialize with planned availability
             const initialSnapshot: AircraftAvailabilitySnapshot = {
                 timestamp: new Date(),
                 available: plannedAvailability,
@@ -46,16 +64,16 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
         }
-    }, [currentDate, plannedAvailability, totalAircraft]);
+    // Only re-run when date changes, not when plannedAvailability changes (avoids loop)
+    }, [currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Calculate average whenever snapshots change
+    // Calculate average whenever snapshots change (no onAvailabilityChange in deps to avoid loop)
     useEffect(() => {
         if (snapshots.length > 0) {
             const timeline = convertSnapshotsToTimeline(snapshots);
             const avg = calculateDailyAverageAvailability(timeline, dayFlyingStart.replace(':', ''), dayFlyingEnd.replace(':', ''));
             setAverageAvailability(avg);
 
-            // Create daily record
             const record: DailyAvailabilityRecord = {
                 date: formatDate(currentDate),
                 snapshots: snapshots,
@@ -64,15 +82,21 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
                 dayFlyingEnd
             };
 
-            // Save to localStorage
             localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
-
-            // Notify parent
-            onAvailabilityChange(record);
         }
-    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, onAvailabilityChange]);
+    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
 
-    const handleAvailabilityChange = (newAvailable: number, notes?: string) => {
+    const handleAvailabilityChange = async (newAvailable: number, notes?: string) => {
+    if (arguments.length === 0) return; // Prevent direct call without arguments
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                await showDarkAlert('System is frozen. Aircraft Availability modifications are not permitted.', 'System Frozen', 'error');
+                return;
+            }
+        }
         const newSnapshot: AircraftAvailabilitySnapshot = {
             timestamp: new Date(),
             available: newAvailable,
@@ -82,6 +106,11 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
 
         setSnapshots(prev => [...prev, newSnapshot]);
         setCurrentAvailable(newAvailable);
+        lastSetByPanel.current = newAvailable;
+        if (onUpdateCurrentAvailability) {
+            onUpdateCurrentAvailability(newAvailable);
+        } else {
+        }
     };
 
     const handleDragStart = () => {
@@ -92,15 +121,34 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
         setIsDragging(false);
     };
 
-    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSliderChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                return;
+            }
+        }
         const value = parseInt(e.target.value);
         setCurrentAvailable(value);
+        lastSetByPanel.current = value;
+        if (onUpdateCurrentAvailability) {
+            onUpdateCurrentAvailability(value);
+        } else {
+        }
     };
 
-    const handleSliderRelease = () => {
-        if (currentAvailable !== (snapshots[snapshots.length - 1]?.available || 0)) {
-            handleAvailabilityChange(currentAvailable);
+    const handleSliderRelease = async () => {
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                return;
+            }
         }
+        handleAvailabilityChange(currentAvailable);
     };
 
     const getAvailabilityColor = (available: number, total: number): string => {
@@ -144,10 +192,9 @@ const AircraftAvailabilityPanel: React.FC<AircraftAvailabilityPanelProps> = ({
                         value={currentAvailable}
                         onChange={handleSliderChange}
                         onMouseDown={handleDragStart}
-                        onMouseUp={handleDragEnd}
+                        onMouseUp={handleSliderRelease}
                         onTouchStart={handleDragStart}
-                        onTouchEnd={handleDragEnd}
-                        onMouseLeave={handleSliderRelease}
+                        onTouchEnd={handleSliderRelease}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
                         style={{
                             background: `linear-gradient(to right, ${

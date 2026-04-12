@@ -154,7 +154,14 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
     const flightTiles = events.filter(e => e.type === 'flight').length;
     const ftdTiles = events.filter(e => e.type === 'ftd').length;
     
-    const flightOrFtdEvents = events.filter(e => e.type === 'flight' || e.type === 'ftd');
+    // Exclude STBY events: STBY events may have instructor='TBA' (no real instructor found)
+    // which causes trainees to incorrectly appear in 'Other Instructors' stats
+    const flightOrFtdEvents = events.filter(e =>
+      (e.type === 'flight' || e.type === 'ftd') &&
+      !e.resourceId?.startsWith('STBY') &&
+      !e.resourceId?.startsWith('FTD-STBY') &&
+      !e.resourceId?.startsWith('BNF-STBY')
+    );
     
     const instructorEventCounts = new Map<string, number>();
     events.forEach(e => {
@@ -262,17 +269,21 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
 
     for (const event of flightOrFtdEvents) {
         const traineeName = event.student || event.pilot;
+        // Skip events with no trainee name or no assigned instructor (e.g. STBY events)
         if (!traineeName || !event.instructor) continue;
 
+        // Skip if trainee not found in our data (prevents ghost entries)
         const trainee = traineeMap.get(traineeName);
         if (!trainee) continue;
         
         const instructorName = event.instructor;
         const instructor = instructorMap.get(instructorName);
 
-        if (trainee.primaryInstructor === instructorName) {
+        const primaryArr = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+        const secondaryArr = Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+        if (primaryArr.includes(instructorName)) {
             traineesWithPrimary.add(traineeName);
-        } else if (trainee.secondaryInstructor === instructorName) {
+        } else if (secondaryArr.includes(instructorName)) {
             traineesWithSecondary.add(traineeName);
         } else if (instructor && trainee.flight && instructor.flight === trainee.flight) {
             // Not primary or secondary, but from same flight
@@ -282,6 +293,18 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
             traineesWithOtherInstructors.add(traineeName);
         }
     }
+
+    // A trainee in "Other Instructors" should only appear there if they have NO events
+    // with their primary, secondary, or same-flight instructor. If they have at least one
+    // preferred pairing for the day, remove them from the "Other" category.
+    // Also ensure only trainees with actual events (in traineeEventCounts) are included.
+    traineesWithPrimary.forEach(name => traineesWithOtherInstructors.delete(name));
+    traineesWithSecondary.forEach(name => traineesWithOtherInstructors.delete(name));
+    traineesWithInstructorFromFlight.forEach(name => traineesWithOtherInstructors.delete(name));
+    // Remove any trainee from "Other" who has zero total flight/FTD events (edge-case guard)
+    traineesWithOtherInstructors.forEach(name => {
+        if (!traineeEventCounts.has(name)) traineesWithOtherInstructors.delete(name);
+    });
     
     return {
       flightTiles,

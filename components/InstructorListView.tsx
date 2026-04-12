@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { ScheduleEvent, Instructor, Trainee } from '../types';
+import { ScheduleEvent, Instructor, Trainee, MasterCurrency, CurrencyRequirement } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 // FIX: Corrected import path for the InstructorProfileFlyout component.
 import { InstructorProfileFlyout } from './InstructorProfileFlyout';
@@ -14,6 +14,16 @@ import AuditButton from './AuditButton';
 const generateRandomIdNumber = (): number => {
     return Math.floor(Math.random() * (9999999 - 1000000 + 1)) + 1000000;
 };
+
+// Unit to location mapping: which school each unit belongs to
+const UNIT_LOCATION: Record<string, string> = {
+    '1FTS': 'ESL',
+    'CFS':  'ESL',
+    '2FTS': 'PEA',
+};
+
+// Unit display sort order in Staff Profile
+const UNIT_SORT_ORDER: Record<string, number> = { '1FTS': 1, 'CFS': 2, '2FTS': 3 };
 
 const generateNewInstructorTemplate = (): Instructor => ({
     idNumber: generateRandomIdNumber(),
@@ -50,21 +60,28 @@ interface InstructorListViewProps {
   locations: string[];
   units: string[];
   selectedPersonForProfile?: Instructor | null;
+  onNavigateToTrainee?: (trainee: Trainee) => void;
   onProfileOpened?: () => void;
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: (instructor: Instructor) => void;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
+  profileInitialTab?: 'currency' | null;
+  onProfileTabConsumed?: () => void;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
-const InstructorListView: React.FC<InstructorListViewProps> = ({ 
-    onClose, 
-    events, 
+const InstructorListView: React.FC<InstructorListViewProps> = ({
+    onClose,
+    events,
     traineesData,
-    instructorsData, 
+    instructorsData,
     archivedInstructorsData,
-    school, 
-    personnelData, 
-    onUpdateInstructor, 
-    onNavigateToCurrency, 
+    school,
+    personnelData,
+    onUpdateInstructor,
+    onNavigateToCurrency,
     onBulkUpdateInstructors,
     onArchiveInstructor,
     onRestoreInstructor,
@@ -73,8 +90,30 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     selectedPersonForProfile,
     onProfileOpened,
     onViewLogbook,
-    onRequestSct
+    onRequestSct,
+    onNavigateToTrainee,
+    masterCurrencies = [],
+    currencyRequirements = [],
+    profileInitialTab,
+    onProfileTabConsumed,
+    currentUserId,
+    currentUserName,
 }) => {
+  // Track which prop changed to diagnose render loop
+  const prevPropsRef = React.useRef<any>({});
+  const renderCountRef = React.useRef(0);
+  renderCountRef.current++;
+  const changedProps: string[] = [];
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName };
+  Object.keys(currentProps).forEach(key => {
+    if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
+      changedProps.push(key);
+    }
+  });
+  prevPropsRef.current = currentProps;
+  if (changedProps.length > 0) {
+    console.log(`🏫 [INSTRUCTORLISTVIEW RENDER #${renderCountRef.current}] Changed props:`, changedProps.join(', '));
+  }
   const [hoveredInstructor, setHoveredInstructor] = useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
@@ -96,7 +135,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     if (selectedPersonForProfile) {
         // Try to find element, though in grid it might be scrolled out. 
         // If not found, originRect is null, which flyout handles gracefully (fades in center)
-        const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.idNumber}`);
+        const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
         if (matchingElement) {
             setOriginRect(matchingElement.getBoundingClientRect());
         }
@@ -109,9 +148,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   useEffect(() => {
     if (selectedInstructor) {
-        const updatedInstructor = instructorsData.find(i => i.idNumber === selectedInstructor.idNumber);
+        const updatedInstructor = instructorsData.find(i => i.name === selectedInstructor.name);
         if (updatedInstructor && JSON.stringify(updatedInstructor) !== JSON.stringify(selectedInstructor)) {
-            setSelectedInstructor(updatedInstructor);
+            // Preserve any locally-edited currencyStatus so a background instructorsData refresh
+            // doesn't overwrite currency saves that haven't propagated back to the master array yet
+            setSelectedInstructor({
+              ...updatedInstructor,
+              currencyStatus: selectedInstructor.currencyStatus ?? updatedInstructor.currencyStatus,
+            });
         }
     }
   }, [instructorsData, selectedInstructor]);
@@ -128,18 +172,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
       return instructorsData
           .filter(i => {
-              // Filter by role/flag
-              const isQFI = i.role === 'QFI' || i.isQFI === true;
+              // Filter by role/flag - include QFI and INSTRUCTOR roles
+              const isQFI = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
               if (!isQFI) return false;
               
-              // Filter by location
-              if (school === 'ESL') {
-                  // ESL: Only 1FTS and CFS staff
-                  return i.unit === '1FTS' || i.unit === 'CFS';
-              } else {
-                  // PEA: Only 2FTS staff
-                  return i.unit === '2FTS';
-              }
+              // Filter by location (not unit)
+              // ESL = East Sale, PEA = Pearce
+              // Also include staff with no location set (default to ESL)
+              const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+              const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
+              return i.location === locationFullName || (hasNoLocation && school === 'ESL');
           })
           .sort((a, b) => {
               const rankA = rankOrder[a.rank] || 99;
@@ -156,15 +198,26 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       const groups: { [key: string]: Instructor[] } = {};
       qfis.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
+          // Only include unit if it belongs to the selected school location
+          // Units with no mapping (e.g. 'Unassigned') default to ESL
+          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
+          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [qfis]);
+  }, [qfis, school]);
 
-  const sortedUnits = useMemo(() => Object.keys(qfisByUnit).sort(), [qfisByUnit]);
+  const sortedUnits = useMemo(() =>
+      Object.keys(qfisByUnit).sort((a, b) => {
+          const orderA = UNIT_SORT_ORDER[a] ?? 99;
+          const orderB = UNIT_SORT_ORDER[b] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+      }),
+  [qfisByUnit]);
 
   const simIps = useMemo(() => {
         console.log('🔍 [SIM IP FILTER] instructorsData length:', instructorsData.length);
@@ -172,22 +225,16 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const isSimIp = i.role === 'SIM IP';
             if (!isSimIp) return false;
             
-            // Filter by location
-            if (school === 'ESL') {
-                // ESL: Only 1FTS Sim IPs (CFS has NO Sim IPs)
-                const isValid = i.unit === '1FTS';
-                if (isSimIp && isValid) {
-                    console.log(`🔍 [SIM IP FILTER] Found ESL SIM IP: ${i.name} (${i.rank}) - Unit: ${i.unit}`);
-                }
-                return isValid;
-            } else {
-                // PEA: Only 2FTS Sim IPs
-                const isValid = i.unit === '2FTS';
-                if (isSimIp && isValid) {
-                    console.log(`🔍 [SIM IP FILTER] Found PEA SIM IP: ${i.name} (${i.rank}) - Unit: ${i.unit}`);
-                }
-                return isValid;
+            // Filter by location (not unit)
+            // ESL = East Sale, PEA = Pearce
+            // Also include staff with no location set (default to ESL)
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
+            const isValid = i.location === locationFullName || (hasNoLocation && school === 'ESL');
+            if (isSimIp && isValid) {
+                console.log(`🔍 [SIM IP FILTER] Found ${school} SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
             }
+            return isValid;
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
         
@@ -226,18 +273,12 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             if (!isOfi) return false;
             
-            // Filter by location
-            if (school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff
-                const isValid = i.unit === '1FTS' || i.unit === 'CFS';
-                console.log(`🔍 [OFI FILTER] ESL - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, unit=${i.unit}, isValid=${isValid}`);
-                return isValid;
-            } else {
-                // PEA: Only 2FTS staff
-                const isValid = i.unit === '2FTS';
-                console.log(`🔍 [OFI FILTER] PEA - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, unit=${i.unit}, isValid=${isValid}`);
-                return isValid;
-            }
+            // Filter by location (not unit)
+            // ESL = East Sale, PEA = Pearce
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            const isValid = i.location === locationFullName;
+            console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}, isValid=${isValid}`);
+            return isValid;
         });
         
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
@@ -277,8 +318,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
         
         const otherStaffCandidates = instructorsData.filter(i => {
-            // Exclude QFIs, SIM IPs, and OFIs
-            const isQfi = i.role === 'QFI' || i.isQFI === true;
+            // Exclude QFIs, INSTRUCTORs, SIM IPs, and OFIs
+            const isQfi = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
             const isSimIp = i.role === 'SIM IP';
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             
@@ -286,22 +327,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             const isOther = !isQfi && !isSimIp && !isOfi;
             if (!isOther) return false;
             
-            // Filter by location
-            if (school === 'ESL') {
-                // ESL: Only 1FTS and CFS staff
-                const isValid = i.unit === '1FTS' || i.unit === 'CFS';
-                if (isOther && isValid) {
-                    console.log(`🔍 [OTHER STAFF] Found ESL other staff: ${i.name} (${i.rank}) - role: ${i.role}, unit: ${i.unit}`);
-                }
-                return isValid;
-            } else {
-                // PEA: Only 2FTS staff
-                const isValid = i.unit === '2FTS';
-                if (isOther && isValid) {
-                    console.log(`🔍 [OTHER STAFF] Found PEA other staff: ${i.name} (${i.rank}) - role: ${i.role}, unit: ${i.unit}`);
-                }
-                return isValid;
+            // Filter by location (not unit)
+            // ESL = East Sale, PEA = Pearce
+            const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+            const isValid = i.location === locationFullName;
+            if (isOther && isValid) {
+                console.log(`🔍 [OTHER STAFF] Found ${school} other staff: ${i.name} (${i.rank}) - role: ${i.role}, location: ${i.location}`);
             }
+            return isValid;
         });
         
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
@@ -333,47 +366,56 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         });
     }, [instructorsData, school]);
 
-  const simIpsByUnit = useMemo(() => {
-      const groups: { [key: string]: Instructor[] } = {};
-      simIps.forEach(instructor => {
-          const unit = instructor.unit || 'Unassigned';
-          if (!groups[unit]) {
-              groups[unit] = [];
-          }
-          groups[unit].push(instructor);
-      });
-      return groups;
-  }, [simIps]);
-
-  const sortedSimIpUnits = useMemo(() => Object.keys(simIpsByUnit).sort(), [simIpsByUnit]);
+  // SIM IPs are shown as a single combined section (not split by unit)
+  // simIps is already sorted by unit → rank → name from the simIps useMemo above
 
   const ofisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
       ofis.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
+          // Only include unit if it belongs to the selected school location
+          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
+          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [ofis]);
+  }, [ofis, school]);
 
-  const sortedOfiUnits = useMemo(() => Object.keys(ofisByUnit).sort(), [ofisByUnit]);
+  const sortedOfiUnits = useMemo(() =>
+      Object.keys(ofisByUnit).sort((a, b) => {
+          const orderA = UNIT_SORT_ORDER[a] ?? 99;
+          const orderB = UNIT_SORT_ORDER[b] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+      }),
+  [ofisByUnit]);
 
   const otherStaffByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
       otherStaff.forEach(instructor => {
           const unit = instructor.unit || 'Unassigned';
+          // Only include unit if it belongs to the selected school location
+          const unitSchool = UNIT_LOCATION[unit] ?? 'ESL';
+          if (unitSchool !== school) return;
           if (!groups[unit]) {
               groups[unit] = [];
           }
           groups[unit].push(instructor);
       });
       return groups;
-  }, [otherStaff]);
+  }, [otherStaff, school]);
 
-  const sortedOtherStaffUnits = useMemo(() => Object.keys(otherStaffByUnit).sort(), [otherStaffByUnit]);
+  const sortedOtherStaffUnits = useMemo(() =>
+      Object.keys(otherStaffByUnit).sort((a, b) => {
+          const orderA = UNIT_SORT_ORDER[a] ?? 99;
+          const orderB = UNIT_SORT_ORDER[b] ?? 99;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.localeCompare(b);
+      }),
+  [otherStaffByUnit]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
     if (selectedInstructor || isArchiveMode) return; 
@@ -388,7 +430,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   };
   
   const handleInstructorClick = (e: React.MouseEvent<HTMLLIElement>, instructor: Instructor) => {
-    if (selectedInstructor?.idNumber === instructor.idNumber) {
+    if (selectedInstructor?.name === instructor.name) {
         handleCloseProfile();
     } else {
         setIsArchiveMode(false);
@@ -442,9 +484,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     <ul className="space-y-2">
       {instructors.map((instructor, index) => (
         <li 
-          id={`instructor-row-${instructor.idNumber}`}
-          key={instructor.idNumber} 
-          className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.idNumber === instructor.idNumber ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
+          id={`instructor-row-${instructor.name}`}
+          key={instructor.name}
+          className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
           onMouseEnter={(e) => handleMouseEnter(e, instructor.name)}
           onMouseLeave={handleMouseLeave}
           onClick={(e) => {
@@ -480,46 +522,30 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
               <div className="flex items-center gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-white">Staff</h1>
-                    <p className="text-sm text-gray-400">{locationFullName} ({school})</p>
-                </div>
+                <h1 className="text-2xl font-bold text-white">Staff</h1>
               </div>
-              <div className="flex items-center space-x-3">
-                {isArchiveMode && <span className="text-red-400 font-bold text-sm animate-pulse">ARCHIVE MODE ACTIVE</span>}
-                 <button
-                    onClick={handleShowAddChoice}
-                    className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md flex items-center"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                    </svg>
-                    Add Staff
-                </button>
-                <button
-                    onClick={toggleArchiveMode}
-                    className={`px-4 py-2 rounded-md transition-colors text-sm font-semibold shadow-md flex items-center ${isArchiveMode ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z" />
-                        <path fillRule="evenodd" d="M3 8h14v7a2 2 0 01-2 2H5a2 2 0 01-2-2V8zm5 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" clipRule="evenodd" />
-                    </svg>
-                    {isArchiveMode ? 'Done' : 'Archive'}
-                </button>
+              <div className="flex-1"></div>
+              <div className="flex items-center gap-[1px]">
                 <button
                     onClick={() => setShowArchivedFlyout(true)}
-                    className="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 hover:text-white transition-colors text-sm font-semibold shadow-md"
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                 >
                     View Archived
                 </button>
-                   <AuditButton pageName="Staff" />
-                <div className="w-px h-8 bg-gray-600 mx-2"></div>
                 <button
-                    onClick={onClose}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
+                    onClick={toggleArchiveMode}
+                    className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${isArchiveMode ? 'text-green-500' : 'text-black'}`}
                 >
-                    Back to Program
+                    {isArchiveMode ? 'Done' : 'Archive'}
                 </button>
+                <button
+                    onClick={handleShowAddChoice}
+                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
+                >
+                    Add Staff
+                </button>
+                <div className="w-[8px]"></div>
+                <AuditButton pageName="Staff" />
               </div>
             </div>
 
@@ -531,7 +557,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                         <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                             <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
                                 <h3 className="text-lg font-bold text-sky-400">{unit}</h3>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} QFIs</span>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{qfisByUnit[unit].length} Staff</span>
                             </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
                                 {renderInstructorList(qfisByUnit[unit])}
@@ -539,21 +565,18 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                         </div>
                     ))}
                     
-                    {/* SIM IPs */}
-                    {sortedSimIpUnits.map(unit => (
-                        <div key={`simip-${unit}`} className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
+                    {/* SIM IPs - single combined card regardless of unit */}
+                    {simIps.length > 0 && (
+                        <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                             <div className="p-3 border-b border-teal-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
-                                <div>
-                                    <h3 className="text-lg font-bold text-teal-400">SIM IPs</h3>
-                                    <p className="text-xs text-gray-400">{unit}</p>
-                                </div>
-                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIpsByUnit[unit].length}</span>
+                                <h3 className="text-lg font-bold text-teal-400">SIM IP</h3>
+                                <span className="text-xs font-mono bg-gray-700 text-gray-300 px-2 py-1 rounded-full">{simIps.length}</span>
                             </div>
                             <div className="p-3 overflow-y-auto flex-1 custom-scrollbar">
-                                {renderInstructorList(simIpsByUnit[unit])}
+                                {renderInstructorList(simIps)}
                             </div>
                         </div>
-                    ))}
+                    )}
 
                        {/* OFIs */}
                        {sortedOfiUnits.map(unit => (
@@ -607,17 +630,18 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     traineesData={traineesData}
                     onViewLogbook={onViewLogbook}
                     onRequestSct={() => {
-                        console.log('🔍 [SCT DEBUG] onRequestSct callback triggered in InstructorListView');
-                        console.log('🔍 [SCT DEBUG] onRequestSct exists:', !!onRequestSct);
-                        console.log('🔍 [SCT DEBUG] selectedInstructor:', selectedInstructor?.name);
                         if (onRequestSct) {
                             const instructorToPass = isAddingNew && newInstructorTemplate ? newInstructorTemplate : selectedInstructor!;
-                            console.log('🔍 [SCT DEBUG] Calling onRequestSct with instructor:', instructorToPass?.name);
                             onRequestSct(instructorToPass);
-                            // Don't close the profile immediately - let the SCT modal appear
-                            // handleCloseProfile();
                         }
                     }}
+                    onNavigateToTrainee={onNavigateToTrainee}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
+                    profileInitialTab={profileInitialTab}
+                    onProfileTabConsumed={onProfileTabConsumed}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
                 />
         )}
       

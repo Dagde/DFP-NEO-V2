@@ -1,7 +1,7 @@
 // Data Service - Loads data from API with fallback to mock data
 // Returns plain objects for React compatibility
 
-import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule } from './api';
+import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule, fetchCourses } from './api';
 import { ESL_DATA, PEA_DATA } from '../mockData';
 import { assignTraineesToInstructors } from './traineeAssignmentService';
 
@@ -284,8 +284,10 @@ export async function initializeData() {
     events = await fetchSchedule();
     console.log('✅ Schedule loaded:', events.length);
 
-    // Courses not fetched here - handled by App.tsx directly
-    const courses: any[] = [];
+    // Fetch courses
+    console.log('🎓 Fetching courses from API...');
+    const courses = await fetchCourses();
+    console.log('✅ Courses loaded:', courses.length);
     
     // PERMANENT: Never fall back to mock data - if API returns nothing, use empty arrays.
     // Mock data contaminated real staff lists and must not be loaded at startup under any circumstance.

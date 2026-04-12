@@ -1,13 +1,15 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience } from '../types';
+import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
 import AuditButton from './AuditButton';
 import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
+import CourseEditFlyout from './CourseEditFlyout';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -32,7 +34,17 @@ interface CourseRosterViewProps {
     onProfileOpened?: () => void;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
-       onDeleteTrainee: (trainee: Trainee) => void;
+    onDeleteTrainee: (trainee: Trainee) => void;
+    onArchiveTrainee?: (trainee: Trainee) => void;
+    onOpenInstructorProfile?: (instructorName: string) => void;
+    // New callbacks for course editing
+    onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
+    onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
+    onBackcourseTrainee?: (trainee: Trainee, newCourse: string) => void;
+    masterCurrencies?: MasterCurrency[];
+    currencyRequirements?: CurrencyRequirement[];
+    currentUserId?: string;
+    currentUserName?: string;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -47,6 +59,9 @@ const generateNewTraineeTemplate = (): Trainee => ({
     service: 'RAAF',
     unavailability: [],
     permissions: ['Trainee'],
+    traineeCallsign: '',
+    secondaryCallsign: '',
+    crew: 'N/A',
     priorExperience: {
         day: { p1: 0, p2: 0, dual: 0 },
         night: { p1: 0, p2: 0, dual: 0 },
@@ -80,9 +95,19 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     selectedPersonForProfile,
     onProfileOpened,
     traineeLMPs,
-    onViewLogbook
-       , onDeleteTrainee
+    onViewLogbook,
+    onDeleteTrainee,
+    onArchiveTrainee,
+    onOpenInstructorProfile,
+    onUpdateCourseNumber,
+    onUpdateCourseUnit,
+    onBackcourseTrainee,
+    masterCurrencies = [],
+    currencyRequirements = [],
+    currentUserId,
+    currentUserName,
 }) => {
+    const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -95,6 +120,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
     const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+
+    // Course Edit state
+    const [courseToEdit, setCourseToEdit] = useState<string | null>(null);
 
     useEffect(() => {
         if (selectedPersonForProfile) {
@@ -131,15 +159,25 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
 
             // Update the state only if the data has actually changed to avoid an infinite loop.
+            // Preserve any locally-edited currencyStatus so a background traineesData refresh
+            // doesn't overwrite currency saves that haven't propagated back to the master array yet.
             if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
-                setSelectedTrainee(updatedTrainee);
+                setSelectedTrainee({
+                  ...updatedTrainee,
+                  currencyStatus: selectedTrainee.currencyStatus ?? updatedTrainee.currencyStatus,
+                });
             }
         }
     }, [traineesData, selectedTrainee, isCreatingNew]);
 
-    const activeCourseNumbers = Object.keys(courseColors).sort((a, b) => a.localeCompare(b));
+    // Only show courses that have trainees (from groupedTrainees), not all courses in courseColors
+    // This ensures courses without trainees at the selected location are not displayed
+    // Also filter out archived courses - only show courses that are in the active courseColors map
+    const activeCourseNumbers = Object.keys(groupedTrainees)
+        .filter(course => courseColors.hasOwnProperty(course))
+        .sort((a, b) => a.localeCompare(b));
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
-    
+
     const coursesToDisplay = view === 'active' ? activeCourseNumbers : archivedCourseNumbers;
     const courseColorMap = view === 'active' ? courseColors : archivedCourses;
 
@@ -220,7 +258,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const ViewToggleButton: React.FC<{ label: string; value: 'active' | 'archived' }> = ({ label, value }) => (
         <button
             onClick={() => setView(value)}
-            className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${view === value ? 'bg-sky-600 text-white' : 'bg-gray-600 text-gray-300 hover:bg-gray-500'}`}
+            className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${view === value ? 'active' : ''}`}
         >
             {label}
         </button>
@@ -235,58 +273,77 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
                     <div className="flex items-center space-x-4">
                         <h1 className="text-2xl font-bold text-white">Trainee Roster</h1>
-                         <button
+                    </div>
+                    <div className="flex items-center gap-[1px]">
+                        <ViewToggleButton label="Active Courses" value="active" />
+                        <button
                             onClick={handleAddTraineeClick}
-                            className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold shadow-md flex items-center"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-500"
                         >
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
                             Add Trainee
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirmation(true)}
-                            className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold shadow-md flex items-center"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
                             Delete Trainee
                         </button>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <ViewToggleButton label="Active Courses" value="active" />
-                        <ViewToggleButton label="Archived Courses" value="archived" />
-                           <AuditButton pageName="Trainee Roster" />
+                        <div className="w-[5px]"></div>
+                        <AuditButton pageName="Trainee Roster" />
                     </div>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto">
-                    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+                    <div className="p-4 md:p-6 pb-16 max-w-7xl mx-auto">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                             {coursesToDisplay.map(courseName => {
                                 const courseTrainees = groupedTrainees[courseName] || [];
                                 const color = courseColorMap[courseName] || 'bg-gray-500';
+                                
+                                // Calculate active and paused counts
+                                const activeCount = courseTrainees.filter(t => !t.isPaused).length;
+                                const pausedCount = courseTrainees.filter(t => t.isPaused).length;
 
+                                const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
-                                        <div className={`px-4 py-2 text-white font-bold text-lg ${color} flex justify-between items-center`}>
+                                        <div 
+                                            className={`px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? '' : color} flex justify-between items-center`}
+                                            style={isHexColor(color) ? { backgroundColor: color } : {}}
+                                        >
                                             <div>
                                                 <span>{courseName}</span>
                                                 {courseTrainees.length > 0 && <span className="ml-2 text-xs font-normal opacity-80">{courseTrainees[0].unit}</span>}
                                             </div>
-                                            {view === 'archived' && (
-                                                <button 
-                                                    onClick={() => setCourseToRestore(courseName)}
-                                                    className="p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors" 
-                                                    aria-label={`Restore course ${courseName}`}
-                                                >
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                        <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                                                    </svg>
-                                                </button>
-                                            )}
+                                            <div className="flex items-center gap-1">
+                                                {view === 'active' && (
+                                                    <button 
+                                                        onClick={() => !isFrozen && setCourseToEdit(courseName)} disabled={isFrozen}
+                                                        className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group" 
+                                                        aria-label={`Edit course ${courseName}`}
+                                                        title="Edit course"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 group-hover:scale-110 transition-transform" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                                {view === 'archived' && (
+                                                    <button 
+                                                        onClick={() => setCourseToRestore(courseName)}
+                                                        className="p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors" 
+                                                        aria-label={`Restore course ${courseName}`}
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="px-4 py-1 text-right text-xs text-white opacity-70">
+                                            {activeCount} active{pausedCount > 0 && `, ${pausedCount} paused`}
                                         </div>
                                         <div className="flex-1 overflow-y-auto p-3">
                                             {courseTrainees.length > 0 ? (
@@ -335,6 +392,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     isOpen={showDeleteConfirmation}
                     onClose={() => setShowDeleteConfirmation(false)}
                     onConfirm={handleDeleteTrainee}
+                    onArchive={onArchiveTrainee}
                     traineesData={traineesData}
                     courseColors={courseColors}
                 />
@@ -363,8 +421,13 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     units={units}
                     individualLmp={individualLmpForSelected || []}
                     onViewLogbook={onViewLogbook}
+                    onOpenInstructorProfile={onOpenInstructorProfile}
                     isCreating={isCreatingNew}
                     activeCourses={activeCourseNumbers}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (
@@ -373,6 +436,38 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     position={flyoutPosition}
                     personName={hoveredTrainee.name}
                     personType="Trainee"
+                />
+            )}
+            {courseToEdit && (
+                <CourseEditFlyout
+                    courseName={courseToEdit}
+                    courseUnit={groupedTrainees[courseToEdit]?.[0]?.unit || ''}
+                    trainees={groupedTrainees[courseToEdit] || []}
+                    availableCourses={activeCourseNumbers}
+                    availableUnits={units}
+                    onClose={() => setCourseToEdit(null)}
+                    onUpdateCourseNumber={(oldCourse, newCourse) => {
+                        if (onUpdateCourseNumber) {
+                            onUpdateCourseNumber(oldCourse, newCourse);
+                        }
+                        setCourseToEdit(null);
+                    }}
+                    onUpdateCourseUnit={(courseNumber, newUnit) => {
+                        if (onUpdateCourseUnit) {
+                            onUpdateCourseUnit(courseNumber, newUnit);
+                        }
+                        setCourseToEdit(null);
+                    }}
+                    onDeleteTrainee={(trainee) => {
+                        onDeleteTrainee(trainee);
+                    }}
+                    onBackcourseTrainee={(trainee, newCourse) => {
+                        if (onBackcourseTrainee) {
+                            onBackcourseTrainee(trainee, newCourse);
+                        }
+                        setCourseToEdit(null);
+                    }}
+                    courseColors={courseColors}
                 />
             )}
         </>

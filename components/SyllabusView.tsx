@@ -1,3 +1,4 @@
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { SyllabusItemDetail } from '../types';
@@ -14,9 +15,9 @@ interface SyllabusViewProps {
 
 // Reusable components for view mode
 const DetailCard: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
-    <div className={`bg-gray-700/50 p-3 rounded-lg ${className}`}>
-        <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</label>
-        <div className="mt-1 text-md font-semibold text-white">{value}</div>
+    <div className={`bg-gray-700/50 p-1 rounded-lg ${className}`}>
+        <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">{label}</label>
+        <div className="mt-0.5 text-[10px] font-semibold text-white">{value}</div>
     </div>
 );
 
@@ -116,42 +117,40 @@ const DetailView: React.FC<{
             )}
         </div>
         
-        <fieldset className="p-4 border border-gray-700 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Core Details</legend>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-2">
+        <fieldset className="p-3 border border-gray-700 rounded-lg">
+            <legend className="px-2 text-xs font-semibold text-gray-300">Core Details</legend>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 mt-2">
                 {isEditing ? (
                     <>
-                        <EditableField label="Code" value={currentItem.code} onChange={(val) => handleFieldChange('code', val)} />
-                        <div className="bg-gray-700/50 p-3 rounded-lg">
-                            <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Course</label>
-                            <input
-                                type="text"
-                                value={(currentItem.courses || []).join(', ')}
-                                onChange={(e) => handleFieldChange('courses', e.target.value.split(', ').filter(c => c.trim()))}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-                                placeholder="Enter courses separated by commas"
-                            />
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Dual/Solo</label>
+                             <select
+                                value={currentItem.sortieType || 'Dual'}
+                                onChange={(e) => handleFieldChange('sortieType', e.target.value as 'Dual' | 'Solo')}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            >
+                                <option>Dual</option>
+                                <option>Solo</option>
+                            </select>
                         </div>
-                        <EditableField label="Phase" value={currentItem.phase} onChange={(val) => handleFieldChange('phase', val)} />
-                        <EditableField label="Module" value={currentItem.module} onChange={(val) => handleFieldChange('module', val)} />
-                        <div className="bg-gray-700/50 p-3 rounded-lg">
-                             <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Day/Night</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Day/Night</label>
                              <select
                                 value={currentItem.dayNight}
                                 onChange={(e) => handleFieldChange('dayNight', e.target.value as 'Day' | 'Night' | 'Day/Night')}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             >
                                 <option>Day</option>
                                 <option>Night</option>
                                 <option>Day/Night</option>
                             </select>
                         </div>
-                        <div className="bg-gray-700/50 p-3 rounded-lg">
-                             <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Type</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Type</label>
                              <select
                                 value={getDisplayType(currentItem)}
                                 onChange={handleTypeChange}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             >
                                 <option>Flight</option>
                                 <option>FTD</option>
@@ -159,71 +158,121 @@ const DetailView: React.FC<{
                                 <option>Ground</option>
                             </select>
                         </div>
-                        <EditableField label="Total Event Hours" value={currentItem.totalEventHours} onChange={(val) => handleFieldChange('totalEventHours', val)} type="number" step={0.1}/>
-                        <EditableField label="Flight/Sim Hours" value={currentItem.flightOrSimHours} onChange={(val) => handleFieldChange('flightOrSimHours', val)} type="number" step={0.1}/>
-                        <div className="bg-gray-700/50 p-3 rounded-lg">
-                             <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Dual/Solo</label>
-                             <select
-                                value={currentItem.sortieType || 'Dual'}
-                                onChange={(e) => handleFieldChange('sortieType', e.target.value as 'Dual' | 'Solo')}
-                                className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
-                            >
-                                <option>Dual</option>
-                                <option>Solo</option>
-                            </select>
-                           <div className="bg-gray-700/50 p-3 rounded-lg">
-                               <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">Cct Only</label>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                               <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Cct Only</label>
                                <select
                                   value={currentItem.cctOnly || (currentItem.code === 'BGF10' ? 'YES' : 'NO')}
                                   onChange={(e) => handleFieldChange('cctOnly', e.target.value as 'YES' | 'NO')}
-                                  className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                  className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                               >
                                   <option>NO</option>
                                   <option>YES</option>
-                           <div className="bg-gray-700/50 p-3 rounded-lg">
-                               <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider">TWR DI Reqd</label>
+                              </select>
+                           </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                               <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">TWR DI Reqd</label>
                                <select
                                   value={currentItem.twrDiReqd || (currentItem.code === 'BGF11' || currentItem.code === 'BGF18' ? 'YES' : 'NO')}
                                   onChange={(e) => handleFieldChange('twrDiReqd', e.target.value as 'YES' | 'NO')}
-                                  className="mt-1 block w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-1 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                  className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                               >
                                   <option>NO</option>
                                   <option>YES</option>
                               </select>
                            </div>
-                              </select>
-                           </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Total Event Hrs</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={currentItem.totalEventHours}
+                                onChange={(e) => handleFieldChange('totalEventHours', parseFloat(e.target.value) || 0)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
                         </div>
-                        <EditableField 
-                            label="Pre-Flight Time (mins)" 
-                            value={Math.round(currentItem.preFlightTime * 60)} 
-                            onChange={(val) => handleFieldChange('preFlightTime', Number(val) / 60)} 
-                            type="number" 
-                            step={1}
-                        />
-                        <EditableField 
-                            label="Post-Flight Time (mins)" 
-                            value={Math.round(currentItem.postFlightTime * 60)} 
-                            onChange={(val) => handleFieldChange('postFlightTime', Number(val) / 60)} 
-                            type="number" 
-                            step={1}
-                        />
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Flight/Sim Hrs</label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={currentItem.flightOrSimHours}
+                                onChange={(e) => handleFieldChange('flightOrSimHours', parseFloat(e.target.value) || 0)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Pre-Flight (min)</label>
+                            <input
+                                type="number"
+                                step="1"
+                                value={Math.round(currentItem.preFlightTime * 60)}
+                                onChange={(e) => handleFieldChange('preFlightTime', Number(e.target.value) / 60)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Post-Flight (min)</label>
+                            <input
+                                type="number"
+                                step="1"
+                                value={Math.round(currentItem.postFlightTime * 60)}
+                                onChange={(e) => handleFieldChange('postFlightTime', Number(e.target.value) / 60)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Code</label>
+                            <input
+                                type="text"
+                                value={currentItem.code}
+                                onChange={(e) => handleFieldChange('code', e.target.value)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Course</label>
+                            <input
+                                type="text"
+                                value={(currentItem.courses || []).join(', ')}
+                                onChange={(e) => handleFieldChange('courses', e.target.value.split(', ').filter(c => c.trim()))}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                                placeholder="Enter courses separated by commas"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Phase</label>
+                            <input
+                                type="text"
+                                value={currentItem.phase}
+                                onChange={(e) => handleFieldChange('phase', e.target.value)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Module</label>
+                            <input
+                                type="text"
+                                value={currentItem.module}
+                                onChange={(e) => handleFieldChange('module', e.target.value)}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
                     </>
                 ) : (
                     <>
-                           <DetailCard label="Code" value={item.code} />
-                           <DetailCard label="Course" value={(item.courses || []).join(", ") || "None"} />
-                        <DetailCard label="Phase" value={item.phase} />
-                        <DetailCard label="Module" value={item.module} />
+                        <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
                         <DetailCard label="Day/Night" value={item.dayNight} />
                         <DetailCard label="Type" value={getDisplayType(item)} />
-                        <DetailCard label="Total Event Hours" value={<>{item.totalEventHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
-                        <DetailCard label="Flight/Sim Hours" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
-                        <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
-                           <DetailCard label="Cct Only" value={item.cctOnly || (item.code === 'BGF10' ? 'YES' : 'NO')} />
-                           <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || (item.code === 'BGF11' || item.code === 'BGF18' ? 'YES' : 'NO')} />
-                        <DetailCard label="Pre-Flight Time" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-sm font-normal">mins</span></>} />
-                        <DetailCard label="Post-Flight Time" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-sm font-normal">mins</span></>} />
+                        <DetailCard label="Cct Only" value={item.cctOnly || (item.code === 'BGF10' ? 'YES' : 'NO')} />
+                        <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || (item.code === 'BGF11' || item.code === 'BGF18' ? 'YES' : 'NO')} />
+                        <DetailCard label="Total Event Hrs" value={<>{item.totalEventHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
+                        <DetailCard label="Flight/Sim Hrs" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
+                        <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
+                        <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
+                        <DetailCard label="Code" value={item.code} />
+                        <DetailCard label="Course" value={(item.courses || []).join(", ") || "None"} />
+                        <DetailCard label="Phase" value={item.phase} />
+                        <DetailCard label="Module" value={item.module} />
                     </>
                 )}
             </div>
@@ -301,7 +350,9 @@ const DetailView: React.FC<{
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
 const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem }) => {
+    const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
@@ -327,6 +378,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         });
     }, []);
 
+  // Select first item by default when syllabusDetails or selectedCourseType changes
   useEffect(() => {
     if (initialSelectedId) {
       const itemToSelect = syllabusDetails.find(item => item.code === initialSelectedId);
@@ -340,12 +392,25 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           }
       }
     } else {
-        if (selectedItem) {
+        // Default: select the first item in the filtered list
+        if (filteredSyllabusDetails.length > 0 && !selectedItem) {
+            setSelectedItem(filteredSyllabusDetails[0]);
+        } else if (selectedItem) {
              const updated = syllabusDetails.find(item => item.code === selectedItem.code);
              if (updated) setSelectedItem(updated);
         }
     }
-  }, [initialSelectedId, syllabusDetails, selectedItem, selectedCourseType]);
+  }, [initialSelectedId, syllabusDetails, selectedItem, selectedCourseType, filteredSyllabusDetails]);
+
+  // Reset selection when course type changes (select first item of new course)
+  useEffect(() => {
+    if (filteredSyllabusDetails.length > 0) {
+        setSelectedItem(filteredSyllabusDetails[0]);
+        setIsEditing(false);
+    } else {
+        setSelectedItem(null);
+    }
+  }, [selectedCourseType]);
 
   const handleEdit = () => {
     if (selectedItem) {
@@ -418,12 +483,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     <button onClick={handleCancel} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-semibold">Cancel</button>
                 </div>
             ) : (
-                <div className="flex space-x-3">
-                    <button onClick={handleEdit} disabled={!selectedItem} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 shadow-md text-white rounded-md text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
-                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 hover:bg-gray-700 shadow-md text-white rounded-md text-sm font-semibold">
-                        &larr; Back
-                    </button>
-                       <AuditButton pageName="Master LMP" />
+                <div className="flex items-center gap-[1px]">
+                    <AuditButton pageName="Master LMP" />
+                    <button onClick={handleEdit} disabled={!selectedItem || isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
         </div>
@@ -431,16 +493,17 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
 
       {/* Main Content */}
       <div className="flex-1 flex flex-row overflow-hidden">
-        {/* Left Column: List */}
-        <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
-          {/* Sticky Header */}
-          <div className="sticky top-0 bg-gray-900 z-10 border-b border-gray-700 px-2 py-2 flex">
-            <div className="flex-shrink-0 w-12 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-400">Phase</div>
-            <div className="flex-shrink-0 w-18 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wider border-r border-gray-400 px-1">Module</div>
-            <div className="flex-1 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-2">Event</div>
+        {/* Left Column: List with 3 Columns */}
+        <div className="w-1/4 border-r border-gray-700 overflow-hidden flex flex-col">
+          {/* Sticky Header Row */}
+          <div className="flex-shrink-0 flex gap-0 bg-gray-900">
+            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700 text-center w-12 flex-shrink-0">Phase</div>
+            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700 text-center w-[68px] flex-shrink-0">Module</div>
+            <div className="font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 flex-1 whitespace-nowrap overflow-hidden">Event</div>
           </div>
-          {/* List Items */}
-          <div className="divide-y divide-gray-700">
+          
+          {/* Scrollable Data Rows */}
+          <div className="flex-1 overflow-y-auto">
             {filteredSyllabusDetails.map((item, index) => {
               const totalItems = filteredSyllabusDetails.length;
               const midPoint = Math.ceil(totalItems / 2);
@@ -449,25 +512,54 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
               const actualModule = Math.min(moduleNum, 12);
               
               return (
-                <div key={item.id}>
-                  <button
-                    onClick={() => {
-                        if (!isEditing) {
-                            setSelectedItem(item);
-                        }
-                    }}
-                    disabled={isEditing}
-                    className={`w-full text-left p-2 flex items-center transition-colors text-sm ${
-                        selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
-                    } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                  >
-                    <div className="flex-shrink-0 w-12 text-center text-sm border-r border-gray-400">{phaseNum}</div>
-                    <div className="flex-shrink-0 w-18 text-center text-sm border-r border-gray-400 px-1">{actualModule}</div>
-                    <div className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis px-2">{item.code}</div>
-                  </button>
-                </div>
-              );
-            })}
+              <div key={item.id} className="flex gap-0">
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-12 flex-shrink-0 ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {phaseNum}
+                </button>
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-[68px] flex-shrink-0 ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {actualModule}
+                </button>
+                <button
+                  onClick={() => {
+                      if (!isEditing) {
+                          setSelectedItem(item);
+                      }
+                  }}
+                  onMouseEnter={() => setHoveredItem(item)}
+                  onMouseLeave={() => setHoveredItem(null)}
+                  disabled={isEditing}
+                  className={`text-left p-2 transition-colors text-sm flex-1 whitespace-nowrap overflow-hidden text-ellipsis ${
+                      selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
+                  } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                >
+                  {item.code}
+                </button>
+              </div>
+            );})}
             {filteredSyllabusDetails.length === 0 && (
                 <div className="p-4 text-center text-gray-500 italic text-sm">No events found for this syllabus.</div>
             )}
@@ -477,9 +569,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         {/* Right Column: Detail View */}
         <div className="w-3/4 overflow-y-auto">
           <div className="p-6 max-w-5xl mx-auto">
-            {selectedItem ? (
+            {(hoveredItem || selectedItem) ? (
                 <DetailView 
-                    item={selectedItem}
+                    item={hoveredItem || selectedItem}
                     isEditing={isEditing}
                     editedItem={editedItem}
                     onItemChange={setEditedItem}

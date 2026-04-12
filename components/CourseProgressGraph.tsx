@@ -114,13 +114,19 @@ const CourseProgressGraph: React.FC<CourseProgressGraphProps> = ({ startDate, gr
         return ticks;
     }, [startDate, gradDate, dateToX]);
 
-    const pointColorClass = courseColor.replace('bg-', '').replace('-400/50', '-400').replace('/50', '');
-    const traineeColor = {
-        'sky': '#38bdf8', 'purple': '#c084fc', 'yellow': '#facc15',
-        'pink': '#f472b6', 'teal': '#2dd4bf', 'indigo': '#818cf8',
-        'cyan': '#22d3ee', 'fuchsia': '#e879f9', 'blue': '#60a5fa',
-        'green': '#4ade80', 'red': '#f87171', 'lime': '#a3e635',
-    }[pointColorClass] || '#9ca3af';
+    // Handle hex colors directly - if courseColor is already a hex value, use it as traineeColor
+    const traineeColor = (courseColor && (courseColor.startsWith('#') || courseColor.startsWith('rgb')))
+        ? courseColor
+        : (() => {
+            const pointColorClass = courseColor.replace('bg-', '').replace('-400/50', '-400').replace('/50', '');
+            return ({
+                'sky': '#38bdf8', 'purple': '#c084fc', 'yellow': '#facc15',
+                'pink': '#f472b6', 'teal': '#2dd4bf', 'indigo': '#818cf8',
+                'cyan': '#22d3ee', 'fuchsia': '#e879f9', 'blue': '#60a5fa',
+                'green': '#4ade80', 'red': '#f87171', 'lime': '#a3e635',
+                'amber': '#f59e0b',
+            } as Record<string, string>)[pointColorClass] || '#9ca3af';
+        })();
 
     return (
         <svg viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} className="w-full h-auto" aria-labelledby="chart-title">
@@ -149,7 +155,7 @@ const CourseProgressGraph: React.FC<CourseProgressGraphProps> = ({ startDate, gr
 
             {/* Pace Lines */}
             {paceLines.map((line, index) => (
-                <line key={`pace-${index}`} {...line} stroke={line.color} strokeWidth="2" />
+                <line key={`pace-${index}`} {...line} stroke={line.color} strokeWidth="1" />
             ))}
 
             {/* Today Line */}
@@ -158,7 +164,7 @@ const CourseProgressGraph: React.FC<CourseProgressGraphProps> = ({ startDate, gr
             {/* Trainee Points */}
             <g>
                 {traineePoints.map(point => (
-                    <circle key={point.name} cx={todayX} cy={eventsToY!(point.eventsCompleted)} r="5" fill={traineeColor} stroke="#1f2937" strokeWidth="2">
+                    <circle key={point.name} cx={todayX} cy={eventsToY!(point.eventsCompleted)} r="5" fill={traineeColor} stroke="#1f2937" strokeWidth="1">
                         <title>{`${point.name}: ${point.eventsCompleted} events`}</title>
                     </circle>
                 ))}

@@ -33,12 +33,23 @@ const formatTime = (time: number): string => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+// Helper to get local date string from timezone-adjusted currentTime
+// IMPORTANT: Use this instead of new Date().toISOString() to ensure consistent timezone handling
+const getLocalDateStringFromAdjustedTime = (date: Date): string => {
+    // The date parameter is already timezone-adjusted, so use UTC methods to extract local components
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
 const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date): string => {
     if (event.type !== 'flight') {
         return '';
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
+    const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
     
     // Only apply highlighting for the current date
     if (event.date !== todayStr) {
@@ -54,7 +65,8 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
         return 'text-green-400';
     }
 
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+    // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
+    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const endTime = event.startTime + event.duration;
     if (nowInHours >= endTime) {
         return ''; // Default text color for lapsed events on today's schedule
@@ -108,12 +120,77 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const isEndSegment = segment.segmentType === 'start'; 
   const flyoutToLeft = isEndSegment || (effectiveStartTime + effectiveDuration > 22); // Logic: if it ends late in the day, flyout left
 
+  // Helper: check if a color value is a hex/rgb value vs a Tailwind class (defined here for use in style)
+  const isHexColorEarly = (color: string) => color && (color.startsWith('#') || color.startsWith('rgb'));
+
+  // Tailwind color palette: name -> shade -> [r, g, b]
+  const TAILWIND_COLORS: Record<string, Record<string, [number, number, number]>> = {
+    sky:     { '400': [56,189,248],  '500': [14,165,233] },
+    purple:  { '400': [192,132,252], '500': [168,85,247] },
+    yellow:  { '400': [250,204,21],  '500': [234,179,8] },
+    pink:    { '400': [244,114,182], '500': [236,72,153] },
+    teal:    { '400': [45,212,191],  '500': [20,184,166] },
+    indigo:  { '400': [129,140,248], '500': [99,102,241] },
+    cyan:    { '400': [34,211,238],  '500': [6,182,212] },
+    blue:    { '400': [96,165,250],  '500': [59,130,246] },
+    green:   { '400': [74,222,128],  '500': [34,197,94] },
+    orange:  { '400': [251,146,60],  '500': [249,115,22] },
+    red:     { '400': [248,113,113], '500': [239,68,68],  '800': [153,27,27],  '900': [127,29,29] },
+    gray:    { '400': [156,163,175], '500': [107,114,128],'600': [75,85,99] },
+    amber:   { '400': [251,191,36],  '500': [245,158,11], '700': [180,83,9] },
+    fuchsia: { '400': [232,121,249], '500': [217,70,239] },
+    lime:    { '400': [163,230,53],  '500': [132,204,22] },
+    violet:  { '400': [167,139,250], '500': [139,92,246] },
+    rose:    { '400': [251,113,133], '500': [244,63,94] },
+  };
+
+  // Convert any Tailwind bg class (e.g. 'bg-sky-400/80', 'bg-purple-400/50') to muted rgba.
+  // Tailwind /50 and /80 render at full 50%/80% opacity which is too bright for the dark UI.
+  // We remap to 0.42 and 0.57 alpha to match the intended muted design.
+  const tailwindBgToRgba = (cls: string): string | null => {
+    if (!cls || !cls.startsWith('bg-')) return null;
+    const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
+    if (!match) return null;
+    const [, colorName, shade, opacityStr] = match;
+    const rgb = TAILWIND_COLORS[colorName]?.[shade];
+    if (!rgb) return null;
+    const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
+    let alpha: number;
+    if (opacity >= 75) alpha = 0.57;
+    else if (opacity >= 45) alpha = 0.42;
+    else if (opacity >= 30) alpha = 0.35;
+    else alpha = (opacity / 100) * 0.7;
+    return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+  };
+
+  // Hex to rgba helper
+  const hexToRgba = (hex: string, alpha: number): string => {
+    try {
+      const r = parseInt(hex.slice(1,3), 16);
+      const g = parseInt(hex.slice(3,5), 16);
+      const b = parseInt(hex.slice(5,7), 16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    } catch { return hex; }
+  };
+
+  // Resolve background color as inline style for all non-special tiles
+  const resolvedBgColor: string | null = (() => {
+    if (event.type === 'deployment' || event.type === 'unavailability' || isUnavailabilityConflict || isConflicting) return null;
+    const c = event.color || '';
+    if (isHexColorEarly(c)) return hexToRgba(c, 0.57);
+    return tailwindBgToRgba(c);
+  })();
+
   const style: React.CSSProperties = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
     width: `${tileWidth}px`,
     height: `${rowHeight - 4}px`, // a little padding
     marginTop: '2px',
+    // Apply resolved background color as inline style to override Tailwind CDN rendering
+    ...(resolvedBgColor ? { backgroundColor: resolvedBgColor } : {}),
+    // Also set as CSS custom property for the !important override in index.html
+    ...(resolvedBgColor ? { ['--tile-bg' as any]: resolvedBgColor } : {}),
   };
   
   const getDynamicRingClass = () => {
@@ -121,7 +198,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-red-400'; // Highest priority
     }
     
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Use currentTime (timezone-adjusted) instead of new Date() to match the current time indicator
+    const todayStr = getLocalDateStringFromAdjustedTime(currentTime);
 
     // Only apply auth highlighting for the current date
     if (event.date !== todayStr) {
@@ -134,7 +212,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         return 'ring-green-400';
     }
     
-    const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+    // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
+    const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
     const endTime = event.startTime + event.duration;
 
     // Lapsed status for today - no border required on main schedule
@@ -194,12 +273,24 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
   const isSctEvent = event.eventCategory === 'sct';
+  const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   
   
   
   const picName = isSctEvent ? event.pilot : (event.flightType === 'Solo' ? event.pilot : event.instructor);
   const studentName = event.flightType === 'Solo' ? '' : (isSctEvent ? event.student : event.student || '');
-  
+
+  // For STBY events, show "TBA" for instructor and ensure trainee name is displayed
+  let displayPicNameForRender = picName;
+  let displayStudentNameForRender = studentName;
+
+  if (isStbyEvent) {
+    // Show actual instructor name if assigned, otherwise "TBA"
+    displayPicNameForRender = picName && picName !== '' && picName !== 'TBA' ? picName : 'TBA';
+    // Ensure trainee name is displayed from student or pilot field
+    displayStudentNameForRender = event.student || event.pilot || studentName || '';
+  }
+
   let picClasses = `font-semibold truncate`;
   let studentClasses = `truncate`;
 
@@ -221,9 +312,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       const studentHasUnavailability = unavailablePersonnel && unavailablePersonnel.includes(studentName || '');
       
       // Check for event finish to stop highlighting unavailability on past events
-      const nowInHours = currentTime.getHours() + currentTime.getMinutes() / 60;
+      // Use UTC methods since currentTime is already timezone-adjusted (same as vertical time line)
+      const nowInHours = currentTime.getUTCHours() + currentTime.getUTCMinutes() / 60;
       const eventEndTime = event.startTime + event.duration;
-      const isEventFinished = nowInHours >= eventEndTime && event.date === new Date().toISOString().split('T')[0];
+      const isEventFinished = nowInHours >= eventEndTime && event.date === getLocalDateStringFromAdjustedTime(currentTime);
 
       if ((conflictedPersonnelName === picName) || (picHasUnavailability && !isEventFinished)) {
           picClasses = 'font-bold truncate text-red-500';
@@ -363,8 +455,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     };
 
     // Apply name abbreviation for short flights
-    const displayPicName = isShortFlight ? abbreviateName(picName || '') : picName;
-    const displayStudentName = isShortFlight ? abbreviateName(studentName || '') : studentName;
+    const displayPicName = isShortFlight ? abbreviateName(displayPicNameForRender || '') : displayPicNameForRender;
+    const displayStudentName = isShortFlight ? abbreviateName(displayStudentNameForRender || '') : displayStudentNameForRender;
     
     const isGroundEventFromName = event.flightNumber.includes('CPT') || event.flightNumber.includes('MB') || event.flightNumber.includes('TUT') || event.flightNumber.includes('QUIZ');
     
@@ -429,7 +521,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                     <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
-                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content', transform: 'translateX(-50px)' }}>
+                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
                         <div className="font-mono text-white/80 text-right whitespace-nowrap">
                             <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
@@ -449,7 +541,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
 
-                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content', transform: 'translateX(-50px)' }}>
+                <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
                         <div className="font-mono text-white/80 text-right whitespace-nowrap">
                             <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
@@ -502,16 +594,20 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   const shadowClass = isDragging ? 'shadow-xl' : 'shadow-md';
   const commonClasses = `absolute rounded-sm ${isDraggable ? 'cursor-grab' : 'cursor-pointer'} transition-all duration-200 ${isDragging ? 'opacity-80 z-50' : 'z-10'} ${shadowClass}`;
-  
-  // Check if this is a STBY event
-  const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
-  
+
+  // Use isHexColorEarly (defined above) for hex color detection
+  const isHexColor = isHexColorEarly;
+  const eventColorIsHex = isHexColorEarly(event.color || '');
+
   // Handle deployment tile special styling
+  // When resolvedBgColor is set as inline style, we don't need the Tailwind bg class
   const backgroundClass = event.type === 'deployment' 
     ? 'bg-gray-600/30 border border-white/60' 
     : event.type === 'unavailability'
     ? 'bg-red-900/80 border border-red-600/60'
-    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : event.color;
+    : isUnavailabilityConflict ? 'bg-red-800/90' : isConflicting ? 'bg-red-600/70' : (resolvedBgColor ? '' : event.color);
+  
+  
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
@@ -519,7 +615,8 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const finalClasses = [commonClasses];
 
   if (isPreview) {
-      finalClasses.push(event.color); // The color is set in App.tsx for oracle preview
+      // For preview tiles, use inline style if available, otherwise fall back to Tailwind class
+      finalClasses.push(resolvedBgColor ? '' : event.color);
       finalClasses.push('border-2 border-dashed border-sky-300');
   } else {
       finalClasses.push(backgroundClass);

@@ -23,6 +23,11 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
 }) => {
     const { name: courseName, color: courseColor, gradDate, startDate } = course;
 
+    // Helper: determine if a color value is a hex/rgb value vs a Tailwind class
+    const isHexColor = (color: string) => color.startsWith('#') || color.startsWith('rgb');
+    const courseColorClass = isHexColor(courseColor || '') ? '' : (courseColor || '');
+    const courseColorStyle = isHexColor(courseColor || '') ? { backgroundColor: courseColor } : {};
+
     const getCompletedCount = (traineeScores: Score[]) => {
         // Exclude non-progress events like Mass Briefs and remedial packages
         return traineeScores.filter(s => !s.event.includes('MB') && !s.event.includes('-REM-') && !s.event.includes('-RF')).length;
@@ -131,7 +136,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
 
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit">
-            <div className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColor}`}>
+            <div className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`} style={courseColorStyle}>
                  <h2 className="text-lg font-bold text-white text-center mb-2">{courseName}</h2>
                  <div className="flex justify-between items-center text-xs">
                      <div className="flex items-center space-x-1">
@@ -184,8 +189,8 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
                         </div>
                         <div className="w-full bg-gray-700 rounded-full h-1.5">
                             <div
-                                className={`${courseColor} h-1.5 rounded-full`}
-                                style={{ width: `${percentage}%` }}
+                                className={`${courseColorClass} h-1.5 rounded-full`}
+                                style={{ width: `${percentage}%`, ...(isHexColor(courseColor || '') ? { backgroundColor: courseColor } : {}) }}
                             ></div>
                         </div>
                     </div>

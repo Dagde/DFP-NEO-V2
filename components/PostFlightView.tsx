@@ -1,11 +1,13 @@
+import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ScheduleEvent, Trainee, Instructor } from '../types';
+import { ScheduleEvent, Trainee, Instructor, CurrencyRequirement, MasterCurrency, CurrencyDefinition, PostFlightInputType } from '../types';
 import AuditButton from './AuditButton';
 import UnsavedChangesWarning from './UnsavedChangesWarning';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import { useSystemFreeze } from '../context/SystemFreezeContext';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -14,15 +16,39 @@ interface PostFlightViewProps {
   school: 'ESL' | 'PEA';
   traineesData: Trainee[];
   instructorsData: Instructor[];
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
 }
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [] }) => {
+    const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
         const personName = event.student || event.pilot;
         return traineesData.find(t => t.fullName === personName);
     }, [event, traineesData]);
+
+    // --- POST-FLIGHT CURRENCY STATE ---
+    // All currencies flagged showInPostFlight=true, sorted: composites first, then primitives
+    const postFlightCurrencies = useMemo<CurrencyDefinition[]>(() => {
+        const composites = masterCurrencies.filter(c => c.showInPostFlight);
+        const primitives = currencyRequirements.filter(c => c.showInPostFlight);
+        return [...composites, ...primitives];
+    }, [masterCurrencies, currencyRequirements]);
+
+    // Map: currencyId → value (string for date/count, 'true'/'false' for checkbox)
+    const [currencyValues, setCurrencyValues] = useState<Record<string, string>>({});
+
+    const handleCurrencyChange = (id: string, value: string) => {
+        setCurrencyValues(prev => ({ ...prev, [id]: value }));
+    };
+
+    const getEffectiveInputTypes = (c: CurrencyDefinition): PostFlightInputType[] => {
+        if (c.postFlightInputTypes && c.postFlightInputTypes.length > 0) return c.postFlightInputTypes;
+        if (c.type === 'composite') return ['checkbox'];
+        return (c as CurrencyRequirement).expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date'];
+    };
 
     // State
     const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
@@ -304,6 +330,15 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     };
 
     const handleSave = async (isAutoSave = false) => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen && !_freeze.allowedActions?.postFlightTimes) {
+                await showDarkAlert('System is currently frozen. Post Flight Times entries are not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         const saveData = {
             result,
             aircraftNumber,
@@ -328,7 +363,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 rnp: rnpChecked ? rnpCount : 0,
                 tacan: tacanChecked ? tacanCount : 0,
                 vor: vorChecked ? vorCount : 0,
-            }
+            },
+            // Currency updates from post-flight panel
+            currencyUpdates: Object.keys(currencyValues).length > 0 ? currencyValues : undefined,
         };
         
         // Flush any pending debounced logs before saving
@@ -600,12 +637,15 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 relative">
+              {freezeState.isFrozen && !freezeState.allowedActions.postFlightTimes && (
+                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+              )}
               <div className="p-6 space-y-6 max-w-7xl mx-auto w-full">
                 {/* Top Section */}
                 <div className="flex items-start gap-6">
-                    {/* Result (Top Left) */}
-                    <div className="bg-gray-700/50 p-4 rounded-lg">
+                    {/* Result (Left) — subtle blue hue outline */}
+                    <div className="flex-shrink-0 bg-gray-700/50 p-4 rounded-lg border border-sky-500/40 ring-1 ring-sky-500/20 self-stretch flex flex-col justify-center">
                         <label className="block text-sm font-medium text-gray-400 mb-2">Result</label>
                         <div className="flex flex-col space-y-3">
                             <ResultRadio value="DCO" />
@@ -613,6 +653,85 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             <ResultRadio value="DNCO" />
                         </div>
                     </div>
+
+                    {/* Currency Updates Panel (Right of Result) */}
+                    {postFlightCurrencies.length > 0 && (() => {
+                        const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
+                        const rows: { c: CurrencyDefinition; inputType: PostFlightInputType; fieldKey: string }[] = [];
+                        postFlightCurrencies.forEach(c => {
+                            const inputTypes = getEffectiveInputTypes(c);
+                            inputTypes.forEach(inputType => {
+                                const fieldKey = inputTypes.length > 1 ? `${c.id}__${inputType}` : c.id;
+                                rows.push({ c, inputType, fieldKey });
+                            });
+                        });
+                        const ROWS_PER_COL = 4;
+                        const numCols = Math.ceil(rows.length / ROWS_PER_COL);
+                        return (
+                            <div className="flex-1 bg-gray-700/50 px-3 py-2 rounded border border-gray-600/50 min-w-0 self-stretch flex flex-col">
+                                <p className="text-sm font-medium text-sky-400 mb-3 leading-none">Currencies</p>
+                                <div
+                                    className="grid gap-x-4 gap-y-2"
+                                    style={{
+                                        gridTemplateRows: `repeat(${ROWS_PER_COL}, auto)`,
+                                        gridTemplateColumns: `repeat(${numCols}, minmax(0, 1fr))`,
+                                        gridAutoFlow: 'column',
+                                    }}
+                                >
+                                    {rows.map(({ c, inputType, fieldKey }) => {
+                                        const val = currencyValues[fieldKey] ?? '';
+                                        if (inputType === 'checkbox') {
+                                            const isChecked = val !== '' && val !== 'false';
+                                            return (
+                                                <label key={fieldKey} className="flex items-center gap-1.5 cursor-pointer min-w-0 h-[22px]">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={e => handleCurrencyChange(fieldKey, e.target.checked ? flightDate : '')}
+                                                        className="h-3.5 w-3.5 flex-shrink-0 rounded accent-sky-500 cursor-pointer"
+                                                        title={isChecked ? `Recorded: ${val}` : 'Flight date recorded on tick'}
+                                                    />
+                                                    <span className="text-sm text-white leading-none truncate" title={c.name}>{c.name}</span>
+                                                </label>
+                                            );
+                                        }
+                                        if (inputType === 'date') {
+                                            return (
+                                                <label key={fieldKey} className="flex items-center gap-1.5 min-w-0 h-[22px]">
+                                                    <span className="text-sm text-white leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
+                                                    <input
+                                                        type="date"
+                                                        value={val}
+                                                        onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
+                                                        className="w-[112px] flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                                                        style={{ colorScheme: 'dark' }}
+                                                        title="Date last completed"
+                                                    />
+                                                </label>
+                                            );
+                                        }
+                                        if (inputType === 'count') {
+                                            return (
+                                                <label key={fieldKey} className="flex items-center gap-1.5 min-w-0 h-[22px]">
+                                                    <span className="text-sm text-white leading-none truncate flex-1 min-w-0" title={c.name}>{c.name}</span>
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        value={val}
+                                                        onChange={e => handleCurrencyChange(fieldKey, e.target.value)}
+                                                        placeholder="0"
+                                                        className="w-10 flex-shrink-0 bg-gray-700 border border-gray-600 rounded h-[22px] py-0 px-1 text-white text-sm text-center focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                                                        title="Count completed today"
+                                                    />
+                                                </label>
+                                            );
+                                        }
+                                        return null;
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })()}
                 </div>
 
                 {/* Main "Times" Window */}
@@ -840,10 +959,23 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             </div>
 
             {/* Footer */}
-            <div className="flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end" style={{ gap: '2px' }}>
-                <button onClick={handleManualSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold">Save & Return</button>
-                <button onClick={handleAttemptReturn} className="px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm">Return</button>
-                   <AuditButton pageName="Post-Flight" />
+            <div className="flex-shrink-0 px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end">
+                <div className="flex" style={{ gap: '2px' }}>
+                    <button
+                        onClick={handleManualSave}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                        style={{ borderRadius: '6px' }}
+                    >Save</button>
+                    <button
+                        onClick={handleAttemptReturn}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                        style={{ borderRadius: '6px' }}
+                    >Back</button>
+                    <AuditButton
+                        pageName="Post-Flight"
+                        style={{ borderRadius: '6px' }}
+                    />
+                </div>
             </div>
             {showUnsavedWarning && (
                 <UnsavedChangesWarning 

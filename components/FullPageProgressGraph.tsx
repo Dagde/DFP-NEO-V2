@@ -85,7 +85,7 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
                 }
             }
 
-            // If no events completed yet, still show graph with empty data (no lines/dots)
+            // If no events completed yet, still show graph with empty data
             const effectiveStartDate = firstEventDate || startDate;
 
             // Calculate weekly progress from first event date to current week
@@ -343,8 +343,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
         return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
     }, [weeklyProgress]);
 
-    // Extract color for dots
-    const dotColor = color.includes('sky') ? '#38bdf8' :
+    // Extract hex color for SVG dots and strokes
+    const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
+    const dotColor = isHexColor(color) ? color :
+                     color.includes('sky') ? '#38bdf8' :
                      color.includes('purple') ? '#c084fc' :
                      color.includes('yellow') ? '#facc15' :
                      color.includes('pink') ? '#f472b6' :
@@ -355,11 +357,12 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                      color.includes('blue') ? '#60a5fa' :
                      color.includes('green') ? '#4ade80' :
                      color.includes('red') ? '#f87171' :
+                     color.includes('amber') ? '#f59e0b' :
                      color.includes('lime') ? '#a3e635' : '#9ca3af';
 
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4">
-            <div className={`mb-4 p-3 rounded-lg ${color}`}>
+            <div className={`mb-4 p-3 rounded-lg ${isHexColor(color) ? '' : color}`} style={isHexColor(color) ? { backgroundColor: color } : {}}>
                 <h2 className="text-lg font-bold text-white text-center">{course.name}</h2>
                 <div className="flex justify-between text-sm text-white/80 mt-2">
                     <span>Start: {startDate.toLocaleDateString('en-GB')}</span>
@@ -404,8 +407,8 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             x2={PADDING.left + CHART_WIDTH} 
                             y1={tick.y} 
                             y2={tick.y} 
-                            stroke="#4b5563" 
-                            strokeWidth="1" 
+                            stroke="#374151" 
+                            strokeWidth="0.5" 
                         />
                         <text 
                             x={PADDING.left - 10} 
@@ -427,8 +430,8 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             x2={tick.x} 
                             y1={PADDING.top} 
                             y2={PADDING.top + CHART_HEIGHT} 
-                            stroke="#4b5563" 
-                            strokeWidth="1" 
+                            stroke="#374151" 
+                            strokeWidth="0.5" 
                         />
                         <text 
                             x={tick.x} 
@@ -447,7 +450,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                     d={`M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`} 
                     fill="none" 
                     stroke="#6b7280" 
-                    strokeWidth="2" 
+                    strokeWidth="1" 
                 />
 
                 {/* Axis labels */}
@@ -482,7 +485,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                         x2={line.x2} 
                         y2={line.y2} 
                         stroke={line.color} 
-                        strokeWidth="2" 
+                        strokeWidth="0.25" 
                         strokeDasharray={line.dash}
                     />
                 ))}
@@ -493,7 +496,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                         d={averagePath} 
                         fill="none" 
                         stroke="#60a5fa" 
-                        strokeWidth="2.5"
+                        strokeWidth="1.25"
                     />
                 )}
 
@@ -515,10 +518,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             <circle 
                                 cx={x} 
                                 cy={yHigh} 
-                                r="2.5" 
+                                r="1.25" 
                                 fill="#4ade80" 
                                 stroke="#1f2937" 
-                                strokeWidth="1"
+                                strokeWidth="0.5"
                             >
                                 <title>{`Week ${i + 1}: Highest - ${wp.highest} events (${wp.highestTrainee})`}</title>
                             </circle>
@@ -527,10 +530,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             <circle 
                                 cx={x} 
                                 cy={yLow} 
-                                r="2.5" 
+                                r="1.25" 
                                 fill="#f87171" 
                                 stroke="#1f2937" 
-                                strokeWidth="1"
+                                strokeWidth="0.5"
                             >
                                 <title>{`Week ${i + 1}: Lowest - ${wp.lowest} events (${wp.lowestTrainee})`}</title>
                             </circle>
@@ -539,10 +542,10 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data, allTrainees, scores, tr
                             <circle 
                                 cx={x} 
                                 cy={yAvg} 
-                                r="2" 
+                                r="1" 
                                 fill="#60a5fa" 
                                 stroke="#1f2937" 
-                                strokeWidth="1"
+                                strokeWidth="0.5"
                             >
                                 <title>{`Week ${i + 1}: Average - ${wp.average.toFixed(1)} events`}</title>
                             </circle>

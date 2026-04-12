@@ -3,6 +3,7 @@ import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail } from '.
 import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
+import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
 
 interface CourseAnalysis {
   courseName: string;
@@ -77,7 +78,7 @@ interface BuildIntelligenceViewProps {
   analysis: BuildAnalysis | null;
 }
 
-type TabType = 'people' | 'course-metrics' | 'build-analytics';
+type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'managerial-analytics';
 
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
@@ -85,19 +86,20 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const formattedDate = useMemo(() => {
     const [year, month, day] = props.date.split('-').map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
+    // Format: DD Mmm YY (e.g., "10 Mar 25")
     return dateObj.toLocaleDateString('en-GB', {
-      weekday: 'long',
+      day: '2-digit',
+      month: 'short',
       year: '2-digit',
-      month: 'long',
-      day: 'numeric',
       timeZone: 'UTC'
     });
   }, [props.date]);
 
   const tabs = [
-    { id: 'people' as TabType, label: 'People', icon: '👥' },
-    { id: 'course-metrics' as TabType, label: 'Course Metrics', icon: '📊' },
-    { id: 'build-analytics' as TabType, label: 'Build Analytics', icon: '📈' }
+    { id: 'people' as TabType, label: 'People' },
+    { id: 'course-metrics' as TabType, label: 'Course Metrics' },
+    { id: 'build-analytics' as TabType, label: 'Build Analytics' },
+    { id: 'managerial-analytics' as TabType, label: 'Managerial Analytics' }
   ];
 
   return (
@@ -120,14 +122,13 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
+                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
                     ${activeTab === tab.id
                       ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
                       : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
                     }
                   `}
                 >
-                  <span className="mr-2">{tab.icon}</span>
                   {tab.label}
                 </button>
               ))}
@@ -167,6 +168,10 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 events={props.events}
                 analysis={props.analysis}
               />
+            )}
+
+            {activeTab === 'managerial-analytics' && (
+              <TrainingIntelligenceTab />
             )}
           </div>
         </div>

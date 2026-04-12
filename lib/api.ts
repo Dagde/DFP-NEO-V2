@@ -42,16 +42,22 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<Fet
 export async function fetchInstructors(): Promise<any[]> {
   const result = await fetchAPI<{ personnel: any[] }>('/personnel');
   if (result.success && result.data?.personnel) {
-    return result.data.personnel;
+    // Extract qualifications.currencyStatus into top-level currencyStatus
+    // so that in-memory instructor objects always have currencyStatus available
+    // (the DB stores it nested inside the qualifications JSON field)
+    return result.data.personnel.map((p: any) => ({
+      ...p,
+      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+    }));
   }
   return [];
 }
 
 // Fetch trainees from API
 export async function fetchTrainees(): Promise<any[]> {
-  const result = await fetchAPI<{ personnel: any[] }>('/personnel?role=TRAINEE');
-  if (result.success && result.data?.personnel) {
-    return result.data.personnel;
+  const result = await fetchAPI<{ trainees: any[] }>('/trainees');
+  if (result.success && result.data?.trainees) {
+    return result.data.trainees;
   }
   return [];
 }
@@ -69,10 +75,27 @@ export async function fetchAircraft(): Promise<any[]> {
 export async function fetchScores(): Promise<Record<string, any[]>> {
   const result = await fetchAPI<{ scores: [string, any[]][] }>('/scores');
   if (result.success && result.data?.scores) {
-    // Convert array of entries to plain object
+    // Convert array of entries to plain object.
+    // Normalize asterisk event codes (e.g. 'BIF FTD1*' -> 'BIF FTD1') so they
+    // match syllabus item codes in TraineeLmpView and computeNextEventsForTrainee.
     const scoresObj: Record<string, any[]> = {};
     result.data.scores.forEach(([fullName, scores]) => {
-      scoresObj[fullName] = scores;
+      const normalized = scores.map((s: any) => ({
+        ...s,
+        event: typeof s.event === 'string' ? s.event.replace('*', '') : s.event,
+      }));
+      // Apply BIF FTD dependency rules so BIF FTD1/BIF FTD3 always show as
+      // complete when their trigger events are done, even without lmp-sync:
+      // Rule 1: BIF FTD2 complete -> BIF FTD1 complete
+      // Rule 2: BIF1 complete    -> BIF FTD3 complete
+      const eventIds = normalized.map((s: any) => s.event as string);
+      if (eventIds.includes('BIF FTD2') && !eventIds.includes('BIF FTD1')) {
+        normalized.push({ event: 'BIF FTD1', score: 3, date: '', instructor: '', notes: '', details: [] });
+      }
+      if (eventIds.includes('BIF1') && !eventIds.includes('BIF FTD3')) {
+        normalized.push({ event: 'BIF FTD3', score: 3, date: '', instructor: '', notes: '', details: [] });
+      }
+      scoresObj[fullName] = normalized;
     });
     return scoresObj;
   }
@@ -98,6 +121,32 @@ export async function migratePersonnelToDatabase(personnelList: any[]): Promise<
     return result.data;
   }
   return { success: false, error: result.error || 'Migration failed' };
+}
+
+// Fetch courses from API
+export async function fetchCourses(): Promise<any[]> {
+  const result = await fetchAPI<{ courses: any[] }>('/courses');
+  if (result.success && result.data?.courses) {
+    return result.data.courses;
+  }
+  return [];
+}
+
+// Save a course to the database
+export async function saveCourse(course: any): Promise<{ success: boolean; error?: string }> {
+  const result = await fetchAPI<{ success: boolean }>('/courses', {
+    method: 'POST',
+    body: JSON.stringify(course),
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
+}
+
+// Delete a course from the database
+export async function deleteCourse(name: string): Promise<{ success: boolean; error?: string }> {
+  const result = await fetchAPI<{ success: boolean }>(`/courses/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
 }
 
 // Fetch schedule from API

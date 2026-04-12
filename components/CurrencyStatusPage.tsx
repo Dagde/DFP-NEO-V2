@@ -343,10 +343,10 @@ const CurrencyStatusPage: React.FC<CurrencyStatusPageProps> = ({
         </td>
         {/* Currency name */}
         <td className="px-4 py-3">
-          <div className={`text-sm font-medium ${isInactive && !isEditing ? 'text-gray-500' : 'text-white'}`}>
+          <div className={`text-sm font-medium ${isInactive && !isEditing ? 'text-gray-400' : 'text-white'} flex items-center`}>
             {def.name}
             {isInactive && !isEditing && (
-              <span className="ml-2 text-xs bg-gray-700 text-gray-400 px-1.5 py-0.5 rounded">Inactive</span>
+              <span className="ml-2 text-xs text-orange-400 px-1.5 py-0.5 rounded whitespace-nowrap">Inactive</span>
             )}
           </div>
           {def.description && <div className="text-xs text-gray-500 mt-0.5">{def.description}</div>}

@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState } from 'react';
 import CourseRosterView from './CourseRosterView';
 import TraineeScheduleView from './TraineeScheduleView';
@@ -27,6 +28,15 @@ interface TraineeViewProps {
   traineeLMPs: Map<string, any[]>;
   onViewLogbook: (trainee: any) => void;
   onDeleteTrainee: (trainee: any) => void;
+  onOpenInstructorProfile?: (instructorName: string) => void;
+  // Course edit callbacks
+  onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
+  onUpdateCourseUnit?: (courseNumber: string, newUnit: string) => void;
+  onBackcourseTrainee?: (trainee: any, newCourse: string) => void;
+  masterCurrencies?: any[];
+  currencyRequirements?: any[];
+  currentUserId?: string;
+  currentUserName?: string;
   
   // Props for TraineeScheduleView
   date: string;
@@ -45,6 +55,7 @@ interface TraineeViewProps {
 
 const TraineeView: React.FC<TraineeViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const { isFrozen } = useSystemFreeze();
 
   // Sort trainees for schedule view
   const sortedTrainees = [...props.traineesData]
@@ -87,7 +98,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-y-auto">
         {activeTab === 'profile' && (
           <CourseRosterView
             events={props.events}
@@ -113,6 +124,14 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             traineeLMPs={props.traineeLMPs}
             onViewLogbook={props.onViewLogbook}
             onDeleteTrainee={props.onDeleteTrainee}
+            onOpenInstructorProfile={props.onOpenInstructorProfile}
+            onUpdateCourseNumber={props.onUpdateCourseNumber}
+            onUpdateCourseUnit={props.onUpdateCourseUnit}
+            onBackcourseTrainee={props.onBackcourseTrainee}
+            masterCurrencies={props.masterCurrencies}
+            currencyRequirements={props.currencyRequirements}
+            currentUserId={props.currentUserId}
+            currentUserName={props.currentUserName}
           />
         )}
         {activeTab === 'schedule' && (

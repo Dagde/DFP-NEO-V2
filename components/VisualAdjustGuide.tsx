@@ -1,3 +1,4 @@
+import { showDarkAlert } from './DarkMessageModal';
 import React, { useState, useEffect, useRef } from 'react';
 import { ScheduleEvent } from '../types';
 
@@ -43,8 +44,17 @@ export const VisualAdjustGuide: React.FC<VisualAdjustGuideProps> = ({
         return Math.round(time * 12) / 12;
     };
 
-    const handleMouseDown = (isStart: boolean) => (e: React.MouseEvent) => {
+    const handleMouseDown = (isStart: boolean) => async (e: React.MouseEvent) => {
         e.preventDefault();
+        // System freeze check - prevent dragging when frozen
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen) {
+                await showDarkAlert('System is currently frozen. Dragging events is not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         if (isStart) {
             setIsDraggingStart(true);
         } else {

@@ -66,6 +66,19 @@ interface BuildAnalyticsTabProps {
 }
 
 const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis }) => {
+  // Format build date to DD-Mmm-YY
+  const formattedBuildDate = useMemo(() => {
+    if (!analysis?.buildDate) return '';
+    const [year, month, day] = analysis.buildDate.split('-').map(Number);
+    const dateObj = new Date(Date.UTC(year, month - 1, day));
+    return dateObj.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: '2-digit',
+      timeZone: 'UTC'
+    }).replace(/ /g, '-'); // Replace spaces with hyphens for DD-Mmm-YY format
+  }, [analysis?.buildDate]);
+
   // Tiles statistics from events
   const tilesStats = useMemo(() => {
     const flightTiles = events.filter(e => e.type === 'flight').length;
@@ -132,7 +145,7 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
       <fieldset className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
         <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Build Summary</legend>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <StatCard title="Build Date" value={analysis.buildDate} />
+          <StatCard title="Build Date" value={formattedBuildDate} />
           <StatCard title="Total Events" value={analysis.totalEvents} />
           <StatCard title="Aircraft Available" value={analysis.availableAircraft} />
           <StatCard 

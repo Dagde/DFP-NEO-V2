@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 export interface DarkMessageModalProps {
   type: 'alert' | 'confirm';
@@ -185,11 +186,8 @@ export const showDarkAlert = (message: string, title: string = 'Notice', variant
     const modalElement = React.createElement(Modal);
     
     // Create a temporary React root to render the modal
-    // @ts-ignore - dynamic import for React 18 createRoot
-    import('react-dom/client').then(({ createRoot }) => {
-      const root = createRoot(getModalRoot());
-      root.render(modalElement);
-    });
+    const root = createRoot(getModalRoot());
+    root.render(modalElement);
   });
 };
 
@@ -226,11 +224,8 @@ export const showDarkConfirm = (message: string, title: string = 'Confirm Action
     const modalElement = React.createElement(Modal);
     
     // Create a temporary React root to render the modal
-    // @ts-ignore - dynamic import for React 18 createRoot
-    import('react-dom/client').then(({ createRoot }) => {
-      const root = createRoot(getModalRoot());
-      root.render(modalElement);
-    });
+    const root = createRoot(getModalRoot());
+    root.render(modalElement);
   });
 };
 

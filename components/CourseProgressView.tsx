@@ -41,7 +41,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const activeCourses = useMemo(() => {
         // Filter the full courses list to only include active ones (present in courseColors)
-        // Then sort alphabetically by course name
+        // Sort alphabetically by course name
         return courses
             .filter(course => courseColors[course.name])
             .sort((a, b) => a.name.localeCompare(b.name));

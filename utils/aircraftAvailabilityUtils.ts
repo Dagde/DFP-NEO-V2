@@ -350,19 +350,12 @@ export function calculateCurrentDayAvailability(
  * This bridges the gap between existing data format and the correct algorithm
  */
 export function convertSnapshotsToTimeline(snapshots: AircraftAvailabilitySnapshot[]): {time: string, availability: number}[] {
-    return snapshots.map(snapshot => {
-        const dateObj = new Date(snapshot.timestamp);
-        if (isNaN(dateObj.getTime())) {
-            console.warn('[convertSnapshotsToTimeline] Invalid timestamp:', snapshot.timestamp);
-            return { time: '00:00', availability: snapshot.available };
-        }
-        return {
-            time: dateObj.toLocaleTimeString('en-US', { 
-                hour12: false, 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            }), // Keep HH:mm format consistently
-            availability: snapshot.available
-        };
-    });
+    return snapshots.map(snapshot => ({
+        time: new Date(snapshot.timestamp).toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        }), // Keep HH:mm format consistently
+        availability: snapshot.available
+    }));
 }

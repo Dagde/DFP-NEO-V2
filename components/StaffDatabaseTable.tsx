@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
+import React, { useState, useEffect, useMemo } from 'react';
+import { logAudit } from '../utils/auditLogger';
 
 interface StaffDatabaseTableProps {
-  // No props needed - fetches data from API
+  currentUserPermission?: string;
+  onShowSuccess?: (message: string) => void;
+  onDataChanged?: () => void;  // Callback to refresh parent data
+  onNavigateToProfile?: (user: any) => void;  // Navigate to staff profile for editing
 }
 
 interface DatabaseStaff {
@@ -11,6 +16,7 @@ interface DatabaseStaff {
   rank?: string;
   role?: string;
   category?: string;
+  unit?: string;
   flight?: string;
   location?: string;
   email?: string;
@@ -20,15 +26,66 @@ interface DatabaseStaff {
   isCFI?: boolean;
   isActive?: boolean;
   isAdminStaff?: boolean;
-  userId?: string; // This identifies real database staff (not mockdata)
+  userId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
+type SortField = 'name' | 'rank' | 'unit' | 'flight' | 'idNumber' | 'type' | 'role';
+type SortDirection = 'asc' | 'desc';
+
+const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [staffData, setStaffData] = useState<DatabaseStaff[]>([]);
+  const { isFrozen } = useSystemFreeze();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
+
+  // Track the Personnel ID linked to the currently logged-in user
+  const [myPersonnelId, setMyPersonnelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch the current session to determine which Personnel record belongs to the logged-in user
+    const fetchMyPersonnel = async () => {
+      try {
+        const sessionRes = await fetch('/api/auth/session', { credentials: 'include' });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          const userId = sessionData?.user?.id || sessionData?.userId;
+          if (userId) {
+            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
+            if (personnelRes.ok) {
+              const data = await personnelRes.json();
+              const linked = (data.personnel || []).find((p: any) => p.userId === userId);
+              if (linked) setMyPersonnelId(linked.id);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[StaffDB] Could not determine current user personnel ID:', e);
+      }
+    };
+    fetchMyPersonnel();
+  }, []);
+
+  // Detect duplicate names — mark records with same name as potential duplicates
+  const duplicateNames = useMemo(() => {
+    const nameCounts = new Map<string, number>();
+    staffData.forEach(s => {
+      const key = (s.name || '').trim().toLowerCase();
+      nameCounts.set(key, (nameCounts.get(key) || 0) + 1);
+    });
+    const dupes = new Set<string>();
+    nameCounts.forEach((count, name) => { if (count > 1) dupes.add(name); });
+    return dupes;
+  }, [staffData]);
 
   useEffect(() => {
     fetchDatabaseStaff();
@@ -76,11 +133,9 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
 
       if (data.personnel && Array.isArray(data.personnel)) {
         addDebug(`Total personnel: ${data.personnel.length}`);
-        const realStaff = data.personnel.filter((staff: DatabaseStaff) =>
-          staff.userId !== null && staff.userId !== undefined && staff.userId !== ''
-        );
-        addDebug(`Staff with userId: ${realStaff.length}`);
-        setStaffData(realStaff);
+        // Show ALL database personnel (not just those with userId linked to a user account)
+        setStaffData(data.personnel);
+        addDebug(`Showing all ${data.personnel.length} database staff`);
       } else {
         throw new Error(`Invalid format. Keys: ${Object.keys(data).join(', ')}`);
       }
@@ -94,6 +149,45 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     }
   };
 
+  const handleDeleteStaff = async (staffId: string, staffName: string, staffRank?: string) => {
+    try {
+      setDeletingId(staffId);
+      
+      const response = await fetch(`/api/personnel/${staffId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete staff');
+      }
+
+      // Log the deletion
+      logAudit({ action: 'Delete', description: `Deleted staff ${staffRank ? staffRank + ' ' : ''}${staffName}`, page: 'Staff' });
+
+      // Remove from local state
+      setStaffData(prev => prev.filter(s => s.id !== staffId));
+      
+      if (onShowSuccess) {
+        onShowSuccess(`Deleted staff: ${staffName}`);
+      }
+      
+      // Notify parent to refresh data (Staff Profile list, etc.)
+      if (onDataChanged) {
+        onDataChanged();
+      }
+      
+      console.log(`✅ Deleted staff: ${staffName}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Error deleting staff:', err);
+      setError(msg);
+    } finally {
+      setDeletingId(null);
+      setShowDeleteConfirm(null);
+    }
+  };
+
   // Determine type based on role and category
   const getType = (staff: DatabaseStaff): 'STAFF' | 'TRAINEE' => {
     // Trainees are typically in categories UnCat, D, C
@@ -102,6 +196,90 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     }
     return 'STAFF';
   };
+
+  // Sorting function
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorted data using useMemo
+  const sortedStaffData = useMemo(() => {
+    const sorted = [...staffData].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'rank':
+          aValue = a.rank?.toLowerCase() || '';
+          bValue = b.rank?.toLowerCase() || '';
+          break;
+        case 'unit':
+          aValue = a.unit?.toLowerCase() || '';
+          bValue = b.unit?.toLowerCase() || '';
+          break;
+        case 'flight':
+          aValue = (a.flight || a.location || '')?.toLowerCase() || '';
+          bValue = (b.flight || b.location || '')?.toLowerCase() || '';
+          break;
+        case 'idNumber':
+          aValue = a.idNumber || 0;
+          bValue = b.idNumber || 0;
+          break;
+        case 'type':
+          aValue = getType(a);
+          bValue = getType(b);
+          break;
+        case 'role':
+          aValue = a.role?.toLowerCase() || '';
+          bValue = b.role?.toLowerCase() || '';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [staffData, sortField, sortDirection]);
+
+  // Sort indicator component
+  const SortIndicator = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <span className="ml-1 text-gray-500">⇅</span>;
+    }
+    return (
+      <span className="ml-1 text-sky-400">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
+  // Clickable header component
+  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-left text-sm font-semibold tracking-wide cursor-pointer hover:bg-blue-800/40 select-none transition-colors ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <span className="flex items-center">
+        {children}
+        <SortIndicator field={field} />
+      </span>
+    </th>
+  );
 
   if (loading) {
     return (
@@ -144,45 +322,48 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
     );
   }
 
-  if (staffData.length === 0) {
-    return (
-      <div className="w-full flex items-center justify-center py-12">
-        <div className="text-gray-400 text-sm">
-          No real database staff records found (staff with userId)
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full">
+      {/* Header with title and buttons */}
+      <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4">
+        <div className="p-4 bg-gray-800/80 border-b border-gray-700">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-bold text-sky-400">Staff Database</h3>
+              <p className="text-sm text-gray-400 mt-1">
+                All personnel records from the database (click column headers to sort)
+              </p>
+            </div>
+            <div className="flex items-center">
+              <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
+                {staffData.length} Staff
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="bg-blue-900/40 text-white">
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                NAME
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                RANK/SERVICE
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                UNIT/FLIGHT
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                PMKEYS/ID
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                TYPE
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                ROLE
-              </th>
+              <SortableHeader field="name">NAME</SortableHeader>
+              <SortableHeader field="rank">RANK/SERVICE</SortableHeader>
+              <SortableHeader field="unit">UNIT</SortableHeader>
+              <SortableHeader field="flight">FLIGHT/LOCATION</SortableHeader>
+              <SortableHeader field="idNumber">PMKEYS/ID</SortableHeader>
+              <SortableHeader field="type">TYPE</SortableHeader>
+              <SortableHeader field="role">ROLE</SortableHeader>
+              {isAdmin && (
+                <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
+                  ACTIONS
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
-            {staffData.map((staff, index) => {
+            {sortedStaffData.map((staff, index) => {
               const type = getType(staff);
               const typeBadgeColor = type === 'TRAINEE' 
                 ? 'bg-green-600 text-white' 
@@ -197,10 +378,33 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
                   className={rowBackgroundColor}
                 >
                   <td className="px-4 py-3 text-sm text-white">
-                    {staff.name}
+                    <span className="flex items-center gap-1 flex-wrap">
+                      {staff.name}
+                      {myPersonnelId && staff.id === myPersonnelId && (
+                        <span
+                          title="This is YOUR profile — do not delete this one."
+                          className="text-xs bg-green-700 text-green-100 px-1.5 py-0.5 rounded font-semibold ml-1"
+                        >YOU</span>
+                      )}
+                      {duplicateNames.has((staff.name || '').trim().toLowerCase()) && myPersonnelId && staff.id !== myPersonnelId && (
+                        <span
+                          title="⚠️ Duplicate name — this is NOT your active profile. Safe to delete."
+                          className="text-xs bg-red-800 text-red-200 px-1.5 py-0.5 rounded font-semibold ml-1 cursor-help"
+                        >* DELETE?</span>
+                      )}
+                      {duplicateNames.has((staff.name || '').trim().toLowerCase()) && !myPersonnelId && (
+                        <span
+                          title="⚠️ Duplicate name detected — one of these may be safe to delete."
+                          className="text-amber-400 font-bold cursor-help ml-1"
+                        >*</span>
+                      )}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.rank || 'N/A'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-white">
+                    {staff.unit || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.flight || staff.location || 'N/A'}
@@ -216,6 +420,46 @@ const StaffDatabaseTable: React.FC<StaffDatabaseTableProps> = () => {
                   <td className="px-4 py-3 text-sm text-white">
                     {staff.role || 'N/A'}
                   </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-1">
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => onNavigateToProfile?.({ ...staff, _dataSource: 'database' })}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors"
+                          title="Edit this staff record"
+                        >
+                          Edit
+                        </button>
+                        {/* Delete Button */}
+                        {showDeleteConfirm === staff.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDeleteStaff(staff.id, staff.name, staff.rank)}
+                              disabled={deletingId === staff.id}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
+                            >
+                              {deletingId === staff.id ? 'Deleting...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(null)}
+                              className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowDeleteConfirm(staff.id)}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
+                            title="Delete this staff record"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}

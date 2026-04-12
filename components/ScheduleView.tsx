@@ -70,7 +70,8 @@ const ROW_HEIGHT = 32;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
-const AIRFRAME_COLUMN_WIDTH = 120; // 264 * 0.65 = 171px (35% reduction)
+const AIRFRAME_COLUMN_WIDTH = 108; // Header cell width (date selector)
+const RESOURCE_COLUMN_WIDTH = 105; // 95 * 1.1 = 105px (further 10% wider) // 86 * 1.1 = 95px (10% wider) // 108 * 0.80 = 86px (PC-21 column, 20% narrower than header)
 const TIME_HEADER_HEIGHT = 40;
 
 const isOverlapping = (f1: ScheduleEvent, f2: ScheduleEvent): boolean => {
@@ -905,13 +906,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
                     <div className="flex items-center gap-1 h-full">
-                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-6 gap-4 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`} style={{height: "100%", width: "100%"}}>
-                            <button onClick={() => onDateChange(-1)} className="p-0.5 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
-                                &lt;
+                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`} style={{height: "100%", width: "100%"}}>
+                            <button onClick={() => onDateChange(-1)} className="text-gray-400 hover:text-white transition-colors p-0.5">
+                                ←
                             </button>
-                            <span className="min-w-0 text-center font-semibold text-white cursor-default text-sm whitespace-nowrap">{formattedDisplayDate}</span>
-                            <button onClick={() => onDateChange(1)} className="p-0.5 rounded-full hover:bg-gray-600 text-white flex-shrink-0">
-                                &gt;
+                            <span className="text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap">{formattedDisplayDate}</span>
+                            <button onClick={() => onDateChange(1)} className="text-gray-400 hover:text-white transition-colors p-0.5">
+                                →
                             </button>
                         </div>
                         {isNeoBuild && (
@@ -926,7 +927,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
 
                 {/* Resource Column (Left Col) */}
-                <div className="sticky left-0 z-30 bg-gray-800 border-r border-gray-700">
+                <div className="sticky left-0 z-30 bg-gray-800 border-r border-gray-700" style={{width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden"}}>
                     <AirframeColumn
                         resources={resources}
                         onReorder={onReorderResources}

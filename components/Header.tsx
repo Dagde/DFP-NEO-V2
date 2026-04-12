@@ -53,108 +53,56 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
-    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-    const userButtonRef = useRef<HTMLButtonElement>(null);
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const userButtonRef = useRef<HTMLDivElement>(null);
+    const dropdownMenuRef = useRef<HTMLDivElement>(null);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
 
-    // Update dropdown position when menu opens
-    useEffect(() => {
-        if (showUserMenu && userButtonRef.current) {
-            const rect = userButtonRef.current.getBoundingClientRect();
-            setDropdownPosition({
-                top: rect.bottom + 4,
-                left: rect.right - 192 // 192px = w-48
-            });
-        }
-    }, [showUserMenu]);
-
-    // Close menu when clicking outside - using mousedown to check before click fires
+    // Close user menu when clicking outside - must check BOTH the trigger and the portal dropdown
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            // Don't close if clicking inside the dropdown or the user button
-            if (dropdownRef.current && dropdownRef.current.contains(event.target as Node)) {
+            // Don't close if clicking inside the trigger button wrapper
+            if (userButtonRef.current && userButtonRef.current.contains(event.target as Node)) {
                 return;
             }
-            if (userButtonRef.current && userButtonRef.current.contains(event.target as Node)) {
+            // Don't close if clicking inside the portal dropdown (it's in document.body, outside userButtonRef)
+            if (dropdownMenuRef.current && dropdownMenuRef.current.contains(event.target as Node)) {
                 return;
             }
             setShowUserMenu(false);
         };
         if (showUserMenu) {
-            // Use mousedown instead of click to check before the click event fires
             document.addEventListener('mousedown', handleClickOutside);
         }
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [showUserMenu]);
 
-    // User dropdown menu component (rendered via portal)
-    const userDropdownMenu = showUserMenu && authUser ? (
-        <div 
-            ref={dropdownRef}
-            className="fixed rounded-lg shadow-xl border border-gray-700 z-[9999] overflow-hidden"
-            style={{ 
-                background: '#1a1f2e',
-                top: dropdownPosition.top,
-                left: dropdownPosition.left,
-                width: '192px'
-            }}
-        >
-            <div className="px-3 py-2 border-b border-gray-700">
-                <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
-                <p className="text-[10px] text-gray-400">{authUser.userId}</p>
-                <p className="text-[10px] text-blue-400">{authUser.role}</p>
-            </div>
-            <button
-                onClick={() => { 
-                    console.log('Change Password clicked');
-                    setShowUserMenu(false);
-                    onShowChangePassword?.();
-                }}
-                className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
-            >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-                Change Password
-            </button>
-            {isSuperAdmin && (
-                <button
-                    onClick={() => { 
-                        console.log('Admin Panel clicked');
-                        setShowUserMenu(false);
-                        onShowAdminPanel?.();
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
-                >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    Admin Panel
-                </button>
-            )}
-            <div className="border-t border-gray-700">
-                <button
-                    onClick={() => { setShowUserMenu(false); onLogout?.(); }}
-                    className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-900/20 flex items-center gap-2"
-                >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
-                    Sign Out
-                </button>
-            </div>
-        </div>
-    ) : null;
+    // Fetch the active commit hash from the server at runtime.
+    // /api/version reads RAILWAY_GIT_COMMIT_SHA from the live process environment,
+    // so it always reflects the ACTUAL running deployment - not a build-time baked value.
+    const [activeCommit, setActiveCommit] = useState<string>('...');
+    useEffect(() => {
+        fetch('/api/version')
+            .then(r => r.json())
+            .then(data => {
+                if (data.commit) setActiveCommit(data.commit);
+            })
+            .catch(() => setActiveCommit('err'));
+    }, []);
 
     return (
         <>
-            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-20 relative" style={{ gap: 0 }}>
+            {/*
+                LAYOUT:
+                The header sits between left sidebar (110px) and right sidebar (110px).
+                Header uses a 3-column flex layout:
+                  [144px location dropdown] [flex-1 centered buttons] [144px spacer]
+                The 144px spacer on the right balances the 144px location dropdown on the left,
+                so the button group is perfectly centered in the header.
+            */}
+            <header className="bg-gray-800 h-16 flex-shrink-0 flex items-center z-[60] relative">
 
-                {/* Location Dropdown - absolute left, 144px wide, aligned with date window below */}
-                <div className="absolute left-0 flex items-center justify-center" style={{ width: '144px' }}>
+                {/* LEFT: Location Dropdown - 144px, inline (not absolute) */}
+                <div className="flex-shrink-0 flex items-center justify-center" style={{ width: '144px', paddingLeft: '8px', paddingRight: '8px' }}>
                     <select
                         value={activeLocation}
                         onChange={(e) => onLocationChange(e.target.value)}
@@ -166,7 +114,7 @@ const Header: React.FC<HeaderProps> = ({
                     </select>
                 </div>
 
-                {/* ALL BUTTONS - centered in the full width, 1px gap between each */}
+                {/* CENTER: ALL BUTTONS - flex-1 centers them between the two 144px ends */}
                 <div className="flex-1 flex items-center justify-center">
                     <div className="flex items-center" style={{ gap: '1px' }}>
 
@@ -254,17 +202,13 @@ const Header: React.FC<HeaderProps> = ({
                             <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
                         </button>
 
-                        {/* 10. Logged In As / User Button */}
+                        {/* 10. Logged In As / User Button - shows active commit fetched from server */}
                         {authUser && (
-                            <div className="relative" style={{ marginLeft: '1px' }}>
+                            <div ref={userButtonRef} className="relative" style={{ marginLeft: '1px' }}>
                                 <button
-                                    ref={userButtonRef}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowUserMenu(!showUserMenu);
-                                    }}
+                                    onClick={() => setShowUserMenu(!showUserMenu)}
                                     className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"
-                                    title={`Logged in as ${authUser.displayName}`}
+                                    title={`Logged in as ${authUser.displayName} | Active commit: ${activeCommit}`}
                                 >
                                     <svg className="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -273,7 +217,7 @@ const Header: React.FC<HeaderProps> = ({
                                         {authUser.lastName || authUser.displayName || authUser.userId}
                                     </span>
                                     <span className="text-center leading-tight text-[7px] text-gray-400 font-mono">
-                                        {typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : ''}
+                                        {activeCommit}
                                     </span>
                                 </button>
                             </div>
@@ -282,10 +226,64 @@ const Header: React.FC<HeaderProps> = ({
                     </div>
                 </div>
 
+                {/* RIGHT: 144px spacer to balance the location dropdown on the left,
+                    ensuring the button group is perfectly centered in the header */}
+                <div className="flex-shrink-0" style={{ width: '144px' }}></div>
+
             </header>
             
-            {/* User Dropdown Menu - Rendered via Portal at document.body */}
-            {typeof document !== 'undefined' && ReactDOM.createPortal(userDropdownMenu, document.body)}
+            {/* User Menu Dropdown - rendered via portal to escape overflow-hidden containers */}
+            {showUserMenu && authUser && userButtonRef.current && ReactDOM.createPortal(
+                <div 
+                    ref={dropdownMenuRef}
+                    className="fixed rounded-lg shadow-xl border border-gray-700 z-[100] overflow-hidden"
+                    style={{ 
+                        background: '#1a1f2e',
+                        top: userButtonRef.current!.getBoundingClientRect().bottom + 4,
+                        right: window.innerWidth - userButtonRef.current!.getBoundingClientRect().right,
+                        width: '192px'
+                    }}
+                >
+                    <div className="px-3 py-2 border-b border-gray-700">
+                        <p className="text-xs font-semibold text-white">{authUser.displayName}</p>
+                        <p className="text-[10px] text-gray-400">{authUser.userId}</p>
+                        <p className="text-[10px] text-blue-400">{authUser.role}</p>
+                        <p className="text-[10px] text-gray-500 font-mono">commit: {activeCommit}</p>
+                    </div>
+                    <button
+                        onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}
+                        className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        Change Password
+                    </button>
+                    {isSuperAdmin && (
+                        <button
+                            onClick={() => { setShowUserMenu(false); onShowAdminPanel?.(); }}
+                            className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            Admin Panel
+                        </button>
+                    )}
+                    <div className="border-t border-gray-700">
+                        <button
+                            onClick={() => { setShowUserMenu(false); onLogout?.(); }}
+                            className="w-full px-3 py-2 text-left text-xs text-red-400 hover:bg-red-900/20 flex items-center gap-2"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                            Sign Out
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
             
             {/* Audit Flyout */}
             {showAuditFlyout && (

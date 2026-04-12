@@ -1,3 +1,4 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
@@ -17,6 +18,17 @@ interface StaffViewProps {
   onArchiveInstructor: (id: number) => void;
   onRestoreInstructor: (id: number) => void;
   onRequestSct?: (instructor: any) => void;
+  locations?: string[];
+  units?: string[];
+  selectedPersonForProfile?: any;
+  onProfileOpened?: () => void;
+  onViewLogbook?: (person: any) => void;
+  masterCurrencies?: any[];
+  currencyRequirements?: any[];
+  profileInitialTab?: 'currency' | null;
+  onProfileTabConsumed?: () => void;
+  currentUserId?: string;
+  currentUserName?: string;
   
   // Props for InstructorScheduleView
   date: string;
@@ -36,6 +48,8 @@ interface StaffViewProps {
 
 const StaffView: React.FC<StaffViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'schedule'>('profile');
+  const { isFrozen } = useSystemFreeze();
+  console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
 
   // Define rank order for sorting
   const rankOrder: { [key: string]: number } = {
@@ -47,15 +61,11 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   };
 
   // Filter and sort instructors by location for Staff Schedule
+  // Filter by location field (not unit) - ESL = East Sale, PEA = Pearce
   const locationFilteredInstructorsForSchedule = props.instructorsData
     .filter(i => {
-      if (props.school === 'ESL') {
-        // ESL: Only 1FTS and CFS staff
-        return i.unit === '1FTS' || i.unit === 'CFS';
-      } else {
-        // PEA: Only 2FTS staff
-        return i.unit === '2FTS';
-      }
+      const locationFullName = props.school === 'ESL' ? 'East Sale' : 'Pearce';
+      return i.location === locationFullName;
     })
     .sort((a, b) => {
       // First sort by Role - QFIs before SIM IPs
@@ -129,6 +139,17 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onArchiveInstructor={props.onArchiveInstructor}
             onRestoreInstructor={props.onRestoreInstructor}
             onRequestSct={props.onRequestSct}
+            locations={props.locations}
+            units={props.units}
+            selectedPersonForProfile={props.selectedPersonForProfile}
+            onProfileOpened={props.onProfileOpened}
+            onViewLogbook={props.onViewLogbook}
+            masterCurrencies={props.masterCurrencies}
+            currencyRequirements={props.currencyRequirements}
+            profileInitialTab={props.profileInitialTab}
+            onProfileTabConsumed={props.onProfileTabConsumed}
+            currentUserId={props.currentUserId}
+            currentUserName={props.currentUserName}
           />
         )}
         {activeTab === 'schedule' && (

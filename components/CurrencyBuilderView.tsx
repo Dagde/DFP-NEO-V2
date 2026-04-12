@@ -112,17 +112,32 @@ const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({ onBack, maste
                     <h1 className="text-2xl font-bold text-white">Currency Builder</h1>
                     <p className="text-sm text-gray-400">Define primitive and composite currency rules.</p>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center" style={{ gap: '1px' }}>
                     {isDirty && (
-                         <button onClick={handleSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md flex items-center space-x-2">
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586L7.707 10.293z" /><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" /></svg>
-                             <span>Save Changes</span>
-                         </button>
+                        <button
+                            onClick={handleSave}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                            style={{ borderRadius: '6px 0 0 6px', borderRightWidth: '1px', borderRightColor: '#6b7280' }}
+                        >
+                            Save
+                        </button>
                     )}
-                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md">
-                        &larr; Back to Settings
+                    <button
+                        onClick={onBack}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed"
+                        style={{
+                            borderRadius: isDirty ? '0' : '6px 0 0 6px',
+                            borderLeftWidth: isDirty ? '0' : undefined,
+                            borderRightWidth: '1px',
+                            borderRightColor: '#6b7280',
+                        }}
+                    >
+                        Back
                     </button>
-                       <AuditButton pageName="Currency Builder" />
+                    <AuditButton
+                        pageName="Currency Builder"
+                        style={{ borderRadius: '0 6px 6px 0', borderLeftWidth: '0' }}
+                    />
                 </div>
             </header>
 
@@ -198,6 +213,21 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
     const handleChange = (field: keyof CurrencyRequirement, value: any) => {
         onUpdate({ ...currency, [field]: value });
     };
+
+    // Auto-suggest input types based on expiry rule
+    const suggestedTypes: PostFlightInputType[] = currency.expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date'];
+    const activeTypes: PostFlightInputType[] = (currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0)
+        ? currency.postFlightInputTypes
+        : suggestedTypes;
+
+    const toggleInputType = (type: PostFlightInputType) => {
+        const current = activeTypes;
+        const next = current.includes(type)
+            ? current.filter((t) => t !== type)
+            : [...current, type];
+        handleChange('postFlightInputTypes', next.length > 0 ? next : suggestedTypes);
+    };
+
     return (
         <div className="space-y-4">
             <h2 className="text-2xl font-bold text-green-400">Edit Primitive Currency</h2>
@@ -211,6 +241,48 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
                 <option value="ROLLING_WINDOW">Rolling Window</option>
             </DropdownField>
             <InputField label="Event Codes (comma-separated)" value={currency.eventCodes.join(', ')} onChange={v => handleChange('eventCodes', v.split(',').map((s: string) => s.trim()).filter(Boolean))} />
+
+            {/* Post-Flight Integration */}
+            <div className="p-4 border border-amber-600/40 rounded-lg bg-amber-900/10 space-y-3">
+                <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wide">Post-Flight Page</h3>
+                <CheckboxField
+                    label="Show in Post-Flight entry page"
+                    checked={currency.showInPostFlight ?? false}
+                    onChange={v => handleChange('showInPostFlight', v)}
+                />
+                {currency.showInPostFlight && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">
+                            Input Type(s) in Post-Flight
+                            <span className="ml-2 text-xs text-gray-500">(select all that apply)</span>
+                        </label>
+                        <div className="flex flex-col space-y-2 mt-1">
+                            {([
+                                { type: 'date' as PostFlightInputType, icon: '\ud83d\udcc5', label: 'Date picker', desc: 'Records when this was last completed' },
+                                { type: 'count' as PostFlightInputType, icon: '\ud83d\udd22', label: 'Number input', desc: 'Records how many times completed today' },
+                                { type: 'checkbox' as PostFlightInputType, icon: '\u2611', label: 'Checkbox', desc: 'Ticking records the flight date as the currency date' },
+                            ] as { type: PostFlightInputType; icon: string; label: string; desc: string }[]).map(({ type, icon, label, desc }) => (
+                                <label key={type} className="flex items-start space-x-3 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={activeTypes.includes(type)}
+                                        onChange={() => toggleInputType(type)}
+                                        className="h-4 w-4 mt-0.5 rounded accent-amber-500 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-gray-300 leading-tight">
+                                        <span className="mr-1">{icon}</span>
+                                        <span className="font-medium">{label}</span>
+                                        <span className="text-gray-500 ml-1">&mdash; {desc}</span>
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                        <p className="text-xs text-amber-500/70 mt-2">
+                            Auto-suggested: <span className="font-semibold">{suggestedTypes.join(', ')}</span> based on expiry rule ({currency.expiryRule === 'ROLLING_WINDOW' ? 'rolling count' : 'last event date'})
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
@@ -222,6 +294,21 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
     const handleLogicTreeChange = (newLogicTree: LogicNode) => {
         handleChange('logicTree', newLogicTree);
     };
+
+    // Default for composite currencies is checkbox (most common)
+    const suggestedTypes: PostFlightInputType[] = ['checkbox'];
+    const activeTypes: PostFlightInputType[] = (currency.postFlightInputTypes && currency.postFlightInputTypes.length > 0)
+        ? currency.postFlightInputTypes
+        : suggestedTypes;
+
+    const toggleInputType = (type: PostFlightInputType) => {
+        const current = activeTypes;
+        const next = current.includes(type)
+            ? current.filter((t) => t !== type)
+            : [...current, type];
+        handleChange('postFlightInputTypes', next.length > 0 ? next : suggestedTypes);
+    };
+
     return (
         <div className="space-y-4">
             <h2 className="text-2xl font-bold text-purple-400">Edit Composite Currency</h2>
@@ -233,6 +320,48 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
                 <option value="LATEST_CHILD">Use Latest Expiry</option>
             </DropdownField>
             <LogicNodeEditor node={currency.logicTree} path={[]} onUpdate={handleLogicTreeChange} allCurrencies={allCurrencies} />
+
+            {/* Post-Flight Integration */}
+            <div className="p-4 border border-purple-600/40 rounded-lg bg-purple-900/10 space-y-3">
+                <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wide">Post-Flight Page</h3>
+                <CheckboxField
+                    label="Show in Post-Flight entry page"
+                    checked={currency.showInPostFlight ?? false}
+                    onChange={v => handleChange('showInPostFlight', v)}
+                />
+                {currency.showInPostFlight && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-400 mb-2">
+                            Input Type(s) in Post-Flight
+                            <span className="ml-2 text-xs text-gray-500">(select all that apply)</span>
+                        </label>
+                        <div className="flex flex-col space-y-2 mt-1">
+                            {([
+                                { type: 'checkbox' as PostFlightInputType, icon: '\u2611', label: 'Checkbox', desc: 'Ticking records the flight date as the currency date (recommended for composite)' },
+                                { type: 'date' as PostFlightInputType, icon: '\ud83d\udcc5', label: 'Date picker', desc: 'Records when this was last completed' },
+                                { type: 'count' as PostFlightInputType, icon: '\ud83d\udd22', label: 'Number input', desc: 'Records how many times completed today' },
+                            ] as { type: PostFlightInputType; icon: string; label: string; desc: string }[]).map(({ type, icon, label, desc }) => (
+                                <label key={type} className="flex items-start space-x-3 cursor-pointer group">
+                                    <input
+                                        type="checkbox"
+                                        checked={activeTypes.includes(type)}
+                                        onChange={() => toggleInputType(type)}
+                                        className="h-4 w-4 mt-0.5 rounded accent-purple-500 cursor-pointer"
+                                    />
+                                    <span className="text-sm text-gray-300 leading-tight">
+                                        <span className="mr-1">{icon}</span>
+                                        <span className="font-medium">{label}</span>
+                                        <span className="text-gray-500 ml-1">&mdash; {desc}</span>
+                                    </span>
+                                </label>
+                            ))}
+                        </div>
+                        <p className="text-xs text-purple-500/70 mt-2">
+                            Recommended for composite currencies: <span className="font-semibold">Checkbox</span> (flight date is recorded automatically)
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

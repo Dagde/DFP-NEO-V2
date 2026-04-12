@@ -1,6 +1,8 @@
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
 import { Course } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
+import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
 
 interface CoursesManagementViewProps {
@@ -11,6 +13,7 @@ interface CoursesManagementViewProps {
     onDeleteCourse: (courseName: string, archive: boolean) => void;
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
+    onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
 }
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
@@ -20,11 +23,16 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onAddCourse,
     onDeleteCourse,
     onNavigateToCourseRoster,
-    onNavigateToArchivedCourses
+    onNavigateToArchivedCourses,
+    onUpdateCourseDates
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
+    const { isFrozen } = useSystemFreeze();
+    const [showEditFlyout, setShowEditFlyout] = useState(false);
+    const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
     const [pinInput, setPinInput] = useState('');
     const [showPinDialog, setShowPinDialog] = useState(false);
+    const [showChoiceDialog, setShowChoiceDialog] = useState(false);
     const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
 
     // Group courses by type (only active courses, not archived)
@@ -75,6 +83,17 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         setShowPinDialog(true);
     };
 
+    const handleEditClick = (course: Course) => {
+        setCourseToEdit(course);
+        setShowEditFlyout(true);
+    };
+
+    const handleUpdateCourseDates = (startDate: string, gradDate: string) => {
+        if (courseToEdit) {
+            onUpdateCourseDates(courseToEdit.name, startDate, gradDate);
+        }
+    };
+
     const handlePinSubmit = async () => {
         if (pinInput !== '1234') { // Replace with actual PIN validation
             await showDarkConfirm(
@@ -88,20 +107,28 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
 
         if (!courseToDelete) return;
 
-        const archiveChoice = await showDarkConfirm(
-            'Delete Course',
-            `Do you want to archive or permanently delete "${courseToDelete}"?\n\nClick "Archive" to archive the course (can be restored later).\nClick "Delete" to permanently delete the course.`,
-            'warning',
-            'Archive',
-            'Delete'
-        );
-
-        const shouldArchive = archiveChoice === true;
-        onDeleteCourse(courseToDelete, shouldArchive);
-
-        // Reset state
+        // PIN is correct — close PIN dialog and show the Archive/Delete choice dialog
         setShowPinDialog(false);
         setPinInput('');
+        setShowChoiceDialog(true);
+    };
+
+    const handleArchiveCourse = () => {
+        if (!courseToDelete) return;
+        onDeleteCourse(courseToDelete, true); // archive = true
+        setShowChoiceDialog(false);
+        setCourseToDelete(null);
+    };
+
+    const handleDeleteCoursePermanently = () => {
+        if (!courseToDelete) return;
+        onDeleteCourse(courseToDelete, false); // archive = false — permanent delete
+        setShowChoiceDialog(false);
+        setCourseToDelete(null);
+    };
+
+    const handleCancelChoice = () => {
+        setShowChoiceDialog(false);
         setCourseToDelete(null);
     };
 
@@ -121,23 +148,40 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
             >
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
-                        <div className={`w-4 h-4 rounded ${courseColors[course.name] || 'bg-gray-400/50'}`}></div>
+                        <div 
+                            className={`w-4 h-4 rounded ${!(courseColors[course.name] || '').startsWith('#') ? (courseColors[course.name] || 'bg-gray-400/50') : ''}`}
+                            style={(courseColors[course.name] || '').startsWith('#') ? { backgroundColor: courseColors[course.name] } : {}}
+                        ></div>
                         <h3 className="text-lg font-semibold text-white group-hover:text-sky-400 transition-colors">
                             {course.name}
                         </h3>
                     </div>
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteClick(course.name);
-                        }}
-                        className="text-red-400 hover:text-red-300 transition-colors p-1"
-                        title="Delete Course"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditClick(course);
+                            }}
+                            className="text-sky-400 hover:text-sky-300 transition-colors p-1"
+                            title="Edit Course Dates"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(course.name);
+                            }}
+                            className="text-red-400 hover:text-red-300 transition-colors p-1"
+                            title="Delete Course"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="space-y-2 text-sm text-gray-300">
@@ -164,7 +208,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-gray-900 h-full overflow-hidden">
             {/* Header */}
             <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
                 <div className="flex justify-between items-center">
@@ -172,18 +216,18 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                         <h2 className="text-2xl font-bold text-white">Courses Management</h2>
                         <p className="text-sm text-gray-400">Manage active and archived courses</p>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-[1px]">
                         <button
                             onClick={onNavigateToArchivedCourses}
-                            className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors border border-gray-600"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                         >
-                            Archived Courses
+                            <span className="text-center leading-tight">Archived<br/>Courses</span>
                         </button>
                         <button
                             onClick={() => setShowAddCourseFlyout(true)}
-                            className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                         >
-                            + Add Course
+                            <span className="text-center leading-tight" style={{color: "#22c55e"}}>+ Add<br/>Course</span>
                         </button>
                     </div>
                 </div>
@@ -232,6 +276,20 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                 />
             )}
 
+            {/* Edit Course Flyout */}
+            {showEditFlyout && courseToEdit && (
+                <EditCourseFlyout
+                    courseName={courseToEdit.name}
+                    startDate={courseToEdit.startDate}
+                    gradDate={courseToEdit.gradDate}
+                    onClose={() => {
+                        setShowEditFlyout(false);
+                        setCourseToEdit(null);
+                    }}
+                    onSave={handleUpdateCourseDates}
+                />
+            )}
+
             {/* PIN Dialog */}
             {showPinDialog && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -261,6 +319,42 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
                             >
                                 Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive / Delete Choice Dialog */}
+            {showChoiceDialog && courseToDelete && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-yellow-600/50">
+                        <h3 className="text-xl font-semibold text-yellow-400 mb-2">Archive or Delete Course?</h3>
+                        <p className="text-gray-300 mb-6">
+                            What would you like to do with <span className="font-semibold text-sky-400">{courseToDelete}</span>?
+                        </p>
+                        <div className="text-sm text-gray-400 mb-6 space-y-2">
+                            <p><span className="text-amber-400 font-medium">Archive</span> — hides the course but keeps all data. Can be restored later.</p>
+                            <p><span className="text-red-400 font-medium">Delete</span> — permanently removes the course. This cannot be undone.</p>
+                        </div>
+                        <div className="flex gap-3 justify-end">
+                            <button
+                                onClick={handleCancelChoice}
+                                className="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleArchiveCourse}
+                                className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
+                            >
+                                Archive
+                            </button>
+                            <button
+                                onClick={handleDeleteCoursePermanently}
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                            >
+                                Delete
                             </button>
                         </div>
                     </div>

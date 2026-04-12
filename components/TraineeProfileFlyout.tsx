@@ -1,13 +1,16 @@
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import CurrencyPanel from './CurrencyPanel';
+import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
@@ -32,6 +35,11 @@ interface TraineeProfileFlyoutProps {
   onViewLogbook?: (person: Trainee) => void;
   isCreating?: boolean;
   activeCourses?: string[];
+  onOpenInstructorProfile?: (instructorName: string) => void;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -173,10 +181,13 @@ const EventDetailCard: React.FC<{
   );
 };
 
+// Returns "dd Mmm" e.g. "12 Apr"
 const formatDate = (dateString: string): string => {
     if (!dateString) return '';
     const date = new Date(`${dateString}T00:00:00Z`);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+    return `${day} ${month}`;
 };
 
 const LastEventCard: React.FC<{
@@ -242,9 +253,15 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   individualLmp,
   onViewLogbook,
   isCreating = false,
-  activeCourses = []
+  activeCourses = [],
+  onOpenInstructorProfile,
+  masterCurrencies = [],
+  currencyRequirements = [],
+  currentUserId,
+  currentUserName,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
+    const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
     // Shared 3D card style (matches Staff Profile)
@@ -253,9 +270,28 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     // Tab state — null means no tab open
     const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | null>(null);
-    const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
+    // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
+    const [currencyEditState, setCurrencyEditState] = useState<{
+      isEditing: boolean; isSaving: boolean;
+      onEdit: () => void; onSave: () => void; onCancel: () => void;
+    } | null>(null);
+    // Local currency status override — updated after successful save without triggering full onUpdateTrainee
+    const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+    const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
+    // Audit flyout visibility
+    const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
+    const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
-    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => prev === tab ? null : tab);
+    // Ref for scrollable content area - used to scroll to top when a tab opens
+    const contentScrollRef = useRef<HTMLDivElement>(null);
+
+    const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
+      const next = prev === tab ? null : tab;
+      if (next !== null) {
+        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+      }
+      return next;
+    });
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
     
@@ -274,12 +310,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [flight, setFlight] = useState(trainee.flight || '');
     const [phoneNumber, setPhoneNumber] = useState(trainee.phoneNumber || '');
     const [email, setEmail] = useState(trainee.email || '');
+    const [traineeCallsign, setTraineeCallsign] = useState(trainee.traineeCallsign || '');
+    const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
+    const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
     
     const [priorExperience, setPriorExperience] = useState<LogbookExperience>(trainee.priorExperience || initialExperience);
     const exp = priorExperience;
 
     const allPermissions = useMemo(() => ['Trainee', 'Staff', 'Ops', 'Course Supervisor', 'Admin', 'Super Admin'], []);
+    const allRoles = useMemo(() => ['Course Leader', 'Section Leader', 'Squadron Leader', 'Flight Leader'], []);
 
     const callsignData = useMemo(() => personnelData.get(trainee.fullName), [personnelData, trainee.fullName]);
 
@@ -396,9 +436,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         resetState();
         setIsEditing(isCreating);
     }, [trainee, isCreating]);
-    // Log view on component mount (only if not creating)
+    
+    // Use ref to prevent double-logging in React StrictMode
+    const hasLoggedViewRef = useRef(false);
     useEffect(() => {
-        if (!isCreating) {
+        if (!isCreating && !hasLoggedViewRef.current) {
+            hasLoggedViewRef.current = true;
             logAudit({
                 action: 'View',
                 description: `Viewed trainee profile for ${trainee.rank} ${trainee.name}`,
@@ -537,6 +580,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             flight,
             phoneNumber,
             email,
+            service,
+            traineeCallsign,
+            secondaryCallsign,
+            crew,
             permissions,
             priorExperience
         };
@@ -736,34 +783,59 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const buttonClasses = "w-full px-4 py-2 rounded-md transition-colors text-sm font-semibold shadow-md text-center";
 
     const permissionsWindow = (
-        <fieldset className="p-3 border border-gray-600 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
-            <div className="mt-1 min-h-[10rem] p-2">
-                {isEditing ? (
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                        {allPermissions.map(perm => (
-                            <label key={perm} className="flex items-center space-x-3 cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={permissions.includes(perm)} 
-                                    onChange={e => handlePermissionChange(perm, e.target.checked)} 
-                                    className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
-                                />
-                                <span className="text-white">{perm}</span>
-                            </label>
-                        ))}
-                    </div>
-                ) : (
-                    <ul className="space-y-2 text-white list-disc list-inside">
-                        {(trainee.permissions && trainee.permissions.length > 0) ? (
-                            trainee.permissions.map(perm => <li key={perm}>{perm}</li>)
-                        ) : (
-                            <li className="list-none italic text-gray-500">No permissions assigned.</li>
-                        )}
-                    </ul>
-                )}
-            </div>
-        </fieldset>
+        <div className="grid grid-cols-2 gap-3">
+            <fieldset className="p-3 border border-gray-600 rounded-lg">
+                <legend className="px-2 text-sm font-semibold text-gray-300">Permissions</legend>
+                <div className="mt-1 min-h-[10rem] p-2">
+                    {isEditing ? (
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+                            {allPermissions.map(perm => (
+                                <label key={perm} className="flex items-center space-x-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={permissions.includes(perm)} 
+                                        onChange={e => handlePermissionChange(perm, e.target.checked)} 
+                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                    />
+                                    <span className="text-white text-[11px]">{perm}</span>
+                                </label>
+                            ))}
+                        </div>
+                    ) : (
+                        <ul className="space-y-2 text-white list-disc list-inside">
+                            {(trainee.permissions && trainee.permissions.length > 0) ? (
+                                trainee.permissions.map(perm => <li key={perm}>{perm}</li>)
+                            ) : (
+                                <li className="list-none italic text-gray-500">No permissions assigned.</li>
+                            )}
+                        </ul>
+                    )}
+                </div>
+            </fieldset>
+            <fieldset className="p-3 border border-gray-600 rounded-lg">
+                <legend className="px-2 text-sm font-semibold text-gray-300">Roles</legend>
+                <div className="mt-1 min-h-[10rem] p-2">
+                    {isEditing ? (
+                        <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+                            {allRoles.map(role => (
+                                <label key={role} className="flex items-center space-x-3 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={false} 
+                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                    />
+                                    <span className="text-white text-[11px]">{role}</span>
+                                </label>
+                            ))}
+                        </div>
+                    ) : (
+                        <ul className="space-y-2 text-white list-disc list-inside">
+                            <li className="list-none italic text-gray-500">No roles assigned.</li>
+                        </ul>
+                    )}
+                </div>
+            </fieldset>
+        </div>
     );
 
     return (
@@ -779,25 +851,89 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* MAIN CONTENT — scrollable */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  <div ref={contentScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+                    {/* Transparent freeze overlay — blocks all interaction with content */}
+                    {isFrozen && (
+                      <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                    )}
 
                     {/* ── TAB PANELS (shown inline above profile when a tab is active) ── */}
                     {activeTab === 'currency' && (
-                      <div className={card3d + " p-4"} style={card3dStyle}>
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-sm font-bold text-white">Currency — {trainee.name}</h4>
-                          <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                      <div className={card3d + " p-3"} style={card3dStyle}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-bold text-white">Currency &mdash; {trainee.name}</h4>
+                          <div className="flex items-center gap-[1px]">
+                            {currencyEditState && !currencyEditState.isEditing && (
+                              <button
+                                onClick={currencyEditState.onEdit}
+                                className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                title="Edit currency dates"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {currencyEditState && currencyEditState.isEditing && (
+                              <>
+                                <button
+                                  onClick={currencyEditState.onCancel}
+                                  disabled={currencyEditState.isSaving}
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                  title="Cancel editing"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={currencyEditState.onSave}
+                                  disabled={currencyEditState.isSaving}
+                                  className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50"
+                                  title="Save currency dates"
+                                >
+                                  {currencyEditState.isSaving ? 'Saving\u2026' : 'Save'}
+                                </button>
+                              </>
+                            )}
+                            <button
+                              onClick={() => setActiveTab(null)}
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                              title="Close currency panel"
+                            >
+                              Close
+                            </button>
+                            <button
+                              onClick={() => setShowCurrencyAudit(true)}
+                              className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                              title="View currency audit log"
+                            >
+                              Audit
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-gray-400 text-xs italic mb-4">Currency records for this trainee.</p>
-                        <div className="space-y-2">
-                          {(trainee.currencyStatus || []).length > 0 ? (trainee.currencyStatus || []).map((cs: any) => (
-                            <div key={cs.currencyId} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
-                              <span className="text-white font-medium">{cs.currencyId}</span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cs.status === 'Current' ? 'bg-green-600 text-white' : cs.status === 'Expiring' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}`}>{cs.status}</span>
-                            </div>
-                          )) : <p className="text-gray-500 text-xs italic text-center py-4">No currency records found.</p>}
-                        </div>
+                        <CurrencyPanel
+                          key={`currency-panel-${trainee.idNumber}`}
+                          personId={(trainee as any).id}
+                          idNumber={trainee.idNumber}
+                          personType="trainee"
+                          personName={trainee.name}
+                          masterCurrencies={masterCurrencies}
+                          currencyRequirements={currencyRequirements}
+                          initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? trainee.currencyStatus}
+                          onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
+                            localCurrencyStatusRef.current = newStatus;
+                            setLocalCurrencyStatus(newStatus);
+                          }}
+                          onEditStateChange={setCurrencyEditState}
+                          currentUserId={currentUserId}
+                          currentUserName={currentUserName}
+                        />
                       </div>
+                    )}
+
+                    {showCurrencyAudit && (
+                      <CurrencyAuditFlyout
+                        personId={String((trainee as any).id || trainee.idNumber)}
+                        personName={trainee.name}
+                        onClose={() => setShowCurrencyAudit(false)}
+                      />
                     )}
 
                     {activeTab === 'unavailable' && (
@@ -807,12 +943,24 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                         </div>
                         <div className="space-y-2">
-                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => (
-                            <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
-                              <span className="text-white">{p.startDate}{p.endDate !== p.startDate ? ` → ${p.endDate}` : ''}</span>
-                              <span className="text-gray-300">{p.reason}</span>
-                            </div>
-                          )) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
+                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => {
+                            let periodDisplay = '';
+                            if (p.allDay) {
+                              const sd = formatDate(p.startDate);
+                              const ed = formatDate(p.endDate);
+                              periodDisplay = p.startDate !== p.endDate ? `${sd} – ${ed} @ All Day` : `${sd} @ All Day`;
+                            } else {
+                              const sd = `${formatMilitaryTime(p.startTime)} ${formatDate(p.startDate)}`;
+                              const ed = `${formatMilitaryTime(p.endTime)} ${formatDate(p.endDate)}`;
+                              periodDisplay = p.startDate !== p.endDate ? `${sd} to ${ed}` : `${sd} - ${ed}`;
+                            }
+                            return (
+                              <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
+                                <span className="text-white font-medium">{p.reason}</span>
+                                <span className="text-gray-300 font-mono">{periodDisplay}</span>
+                              </div>
+                            );
+                          }) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
                         </div>
                         <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
                       </div>
@@ -886,8 +1034,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
                               {(['FLTLT','FLGOFF','PLTOFF','WOFF','FSGT','SGT','CPL','LAC','AC','OCdt','CDT'] as TraineeRank[]).map(r => <option key={r} value={r}>{r}</option>)}
                             </Dropdown>
-                            <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
-                              <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
+                            <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
+                              <option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
                             </Dropdown>
                             <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
                               {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
@@ -897,9 +1045,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </Dropdown>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
+                              <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
+                            </Dropdown>
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
                             <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
                             <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <InputField label="Callsign" value={traineeCallsign} onChange={e => setTraineeCallsign(e.target.value)} />
+                            <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
+                            <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
                           </div>
                           <div className="bg-gray-700/30 rounded p-3">
                             <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
@@ -936,35 +1094,50 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                               {/* Row 1 */}
                               <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{trainee.idNumber}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Course</span><span className={`font-semibold px-1 rounded text-white text-[10px] ${courseColors[trainee.course] || 'bg-gray-500'}`}>{trainee.course}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Course</span><span 
+                                className={`font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
+                                style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
+                              >{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
-                              <div></div>
+                              <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
                               {/* Row 2 */}
                               <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{trainee.rank}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Service</span><span className="text-white font-medium">{trainee.service || 'RAAF'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Unit</span><span className="text-white font-medium">{trainee.unit}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Crew</span><span className="text-white font-medium">{trainee.crew || 'N/A'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Location</span><span className="text-white font-medium">{trainee.location}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Flight</span><span className="text-white font-medium">{trainee.flight || 'N/A'}</span></div>
                               {/* Row 3 */}
-                              <div className="col-span-2"><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
-                              <div className="col-span-4"><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Phone Number</span><span className="text-white font-medium">{trainee.phoneNumber || 'N/A'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Email</span><span className="text-white font-medium">{trainee.email || 'N/A'}</span></div>
+                              <div></div>
+                              <div></div>
+                              <div></div>
+                              <div></div>
                             </div>
                           </div>
 
-                          {/* Permissions panel */}
-                          <div className="flex-shrink-0 w-36">
-                            <div className={card3d + " p-2 h-full"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                              <div className="text-[10px] text-gray-400 font-semibold mb-2">Permissions</div>
-                              <div className="space-y-1">
+                          {/* Permissions and Roles panels */}
+                          <div className="flex-shrink-0 w-40 flex flex-col gap-2">
+                            {/* Permissions panel */}
+                            <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
+                              <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
                                 {(trainee.permissions || []).length > 0
                                   ? (trainee.permissions || []).map(p => (
                                       <div key={p} className="text-white text-[10px]">• {p}</div>
                                     ))
-                                  : <div className="text-gray-500 text-[10px] italic">None</div>
+                                  : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
                                 }
+                              </div>
+                            </div>
+                            {/* Roles panel */}
+                            <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
+                              <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
+                                <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
                               </div>
                             </div>
                           </div>
@@ -972,129 +1145,190 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
                     </div>
 
-                                        {/* ── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ── */}
-                    {!isEditing && !isCreating && (
-                      <div className={card3d + " p-3"} style={card3dStyle}>
-                        <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
-                        <div className="grid grid-cols-4 gap-2">
-                          {/* Primary Instructor 1 */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
-                            {trainee.primaryInstructor ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                  {trainee.primaryInstructor.toLowerCase().includes('burns') ? (
-                                    <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.primaryInstructor} className="w-full h-full object-cover object-top" />
-                                  ) : (
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                  )}
-                                </div>
-                                <span className="text-white text-[10px] font-medium leading-tight">{trainee.primaryInstructor}</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                </div>
-                                <span className="text-gray-600 text-[10px] italic">Not assigned</span>
-                              </div>
-                            )}
-                          </div>
-                          {/* Primary Instructor 2 — empty slot */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                              </div>
-                              <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+
+                      {/* ─── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ─── */}
+                      {!isEditing && !isCreating && (
+                        <div className={card3d + " p-3"} style={card3dStyle}>
+                          <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* Primary Instructors */}
+                            <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[9px] text-sky-400 font-semibold mb-1.5">Primary</div>
+                              {(() => {
+                                const primaries = Array.isArray(trainee.primaryInstructor)
+                                  ? trainee.primaryInstructor
+                                  : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+                                return primaries.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    {primaries.map((name, idx) => (
+                                      <div key={idx} className="flex items-center gap-2">
+                                        <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                          {name.toLowerCase().includes('burns') ? (
+                                            <img src="https://dfp-neo.com/burns-profile.png" alt={name} className="w-full h-full object-cover object-top" />
+                                          ) : (
+                                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                          )}
+                                        </div>
+                                        {onOpenInstructorProfile ? (
+                                          <button
+                                            onClick={() => { onOpenInstructorProfile(name); onClose(); }}
+                                            className="text-sky-300 hover:text-sky-100 hover:underline text-[10px] font-medium leading-tight text-left"
+                                          >{name}</button>
+                                        ) : (
+                                          <span className="text-white text-[10px] font-medium leading-tight">{name}</span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    </div>
+                                    <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
-                          </div>
-                          {/* Secondary Instructor 1 */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
-                            {trainee.secondaryInstructor ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                  {trainee.secondaryInstructor.toLowerCase().includes('burns') ? (
-                                    <img src="https://dfp-neo.com/burns-profile.png" alt={trainee.secondaryInstructor} className="w-full h-full object-cover object-top" />
-                                  ) : (
-                                    <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                  )}
-                                </div>
-                                <span className="text-white text-[10px] font-medium leading-tight">{trainee.secondaryInstructor}</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                                </div>
-                                <span className="text-gray-600 text-[10px] italic">Not assigned</span>
-                              </div>
-                            )}
-                          </div>
-                          {/* Secondary Instructor 2 — empty slot */}
-                          <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                            <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
-                                <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                              </div>
-                              <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                            {/* Secondary Instructors */}
+                            <div className={card3d + " p-2"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
+                              <div className="text-[9px] text-amber-400 font-semibold mb-1.5">Secondary</div>
+                              {(() => {
+                                const secondaries = Array.isArray(trainee.secondaryInstructor)
+                                  ? trainee.secondaryInstructor
+                                  : trainee.secondaryInstructor ? [trainee.secondaryInstructor] : [];
+                                return secondaries.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    {secondaries.map((name, idx) => (
+                                      <div key={idx} className="flex items-center gap-2">
+                                        <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                          {name.toLowerCase().includes('burns') ? (
+                                            <img src="https://dfp-neo.com/burns-profile.png" alt={name} className="w-full h-full object-cover object-top" />
+                                          ) : (
+                                            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                          )}
+                                        </div>
+                                        {onOpenInstructorProfile ? (
+                                          <button
+                                            onClick={() => { onOpenInstructorProfile(name); onClose(); }}
+                                            className="text-amber-300 hover:text-amber-100 hover:underline text-[10px] font-medium leading-tight text-left"
+                                          >{name}</button>
+                                        ) : (
+                                          <span className="text-white text-[10px] font-medium leading-tight">{name}</span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0">
+                                      <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+                                    </div>
+                                    <span className="text-gray-600 text-[10px] italic">Not assigned</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* ── SECTION 3: LOGBOOK VIEW (always visible, not editing) ── */}
-                    {!isEditing && (
-                      <div className={card3d + " p-3"} style={card3dStyle}>
-                        <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
-                        <div className="flex gap-2">
-                          <CircularGauge title="Day Flying" mainValue={exp.day.p1 + exp.day.p2 + exp.day.dual}
-                            subItems={[{ label: 'P1', value: exp.day.p1 }, { label: 'P2', value: exp.day.p2 }, { label: 'Dual', value: exp.day.dual }]} />
-                          <CircularGauge title="Night Flying" mainValue={exp.night.p1 + exp.night.p2 + exp.night.dual}
-                            subItems={[{ label: 'P1', value: exp.night.p1 }, { label: 'P2', value: exp.night.p2 }, { label: 'Dual', value: exp.night.dual }]} />
-                          <CircularGauge title="Totals" mainValue={exp.total}
-                            subItems={[{ label: 'TOTAL', value: exp.total }, { label: 'Captain', value: exp.captain }, { label: 'Instructor', value: exp.instructor }]} />
-                          <InstrumentGauge sim={exp.instrument.sim} actual={exp.instrument.actual} />
-                          <CircularGauge title="Simulator" mainValue={exp.simulator.total}
-                            subItems={[{ label: 'P1', value: exp.simulator.p1 }, { label: 'P2', value: exp.simulator.p2 }, { label: 'Dual', value: exp.simulator.dual }, { label: 'Total', value: exp.simulator.total }]} />
+                      {/* ─── SECTION 3: LOGBOOK VIEW (always visible, not editing) ─── */}
+                      {!isEditing && (
+                        <div className={card3d + " p-3"} style={card3dStyle}>
+                          <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
+                          <div className="flex gap-2">
+                            {/* Day Flying */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Day Flying</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{(exp.day.p1 + exp.day.p2 + exp.day.dual).toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P1</span><span className="text-white font-medium">{exp.day.p1.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P2</span><span className="text-white font-medium">{exp.day.p2.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Dual</span><span className="text-white font-medium">{exp.day.dual.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Night Flying */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Night Flying</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{(exp.night.p1 + exp.night.p2 + exp.night.dual).toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P1</span><span className="text-white font-medium">{exp.night.p1.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P2</span><span className="text-white font-medium">{exp.night.p2.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Dual</span><span className="text-white font-medium">{exp.night.dual.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Totals */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Totals</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{exp.total.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">TOTAL</span><span className="text-white font-medium">{exp.total.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Captain</span><span className="text-white font-medium">{exp.captain.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Instructor</span><span className="text-white font-medium">{exp.instructor.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Instrument */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Instrument</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2">
+                                <span className="text-gray-400 text-[9px] leading-none">Sim</span>
+                                <span className="text-white font-bold text-sm">{exp.instrument.sim.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Actual</span><span className="text-white font-medium">{exp.instrument.actual.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Simulator */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Simulator</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{exp.simulator.total.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P1</span><span className="text-white font-medium">{exp.simulator.p1.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">P2</span><span className="text-white font-medium">{exp.simulator.p2.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Dual</span><span className="text-white font-medium">{exp.simulator.dual.toFixed(1)}</span></div>
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Total</span><span className="text-white font-medium">{exp.simulator.total.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                  </div>
+                    </div>
 
-                  {/* RIGHT SIDEBAR — buttons */}
-                  <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col space-y-[1px]">
-                    {!isEditing && (
-                      <>
-                        <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
-                        <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                        <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
-                        <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
-                        <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
-                        <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
-                      </>
-                    )}
-                    <div className="flex-grow"></div>
-                    {isEditing ? (
-                      <>
-                        <button onClick={handleSave} className={btnClass}>Save</button>
-                        <button onClick={handleCancel} className={btnClass}>Cancel</button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => setIsEditing(true)} className={btnClass}>Edit</button>
-                        <button onClick={onClose} className={btnClass}>Close</button>
-                      </>
-                    )}
+                    {/* RIGHT SIDEBAR — buttons */}
+                    <div className="w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col space-y-[1px]">
+                      {!isEditing && (
+                        <>
+                          <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
+                          <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
+                          <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
+                          <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
+                          <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
+                          <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
+                          <div className="mt-[1px]"></div>
+                          <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
+                          <button onClick={onClose} className={btnClass}>Close</button>
+                        </>
+                      )}
+                      {isEditing && (
+                        <>
+                          <button onClick={handleSave} className={btnClass}>Save</button>
+                          <button onClick={handleCancel} className={btnClass}>Cancel</button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}

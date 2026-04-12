@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Trainee, Score, SyllabusItemDetail, Instructor } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 interface AddRemedialPackageFlyoutProps {
   trainee: Trainee;
@@ -23,6 +24,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   onClose,
   onSave
 }) => {
+  const { isFrozen } = useSystemFreeze();
   const [eventToRemediateId, setEventToRemediateId] = useState<string>('');
   const [remedialEvents, setRemedialEvents] = useState<{ id: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]>([]);
 
@@ -166,7 +168,11 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
           <button onClick={onClose} className="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
         </div>
 
-        <div className="p-6 space-y-6 flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6 flex-1 overflow-y-auto relative">
+          {/* Transparent freeze overlay */}
+          {isFrozen && (
+            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+          )}
           {/* Step 1: Select Event to Remediate */}
           <fieldset className="p-4 border border-gray-600 rounded-lg">
             <legend className="px-2 text-sm font-semibold text-gray-300">Step 1: Select Failed Event</legend>
@@ -264,8 +270,8 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
         </div>
         
         <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
-            <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Cancel</button>
-            <button onClick={handleSavePackage} disabled={!eventToRemediate || remedialEvents.length === 0} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save Package</button>
+            <button onClick={onClose} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
+            <button onClick={handleSavePackage} disabled={!eventToRemediate || remedialEvents.length === 0} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed">Save Package</button>
         </div>
       </div>
     </div>

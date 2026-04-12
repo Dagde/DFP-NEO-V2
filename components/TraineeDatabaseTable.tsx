@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useSystemFreeze } from "../hooks/useSystemFreeze";
+import React, { useState, useEffect, useMemo } from 'react';
+import { logAudit } from '../utils/auditLogger';
 
 interface TraineeDatabaseTableProps {
-  // No props needed - fetches data from API
+  currentUserPermission?: string;
+  onShowSuccess?: (message: string) => void;
+  onDataChanged?: () => void;  // Callback to refresh parent data
+  onNavigateToProfile?: (trainee: any) => void;  // Navigate to trainee profile for editing
 }
 
 interface DatabaseTrainee {
@@ -21,18 +26,30 @@ interface DatabaseTrainee {
   location?: string;
   phoneNumber?: string;
   email?: string;
-  primaryInstructor?: string;
-  secondaryInstructor?: string;
+  primaryInstructor?: string | string[];
+  secondaryInstructor?: string | string[];
   isActive?: boolean;
   userId?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
+type SortField = 'name' | 'role' | 'rank' | 'course' | 'unit' | 'idNumber' | 'primaryInstructor' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUserPermission, onShowSuccess, onDataChanged, onNavigateToProfile }) => {
   const [traineeData, setTraineeData] = useState<DatabaseTrainee[]>([]);
+  const { isFrozen } = useSystemFreeze();
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  
+  // Sorting state
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const isAdmin = currentUserPermission === 'Super Admin' || currentUserPermission === 'Admin';
 
   useEffect(() => {
     fetchDatabaseTrainees();
@@ -94,6 +111,133 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
     }
   };
 
+  const handleDeleteTrainee = async (traineeId: string, traineeName: string, traineeRank?: string) => {
+    try {
+      setDeletingId(traineeId);
+      
+      const response = await fetch(`/api/trainees/${traineeId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete trainee');
+      }
+
+      // Log the deletion
+      logAudit({ action: 'Delete', description: `Deleted trainee ${traineeRank ? traineeRank + ' ' : ''}${traineeName}`, page: 'Trainee Roster' });
+
+      // Remove from local state
+      setTraineeData(prev => prev.filter(t => t.id !== traineeId));
+      
+      if (onShowSuccess) {
+        onShowSuccess(`Deleted trainee: ${traineeName}`);
+      }
+      
+      // Notify parent to refresh data (Trainee Profile list, etc.)
+      if (onDataChanged) {
+        onDataChanged();
+      }
+      
+      console.log(`✅ Deleted trainee: ${traineeName}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Error deleting trainee:', err);
+      setError(msg);
+    } finally {
+      setDeletingId(null);
+      setShowDeleteConfirm(null);
+    }
+  };
+
+  // Sorting function
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Sorted data using useMemo
+  const sortedTraineeData = useMemo(() => {
+    const sorted = [...traineeData].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name?.toLowerCase() || '';
+          bValue = b.name?.toLowerCase() || '';
+          break;
+        case 'role':
+          aValue = 'trainee';
+          bValue = 'trainee';
+          break;
+        case 'rank':
+          aValue = (a.rank || a.service || '')?.toLowerCase() || '';
+          bValue = (b.rank || b.service || '')?.toLowerCase() || '';
+          break;
+        case 'course':
+          aValue = (a.course || '')?.toLowerCase() || '';
+          bValue = (b.course || '')?.toLowerCase() || '';
+          break;
+        case 'unit':
+          aValue = (a.unit || a.flight || '')?.toLowerCase() || '';
+          bValue = (b.unit || b.flight || '')?.toLowerCase() || '';
+          break;
+        case 'idNumber':
+          aValue = a.idNumber || 0;
+          bValue = b.idNumber || 0;
+          break;
+        case 'primaryInstructor':
+          aValue = (Array.isArray(a.primaryInstructor) ? a.primaryInstructor[0] : a.primaryInstructor)?.toLowerCase() || '';
+          bValue = (Array.isArray(b.primaryInstructor) ? b.primaryInstructor[0] : b.primaryInstructor)?.toLowerCase() || '';
+          break;
+        case 'status':
+          aValue = a.isPaused ? 'paused' : 'active';
+          bValue = b.isPaused ? 'paused' : 'active';
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [traineeData, sortField, sortDirection]);
+
+  // Sort indicator component
+  const SortIndicator = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <span className="ml-1 text-gray-500">⇅</span>;
+    }
+    return (
+      <span className="ml-1 text-sky-400">
+        {sortDirection === 'asc' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
+  // Clickable header component
+  const SortableHeader = ({ field, children, className = '' }: { field: SortField; children: React.ReactNode; className?: string }) => (
+    <th
+      className={`px-4 py-3 text-left text-sm font-semibold tracking-wide cursor-pointer hover:bg-green-800/40 select-none transition-colors ${className}`}
+      onClick={() => handleSort(field)}
+    >
+      <span className="flex items-center">
+        {children}
+        <SortIndicator field={field} />
+      </span>
+    </th>
+  );
+
   if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
@@ -152,14 +296,16 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-4">
           <div className="p-4 bg-gray-800/80 border-b border-gray-700">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-bold text-sky-400">Trainee Database</h3>
+              <div>
+                <h3 className="text-lg font-bold text-sky-400">Trainee Database</h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  All trainee records from the database (click column headers to sort)
+                </p>
+              </div>
               <span className="text-xs font-mono bg-gray-700 text-gray-300 px-3 py-1 rounded-full">
                 {traineeData.length} Trainees
               </span>
             </div>
-            <p className="text-sm text-gray-400 mt-1">
-              All trainee records from the database
-            </p>
           </div>
         </div>
 
@@ -168,34 +314,23 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
         <table className="w-full">
           <thead>
             <tr className="bg-green-900/40 text-white">
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                NAME
-              </th>
-                 <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                   ROLE
-                 </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                RANK/SERVICE
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                COURSE/LMP
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                UNIT/FLIGHT
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                PMKEYS/ID
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                PRIMARY INSTR
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
-                STATUS
-              </th>
+              <SortableHeader field="name">NAME</SortableHeader>
+              <SortableHeader field="role">ROLE</SortableHeader>
+              <SortableHeader field="rank">RANK/SERVICE</SortableHeader>
+              <SortableHeader field="course">COURSE/LMP</SortableHeader>
+              <SortableHeader field="unit">UNIT/FLIGHT</SortableHeader>
+              <SortableHeader field="idNumber">PMKEYS/ID</SortableHeader>
+              <SortableHeader field="primaryInstructor">PRIMARY INSTR</SortableHeader>
+              <SortableHeader field="status">STATUS</SortableHeader>
+              {isAdmin && (
+                <th className="px-4 py-3 text-left text-sm font-semibold tracking-wide">
+                  ACTIONS
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
-            {traineeData.map((trainee, index) => {
+            {sortedTraineeData.map((trainee, index) => {
               const rowBackgroundColor = index % 2 === 0
                 ? 'bg-green-950/30'
                 : 'bg-green-900/20';
@@ -208,9 +343,9 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
                   <td className="px-4 py-3 text-sm text-white">
                     {trainee.name}
                   </td>
-                     <td className="px-4 py-3 text-sm text-white">
-                       Trainee
-                     </td>
+                  <td className="px-4 py-3 text-sm text-white">
+                    Trainee
+                  </td>
                   <td className="px-4 py-3 text-sm text-white">
                     {[trainee.rank, trainee.service].filter(Boolean).join(' / ') || 'N/A'}
                   </td>
@@ -226,7 +361,10 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
                     {trainee.idNumber || 'N/A'}
                   </td>
                   <td className="px-4 py-3 text-sm text-white">
-                    {trainee.primaryInstructor || <span className="text-gray-500 italic">Unassigned</span>}
+                    {(() => {
+                      const p = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
+                      return p.length > 0 ? p.join(', ') : <span className="text-gray-500 italic">Unassigned</span>;
+                    })()}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {trainee.isPaused ? (
@@ -239,6 +377,46 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = () => {
                       </span>
                     )}
                   </td>
+                  {isAdmin && (
+                    <td className="px-4 py-3 text-sm">
+                      <div className="flex items-center gap-1">
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => onNavigateToProfile?.({ ...trainee, _dataSource: 'database' })}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-blue-400 transition-colors"
+                          title="Edit this trainee record"
+                        >
+                          Edit
+                        </button>
+                        {/* Delete Button */}
+                        {showDeleteConfirm === trainee.id ? (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleDeleteTrainee(trainee.id, trainee.name, trainee.rank)}
+                              disabled={deletingId === trainee.id}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white text-xs rounded transition-colors disabled:opacity-50"
+                            >
+                              {deletingId === trainee.id ? 'Deleting...' : 'Confirm'}
+                            </button>
+                            <button
+                              onClick={() => setShowDeleteConfirm(null)}
+                              className="px-2 py-1 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setShowDeleteConfirm(trainee.id)}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed hover:text-red-600 transition-colors"
+                            title="Delete this trainee record"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               );
             })}

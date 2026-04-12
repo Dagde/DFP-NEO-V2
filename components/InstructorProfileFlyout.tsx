@@ -1,10 +1,13 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience } from '../types';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { InstructorRank, Instructor, InstructorCategory, SeatConfig, UnavailabilityPeriod, UnavailabilityReason, Trainee, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
+import CurrencyPanel from './CurrencyPanel';
+import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -21,6 +24,13 @@ interface InstructorProfileFlyoutProps {
   traineesData: Trainee[];
   onViewLogbook?: (person: Instructor) => void;
   onRequestSct: () => void;
+  onNavigateToTrainee?: (trainee: Trainee) => void;
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
+  profileInitialTab?: 'currency' | null;
+  onProfileTabConsumed?: () => void;
+  currentUserId?: string;
+  currentUserName?: string;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -96,10 +106,13 @@ const InstrumentGauge: React.FC<{ sim: number; actual: number }> = ({ sim, actua
   </div>
 );
 
+// Returns "dd Mmm" e.g. "12 Apr"
 const formatDate = (dateString: string): string => {
   if (!dateString) return '';
   const date = new Date(`${dateString}T00:00:00Z`);
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+  return `${day} ${month}`;
 };
 
 const initialExperience: LogbookExperience = {
@@ -117,9 +130,13 @@ const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 6
 export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = ({
   instructor, onClose, school, personnelData, onUpdateInstructor,
   onNavigateToCurrency, originRect, isClosing, isCreating = false,
-  locations, units, traineesData, onViewLogbook, onRequestSct
+  locations, units, traineesData, onViewLogbook, onRequestSct, onNavigateToTrainee,
+  masterCurrencies = [], currencyRequirements = [],
+  profileInitialTab, onProfileTabConsumed,
+  currentUserId, currentUserName,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
+    const { isFrozen } = useSystemFreeze();
   const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
   const [idNumber, setIdNumber] = useState(instructor.idNumber);
@@ -155,8 +172,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   const { primaryTrainees, secondaryTrainees } = useMemo(() => {
     if (!traineesData) return { primaryTrainees: [], secondaryTrainees: [] };
-    const primary = traineesData.filter(t => t.primaryInstructor === instructor.name).sort((a, b) => a.name.localeCompare(b.name));
-    const secondary = traineesData.filter(t => t.secondaryInstructor === instructor.name).sort((a, b) => a.name.localeCompare(b.name));
+    const primary = traineesData.filter(t => {
+      const p = t.primaryInstructor;
+      return Array.isArray(p) ? p.includes(instructor.name) : p === instructor.name;
+    }).sort((a, b) => a.name.localeCompare(b.name));
+    const secondary = traineesData.filter(t => {
+      const s = t.secondaryInstructor;
+      return Array.isArray(s) ? s.includes(instructor.name) : s === instructor.name;
+    }).sort((a, b) => a.name.localeCompare(b.name));
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
 
@@ -179,8 +202,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   useEffect(() => { resetState(); setIsEditing(isCreating); }, [instructor, isCreating]);
+  
+  // Use ref to prevent double-logging in React StrictMode
+  const hasLoggedViewRef = useRef(false);
   useEffect(() => {
-    if (!isCreating) logAudit({ action: 'View', description: `Viewed staff profile for ${instructor.rank} ${instructor.name}`, changes: `Role: ${instructor.role}, Unit: ${instructor.unit}`, page: 'Staff' });
+    if (!isCreating && !hasLoggedViewRef.current) {
+      hasLoggedViewRef.current = true;
+      logAudit({ action: 'View', description: `Viewed staff profile for ${instructor.rank} ${instructor.name}`, changes: `Role: ${instructor.role}, Unit: ${instructor.unit}`, page: 'Staff' });
+    }
   }, []);
 
   const handleEdit = () => setIsEditing(true);
@@ -199,7 +228,39 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor, isAdminStaff, isQFI, isOFI
     };
     flushPendingAudits();
-    if (isCreating) logAudit({ action: 'Add', description: `Added new staff ${rank} ${name}`, changes: `Role: ${role}, Unit: ${unit}, Location: ${location}`, page: 'Staff' });
+    
+    if (isCreating) {
+      logAudit({ action: 'Add', description: `Added new staff ${rank} ${name}`, changes: `Role: ${role}, Unit: ${unit}, Location: ${location}`, page: 'Staff' });
+    } else {
+      // Track what changed for edit audit log
+      const changes: string[] = [];
+      if (instructor.name !== name) changes.push(`Name: ${instructor.name} → ${name}`);
+      if (instructor.rank !== rank) changes.push(`Rank: ${instructor.rank} → ${rank}`);
+      if (instructor.role !== role) changes.push(`Role: ${instructor.role} → ${role}`);
+      if (instructor.unit !== unit) changes.push(`Unit: ${instructor.unit || '(none)'} → ${unit || '(none)'}`);
+      if (instructor.flight !== flight) changes.push(`Flight: ${instructor.flight || '(none)'} → ${flight || '(none)'}`);
+      if (instructor.location !== location) changes.push(`Location: ${instructor.location || '(none)'} → ${location || '(none)'}`);
+      if (instructor.phoneNumber !== phoneNumber) changes.push(`Phone: ${instructor.phoneNumber || '(none)'} → ${phoneNumber || '(none)'}`);
+      if (instructor.email !== email) changes.push(`Email: ${instructor.email || '(none)'} → ${email || '(none)'}`);
+      if (instructor.category !== category) changes.push(`Category: ${instructor.category} → ${category}`);
+      if (instructor.seatConfig !== seatConfig) changes.push(`Seat Config: ${instructor.seatConfig} → ${seatConfig}`);
+      if (instructor.service !== service) changes.push(`Service: ${instructor.service || '(none)'} → ${service || '(none)'}`);
+      if (instructor.isTestingOfficer !== isTestingOfficer) changes.push(`Testing Officer: ${instructor.isTestingOfficer} → ${isTestingOfficer}`);
+      if (instructor.isExecutive !== isExecutive) changes.push(`Executive: ${instructor.isExecutive} → ${isExecutive}`);
+      if (instructor.isFlyingSupervisor !== isFlyingSupervisor) changes.push(`Flying Supervisor: ${instructor.isFlyingSupervisor} → ${isFlyingSupervisor}`);
+      if (instructor.isIRE !== isIRE) changes.push(`IRE: ${instructor.isIRE} → ${isIRE}`);
+      if (instructor.isCommandingOfficer !== isCommandingOfficer) changes.push(`CO: ${instructor.isCommandingOfficer} → ${isCommandingOfficer}`);
+      if (instructor.isCFI !== isCFI) changes.push(`CFI: ${instructor.isCFI} → ${isCFI}`);
+      if (instructor.isDeputyFlightCommander !== isDeputyFlightCommander) changes.push(`Deputy FC: ${instructor.isDeputyFlightCommander} → ${isDeputyFlightCommander}`);
+      if (instructor.isContractor !== isContractor) changes.push(`Contractor: ${instructor.isContractor} → ${isContractor}`);
+      if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
+      if (instructor.isQFI !== isQFI) changes.push(`QFI: ${instructor.isQFI} → ${isQFI}`);
+      if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
+      
+      const changesStr = changes.length > 0 ? changes.join(', ') : 'No field changes';
+      logAudit({ action: 'Edit', description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: 'Staff' });
+    }
+    
     onUpdateInstructor(updatedInstructor);
     try {
       const cleanName = name.replace(/,\s/g, '_');
@@ -232,12 +293,42 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
   // Tab state — null means no tab open (profile only)
   const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'sct' | null>(null);
-  const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed";
+
+  // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
+  const [currencyEditState, setCurrencyEditState] = useState<{
+    isEditing: boolean; isSaving: boolean;
+    onEdit: () => void; onSave: () => void; onCancel: () => void;
+  } | null>(null);
+
+  // Local currency status override — updated after successful save without triggering full onUpdateInstructor
+  // Uses a ref to ensure the value persists across renders and instructor prop changes
+  const [localCurrencyStatus, setLocalCurrencyStatus] = useState<PersonCurrencyStatus[] | undefined>(undefined);
+  const localCurrencyStatusRef = useRef<PersonCurrencyStatus[] | undefined>(undefined);
+  // Audit flyout visibility
+  const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
+
+  // Open to a specific tab if requested (e.g. from "My Currency" in MyDashboard)
+  useEffect(() => {
+    if (profileInitialTab) {
+      setActiveTab(profileInitialTab);
+      onProfileTabConsumed?.();
+    }
+  }, [profileInitialTab]);
+  const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
   const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
+  // Ref for the scrollable content area - used to scroll to top when a tab opens
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+
   // Toggle: clicking active tab closes it; clicking another opens it
   const handleTabClick = (tab: typeof activeTab) => {
-    console.log('🔍 [SCT DEBUG] Tab clicked:', tab);
-    setActiveTab(prev => prev === tab ? null : tab);
+    setActiveTab(prev => {
+      const next = prev === tab ? null : tab;
+      // Scroll to top so the tab panel is visible
+      if (next !== null) {
+        setTimeout(() => contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+      }
+      return next;
+    });
   };
   const exp = priorExperience;
 
@@ -275,25 +366,89 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
 
           <div className="flex flex-1 overflow-hidden">
             {/* MAIN CONTENT — always full, scrollable */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div ref={contentScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+              {/* Transparent freeze overlay — blocks all interaction with content */}
+              {isFrozen && (
+                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+              )}
 
               {/* ── TAB PANEL (shown inline above profile when a tab is active) ── */}
               {activeTab === 'currency' && (
-                <div className={card3d + " p-4"} style={card3dStyle}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-white">Currency — {instructor.name}</h4>
-                    <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
+                <div className={card3d + " p-3"} style={card3dStyle}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-bold text-white">Currency &mdash; {instructor.name}</h4>
+                    <div className="flex items-center gap-[1px]">
+                      {currencyEditState && !currencyEditState.isEditing && (
+                        <button
+                          onClick={currencyEditState.onEdit}
+                          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                          title="Edit currency dates"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {currencyEditState && currencyEditState.isEditing && (
+                        <>
+                          <button
+                            onClick={currencyEditState.onCancel}
+                            disabled={currencyEditState.isSaving}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                            title="Cancel editing"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={currencyEditState.onSave}
+                            disabled={currencyEditState.isSaving}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md disabled:opacity-50"
+                            title="Save currency dates"
+                          >
+                            {currencyEditState.isSaving ? 'Saving\u2026' : 'Save'}
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => setActiveTab(null)}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                        title="Close currency panel"
+                      >
+                        Close
+                      </button>
+                      <button
+                        onClick={() => setShowCurrencyAudit(true)}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                        title="View currency audit log"
+                      >
+                        Audit
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-gray-400 text-xs italic mb-4">Currency records for this staff member.</p>
-                  <div className="space-y-2">
-                    {(instructor.currencyStatus || []).length > 0 ? (instructor.currencyStatus || []).map((cs: any) => (
-                      <div key={cs.currencyId} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
-                        <span className="text-white font-medium">{cs.currencyId}</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${cs.status === 'Current' ? 'bg-green-600 text-white' : cs.status === 'Expiring' ? 'bg-amber-500 text-white' : 'bg-red-600 text-white'}`}>{cs.status}</span>
-                      </div>
-                    )) : <p className="text-gray-500 text-xs italic text-center py-4">No currency records found.</p>}
-                  </div>
+                  <CurrencyPanel
+                    key={`currency-panel-${instructor.idNumber}`}
+                    personId={(instructor as any).id}
+                    idNumber={instructor.idNumber}
+                    personType="instructor"
+                    personName={instructor.name}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
+                    initialCurrencyStatus={localCurrencyStatusRef.current ?? localCurrencyStatus ?? instructor.currencyStatus}
+                    onCurrencyStatusChange={(newStatus: PersonCurrencyStatus[]) => {
+                      localCurrencyStatusRef.current = newStatus;
+                      setLocalCurrencyStatus(newStatus);
+                    }}
+                    onEditStateChange={setCurrencyEditState}
+                    currentUserId={currentUserId}
+                    currentUserName={currentUserName}
+                  />
                 </div>
+              )}
+
+              {showCurrencyAudit && (
+                <CurrencyAuditFlyout
+                  personId={String((instructor as any).id || instructor.idNumber)}
+                  personName={instructor.name}
+                  onClose={() => setShowCurrencyAudit(false)}
+                />
               )}
 
               {activeTab === 'logbook' && (
@@ -354,13 +509,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   </div>
                   <div className="space-y-1 mb-4 max-h-64 overflow-y-auto">
                     {unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map(p => {
-                      const startDisplay = formatDate(p.startDate);
-                      const endDisplay = formatDate(p.endDate);
-                      const timeStr = p.allDay ? 'All Day' : `${formatMilitaryTime(p.startTime)}-${formatMilitaryTime(p.endTime)}`;
+                      let periodDisplay = '';
+                      if (p.allDay) {
+                        const startDisplay = formatDate(p.startDate);
+                        const endDisplay = formatDate(p.endDate);
+                        periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
+                      } else {
+                        const startDisplay = `${formatMilitaryTime(p.startTime)} ${formatDate(p.startDate)}`;
+                        const endDisplay   = `${formatMilitaryTime(p.endTime)} ${formatDate(p.endDate)}`;
+                        periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
+                      }
                       return (
                         <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                           <span className="text-white font-medium">{p.reason}</span>
-                          <span className="text-gray-300 font-mono">{startDisplay}{p.startDate !== p.endDate ? ` – ${endDisplay}` : ''} {timeStr}</span>
+                          <span className="text-gray-300 font-mono">{periodDisplay}</span>
                           <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
                         </div>
                       );
@@ -377,19 +539,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                     <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                   </div>
                   <p className="text-gray-400 text-xs italic mb-4">Submit a Standardisation and Continuation Training request for this staff member.</p>
-                  <p className="text-yellow-400 text-xs mb-2 font-bold">🔧 DEBUG: SCT Tab is active, activeTab={activeTab}</p>
-                  <p className="text-yellow-400 text-xs mb-2">🔧 DEBUG: onRequestSct exists: {String(!!onRequestSct)}</p>
-                  <button 
-                    onClick={(e) => { 
+                  <button
+                    onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      alert('SCT Button Clicked! Check console for debug output.');
-                      console.log('🔍 [SCT DEBUG] Submit SCT Request button clicked in InstructorProfileFlyout');
-                      console.log('🔍 [SCT DEBUG] onRequestSct exists:', !!onRequestSct);
-                      console.log('🔍 [SCT DEBUG] onRequestSct type:', typeof onRequestSct);
-                      onRequestSct(); 
-                      setActiveTab(null); 
-                    }} 
+                      onRequestSct();
+                      setActiveTab(null);
+                    }}
                     className="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded"
                   >Submit SCT Request</button>
                 </div>
@@ -422,6 +578,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
                       </Dropdown>
                       <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
+                        <option value="">Select...</option>
                         {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
                       </Dropdown>
                     </div>
@@ -544,7 +701,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {primaryTrainees[0] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[0].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(primaryTrainees[0])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {primaryTrainees[0].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -559,7 +722,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {primaryTrainees[1] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{primaryTrainees[1].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(primaryTrainees[1])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {primaryTrainees[1].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -574,7 +743,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {secondaryTrainees[0] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[0].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(secondaryTrainees[0])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {secondaryTrainees[0].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -589,7 +764,13 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       {secondaryTrainees[1] ? (
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0"><TraineeIcon /></div>
-                          <span className="text-white text-[10px] font-medium leading-tight">{secondaryTrainees[1].name}</span>
+                          <button
+                            onClick={() => onNavigateToTrainee?.(secondaryTrainees[1])}
+                            className="text-white text-[10px] font-medium leading-tight hover:text-sky-400 hover:underline cursor-pointer"
+                            title="View trainee profile"
+                          >
+                            {secondaryTrainees[1].name}
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
@@ -669,13 +850,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <h4 className="text-xs font-semibold text-gray-300 mb-2">Unavailability</h4>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map(p => {
-                    const startDisplay = formatDate(p.startDate);
-                    const endDisplay = formatDate(p.endDate);
-                    const timeStr = p.allDay ? 'All Day' : `${formatMilitaryTime(p.startTime)}-${formatMilitaryTime(p.endTime)}`;
+                    let periodDisplay = '';
+                    if (p.allDay) {
+                      const startDisplay = formatDate(p.startDate);
+                      const endDisplay = formatDate(p.endDate);
+                      periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
+                    } else {
+                      const startDisplay = `${formatMilitaryTime(p.startTime)} ${formatDate(p.startDate)}`;
+                      const endDisplay   = `${formatMilitaryTime(p.endTime)} ${formatDate(p.endDate)}`;
+                      periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
+                    }
                     return (
                       <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                         <span className="text-white font-medium">{p.reason}</span>
-                        <span className="text-gray-300 font-mono">{startDisplay}{p.startDate !== p.endDate ? ` – ${endDisplay}` : ''} {timeStr}</span>
+                        <span className="text-gray-300 font-mono">{periodDisplay}</span>
                       </div>
                     );
                   }) : <p className="text-sm text-gray-500 text-center italic py-2">No unavailability periods scheduled.</p>}
@@ -691,7 +879,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
                 <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                 <button onClick={() => handleTabClick('sct')} className={tabBtnClass('sct')}>Request SCT</button>
-                <button onClick={() => { setActiveTab(null); handleEdit(); }} className={btnClass}>Edit</button>
+                <button onClick={() => { setActiveTab(null); handleEdit(); }} disabled={isFrozen} className={btnClass}>Edit</button>
                 <button onClick={onClose} className={btnClass}>Close</button>
               </>)}
               {isEditing && (<>

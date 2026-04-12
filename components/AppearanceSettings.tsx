@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTheme, AppTheme } from '../src/context/ThemeContext';
+import { useTheme, AppTheme } from '../context/ThemeContext';
 
 const AppearanceSettings: React.FC = () => {
     const { theme, setTheme } = useTheme();

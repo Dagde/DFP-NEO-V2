@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Trainee, ScheduleEvent, Pt051Assessment, Pt051Grade, Instructor, Pt051OverallGrade, Score, SyllabusItemDetail, PhraseBank } from '../types';
 import AuditButton from './AuditButton';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
-import { showDarkConfirm } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
+import { useSystemFreeze } from '../context/SystemFreezeContext';
 
 interface PT051ViewProps {
     trainee: Trainee;
@@ -200,6 +201,7 @@ const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' }
 
 const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
+    const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved'>('Saved');
     const isFirstRender = useRef(true);
@@ -618,7 +620,16 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }));
     }, [commentFields]);
 
-    const handleSave = (isAutoSave = false) => {
+    const handleSave = async (isAutoSave = false) => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
+                await showDarkAlert('System is currently frozen. PT-051 entries are not permitted during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         // Include timing data from currentEvent in the assessment
         const finalAssessment: Pt051Assessment = {
             ...assessment,
@@ -756,31 +767,31 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                         <span className="text-xs text-gray-300 font-mono uppercase">{saveStatus === 'Saved' ? 'All changes saved' : saveStatus}</span>
                     </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-[1px]">
                     {/* Show Edit button if this is a saved assessment */}
                     {initialAssessment && initialAssessment.id && (
                         <button onClick={() => {
                             // Enable editing mode - you could add state to track this
                             console.log('Editing mode enabled for PT-051:', initialAssessment.id);
-                        }} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold shadow-md">
-                            ✏️ Edit Assessment
+                        }} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                            Edit
                         </button>
                     )}
-                    <button onClick={handleManualSaveAndExit} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold shadow-md">
-                        Save & Exit
+                    <button onClick={handleManualSaveAndExit} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                        Save
                     </button>
                     {assessment.id && onDeleteAssessment && (
                         <button 
                             onClick={handleDeleteAssessment} 
-                            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold shadow-md"
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
                         >
-                            🗑️ Delete Assessment
+                            Delete
                         </button>
                     )}
-                    <button onClick={onBack} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md">
-                        &larr; Back to Summary
-                       <AuditButton pageName="PT-051 Assessment" />
+                    <button onClick={onBack} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                        Back
                     </button>
+                    <AuditButton pageName="PT-051 Assessment" />
                 </div>
             </div>
 

@@ -17,15 +17,15 @@ interface AddCourseFlyoutProps {
 }
 
 const ALL_COLORS = [
-    'bg-sky-400/50',      // Light Blue
-    'bg-purple-400/50',   // Purple
-    'bg-yellow-400/50',   // Yellow
-    'bg-pink-400/50',     // Pink
-    'bg-teal-400/50',     // Teal
-    'bg-indigo-400/50',   // Indigo
-    'bg-cyan-400/50',     // Cyan
-    'bg-fuchsia-400/50',  // Fuchsia
-    'bg-blue-400/50',     // Blue
+    'bg-sky-400/80',      // Light Blue
+    'bg-purple-400/80',   // Purple
+    'bg-yellow-400/80',   // Yellow
+    'bg-pink-400/80',     // Pink
+    'bg-teal-400/80',     // Teal
+    'bg-indigo-400/80',   // Indigo
+    'bg-cyan-400/80',     // Cyan
+    'bg-fuchsia-400/80',  // Fuchsia
+    'bg-blue-400/80',     // Blue
 ];
 
 const courseTypes = ['ADF', 'FIC', 'WSO', 'IFIC', 'OFI', 'Pilot Conversion'];
@@ -59,7 +59,7 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
 
     const availableColor = useMemo(() => {
         const usedColors = new Set(Object.values(existingCourses));
-        return ALL_COLORS.find(c => !usedColors.has(c)) || 'bg-gray-400/50';
+        return ALL_COLORS.find(c => !usedColors.has(c)) || 'bg-gray-400/80';
     }, [existingCourses]);
 
     const totalStart = useMemo(() => raafStart + navyStart + armyStart, [raafStart, navyStart, armyStart]);

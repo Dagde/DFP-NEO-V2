@@ -13,6 +13,7 @@ interface TrainingRecordsViewProps {
     onDeleteCourse: (courseName: string, archive: boolean) => void;
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
+    onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
     archivedTraineesData: Trainee[];
@@ -35,6 +36,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onDeleteCourse,
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
+    onUpdateCourseDates,
     traineesData,
     instructorsData,
     archivedTraineesData,
@@ -49,7 +51,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
     return (
-        <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-gray-900 h-full overflow-auto">
             <div className="flex-shrink-0 bg-gray-800 p-4 border-b border-gray-700">
                 <div className="flex justify-between items-center mb-4">
                     <div>
@@ -96,6 +98,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onDeleteCourse={onDeleteCourse}
                         onNavigateToCourseRoster={onNavigateToCourseRoster}
                         onNavigateToArchivedCourses={onNavigateToArchivedCourses}
+                        onUpdateCourseDates={onUpdateCourseDates}
                     />
                 )}
                 {activeTab === 'export' && (

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
+import { InstructorPriorityConfig } from '../App';
 
 interface PrioritiesViewWithMenuProps {
+  school: 'ESL' | 'PEA';
   coursePriorities: string[];
   onUpdatePriorities: (newOrder: string[]) => void;
   coursePercentages: Map<string, number>;
@@ -34,13 +36,15 @@ interface PrioritiesViewWithMenuProps {
   highestPriorityEvents: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
-  programWithPrimaries: boolean;
-  onUpdateProgramWithPrimaries: (value: boolean) => void;
+  instructorPriority: InstructorPriorityConfig;
+  onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;
+  onSubmitSctRequest: (id: string, type: 'flight' | 'ftd') => void;
+  onToggleSctInclude: (id: string, type: 'flight' | 'ftd') => void;
   syllabusDetails: SyllabusItemDetail[];
   scores?: Map<string, Score[]>;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
@@ -118,10 +122,17 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             {/* Main Content - Render PrioritiesView with filtered content */}
             <div className="flex-1 overflow-y-auto bg-gray-900">
                 <style>{`
-                    .priorities-content > div:not(.section-${activeSection}) {
+                    .priorities-content > div:not(.section-${activeSection}):not(.section-sct-optional) {
                         display: none !important;
                     }
-                        display: ${activeSection === 'course-priority' || activeSection === 'build-factors' ? 'grid' : 'none'} !important;
+                    .priorities-content > div.section-sct-optional {
+                        display: ${activeSection === 'highest-priority' ? 'block' : 'none'} !important;
+                    }
+                    .priorities-content > div.section-course-priority {
+                        display: ${activeSection === 'course-priority' ? 'grid' : 'none'} !important;
+                    }
+                    .priorities-content > div.section-build-factors {
+                        display: ${activeSection === 'build-factors' ? 'grid' : 'none'} !important;
                     }
                 `}</style>
                 <div className="p-6">

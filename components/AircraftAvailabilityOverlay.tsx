@@ -1,7 +1,7 @@
+import { showDarkAlert } from './DarkMessageModal';
 import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
-
 import { logAudit } from '../utils/auditLogger';
 interface AircraftAvailabilityOverlayProps {
     currentDate: Date;
@@ -14,6 +14,7 @@ interface AircraftAvailabilityOverlayProps {
     pixelsPerHour: number; // For time-based positioning
     startHour: number; // Start hour of timeline (usually 0)
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
+    onUpdatePlannedAvailability?: (count: number) => void; // Syncs with Settings panel
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
@@ -26,13 +27,20 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     rowHeight,
     pixelsPerHour,
     startHour,
-    onAvailabilityChange
+    onAvailabilityChange,
+    onUpdatePlannedAvailability
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(plannedAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const overlayRef = useRef<SVGSVGElement>(null);
+    // Track last value set by THIS overlay to avoid re-syncing our own updates
+    const lastSetByOverlay = useRef<number>(plannedAvailability);
+    // Stable ref for onAvailabilityChange to avoid re-running snapshots effect on every render
+    const onAvailabilityChangeRef = useRef(onAvailabilityChange);
+    useEffect(() => { onAvailabilityChangeRef.current = onAvailabilityChange; }, [onAvailabilityChange]);
 
-    // Load snapshots from localStorage on mount
+    // Load snapshots from localStorage on mount / date change ONLY
+    // NOTE: plannedAvailability intentionally excluded from deps to avoid resetting on every slider move
     useEffect(() => {
         const dateKey = formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
@@ -42,7 +50,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 ...s,
                 timestamp: new Date(s.timestamp)
             })));
-            setCurrentAvailable(data.snapshots[data.snapshots.length - 1]?.available || plannedAvailability);
+            const lastAvailable = data.snapshots[data.snapshots.length - 1]?.available ?? plannedAvailability;
+            setCurrentAvailable(lastAvailable);
+            lastSetByOverlay.current = lastAvailable;
         } else {
             // Initialize with planned availability at start of day (0001)
             const initialSnapshot: AircraftAvailabilitySnapshot = {
@@ -53,6 +63,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             };
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
+            lastSetByOverlay.current = plannedAvailability;
                 
                 // Log audit record for initial availability setup
                 const initialDescription = `Aircraft availability initialized at ${plannedAvailability} (${totalAircraft - plannedAvailability} aircraft unavailable)`;
@@ -64,9 +75,12 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     changes: initialDetails
                 });
         }
-    }, [currentDate, plannedAvailability, totalAircraft]);
+    }, [currentDate.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps - use string to avoid new Date() reference changes
+
+
 
     // Save and calculate average whenever snapshots change
+    // NOTE: onAvailabilityChange intentionally excluded from deps (use ref) to avoid re-render loop
     useEffect(() => {
         if (snapshots.length > 0) {
             // Convert snapshots to timeline format for calculation
@@ -88,9 +102,9 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             };
 
             localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
-            onAvailabilityChange(record);
+            onAvailabilityChangeRef.current(record);
         }
-    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, onAvailabilityChange]);
+    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Calculate Y position for a given aircraft count (snap to lower grid line)
     const getYPosition = (aircraftCount: number): number => {
@@ -116,80 +130,97 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const [isDragging, setIsDragging] = useState(false);
     const [dragY, setDragY] = useState(0); // Store raw Y position during drag
     const [mouseX, setMouseX] = useState(0); // Store mouse X position for tooltip
+    // Refs to avoid stale closures in event listeners
+    const isDraggingRef = useRef(false);
+    const dragYRef = useRef(0);
+    const snapshotsRef = useRef(snapshots);
+    const rowHeightRef = useRef(rowHeight);
+    const totalAircraftRef = useRef(totalAircraft);
+    useEffect(() => { snapshotsRef.current = snapshots; }, [snapshots]);
+    useEffect(() => { rowHeightRef.current = rowHeight; }, [rowHeight]);
+    useEffect(() => { totalAircraftRef.current = totalAircraft; }, [totalAircraft]);
+    // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
+    useEffect(() => {
+        // Don't sync if we're currently dragging - drag end will handle it
+        if (isDraggingRef.current) {
+            return;
+        }
+        if (plannedAvailability !== lastSetByOverlay.current) {
+            setCurrentAvailable(plannedAvailability);
+        } else {
+        }
+    }, [plannedAvailability]);
+
 
     // Handle drag start on the solid line
-    const handleLineMouseDown = (e: React.MouseEvent) => {
+    const handleLineMouseDown = async (e: React.MouseEvent) => {
+        // Check if system is frozen and aircraft availability is not allowed
+        const freezeRaw = localStorage.getItem('systemFreezeState');
+        if (freezeRaw) {
+            const freeze = JSON.parse(freezeRaw);
+            if (freeze.isFrozen && !freeze.allowedActions.aircraftAvailability) {
+                await showDarkAlert('System is frozen. Aircraft Availability modifications are not permitted.', 'System Frozen', 'error');
+                return;
+            }
+        }
         if (!overlayRef.current) return;
         e.preventDefault();
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
         
-        console.log('🖱️ DRAG START:', {
-            timestamp: new Date().toISOString(),
-            mouseY: y,
-            mouseX: x,
-            currentAvailable: currentAvailable,
-            snapshotsCount: snapshots.length,
-            snapshots: snapshots.map(s => ({
-                time: s.timestamp.toLocaleTimeString(),
-                available: s.available
-            }))
-        });
         
+        isDraggingRef.current = true;
+        dragYRef.current = y;
         setIsDragging(true);
-        setDragY(y); // Initialize with current position
-        setMouseX(x); // Initialize mouse X position
+        setDragY(y);
+        setMouseX(x);
     };
 
     // Handle drag move - smooth movement with raw Y position
     const handleDragMove = (e: MouseEvent) => {
-        if (!isDragging || !overlayRef.current) return;
+        if (!isDraggingRef.current || !overlayRef.current) return;
 
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
         
-        // Store raw Y position and mouse X for smooth rendering
+        dragYRef.current = y;
         setDragY(y);
         setMouseX(x);
         
-        // Convert Y position to aircraft count (for tooltip display)
-        // Rows BELOW the line = available aircraft
-        // Rows ABOVE the line = unavailable aircraft
-        const rowsFromTop = y / rowHeight;
-        const exactCount = rowsFromTop; // Available = rows from top
-        const clampedCount = Math.max(0, Math.min(totalAircraft, exactCount));
-        
-        console.log('🔄 DRAGGING:', {
-            mouseY: y,
-            rowsFromTop: rowsFromTop.toFixed(2),
-            exactCount: exactCount.toFixed(2),
-            clampedCount: clampedCount.toFixed(2),
-            currentAvailable: currentAvailable.toFixed(2)
-        });
-        
+        const rowsFromTop = y / rowHeightRef.current;
+        const clampedCount = Math.max(0, Math.min(totalAircraftRef.current, rowsFromTop));
         setCurrentAvailable(clampedCount);
     };
 
     // Handle drag end - snap to nearest whole number based on final drag position
+    // Uses refs to avoid stale closure issues with event listeners
     const handleDragEnd = () => {
-        if (isDragging) {
+        if (isDraggingRef.current) {
+            isDraggingRef.current = false;
             setIsDragging(false);
             
+            // Use ref values to avoid stale closures
+            const finalDragY = dragYRef.current;
+            const currentRowHeight = rowHeightRef.current;
+            const currentTotalAircraft = totalAircraftRef.current;
+            const currentSnapshots = snapshotsRef.current;
+
+            
             // Calculate aircraft count from final drag Y position
-            const rowsFromTop = dragY / rowHeight;
+            const rowsFromTop = finalDragY / currentRowHeight;
             const exactCount = rowsFromTop;
             
             // Snap to nearest whole number
-            const snappedCount = Math.round(Math.max(0, Math.min(totalAircraft, exactCount)));
+            const snappedCount = Math.round(Math.max(0, Math.min(currentTotalAircraft, exactCount)));
             
-            const previousAvailability = snapshots[snapshots.length - 1]?.available || plannedAvailability;
+            const previousAvailability = currentSnapshots[currentSnapshots.length - 1]?.available || plannedAvailability;
             const valueChanged = snappedCount !== previousAvailability;
             
             console.log('✅ DRAG END:', {
                 timestamp: new Date().toISOString(),
-                dragY: dragY.toFixed(2),
+                dragY: finalDragY.toFixed(2),
                 rowsFromTop: rowsFromTop.toFixed(2),
                 exactCount: exactCount.toFixed(2),
                 snappedCount: snappedCount,
@@ -198,11 +229,22 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 snapshotsBeforeUpdate: snapshots.length
             });
             
+            // ALWAYS update lastSetByOverlay BEFORE any state/prop changes
+            // This prevents the plannedAvailability sync useEffect from overwriting our drag result
+            lastSetByOverlay.current = snappedCount;
             setCurrentAvailable(snappedCount);
+
+            // Sync with Settings panel slider
+            if (valueChanged) {
+                if (onUpdatePlannedAvailability) {
+                    onUpdatePlannedAvailability(snappedCount);
+                } else {
+                }
+            }
             
                 // Log audit record for availability change
-                const changeDescription = `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${totalAircraft - snappedCount} aircraft unavailable)`;
-                const changeDetails = `Time: ${new Date().toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${totalAircraft}`;
+                const changeDescription = `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${currentTotalAircraft - snappedCount} aircraft unavailable)`;
+                const changeDetails = `Time: ${new Date().toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${currentTotalAircraft}`;
                 logAudit({
                     page: "Program Schedule",
                     action: "Edit",
@@ -226,44 +268,17 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                        now.getMilliseconds()
                    );
                 
-                console.log('🕐 TIMESTAMP DEBUG:', {
-                    now: now.toISOString(),
-                    nowLocal: now.toLocaleString(),
-                    currentDate: currentDate.toISOString(),
-                    currentDateLocal: currentDate.toLocaleString(),
-                    snapshotTime: snapshotTime.toISOString(),
-                    snapshotTimeLocal: snapshotTime.toLocaleString(),
-                    nowHours: now.getHours(),
-                    nowMinutes: now.getMinutes(),
-                    snapshotHours: snapshotTime.getHours(),
-                    snapshotMinutes: snapshotTime.getMinutes()
-                });
                 
                 const newSnapshot: AircraftAvailabilitySnapshot = {
                     timestamp: snapshotTime,
                     available: snappedCount,
-                    total: totalAircraft,
+                    total: currentTotalAircraft,
                     notes: `Availability changed to ${snappedCount}`
                 };
                 
-                console.log('📸 CREATING NEW SNAPSHOT:', {
-                    newSnapshot: {
-                        time: newSnapshot.timestamp.toLocaleTimeString(),
-                        available: newSnapshot.available,
-                        total: newSnapshot.total
-                 },
-                    snapshotsAfterUpdate: snapshots.length + 1
-                });
                 
                 setSnapshots(prev => {
                     const updated = [...prev, newSnapshot];
-                    console.log('📊 SNAPSHOTS UPDATED:', {
-                        count: updated.length,
-                        all: updated.map(s => ({
-                            time: s.timestamp.toLocaleTimeString(),
-                            available: s.available
-                     }))
-                 });
                     return updated;
                 });
             } else {
@@ -273,16 +288,24 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     };
 
     // Add global mouse event listeners for dragging
+    // Use refs for handlers to avoid stale closures
+    const handleDragMoveRef = useRef(handleDragMove);
+    const handleDragEndRef = useRef(handleDragEnd);
+    useEffect(() => { handleDragMoveRef.current = handleDragMove; });
+    useEffect(() => { handleDragEndRef.current = handleDragEnd; });
+
     useEffect(() => {
         if (isDragging) {
-            window.addEventListener('mousemove', handleDragMove);
-            window.addEventListener('mouseup', handleDragEnd);
+            const moveHandler = (e: MouseEvent) => handleDragMoveRef.current(e);
+            const upHandler = () => handleDragEndRef.current();
+            window.addEventListener('mousemove', moveHandler);
+            window.addEventListener('mouseup', upHandler);
             return () => {
-                window.removeEventListener('mousemove', handleDragMove);
-                window.removeEventListener('mouseup', handleDragEnd);
+                window.removeEventListener('mousemove', moveHandler);
+                window.removeEventListener('mouseup', upHandler);
             };
         }
-    }, [isDragging, currentAvailable, totalAircraft, rowHeight, snapshots]);
+    }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Update component every minute to transition solid line to dashed as time passes
     const [, setCurrentTime] = useState(new Date());
@@ -302,7 +325,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     // Render historical segments - each segment between snapshots
     const renderHistoricalLines = () => {
         if (snapshots.length === 0) {
-            console.log('📏 RENDER HISTORICAL LINES: No snapshots');
             return null;
         }
         
@@ -313,13 +335,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
            // Use all snapshots without filtering
            const filteredSnapshots = snapshots;
 
-           console.log("📏 RENDER HISTORICAL LINES:", {
-               originalCount: snapshots.length,
-               filteredCount: filteredSnapshots.length,
-               isDragging: isDragging,
-               currentAvailable: currentAvailable,
-               currentTimeX: currentTimeX.toFixed(2)
-           });
 
         
         const lines = [];
@@ -330,7 +345,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             // Only render this segment if the snapshot is in the past (before current time)
             // Skip the last snapshot if it's at or after current time (it will be rendered separately)
             if (i === filteredSnapshots.length - 1 && snapshotX >= currentTimeX) {
-                console.log(`  ⏭️ Skipping Line ${i} (most recent, at/after current time)`);
                 continue;
             }
             
@@ -341,15 +355,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             
             // Only log specific lines to reduce spam
                if (i === 0 || i === 5 || i === filteredSnapshots.length - 1) {
-                   console.log(`  📍 Line ${i}:`, {
-                time: snapshot.timestamp.toLocaleTimeString(),
-                available: snapshot.available,
-                startX: startX.toFixed(2),
-                endX: endX.toFixed(2),
-                y: y.toFixed(2),
-                       timestampRaw: snapshot.timestamp.toISOString()
-
-               });
                }
             
             // Add horizontal line for this segment
@@ -404,38 +409,11 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     
     // Debug timestamp comparison
     if (lastSnapshot) {
-        console.log('🕐 TIMESTAMP COMPARISON:', {
-            now: now.toISOString(),
-            nowLocal: now.toLocaleTimeString(),
-            nowHours: now.getHours(),
-            nowMinutes: now.getMinutes(),
-            lastSnapshotTime: lastSnapshot.timestamp.toISOString(),
-            lastSnapshotLocal: lastSnapshot.timestamp.toLocaleTimeString(),
-            lastSnapshotHours: lastSnapshot.timestamp.getHours(),
-            lastSnapshotMinutes: lastSnapshot.timestamp.getMinutes(),
-            currentTimeX: currentTimeX.toFixed(2),
-            lastChangeX: lastChangeX.toFixed(2),
-            difference: (currentTimeX - lastChangeX).toFixed(2)
-        });
     }
     
     // Determine if we need to split the line into history (dashed) and future (solid)
     const needsSplit = lastSnapshot && currentTimeX > lastChangeX && currentTimeX < endOfDayX;
     
-    console.log('🎯 SOLID LINE CALCULATION:', {
-        hasLastSnapshot: !!lastSnapshot,
-        lastSnapshotTime: lastSnapshot?.timestamp.toLocaleTimeString(),
-           lastSnapshotTimestamp: lastSnapshot?.timestamp.toISOString(),
-        lastSnapshotAvailable: lastSnapshot?.available,
-        lastChangeX: lastChangeX.toFixed(2),
-        currentTimeX: currentTimeX.toFixed(2),
-        endOfDayX: endOfDayX.toFixed(2),
-        displayY: displayY.toFixed(2),
-        isDragging: isDragging,
-        needsSplit: needsSplit,
-           currentTime: now.toISOString(),
-           currentDate: currentDate.toISOString()
-    });
 
     return (<>
         <svg
@@ -447,7 +425,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             {renderHistoricalLines()}
 
                {/* Solid line for current availability - from last change to end of day - DRAGGABLE */}
-{lastSnapshot && (
+{lastSnapshot ? (
                       <g>
                           {needsSplit ? (
                               <>
@@ -542,6 +520,29 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                                 </>
                             )}
                         </g>
+                     ) : (
+                         // If no snapshot exists (shouldn't happen), render full draggable line from start of day
+                         <g>
+                             <line
+                                 x1={0}
+                                 y1={displayY}
+                                 x2={endOfDayX}
+                                 y2={displayY}
+                                 stroke="rgba(236, 72, 153, 0.4)"
+                                 strokeWidth="2"
+                                 className="pointer-events-none"
+                             />
+                             <line
+                                 x1={0}
+                                 y1={displayY}
+                                 x2={endOfDayX}
+                                 y2={displayY}
+                                 stroke="transparent"
+                                 strokeWidth="20"
+                                 style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
+                                 onMouseDown={handleLineMouseDown}
+                             />
+                         </g>
                      )}
             </svg>
 

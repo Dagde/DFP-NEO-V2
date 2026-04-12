@@ -5,9 +5,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
-   import { logAudit } from '../utils/auditLogger';
+import { logAudit } from '../utils/auditLogger';
+import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 
 interface PrioritiesViewProps {
+  school?: 'ESL' | 'PEA';
   coursePriorities: string[];
   onUpdatePriorities: (newOrder: string[]) => void;
   coursePercentages: Map<string, number>;
@@ -38,14 +40,16 @@ interface PrioritiesViewProps {
   highestPriorityEvents: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
-  programWithPrimaries: boolean;
-  onUpdateProgramWithPrimaries: (value: boolean) => void;
+  onDeletePriorityEvent: (eventId: string) => void;
+  instructorPriority: InstructorPriorityConfig;
+  onUpdateInstructorPriority: (value: InstructorPriorityConfig) => void;
   sctFlights: SctRequest[];
   sctFtds: SctRequest[];
   onAddSctRequest: (type: 'flight' | 'ftd') => void;
   onRemoveSctRequest: (id: string, type: 'flight' | 'ftd') => void;
   onUpdateSctRequest: (id: string, field: keyof SctRequest, value: string, type: 'flight' | 'ftd') => void;
   onSubmitSctRequest: (id: string, type: 'flight' | 'ftd') => void;
+  onToggleSctInclude: (id: string, type: 'flight' | 'ftd') => void;
   syllabusDetails: SyllabusItemDetail[];
   scores?: Map<string, Score[]>; // Optional because it might not be passed initially but needed for new feature
   traineeLMPs?: Map<string, SyllabusItemDetail[]>; // Optional
@@ -57,6 +61,7 @@ interface PrioritiesViewProps {
 
 // FIX: Export component as a named const to fix module import error.
 export const PrioritiesView: React.FC<PrioritiesViewProps> = ({ 
+  school = 'ESL',
   coursePriorities, 
   onUpdatePriorities, 
   coursePercentages, 
@@ -87,14 +92,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   highestPriorityEvents,
   onSelectEvent,
   onUpdatePriorityEvent,
-  programWithPrimaries,
-  onUpdateProgramWithPrimaries,
+  onDeletePriorityEvent,
+  instructorPriority,
+  onUpdateInstructorPriority,
   sctFlights,
   sctFtds,
   onAddSctRequest,
   onRemoveSctRequest,
   onUpdateSctRequest,
   onSubmitSctRequest,
+  onToggleSctInclude,
   syllabusDetails,
   scores = new Map(),
   traineeLMPs = new Map(),
@@ -399,6 +406,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <th className="py-2 px-2 text-left">Solo/Dual</th>
                     <th className="py-2 px-2 text-left">Currency</th>
                     <th className="py-2 px-2 text-left">Priority</th>
+                    <th className="py-2 px-2 text-left">Action</th>
                 </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -411,6 +419,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <td className="py-2 px-2 text-gray-300">{event.soloOrDual || event.flightType || 'N/A'}</td>
                         <td className="py-2 px-2 text-gray-300">{event.currency || 'N/A'}</td>
                         <td className="py-2 px-2 text-gray-300 bg-yellow-100 text-gray-800 font-semibold">High</td>
+                        <td className="py-2 px-2">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onDeletePriorityEvent(event.id); }} 
+                                className="p-1 text-gray-400 hover:text-red-400"
+                                title="Delete event"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        </td>
                     </tr>
                     );
                 })}
@@ -425,47 +444,61 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
             <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
                 <div className="p-4 flex justify-between items-center">
-                    <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-200">Course Priority</h2>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                            {school === 'ESL' ? 'East Sale (ESL)' : 'Pearce (PEA)'} &mdash; locality courses only
+                        </p>
+                    </div>
                     <span className="text-xs text-gray-500">Last updated: {courseTimestamp}</span>
                 </div>
                 <div className="p-4 border-t border-gray-700">
-                    <ul className="space-y-2">
-                        {coursePriorities.map((course, index) => (
-                            <li
-                                key={course}
-                                draggable
-                                onDragStart={() => handleCourseDragStart(index)}
-                                onDragEnter={() => handleCourseDragEnter(index)}
-                                onDragEnd={handleCourseDragEnd}
-                                onDragOver={(e) => e.preventDefault()}
-                                className="p-3 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
-                            >
-                                <div className="flex items-center space-x-3">
-                                    <span className="font-mono text-gray-500">{index + 1}</span>
-                                    <span className="font-semibold">{course}</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <span className={`font-mono w-12 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
-                                    <div className="flex flex-col">
-                                        <ArrowButton direction="up" onClick={() => handlePercentageChange(course, 'increase')} disabled={(coursePercentages.get(course) ?? 0) >= 100} />
-                                        <ArrowButton direction="down" onClick={() => handlePercentageChange(course, 'decrease')} disabled={(coursePercentages.get(course) ?? 0) <= 5} />
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                     <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                        Total: {totalPercentage}%
-                    </div>
-                    <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
-                        <p className="font-semibold mb-1">ℹ️ Weighted Priority System:</p>
-                        <ul className="list-disc list-inside space-y-1 text-blue-200">
-                            <li>Percentages are auto-normalized to 100%</li>
-                            <li>Minimum percentage per course: 5%</li>
-                            <li>Higher % = more events (biased allocation)</li>
-                            <li>All courses still get events (no starvation)</li>
-                        </ul>
-                    </div>
+                    {coursePriorities.length === 0 ? (
+                        <div className="py-8 text-center text-gray-500">
+                            <p className="text-sm font-medium">No courses found for {school === 'ESL' ? 'East Sale' : 'Pearce'}</p>
+                            <p className="text-xs mt-1">Courses will appear here once trainees are loaded for this locality.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <ul className="space-y-2">
+                                {coursePriorities.map((course, index) => (
+                                    <li
+                                        key={course}
+                                        draggable
+                                        onDragStart={() => handleCourseDragStart(index)}
+                                        onDragEnter={() => handleCourseDragEnter(index)}
+                                        onDragEnd={handleCourseDragEnd}
+                                        onDragOver={(e) => e.preventDefault()}
+                                        className="p-3 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing"
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            <span className="font-mono text-gray-500">{index + 1}</span>
+                                            <span className="font-semibold">{course}</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <span className={`font-mono w-12 text-center ${totalPercentage !== 100 && 'text-red-400'}`}>{coursePercentages.get(course) ?? 0}%</span>
+                                            <div className="flex flex-col">
+                                                <ArrowButton direction="up" onClick={() => handlePercentageChange(course, 'increase')} disabled={(coursePercentages.get(course) ?? 0) >= 100} />
+                                                <ArrowButton direction="down" onClick={() => handlePercentageChange(course, 'decrease')} disabled={(coursePercentages.get(course) ?? 0) <= 5} />
+                                            </div>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                                Total: {totalPercentage}%
+                            </div>
+                            <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
+                                <p className="font-semibold mb-1">&#x2139;&#xFE0F; Weighted Priority System:</p>
+                                <ul className="list-disc list-inside space-y-1 text-blue-200">
+                                    <li>Percentages are auto-normalized to 100%</li>
+                                    <li>Minimum percentage per course: 5%</li>
+                                    <li>Higher % = more events (biased allocation)</li>
+                                    <li>All courses still get events (no starvation)</li>
+                                </ul>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
            </div>
@@ -477,72 +510,229 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="p-4 flex justify-between items-center">
                         <h2 className="text-lg font-semibold text-gray-200">Build Factors</h2>
                     </div>
-                     <div className="p-4 border-t border-gray-700 space-y-4">
-                        <div>
-                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-gray-400">Available Aircraft</label>
-                            <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
-                        </div>
-                        <div>
-                            <label htmlFor="ftd-count" className="block text-sm font-medium text-gray-400">FTD Available</label>
-                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
-                        </div>
-                        <div>
-                            <label htmlFor="cpt-count" className="block text-sm font-medium text-gray-400">CPT Available</label>
-                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-400">Day Flying Window</label>
-                            <div className="flex items-center space-x-2 mt-1">
-                                <select value={flyingStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`); onUpdateFlyingStartTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                                <span className="text-gray-400">to</span>
-                                <select value={flyingEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`); onUpdateFlyingEndTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                    {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                           <div>
-                               <label className="block text-sm font-medium text-gray-400">FTD Operating Window</label>
-                               <div className="flex items-center space-x-2 mt-1">
-                                   <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                       {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                   </select>
-                                   <span className="text-gray-400">to</span>
-                                   <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                       {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                   </select>
-                               </div>
-                           </div>
-                         <div>
-                            <label className="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-5 w-5 bg-gray-700 rounded accent-sky-500" />
-                                <span className="font-semibold text-sky-400">Allow Night Flying</span>
-                            </label>
-                        </div>
-                         {allowNightFlying && (
-                             <div className="pl-8 space-y-2">
-                                <label className="block text-sm font-medium text-gray-400">Night Flying Window</label>
-                                <div className="flex items-center space-x-2">
-                                    <select value={commenceNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                        {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
-                                    <span className="text-gray-400">to</span>
-                                    <select value={ceaseNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`); onUpdateCeaseNightFlying(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
-                                        {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                    </select>
+                     <div className="p-4 border-t border-gray-700">
+                        {/* 2-column grid layout */}
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+
+                            {/* COLUMN 1: Asset Counts */}
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="aircraft-count" className="block text-sm font-medium text-gray-400">Available Aircraft</label>
+                                    <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} \u2192 ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
+                                </div>
+                                <div>
+                                    <label htmlFor="ftd-count" className="block text-sm font-medium text-gray-400">FTD Available</label>
+                                    <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} \u2192 ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
+                                </div>
+                                <div>
+                                    <label htmlFor="cpt-count" className="block text-sm font-medium text-gray-400">CPT Available</label>
+                                    <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} \u2192 ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500"/>
                                 </div>
                             </div>
-                         )}
-                         <div>
-                            <label className="flex items-center space-x-3 cursor-pointer">
-                                <input type="checkbox" checked={programWithPrimaries} onChange={(e) => { logAudit("Priorities", "Edit", "Updated program with primaries", `${programWithPrimaries} → ${e.target.checked}`); onUpdateProgramWithPrimaries(e.target.checked); }} className="h-5 w-5 bg-gray-700 rounded accent-sky-500" />
-                                <span className="font-semibold text-sky-400">Program with Primaries</span>
-                            </label>
+
+                            {/* COLUMN 2: Flying Windows */}
+                            <div className="space-y-4">
+                                {/* Day Flying Window */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400">Day Flying Window</label>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                        <select value={flyingStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFlyingStartTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
+                                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                        <span className="text-gray-400 shrink-0">to</span>
+                                        <select value={flyingEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFlyingEndTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
+                                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* FTD Operating Window */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400">FTD Operating Window</label>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                        <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
+                                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                        <span className="text-gray-400 shrink-0">to</span>
+                                        <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center">
+                                            {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Allow Night Flying checkbox + Night Flying Window (always visible, greyed when unchecked) */}
+                                <div>
+                                    <label className="flex items-center space-x-2 cursor-pointer mb-2">
+                                        <input type="checkbox" checked={allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} \u2192 ${e.target.checked}`); onUpdateAllowNightFlying(e.target.checked); }} className="h-4 w-4 bg-gray-700 rounded accent-sky-500 shrink-0" />
+                                        <span className="text-sm font-medium text-sky-400">Allow Night Flying</span>
+                                    </label>
+                                    {/* Night Flying Window always rendered, disabled+greyed when checkbox is off */}
+                                    <div className={`transition-opacity duration-150 ${allowNightFlying ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                        <label className="block text-sm font-medium text-gray-400">Night Flying Window</label>
+                                        <div className="flex items-center space-x-2 mt-1">
+                                            <select value={commenceNightFlying} disabled={!allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} \u2192 ${parseFloat(e.target.value)}`); onUpdateCommenceNightFlying(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center disabled:cursor-not-allowed">
+                                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                            </select>
+                                            <span className="text-gray-400 shrink-0">to</span>
+                                            <select value={ceaseNightFlying} disabled={!allowNightFlying} onChange={(e) => { logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} \u2192 ${parseFloat(e.target.value)}`); onUpdateCeaseNightFlying(parseFloat(e.target.value)); }} className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center disabled:cursor-not-allowed">
+                                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
 
+                {/* ── INSTRUCTOR ALLOCATION PRIORITIES ── */}
+                <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit">
+                    <div className="p-4 flex justify-between items-center">
+                        <h2 className="text-lg font-semibold text-gray-200">Instructor Allocation Priorities</h2>
+                    </div>
+                    <div className="p-4 border-t border-gray-700 space-y-5">
+
+                        {/* Master switch */}
+                        <div>
+                            <label className="flex items-center space-x-3 cursor-pointer">
+                                <div
+                                    onClick={() => {
+                                        const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
+                                        logAudit("Priorities", "Edit", "Instructor Priority Mode toggled", `${instructorPriority.enabled} → ${next.enabled}`);
+                                        onUpdateInstructorPriority(next);
+                                    }}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? 'bg-sky-500' : 'bg-gray-600'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${instructorPriority.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </div>
+                                <span className="font-semibold text-sky-400">Priority Mode</span>
+                            </label>
+                            <p className="text-xs text-gray-400 mt-1 ml-14">
+                                When on, the scheduler prioritises selected instructor groups for flight and FTD events.
+                            </p>
+                        </div>
+
+                        {instructorPriority.enabled && (
+                            <div className="space-y-5 pl-2">
+
+                                {/* Hard / Soft toggle */}
+                                <div>
+                                    <p className="text-sm font-medium text-gray-300 mb-2">Mode</p>
+                                    <div className="flex items-center space-x-2 bg-gray-700 rounded-lg p-1 w-fit">
+                                        {(['soft', 'hard'] as const).map((m) => (
+                                            <button
+                                                key={m}
+                                                onClick={() => {
+                                                    const next = { ...instructorPriority, mode: m };
+                                                    logAudit("Priorities", "Edit", "Instructor Priority mode changed", `${instructorPriority.mode} → ${m}`);
+                                                    onUpdateInstructorPriority(next);
+                                                }}
+                                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                                    instructorPriority.mode === m
+                                                        ? m === 'hard' ? 'bg-red-600 text-white shadow' : 'bg-sky-600 text-white shadow'
+                                                        : 'text-gray-400 hover:text-white'
+                                                }`}
+                                            >
+                                                {m === 'soft' ? 'Soft' : 'Hard'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {instructorPriority.mode === 'soft' && (
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler will prefer instructors from selected groups but will use any available instructor if none are free.
+                                        </p>
+                                    )}
+                                    {instructorPriority.mode === 'hard' && (
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            <span className="text-red-400 font-medium">Hard:</span> Flight and FTD events will only be placed if an instructor from the required groups is available. If none are free, the event is placed on STBY with no instructor. CPT and Ground are unaffected.
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Soft mode group selection */}
+                                {instructorPriority.mode === 'soft' && (
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-300 mb-2">Preferred Groups
+                                            <span className="text-xs text-gray-400 font-normal ml-2">(select one or more)</span>
+                                        </p>
+                                        <div className="space-y-2">
+                                            {([ 
+                                                { key: 'primary',    label: 'Primary Instructor',         desc: "Trainee's assigned primary instructor" },
+                                                { key: 'secondary',  label: 'Secondary Instructor',       desc: "Trainee's assigned secondary instructor" },
+                                                { key: 'sameFlight', label: 'Same Flight Instructor',     desc: 'Instructor from the exact same flight (e.g. CFS/A)' },
+                                            ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
+                                                <label key={key} className="flex items-start space-x-3 cursor-pointer group">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={instructorPriority.softGroups[key]}
+                                                        onChange={(e) => {
+                                                            const next: InstructorPriorityConfig = {
+                                                                ...instructorPriority,
+                                                                softGroups: { ...instructorPriority.softGroups, [key]: e.target.checked }
+                                                            };
+                                                            logAudit("Priorities", "Edit", `Soft group ${key} changed`, `${instructorPriority.softGroups[key]} → ${e.target.checked}`);
+                                                            onUpdateInstructorPriority(next);
+                                                        }}
+                                                        className="mt-0.5 h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                                                    />
+                                                    <div>
+                                                        <span className="text-sm font-medium text-gray-200 group-hover:text-white">{label}</span>
+                                                        <p className="text-xs text-gray-400">{desc}</p>
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Hard mode group selection */}
+                                {instructorPriority.mode === 'hard' && (
+                                    <div className="space-y-4">
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-300 mb-1">Required Groups
+                                                <span className="text-xs text-gray-400 font-normal ml-2">(flight/FTD will go to STBY if none available)</span>
+                                            </p>
+                                            <p className="text-xs text-gray-400 mb-2">
+                                                Select which instructor groups must be available for a flight or FTD to be placed on the schedule. If none from the selected groups are free, the event is placed on STBY with no instructor assigned.
+                                            </p>
+                                            <div className="space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3">
+                                                {([
+                                                    { key: 'primary',    label: 'Primary Instructor',     desc: "Trainee's assigned primary instructor" },
+                                                    { key: 'secondary',  label: 'Secondary Instructor',   desc: "Trainee's assigned secondary instructor" },
+                                                    { key: 'sameFlight', label: 'Same Flight Instructor', desc: 'Instructor from the exact same flight (e.g. CFS/A)' },
+                                                ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
+                                                    <label key={key} className="flex items-start space-x-3 cursor-pointer group">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={instructorPriority.hardGroups[key]}
+                                                            onChange={(e) => {
+                                                                const next: InstructorPriorityConfig = {
+                                                                    ...instructorPriority,
+                                                                    hardGroups: { ...instructorPriority.hardGroups, [key]: e.target.checked }
+                                                                };
+                                                                logAudit("Priorities", "Edit", `Hard group ${key} changed`, `${instructorPriority.hardGroups[key]} → ${e.target.checked}`);
+                                                                onUpdateInstructorPriority(next);
+                                                            }}
+                                                            className="mt-0.5 h-4 w-4 bg-gray-700 rounded accent-red-500"
+                                                        />
+                                                        <div>
+                                                            <span className="text-sm font-medium text-gray-200 group-hover:text-white">{label}</span>
+                                                            <p className="text-xs text-gray-400">{desc}</p>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3">
+                                            <span className="font-semibold">Note:</span> CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal.
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
             </div>
         </div>
@@ -559,6 +749,95 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Highest Priority Events</h2>
             <PriorityEventTable events={standardPriorityEvents} />
         </div>
+
+        {/* MEDIUM/LOW Priority SCT Events - User can manually include in build */}
+        <div className="section-sct-optional bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+            <h2 className="text-xl font-semibold text-amber-400 mb-2">Optional SCT Events</h2>
+            <p className="text-xs text-gray-400 mb-4">MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.</p>
+            {sctFlights.filter(r => r.priority !== 'High').length === 0 && sctFtds.filter(r => r.priority !== 'High').length === 0 && (
+              <p className="text-gray-500 text-sm italic">No MEDIUM or LOW priority SCT events. Add SCT requests with MEDIUM or LOW priority in the SCT Requests tab above.</p>
+            )}
+
+              {/* SCT Flights - MEDIUM/LOW */}
+              {sctFlights.filter(r => r.priority !== 'High').length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT Flights</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                        <thead className="text-xs text-gray-400 uppercase">
+                            <tr>
+                                <th className="py-2 px-2 text-left">Name</th>
+                                <th className="py-2 px-2 text-left">Event</th>
+                                <th className="py-2 px-2 text-left">Type</th>
+                                <th className="py-2 px-2 text-left">Currency</th>
+                                <th className="py-2 px-2 text-left">Priority</th>
+                                <th className="py-2 px-2 text-center">Include in Build</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                            {sctFlights.filter(r => r.priority !== 'High').map(req => (
+                                <tr key={req.id} className="hover:bg-sky-900/50">
+                                    <td className="py-2 px-2 text-gray-300">{req.name}</td>
+                                    <td className="py-2 px-2 text-amber-300 font-semibold">{req.event}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.flightType}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.currency || 'N/A'}</td>
+                                    <td className={`py-2 px-2 font-semibold ${req.priority === 'Medium' ? 'text-orange-400' : 'text-green-400'}`}>{req.priority}</td>
+                                    <td className="py-2 px-2 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={req.includeInBuild || false}
+                                            onChange={() => onToggleSctInclude(req.id, 'flight')}
+                                            className="h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                                        />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* SCT FTDs - MEDIUM/LOW */}
+              {sctFtds.filter(r => r.priority !== 'High').length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT FTDs</h3>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                        <thead className="text-xs text-gray-400 uppercase">
+                            <tr>
+                                <th className="py-2 px-2 text-left">Name</th>
+                                <th className="py-2 px-2 text-left">Event</th>
+                                <th className="py-2 px-2 text-left">Type</th>
+                                <th className="py-2 px-2 text-left">Currency</th>
+                                <th className="py-2 px-2 text-left">Priority</th>
+                                <th className="py-2 px-2 text-center">Include in Build</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-700/50">
+                            {sctFtds.filter(r => r.priority !== 'High').map(req => (
+                                <tr key={req.id} className="hover:bg-sky-900/50">
+                                    <td className="py-2 px-2 text-gray-300">{req.name}</td>
+                                    <td className="py-2 px-2 text-amber-300 font-semibold">{req.event}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.flightType}</td>
+                                    <td className="py-2 px-2 text-gray-300">{req.currency || 'N/A'}</td>
+                                    <td className={`py-2 px-2 font-semibold ${req.priority === 'Medium' ? 'text-orange-400' : 'text-green-400'}`}>{req.priority}</td>
+                                    <td className="py-2 px-2 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={req.includeInBuild || false}
+                                            onChange={() => onToggleSctInclude(req.id, 'ftd')}
+                                            className="h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                                        />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+          </div>
 
         <div className="section-remedial-queue bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Remedial Priority Queue</h2>

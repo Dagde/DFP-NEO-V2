@@ -14,42 +14,71 @@ export interface SystemFreezeState {
     allowedActions: AllowedActions;
 }
 
+const FREEZE_KEY = 'systemFreezeState';
+const FREEZE_EVENT = 'systemFreezeChanged';
+
+const defaultAllowedActions: AllowedActions = {
+    postFlightTimes: false,
+    pt051Entries: false,
+    flightAuthorisation: false,
+    aircraftAvailability: false,
+};
+
+const readFreezeFromStorage = (): { isFrozen: boolean; allowedActions: AllowedActions } => {
+    const raw = localStorage.getItem(FREEZE_KEY);
+    if (raw) {
+        try {
+            const freeze = JSON.parse(raw);
+            return {
+                isFrozen: freeze.isFrozen === true,
+                allowedActions: {
+                    ...defaultAllowedActions,
+                    ...(freeze.allowedActions || {}),
+                },
+            };
+        } catch {
+            return { isFrozen: false, allowedActions: { ...defaultAllowedActions } };
+        }
+    }
+    return { isFrozen: false, allowedActions: { ...defaultAllowedActions } };
+};
+
+// Dispatch a custom event whenever freeze state changes (same-tab communication)
+export const dispatchFreezeChange = () => {
+    window.dispatchEvent(new CustomEvent(FREEZE_EVENT));
+};
+
 export const useSystemFreeze = () => {
-    const [isFrozen, setIsFrozen] = useState(false);
-    
+    const [isFrozen, setIsFrozen] = useState(() => readFreezeFromStorage().isFrozen);
+    const [allowedActions, setAllowedActions] = useState<AllowedActions>(
+        () => readFreezeFromStorage().allowedActions
+    );
+
     useEffect(() => {
         const checkFreeze = () => {
-            const freezeRaw = localStorage.getItem('systemFreezeState');
-            if (freezeRaw) {
-                const freeze: SystemFreezeState = JSON.parse(freezeRaw);
-                setIsFrozen(freeze.isFrozen);
-            } else {
-                setIsFrozen(false);
-            }
+            const { isFrozen: frozen, allowedActions: actions } = readFreezeFromStorage();
+            setIsFrozen(frozen);
+            setAllowedActions(actions);
         };
-        
-        checkFreeze();
-        
-        // Listen for storage changes
-        const handleStorageChange = () => {
-            checkFreeze();
-        };
-        
-        window.addEventListener('storage', handleStorageChange);
-        
+
+        // Listen for same-tab custom events
+        window.addEventListener(FREEZE_EVENT, checkFreeze);
+        // Listen for cross-tab storage events
+        window.addEventListener('storage', checkFreeze);
+        // Polling fallback every 500ms to guarantee reactivity
+        const poll = setInterval(checkFreeze, 500);
+
         return () => {
-            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener(FREEZE_EVENT, checkFreeze);
+            window.removeEventListener('storage', checkFreeze);
+            clearInterval(poll);
         };
     }, []);
-    
+
     const isActionAllowed = (action: keyof AllowedActions): boolean => {
-        const freezeRaw = localStorage.getItem('systemFreezeState');
-        if (freezeRaw) {
-            const freeze: SystemFreezeState = JSON.parse(freezeRaw);
-            return !freeze.isFrozen || freeze.allowedActions[action];
-        }
-        return true;
+        if (!isFrozen) return true;
+        return allowedActions[action] === true;
     };
-    
-    return { isFrozen, isActionAllowed };
-};
+
+    return { isFrozen, allowedActions, isActionAllowed };
+};// freeze-fix-v2

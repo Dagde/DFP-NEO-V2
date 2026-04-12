@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Trainee, SyllabusItemDetail, Score } from '../types';
 import AuditButton from './AuditButton';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -133,9 +134,34 @@ const CheckIcon = () => (
 
 
 const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, scores, onBack }) => {
+  const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
 
-  const completedEventIds = useMemo(() => new Set(scores.map(s => s.event)), [scores]);
+  // Dual-source completion check:
+  // 1. Normalize asterisk codes from scores (e.g. 'BIF FTD1*' -> 'BIF FTD1')
+  // 2. Also check traineeLmp items that have completedAt set (set by lmp-sync callback in App.tsx)
+  // This ensures BIF FTD1/BIF FTD3 always show as complete even if scores state is stale
+  // or the lmp-sync fallback path runs without dependency rules applied.
+  const completedEventIds = useMemo(() => {
+    // Source 1: from scores prop (PT-051 records, normalized)
+    const ids = new Set(scores.map(s => (s.event || '').replace('*', '')));
+    // Source 2: from traineeLmp items with completedAt set (populated by App.tsx lmp-sync callback)
+    traineeLmp.forEach((item: any) => {
+      if (item.completedAt) {
+        ids.add((item.id || item.code || '').replace('*', ''));
+      }
+    });
+    // Source 3: BIF FTD dependency rules — apply directly in UI as final safety net
+    // Rule 1: BIF FTD2 complete → BIF FTD1 complete
+    if (ids.has('BIF FTD2') && !ids.has('BIF FTD1')) {
+      ids.add('BIF FTD1');
+    }
+    // Rule 2: BIF1 complete → BIF FTD3 complete
+    if (ids.has('BIF1') && !ids.has('BIF FTD3')) {
+      ids.add('BIF FTD3');
+    }
+    return ids;
+  }, [scores, traineeLmp]);
 
   useEffect(() => {
     setSelectedItem(null);
@@ -152,16 +178,20 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, sc
            <div className="flex items-center gap-2">
         <button
           onClick={onBack}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold shadow-md"
+          className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
         >
-          &larr; Back - Trainee Profile
+          ← Back
         </button>
              <AuditButton pageName="Individual LMP" />
            </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-row overflow-hidden">
+      <div className="flex-1 flex flex-row overflow-hidden relative">
+        {/* Transparent freeze overlay */}
+        {isFrozen && (
+          <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+        )}
         {/* Left Column: List */}
         <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
           <ul className="p-2 space-y-1">
