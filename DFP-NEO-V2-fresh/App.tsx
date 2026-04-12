@@ -8174,6 +8174,28 @@ useEffect(() => {
            const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs`;
            
            logAudit(pageName, "Delete", description, changes);
+
+        // ── Deployment unavailability cleanup after delete ────────────────────
+        // Capture the deleted event's id and type before clearing selectedEvent
+        const _deletedId   = selectedEvent.id;
+        const _deletedType = selectedEvent.type;
+        setTimeout(() => {
+            if (_deletedType === 'deployment') {
+                // A deployment tile was removed — re-run the full check on the
+                // updated schedule so all previously tagged Deployed unavailabilities
+                // are cleaned up for everyone.
+                setPublishedSchedules(prevSchedules => {
+                    const allEvents = Object.values(prevSchedules).flat();
+                    handleDeploymentUnavailability(allEvents);
+                    return prevSchedules;
+                });
+            } else {
+                // A flight/FTD/CPT tile was removed — remove its specific tag only
+                removeDeployedUnavailability(_deletedId);
+            }
+        }, 600); // slight delay to allow state to settle after delete
+        // ─────────────────────────────────────────────────────────────────────
+
         setSelectedEvent(null);
     };
     

@@ -2610,9 +2610,11 @@ app.get('/api/aircraft-availability-events', async (req, res) => {
 app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { date, availableCount, totalFleet, notes, timestamp } = req.body;
+    // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
+    const { date, availableCount, notes, timestamp } = req.body;
+    const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
     if (!date || availableCount === undefined || !totalFleet) {
-      return res.status(400).json({ error: 'date, availableCount, totalFleet required' });
+      return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
     }
     const ts = timestamp ? new Date(timestamp) : new Date();
     await db.$executeRawUnsafe(
