@@ -421,6 +421,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
     const [isEditing, setIsEditing] = useState(isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
+    const [showDeleteChoice, setShowDeleteChoice] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
     const [showMassBriefComplete, setShowMassBriefComplete] = useState(false);
     const [showMassBriefConfirmation, setShowMassBriefConfirmation] = useState(false);
@@ -1861,7 +1862,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 {isFrozen && (
                                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                 )}
-                                <button onClick={() => setShowCancelConfirm(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
+                                <button onClick={() => setShowDeleteChoice(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
                                     Delete
                                 </button>
                             </div>
@@ -2331,6 +2332,74 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     </div>
                 </div>
             </div>
+            {/* ── Delete Choice Modal ─────────────────────────────────────────── */}
+            {showDeleteChoice && (
+                <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowDeleteChoice(false)}>
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-red-500/50" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <h2 className="text-lg font-bold text-red-400">Delete Event</h2>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-3">
+                            <p className="text-gray-300 text-sm">What would you like to do with this event?</p>
+
+                            {/* Cancel Flight option */}
+                            <button
+                                onClick={() => {
+                                    setShowDeleteChoice(false);
+                                    setShowCancelConfirm(true);
+                                }}
+                                className="w-full flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-600/40 rounded-lg hover:bg-amber-900/40 transition-colors text-left"
+                            >
+                                <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-amber-600/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="text-amber-300 font-semibold text-sm">Cancel Flight</div>
+                                    <div className="text-gray-400 text-xs mt-0.5">Stays on the schedule with a redline through it. Requires a cancellation code.</div>
+                                </div>
+                            </button>
+
+                            {/* Remove from Schedule option */}
+                            <button
+                                onClick={() => {
+                                    setShowDeleteChoice(false);
+                                    onDeleteRequest();
+                                }}
+                                className="w-full flex items-start gap-3 p-4 bg-red-900/20 border border-red-600/40 rounded-lg hover:bg-red-900/40 transition-colors text-left"
+                            >
+                                <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-red-600/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="text-red-300 font-semibold text-sm">Remove from Schedule</div>
+                                    <div className="text-gray-400 text-xs mt-0.5">Permanently removes the event. Not visible on the schedule and deleted from the database.</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-3 bg-gray-900/50 border-t border-gray-700 flex justify-end">
+                            <button
+                                onClick={() => setShowDeleteChoice(false)}
+                                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
+                            >
+                                Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showCancelConfirm && (
                 <CancelEventFlyout 
                     eventId={event.id}
