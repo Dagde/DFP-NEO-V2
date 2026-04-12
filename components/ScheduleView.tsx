@@ -956,7 +956,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     {renderValidateOverlay()}
                     
                     {/* Aircraft Availability Overlay */}
-                    {showAircraftAvailability && plannedAvailability !== undefined && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && (
+                    {showAircraftAvailability && plannedAvailability !== undefined && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && (
                         <AircraftAvailabilityOverlay
                             currentDate={new Date(date)}
                             totalAircraft={airframeCount}
