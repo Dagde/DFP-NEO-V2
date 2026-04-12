@@ -5950,7 +5950,7 @@ useEffect(() => {
         const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
 
         for (const event of allEvents) {
-            const const eventDate = safeParseDate(event.date);
+            const eventDate = safeParseDate(event.date);
             if (!eventDate) { continue; }
             eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
             const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
