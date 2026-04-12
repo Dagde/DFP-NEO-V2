@@ -12543,6 +12543,7 @@ updates.forEach(update => {
                     traineeLMPs={traineeLMPs}
                     scores={scores}
                     locationOpAreas={locationOpAreas}
+                    formationCallsigns={formationCallsigns}
                 />
             )}
             {selectedEvent && !isAddingTile && (

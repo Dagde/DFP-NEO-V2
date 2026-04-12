@@ -16,6 +16,7 @@ interface AddFlightTileModalProps {
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   scores?: Map<string, Score[]>;
   locationOpAreas?: Record<string, string[]>;
+  formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -432,6 +433,7 @@ interface TileProps {
   areaOptions: { value: string; label: string }[];
   aircraftOptions: { value: string; label: string }[];
   callsignOptions: string[];
+  formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
   // cascading dropdown helpers
   allUnits: string[];
   getLayer2: (unit: string) => string[];
@@ -457,6 +459,7 @@ const FlightTile: React.FC<TileProps> = ({
   flightType, startTime, picName, studentName, duration, flightNumber,
   area, aircraftNumber, callsign, color,
   timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
+  formationCallsigns,
   allUnits, getLayer2, getNames,
   courseOptions, getEventsForCourse, nextLMPEvent, eventCategory,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
@@ -486,10 +489,33 @@ const FlightTile: React.FC<TileProps> = ({
   };
 
   // ── State ──────────────────────────────────────────────────────────────
+  // ── localStorage persistence ──────────────────────────────────────────────────────────
+  const LAYOUT_STORAGE_KEY = 'flightTileLayout_v1';
+
+  const loadPersistedLayout = (): { pos: Record<ElemKey, { x: number; y: number }>; saved: boolean } => {
+    try {
+      const raw = localStorage.getItem('flightTileLayout_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && 'positions' in parsed) {
+          // Validate all keys exist
+          const keys: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
+          const posData = parsed.positions as Record<ElemKey, { x: number; y: number }>;
+          if (keys.every(k => posData[k] && typeof posData[k].x === 'number')) {
+            return { pos: posData, saved: true };
+          }
+        }
+      }
+    } catch { /* ignore */ }
+    return { pos: DEFAULT_POSITIONS, saved: false };
+  };
+
+  const _persisted = loadPersistedLayout();
+
   const [editMode,     setEditMode]     = useState(false);
-  const [layoutSaved,  setLayoutSaved]  = useState(false);  // true = use absolute positions in normal view
-  const [positions,    setPositions]    = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
-  const [savedPositions, setSavedPositions] = useState<Record<ElemKey, { x: number; y: number }>>(DEFAULT_POSITIONS);
+  const [layoutSaved,  setLayoutSaved]  = useState(_persisted.saved);
+  const [positions,    setPositions]    = useState<Record<ElemKey, { x: number; y: number }>>(_persisted.pos);
+  const [savedPositions, setSavedPositions] = useState<Record<ElemKey, { x: number; y: number }>>(_persisted.pos);
 
   const tileRef   = useRef<HTMLDivElement>(null);
   const elemRefs  = useRef<Partial<Record<ElemKey, HTMLDivElement | null>>>({});
@@ -526,6 +552,10 @@ const FlightTile: React.FC<TileProps> = ({
       // Lock the current dragged positions as the saved layout
       setSavedPositions({ ...positions });
       setLayoutSaved(true);
+      // Persist to localStorage so layout survives navigation, refresh, and restarts
+      try {
+        localStorage.setItem('flightTileLayout_v1', JSON.stringify({ positions }));
+      } catch { /* ignore storage errors */ }
     } else {
       // Revert to the last saved (or default) positions
       setPositions({ ...savedPositions });
@@ -827,6 +857,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   onClose, onSave, instructors, trainees, syllabusDetails, school,
   traineesData, instructorsData, courseColors, date, traineeLMPs, scores,
   locationOpAreas = {},
+  formationCallsigns = [],
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
   const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>('Dual');
@@ -1023,30 +1054,45 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     return lmp.find(item => isFlight(item) && !done.has(item.id) && !done.has(item.code)) || null;
   }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
 
-  // ── Auto-fill callsign from PIC profile ──────────────────────────────────
+  // ── Auto-fill callsign from PIC profile + formation callsigns for same unit ──────────
   useEffect(() => {
     if (!picName) { setCallsign(''); setCallsignOptions([]); return; }
+
+    // Determine PIC's unit (for filtering formation callsigns)
+    let picUnit: string | null = null;
+
     // Check instructor first
     const inst = instructorsData.find(i => i.name === picName);
     if (inst) {
+      picUnit = inst.unit || null;
       const primary   = inst.callsign || '';
       const secondary = inst.secondaryCallsign || '';
-      const opts = [primary, secondary].filter(Boolean);
-      setCallsignOptions(opts);
-      setCallsign(primary);
+      const personal  = [primary, secondary].filter(Boolean);
+      // Add formation callsigns that belong to the same unit as the PIC
+      const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
+      const allOpts   = [...new Set([...personal, ...formation])];
+      setCallsignOptions(allOpts);
+      setCallsign(primary || (allOpts[0] || ''));
       return;
     }
+
     // Check trainee
     const trainee = traineesData.find(t => (t.fullName || t.name) === picName);
     if (trainee) {
+      picUnit = (trainee as any).unit || null;
       const cs = trainee.traineeCallsign || '';
-      setCallsignOptions(cs ? [cs] : []);
-      setCallsign(cs);
+      const personal = cs ? [cs] : [];
+      // Add formation callsigns that belong to the same unit as the PIC
+      const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
+      const allOpts   = [...new Set([...personal, ...formation])];
+      setCallsignOptions(allOpts);
+      setCallsign(cs || (allOpts[0] || ''));
       return;
     }
+
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData]);
+  }, [picName, instructorsData, traineesData, formationCallsigns]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
@@ -1233,6 +1279,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   areaOptions={areaOptions}
                   aircraftOptions={aircraftOptions}
                   callsignOptions={callsignOptions}
+                  formationCallsigns={formationCallsigns}
                   allUnits={allUnits}
                   getLayer2={getLayer2}
                   getNames={getNames}
