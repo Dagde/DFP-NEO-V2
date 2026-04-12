@@ -698,7 +698,7 @@ const FlightTile: React.FC<TileProps> = ({
   const durationContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
       <Oval px={10} py={5} minW={58}>
-        <span style={{ fontFamily: monoFamily, fontSize: 20, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
+        <span style={{ fontFamily: monoFamily, fontSize: 18, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
       </Oval>
       <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
@@ -711,7 +711,7 @@ const FlightTile: React.FC<TileProps> = ({
     <div style={{ position: 'relative' }}>
       <Oval px={10} py={5} minW={58}>
         <EventDropdown value={flightNumber} onChange={onFlightNumberChange} courseOptions={courseOptions} getEventsForCourse={getEventsForCourse}
-          nextLMPEvent={nextLMPEvent} fontSize={20} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
+          nextLMPEvent={nextLMPEvent} fontSize={18} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
       </Oval>
     </div>
   );
@@ -719,7 +719,7 @@ const FlightTile: React.FC<TileProps> = ({
   const areaContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
       <Oval px={10} py={5} minW={42}>
-        <span style={{ fontSize: 20, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
+        <span style={{ fontSize: 18, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
       </Oval>
       <select value={area} onChange={e => onAreaChange(e.target.value)}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
@@ -730,7 +730,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   const aircraftContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <span style={{ fontFamily: monoFamily, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
+      <span style={{ fontFamily: monoFamily, fontSize: 18, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
       <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
@@ -748,7 +748,7 @@ const FlightTile: React.FC<TileProps> = ({
         placeholder="CALLSGN"
         style={{
           background: 'transparent', border: 'none', outline: 'none',
-          fontFamily: monoFamily, fontSize: 12, fontStyle: 'italic', lineHeight: 1,
+          fontFamily: monoFamily, fontSize: 18, fontStyle: 'italic', lineHeight: 1,
           color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
           width: callsignOptions.length > 0 ? 70 : 80, padding: 0, cursor: 'text',
         }}
