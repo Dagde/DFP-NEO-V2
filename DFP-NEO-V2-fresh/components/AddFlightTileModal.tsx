@@ -730,7 +730,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   const aircraftContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <span style={{ fontFamily: monoFamily, fontSize: 14, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
+      <span style={{ fontFamily: monoFamily, fontSize: 12, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
       <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
@@ -748,7 +748,7 @@ const FlightTile: React.FC<TileProps> = ({
         placeholder="CALLSGN"
         style={{
           background: 'transparent', border: 'none', outline: 'none',
-          fontFamily: monoFamily, fontSize: 14, fontStyle: 'italic', lineHeight: 1,
+          fontFamily: monoFamily, fontSize: 12, fontStyle: 'italic', lineHeight: 1,
           color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
           width: callsignOptions.length > 0 ? 70 : 80, padding: 0, cursor: 'text',
         }}
@@ -1114,7 +1114,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         const textColor = colourMap[twClass] || '#fff';
         return {
           name: t.fullName || t.name,
-          label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}`,
+          label: `${t.rank ? t.rank + ' ' : ''}${t.fullName || t.name}${t.course ? ' (' + t.course + ')' : ''}`,
           color: textColor,
         };
       });
@@ -1122,11 +1122,17 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   // ── Tile colour from trainee course ──────────────────────────────────────
   const tileColor = useMemo(() => {
+    // SCT events are always grey
+    if (eventCategory === 'sct') return 'bg-gray-500';
+    // Staff CAT / TWR DI - no trainee involved, use grey
+    if (eventCategory === 'staff_cat' || eventCategory === 'twr_di') return 'bg-gray-500';
     const name = flightType === 'Solo' ? picName : studentName;
-    if (!name) return 'bg-sky-500';
+    if (!name) return 'bg-gray-500';
     const t = traineesData.find(t => (t.fullName || t.name) === name);
-    return (t?.course && courseColors[t.course]) || 'bg-sky-500';
-  }, [picName, studentName, flightType, traineesData, courseColors]);
+    // If the person found is not a trainee (i.e. instructor in solo), use grey
+    if (!t) return 'bg-gray-500';
+    return (t.course && courseColors[t.course]) || 'bg-gray-500';
+  }, [picName, studentName, flightType, traineesData, courseColors, eventCategory]);
 
   // ── Syllabus by course (for event dropdown) ───────────────────────────────
   const syllabusByCourse = useMemo(() => {
@@ -1184,6 +1190,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [picName, studentName, flightType, traineeLMPs, scores, eventCategory]);
 
   // ── Auto-fill callsign from PIC profile + formation callsigns for same unit ──────────
+  // Helper: build callsign string from callsignNumber + school prefix (ESL=ROLR, PEA=VIPR)
+  const buildCallsignFromNumber = (num: number | undefined | null): string => {
+    if (!num || num <= 0) return '';
+    const prefix = school === 'ESL' ? 'ROLR' : 'VIPR';
+    return `${prefix}${num}`;
+  };
+
   useEffect(() => {
     if (!picName) { setCallsign(''); setCallsignOptions([]); return; }
 
@@ -1194,7 +1207,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const inst = instructorsData.find(i => i.name === picName);
     if (inst) {
       picUnit = inst.unit || null;
-      const primary   = inst.callsign || '';
+      // Build callsign: prefer explicit callsign string, fall back to callsignNumber + school prefix
+      const primary   = inst.callsign || buildCallsignFromNumber((inst as any).callsignNumber) || '';
       const secondary = inst.secondaryCallsign || '';
       const personal  = [primary, secondary].filter(Boolean);
       // Add formation callsigns that belong to the same unit as the PIC
@@ -1209,7 +1223,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const trainee = traineesData.find(t => (t.fullName || t.name) === picName);
     if (trainee) {
       picUnit = (trainee as any).unit || null;
-      const cs = trainee.traineeCallsign || '';
+      const cs = trainee.traineeCallsign || buildCallsignFromNumber((trainee as any).callsignNumber) || '';
       const personal = cs ? [cs] : [];
       // Add formation callsigns that belong to the same unit as the PIC
       const formation = (formationCallsigns || []).filter(fc => fc.unit && picUnit && fc.unit === picUnit).map(fc => fc.name || fc.code).filter(Boolean);
@@ -1221,7 +1235,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
     setCallsign('');
     setCallsignOptions([]);
-  }, [picName, instructorsData, traineesData, formationCallsigns]);
+  }, [picName, instructorsData, traineesData, formationCallsigns, school]);
 
   // ── Auto-set duration from selected LMP event ─────────────────────────────
   // (handled in onFlightNumberChange handler — see handleFlightNumberChange below)
