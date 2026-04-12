@@ -2091,14 +2091,15 @@ app.get('/api/aircraft-availability-events', async (req, res) => {
 app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { date, availableCount, totalFleet, notes, timestamp } = req.body;
-    if (!date || availableCount === undefined || !totalFleet) {
-      return res.status(400).json({ error: 'date, availableCount, totalFleet required' });
+    const { date, availableCount, notes, timestamp } = req.body;
+    const totalFleet = req.body.totalFleet ?? req.body.totalAircraft ?? req.body.availableCount;
+    if (!date || availableCount === undefined) {
+      return res.status(400).json({ error: 'date and availableCount required' });
     }
     const ts = timestamp ? new Date(timestamp) : new Date();
     await db.$executeRawUnsafe(
       `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalFleet", "notes")
-       VALUES ($1::text, $2::text, $3::int, $4::int, $5::text)`,
+       VALUES ($1::text, $2::timestamp, $3::int, $4::int, $5::text)`,
       date, ts, availableCount, totalFleet, notes || null
     );
     const inserted = await db.$queryRawUnsafe(
