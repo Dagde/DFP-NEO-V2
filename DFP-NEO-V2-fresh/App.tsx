@@ -3950,6 +3950,20 @@ const App: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
+    // Helper: safely parse a date string to Date object if valid, otherwise return null
+    const safeParseDate = (dateStr: string | undefined | null): Date | null => {
+        if (!dateStr || typeof dateStr !== 'string' || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            console.warn('[safeParseDate] Invalid date string provided:', dateStr);
+            return null;
+        }
+        const dateObj = new Date(`${dateStr}T00:00:00Z`);
+        if (isNaN(dateObj.getTime())) {
+            console.warn('[safeParseDate] Failed to parse date string:', dateStr);
+            return null;
+        }
+        return dateObj;
+    };
+
     // Dark Message Modal utility functions
     const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info', autoCloseDelay?: number) => {
         return new Promise<void>((resolve) => {
@@ -5834,7 +5848,12 @@ useEffect(() => {
             const overlappingDeployments = allEvents.filter(event => {
                 if (event.type !== 'deployment') return false;
                 
-                const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+                const eventDateObj = safeParseDate(event.date);
+                if (!eventDateObj) {
+                    console.warn('[DeploymentCount] Event has invalid date, skipping:', event.id, event.date);
+                    return false;
+                }
+                const eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
                 const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
                 
                 return eventStartMs < todayEndTime && eventEndMs > todayStart;
@@ -6115,9 +6134,16 @@ useEffect(() => {
         });
     
         for (const event of allEvents) {
+            // Skip events with invalid dates
+            const eventDateObj = safeParseDate(event.date);
+            if (!eventDateObj) {
+                console.warn('[eventSegmentsForDate] Event has invalid date, skipping:', event.id, event.date);
+                continue;
+            }
+            
             let eventStartMs: number, eventEndMs: number;
     
-            eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+            eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
             eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
     
             if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
@@ -6165,7 +6191,13 @@ useEffect(() => {
         const allEvents = buildEventsWithDate;
 
         for (const event of allEvents) {
-            const eventStartMs = new Date(`${event.date}T00:00:00Z`).getTime() + (event.startTime * 60 * 60 * 1000);
+            const eventDateObj = safeParseDate(event.date);
+            if (!eventDateObj) {
+                console.warn('[NEO-Build] Event has invalid date, skipping:', event.id, event.date);
+                continue;
+            }
+            
+            const eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
             const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
 
             if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
@@ -7279,7 +7311,12 @@ useEffect(() => {
     };
 
     const handleDateChange = (increment: number) => {
-        const currentDate = new Date(`${date}T00:00:00Z`);
+        const currentDateObj = safeParseDate(date);
+        if (!currentDateObj) {
+            console.error('[handleDateChange] Invalid current date state:', date);
+            return;
+        }
+        const currentDate = new Date(currentDateObj);
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
