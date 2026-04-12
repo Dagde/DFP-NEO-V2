@@ -115,12 +115,14 @@ interface PersonDropdownProps {
   allowSolo?: boolean;    // shows SOLO as first option
   onSoloSelect?: () => void;
   dropdownZIndex?: number; // z-index for the portal dropdown (default 9000)
+  dropdownId?: string;     // unique id for portal element (default 'person-dropdown-portal')
 }
 
 const PersonDropdown: React.FC<PersonDropdownProps> = ({
   value, onChange, allUnits, getLayer2, getNames,
   placeholder, fontSize, color, bold = false, allowSolo, onSoloSelect,
   dropdownZIndex = 9000,
+  dropdownId = 'person-dropdown-portal',
 }) => {
   const [open, setOpen] = useState(false);
   const [hovUnit, setHovUnit] = useState<string | null>(null);
@@ -132,19 +134,22 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         // Also check if click was inside the portal dropdown
-        const portalEl = document.getElementById('person-dropdown-portal');
+        const portalEl = document.getElementById(dropdownId);
         if (portalEl && portalEl.contains(e.target as Node)) return;
         setOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [dropdownId]);
 
   const handleOpen = () => {
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect();
-      setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+      // Store viewport-relative coords (BoundingClientRect is already viewport-relative, use directly with position:fixed)
+      const DROPDOWN_WIDTH = 520;
+      const left = Math.min(rect.left, window.innerWidth - DROPDOWN_WIDTH - 8);
+      setDropdownPos({ top: rect.bottom + 4, left: Math.max(8, left) });
     }
     setOpen(o => !o);
   };
@@ -152,11 +157,11 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
   // Portal dropdown rendered at document.body level
   const dropdownPanel = open ? ReactDOM.createPortal(
     <div
-      id="person-dropdown-portal"
+      id={dropdownId}
       onClick={e => e.stopPropagation()}
       style={{
         position: 'fixed',
-        top: dropdownPos.top - window.scrollY,
+        top: dropdownPos.top,
         left: dropdownPos.left,
         zIndex: dropdownZIndex,
         display: 'flex',
@@ -674,13 +679,15 @@ const FlightTile: React.FC<TileProps> = ({
 
   const picNameContent = () => (
     <PersonDropdown value={picName} onChange={onPicNameChange} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-      placeholder="Surname, First (N)" fontSize={30} color={picName ? WHITE_FULL : WHITE_GHOST} bold />
+      placeholder="Surname, First (N)" fontSize={30} color={picName ? WHITE_FULL : WHITE_GHOST} bold
+      dropdownId="pic-dropdown-portal" />
   );
 
   const coPilotContent = () => (
     flightType === 'Dual' ? (
       <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-        placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')} />
+        placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
+        dropdownId="copilot-dropdown-portal" />
     ) : (
       <span onClick={() => onFlightTypeChange('Dual')}
         style={{ display: 'inline-block', fontSize: 18, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)', padding: '3px 10px', borderRadius: 4, lineHeight: 1.25, cursor: 'pointer' }}
@@ -1224,7 +1231,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setPicName(''); setStudentName(''); setFlightNumber('');
     setStartTime(8.0); setDuration(1.2);
     setArea(opAreas[0] || '-'); setAircraftNumber('001');
-    setCallsign(''); setCallsignOptions(''); setNotes(''); setErrors([]);
+    setCallsign(''); setCallsignOptions([]); setNotes(''); setErrors([]);
   }, [eventCategory]);
 
   useEffect(() => {
