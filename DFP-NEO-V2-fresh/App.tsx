@@ -7978,10 +7978,9 @@ useEffect(() => {
         // Remove from highest priority events
         setHighestPriorityEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
         
-        // Force a refresh of the events by updating the date
-        const currentDate = date;
-        setDate(''); // Clear date
-        setTimeout(() => setDate(currentDate), 100); // Reset date after 100ms
+        // Note: No need to force a date refresh - the state updates above
+        // (setNextDayBuildEvents / setPublishedSchedules) will trigger re-render automatically.
+        // Previously used setDate('') which caused RangeError: invalid date in AircraftAvailabilityOverlay.
         
         // Log the cancellation to audit trail
         const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';

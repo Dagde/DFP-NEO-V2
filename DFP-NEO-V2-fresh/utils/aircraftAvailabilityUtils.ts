@@ -162,7 +162,11 @@ export function getLastNWeeksRange(weeks: number): { start: Date; end: Date } {
 /**
  * Format date as YYYY-MM-DD
  */
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | null | undefined): string {
+    if (!date || isNaN(date.getTime())) {
+        console.warn('[formatDate] Invalid date provided:', date);
+        return '';
+    }
     return date.toISOString().split('T')[0];
 }
 
