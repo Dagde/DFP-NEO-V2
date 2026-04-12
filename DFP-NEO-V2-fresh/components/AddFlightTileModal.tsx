@@ -104,6 +104,7 @@ const ghostStyle = (
 // ─── Cascading dropdown for Person selection (3 layers: Unit→Staff/Course→Names) ─
 interface PersonDropdownProps {
   value: string;
+  displayValue?: string;  // optional display label (e.g. "Davies, Mary (ADF301)") — if omitted, value is shown
   onChange: (name: string, callsigns: string[]) => void;
   allUnits: string[];
   getLayer2: (unit: string) => string[];
@@ -119,7 +120,7 @@ interface PersonDropdownProps {
 }
 
 const PersonDropdown: React.FC<PersonDropdownProps> = ({
-  value, onChange, allUnits, getLayer2, getNames,
+  value, displayValue, onChange, allUnits, getLayer2, getNames,
   placeholder, fontSize, color, bold = false, allowSolo, onSoloSelect,
   dropdownZIndex = 9000,
   dropdownId = 'person-dropdown-portal',
@@ -286,7 +287,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
         onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
         onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
-        {value || placeholder}
+        {displayValue || value || placeholder}
       </div>
       {dropdownPanel}
     </div>
@@ -477,6 +478,7 @@ interface TileProps {
   allUnits: string[];
   getLayer2: (unit: string) => string[];
   getNames: (unit: string, sel: string) => { name: string; label: string; color?: string }[];
+  getDisplayLabel: (name: string) => string;  // returns "Name – Course" for trainees, "Name" for staff
   // event dropdown helpers
   courseOptions: string[];
   getEventsForCourse: (course: string) => SyllabusItemDetail[];
@@ -507,7 +509,7 @@ const FlightTile: React.FC<TileProps> = ({
   area, aircraftNumber, callsign, color,
   timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
   formationCallsigns,
-  allUnits, getLayer2, getNames,
+  allUnits, getLayer2, getNames, getDisplayLabel,
   courseOptions, getEventsForCourse, nextLMPEvent, eventCategory,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
@@ -685,7 +687,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   const coPilotContent = () => (
     flightType === 'Dual' ? (
-      <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
+      <PersonDropdown value={studentName} displayValue={studentName ? getDisplayLabel(studentName) : undefined} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
         placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
         dropdownId="copilot-dropdown-portal" />
     ) : (
@@ -1121,6 +1123,14 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   // ── Tile colour from trainee course ──────────────────────────────────────
+  // ── Helper: get display label for a person (name + course if trainee) ────────
+  const getDisplayLabel = (name: string): string => {
+    if (!name) return '';
+    const trainee = traineesData.find(t => (t.fullName || t.name) === name);
+    if (trainee && trainee.course) return `${name} – ${trainee.course}`;
+    return name;
+  };
+
   const tileColor = useMemo(() => {
     // SCT events are always grey
     if (eventCategory === 'sct') return 'bg-gray-500';
@@ -1433,6 +1443,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   allUnits={allUnits}
                   getLayer2={getLayer2}
                   getNames={getNames}
+                  getDisplayLabel={getDisplayLabel}
                   courseOptions={courseOptions}
                   getEventsForCourse={getEventsForCourse}
                   nextLMPEvent={nextLMPEvent}
