@@ -9176,7 +9176,32 @@ useEffect(() => {
             e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground'
         );
 
+        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
+        console.group('[DeployUnavail] handleDeploymentUnavailability');
+        console.log('Total events in updatedSchedule:', updatedSchedule.length);
+        console.log('Deployment tiles found:', deploymentTiles.length, deploymentTiles.map(d => ({
+            id: d.id,
+            date: d.date,
+            deploymentStartDate: d.deploymentStartDate,
+            deploymentEndDate:   d.deploymentEndDate,
+            deploymentStartTime: d.deploymentStartTime,
+            deploymentEndTime:   d.deploymentEndTime,
+            startTime: d.startTime,
+            duration:  d.duration,
+        })));
+        console.log('Flight/FTD/CPT tiles found:', flightTiles.length, flightTiles.map(f => ({
+            id: f.id,
+            type: f.type,
+            date: f.date,
+            startTime: f.startTime,
+            instructor: f.instructor,
+            student: f.student,
+        })));
+        // ────────────────────────────────────────────────────────────────────
+
         if (deploymentTiles.length === 0) {
+            console.log('[DeployUnavail] No deployment tiles — cleaning up any lingering Deployed periods');
+            console.groupEnd();
             // No deployments — remove any lingering Deployed periods tagged to all flight tiles
             for (const flight of flightTiles) {
                 await removeDeployedUnavailability(flight.id);
@@ -9191,15 +9216,29 @@ useEffect(() => {
             const overlappingDeploy = deploymentTiles.find(dep => {
                 const depStart = dep.deploymentStartDate || dep.date;
                 const depEnd   = dep.deploymentEndDate   || dep.date;
-                return flight.date >= depStart && flight.date <= depEnd;
+                const matches  = flight.date >= depStart && flight.date <= depEnd;
+
+                // ── DIAGNOSTIC LOGGING ──────────────────────────────────────
+                console.log(
+                    '[DeployUnavail] Flight "' + flight.id + '" (' + flight.type + ') date="' + flight.date + '"' +
+                    ' vs deployment "' + dep.id + '" depStart="' + depStart + '" depEnd="' + depEnd + '"' +
+                    ' matches=' + matches
+                );
+                // ────────────────────────────────────────────────────────────
+
+                return matches;
             });
 
             if (overlappingDeploy) {
+                console.log('[DeployUnavail] MATCH: Flight "' + flight.id + '" (' + (flight.instructor || flight.student || '?') + ') is ON deployment - upsert');
                 await upsertDeployedUnavailability(flight, overlappingDeploy);
             } else {
+                console.log('[DeployUnavail] NO MATCH: Flight "' + flight.id + '" (' + (flight.instructor || flight.student || '?') + ') is NOT on deployment - remove');
                 await removeDeployedUnavailability(flight.id);
             }
         }
+
+        console.groupEnd();
     };
 
     const upsertDeployedUnavailability = async (flight: ScheduleEvent, deployment: ScheduleEvent) => {
@@ -9240,6 +9279,13 @@ useEffect(() => {
             notes: tag,
         };
 
+        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
+        console.group('[DeployUnavail] upsertDeployedUnavailability');
+        console.log('Flight:', { id: flight.id, type: flight.type, date: flight.date, startTime: flight.startTime, instructor: flight.instructor, student: flight.student, pilot: flight.pilot, crew: flight.crew });
+        console.log('Deployment:', { id: deployment.id, date: deployment.date, deploymentStartDate: deployment.deploymentStartDate, deploymentEndDate: deployment.deploymentEndDate, deploymentStartTime: deployment.deploymentStartTime, deploymentEndTime: deployment.deploymentEndTime });
+        console.log('Computed period:', { tag, startDate: flightDateStr, startTime, endDate: endDateStr, endTime });
+        // ────────────────────────────────────────────────────────────────────
+
         // Collect personnel on this flight
         const personnelNames: string[] = [];
         if (flight.instructor) personnelNames.push(flight.instructor);
@@ -9249,6 +9295,10 @@ useEffect(() => {
         }
         if (flight.pilot) personnelNames.push(flight.pilot);
         if (flight.crew) personnelNames.push(flight.crew);
+
+        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
+        console.log('Personnel to tag:', personnelNames);
+        // ────────────────────────────────────────────────────────────────────
 
         for (const personName of personnelNames) {
             // Check instructors
@@ -9298,10 +9348,23 @@ useEffect(() => {
                 }
             }
         }
+
+        console.groupEnd(); // upsertDeployedUnavailability
     };
 
     const removeDeployedUnavailability = async (flightId: string) => {
         const tag = `__deploy__${flightId}`;
+
+        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
+        const instructorsWithTag = allInstructorsData.filter(i => (i.unavailability || []).some(p => p.notes === tag));
+        const traineesWithTag    = allTraineesData.filter(t => (t.unavailability || []).some(p => p.notes === tag));
+        if (instructorsWithTag.length > 0 || traineesWithTag.length > 0) {
+            console.log('[DeployUnavail] removeDeployedUnavailability for flightId="' + flightId + '" tag="' + tag + '"',
+                'Removing from instructors:', instructorsWithTag.map(i => i.name),
+                'Removing from trainees:', traineesWithTag.map(t => t.name)
+            );
+        }
+        // ────────────────────────────────────────────────────────────────────
 
         // Instructors
         const affectedInstructors = allInstructorsData.filter(i =>
@@ -9376,8 +9439,15 @@ useEffect(() => {
         _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
             if (updatedEventsForDate.length > 0) {
                 persistScheduleForDate(date, updatedEventsForDate);
-                // Handle deployment-driven unavailability after drag settles
-                handleDeploymentUnavailability(updatedEventsForDate);
+                // Handle deployment-driven unavailability after drag settles.
+                // IMPORTANT: pass the FULL schedule across all dates so we can find
+                // deployment tiles that may live on a different date than the dragged flight.
+                setPublishedSchedules(prevSchedules => {
+                    const allEvents = Object.values(prevSchedules).flat();
+                    console.log('[DeployUnavail] Calling handleDeploymentUnavailability with', allEvents.length, 'total events across', Object.keys(prevSchedules).length, 'dates. Dates:', Object.keys(prevSchedules));
+                    handleDeploymentUnavailability(allEvents);
+                    return prevSchedules; // no state change, just reading
+                });
             }
         }, 500);
            
