@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { loadUserPreferences, saveUserPreference } from '../utils/userPreferencesService';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -113,20 +114,26 @@ interface PersonDropdownProps {
   bold?: boolean;
   allowSolo?: boolean;    // shows SOLO as first option
   onSoloSelect?: () => void;
+  dropdownZIndex?: number; // z-index for the portal dropdown (default 9000)
 }
 
 const PersonDropdown: React.FC<PersonDropdownProps> = ({
   value, onChange, allUnits, getLayer2, getNames,
   placeholder, fontSize, color, bold = false, allowSolo, onSoloSelect,
+  dropdownZIndex = 9000,
 }) => {
   const [open, setOpen] = useState(false);
   const [hovUnit, setHovUnit] = useState<string | null>(null);
   const [hovL2, setHovL2] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
+        // Also check if click was inside the portal dropdown
+        const portalEl = document.getElementById('person-dropdown-portal');
+        if (portalEl && portalEl.contains(e.target as Node)) return;
         setOpen(false);
       }
     };
@@ -134,10 +141,129 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const handleOpen = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX });
+    }
+    setOpen(o => !o);
+  };
+
+  // Portal dropdown rendered at document.body level
+  const dropdownPanel = open ? ReactDOM.createPortal(
+    <div
+      id="person-dropdown-portal"
+      onClick={e => e.stopPropagation()}
+      style={{
+        position: 'fixed',
+        top: dropdownPos.top - window.scrollY,
+        left: dropdownPos.left,
+        zIndex: dropdownZIndex,
+        display: 'flex',
+        width: 520,
+        maxHeight: 300,
+        backgroundColor: '#1a2f4a',
+        borderRadius: 8,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.85)',
+        overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.18)',
+      }}
+    >
+      {/* Col 1: Units */}
+      <div style={{ width: 110, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#1a2f4a' }}>
+        {allowSolo && (
+          <div
+            onClick={() => { onSoloSelect?.(); setOpen(false); }}
+            style={{ padding: '9px 12px', color: '#ffd43b', fontWeight: 700, fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.12)', backgroundColor: 'transparent' }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,212,59,0.15)')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            SOLO
+          </div>
+        )}
+        {allUnits.map(unit => (
+          <div
+            key={unit}
+            onMouseEnter={() => { setHovUnit(unit); setHovL2(null); }}
+            onClick={() => setHovUnit(unit)}
+            style={{
+              padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              color: hovUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
+              backgroundColor: hovUnit === unit ? 'rgba(255,255,255,0.12)' : 'transparent',
+            }}
+          >
+            {unit}
+            <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Col 2: STAFF / Courses */}
+      <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#16293f' }}>
+        {hovUnit ? (
+          getLayer2(hovUnit).map(opt => (
+            <div
+              key={opt}
+              onMouseEnter={() => setHovL2(opt)}
+              onClick={() => setHovL2(opt)}
+              style={{
+                padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                fontWeight: opt === 'STAFF' ? 600 : 400,
+                color: hovL2 === opt ? '#fff' : 'rgba(255,255,255,0.8)',
+                backgroundColor: hovL2 === opt ? 'rgba(255,255,255,0.12)' : 'transparent',
+              }}
+            >
+              {opt}
+              <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
+            </div>
+          ))
+        ) : (
+          <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
+            Select unit
+          </div>
+        )}
+      </div>
+
+      {/* Col 3: Names */}
+      <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: '#122437' }}>
+        {hovUnit && hovL2 ? (
+          getNames(hovUnit, hovL2).map(person => (
+            <div
+              key={person.name}
+              onClick={() => {
+                onChange(person.name, []);
+                setOpen(false);
+                setHovUnit(null);
+                setHovL2(null);
+              }}
+              style={{
+                padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                color: person.color || '#fff',
+                backgroundColor: 'transparent',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {person.label}
+            </div>
+          ))
+        ) : (
+          <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
+            {hovUnit ? 'Select category' : 'Select unit'}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
         style={{
           fontSize,
           fontWeight: bold ? 700 : 400,
@@ -157,119 +283,7 @@ const PersonDropdown: React.FC<PersonDropdownProps> = ({
       >
         {value || placeholder}
       </div>
-
-      {open && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            zIndex: 2000,
-            display: 'flex',
-            width: 520,
-            maxHeight: 300,
-            backgroundColor: '#1a2f4a',
-            borderRadius: 8,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-            overflow: 'hidden',
-            marginTop: 4,
-            border: '1px solid rgba(255,255,255,0.12)',
-          }}
-        >
-          {/* Col 1: Units */}
-          <div style={{ width: 110, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300 }}>
-            {allowSolo && (
-              <div
-                onClick={() => { onSoloSelect?.(); setOpen(false); }}
-                style={{
-                  padding: '9px 12px', color: '#ffd43b', fontWeight: 700, fontSize: 13,
-                  cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.12)',
-                  backgroundColor: 'transparent',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,212,59,0.15)')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                SOLO
-              </div>
-            )}
-            {allUnits.map(unit => (
-              <div
-                key={unit}
-                onMouseEnter={() => { setHovUnit(unit); setHovL2(null); }}
-                onClick={() => setHovUnit(unit)}
-                style={{
-                  padding: '9px 12px', fontSize: 13, cursor: 'pointer',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  color: hovUnit === unit ? '#fff' : 'rgba(255,255,255,0.8)',
-                  backgroundColor: hovUnit === unit ? 'rgba(255,255,255,0.12)' : 'transparent',
-                }}
-              >
-                {unit}
-                <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Col 2: STAFF / Courses */}
-          <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 300, backgroundColor: '#16293f' }}>
-            {hovUnit ? (
-              getLayer2(hovUnit).map(opt => (
-                <div
-                  key={opt}
-                  onMouseEnter={() => setHovL2(opt)}
-                  onClick={() => setHovL2(opt)}
-                  style={{
-                    padding: '9px 12px', fontSize: 13, cursor: 'pointer',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    fontWeight: opt === 'STAFF' ? 600 : 400,
-                    color: hovL2 === opt ? '#fff' : 'rgba(255,255,255,0.8)',
-                    backgroundColor: hovL2 === opt ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  }}
-                >
-                  {opt}
-                  <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
-                </div>
-              ))
-            ) : (
-              <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
-                Select unit
-              </div>
-            )}
-          </div>
-
-          {/* Col 3: Names */}
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 300, backgroundColor: '#122437' }}>
-            {hovUnit && hovL2 ? (
-              getNames(hovUnit, hovL2).map(person => (
-                <div
-                  key={person.name}
-                  onClick={() => {
-                    onChange(person.name, []);
-                    setOpen(false);
-                    setHovUnit(null);
-                    setHovL2(null);
-                  }}
-                  style={{
-                    padding: '9px 12px', fontSize: 13, cursor: 'pointer',
-                    color: person.color || '#fff',
-                    backgroundColor: 'transparent',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  {person.label}
-                </div>
-              ))
-            ) : (
-              <div style={{ padding: '16px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
-                {hovUnit ? 'Select category' : 'Select unit'}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {dropdownPanel}
     </div>
   );
 };
@@ -293,19 +307,119 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
   const [open, setOpen] = useState(false);
   const [hovCourse, setHovCourse] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        const portalEl = document.getElementById('event-dropdown-portal');
+        if (portalEl && portalEl.contains(e.target as Node)) return;
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const handleOpen = () => {
+    if (disabled) return;
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      // right-align the dropdown to the trigger element
+      setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setOpen(o => !o);
+  };
+
+  const dropdownPanel = open && !disabled ? ReactDOM.createPortal(
+    <div
+      id="event-dropdown-portal"
+      onClick={e => e.stopPropagation()}
+      style={{
+        position: 'fixed',
+        top: dropdownPos.top,
+        right: dropdownPos.right,
+        zIndex: 9000,
+        display: 'flex',
+        width: 400,
+        maxHeight: 320,
+        backgroundColor: '#1a2f4a',
+        borderRadius: 8,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.85)',
+        overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.18)',
+      }}
+    >
+      {/* Col 1: Courses */}
+      <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 320, backgroundColor: '#1a2f4a' }}>
+        {courseOptions.map(course => (
+          <div
+            key={course}
+            onMouseEnter={() => setHovCourse(course)}
+            onClick={() => {
+              if (course === 'SCT') {
+                onChange('SCT');
+                setOpen(false);
+              }
+            }}
+            style={{
+              padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              color: hovCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
+              backgroundColor: hovCourse === course ? 'rgba(255,255,255,0.12)' : 'transparent',
+              fontWeight: course === 'SCT' ? 600 : 400,
+            }}
+          >
+            {course}
+            {course !== 'SCT' && <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>}
+          </div>
+        ))}
+      </div>
+
+      {/* Col 2: Events */}
+      <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
+        {hovCourse && hovCourse !== 'SCT' ? (
+          getEventsForCourse(hovCourse).map(ev => {
+            const code = ev.code || ev.id || '';
+            const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
+            return (
+              <div
+                key={code}
+                onClick={() => {
+                  onChange(code, ev.flightOrSimHours || ev.duration || undefined);
+                  setOpen(false);
+                  setHovCourse(null);
+                }}
+                style={{
+                  padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                  color: isNext ? '#22c55e' : '#fff',
+                  backgroundColor: isNext ? 'rgba(34,197,94,0.12)' : 'transparent',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = isNext ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.1)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = isNext ? 'rgba(34,197,94,0.12)' : 'transparent')}
+                title={ev.eventDescription || code}
+              >
+                <span>{code}</span>
+                {isNext && <span style={{ fontSize: 10, color: '#22c55e', marginLeft: 6 }}>NEXT</span>}
+              </div>
+            );
+          })
+        ) : (
+          <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
+            {hovCourse === 'SCT' ? 'SCT selected' : 'Hover a course'}
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div
-        onClick={() => { if (!disabled) setOpen(o => !o); }}
+        onClick={handleOpen}
         style={{
           fontSize,
           fontStyle: 'italic',
@@ -323,93 +437,11 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
       >
         {value || 'EVENT'}
       </div>
-
-      {open && !disabled && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute',
-            top: '100%',
-            right: 0,
-            zIndex: 2000,
-            display: 'flex',
-            width: 400,
-            maxHeight: 320,
-            backgroundColor: '#1a2f4a',
-            borderRadius: 8,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-            overflow: 'hidden',
-            marginTop: 4,
-            border: '1px solid rgba(255,255,255,0.12)',
-          }}
-        >
-          {/* Col 1: Courses */}
-          <div style={{ width: 130, borderRight: '1px solid rgba(255,255,255,0.12)', overflowY: 'auto', maxHeight: 320 }}>
-            {courseOptions.map(course => (
-              <div
-                key={course}
-                onMouseEnter={() => setHovCourse(course)}
-                onClick={() => {
-                  if (course === 'SCT') {
-                    onChange('SCT');
-                    setOpen(false);
-                  }
-                }}
-                style={{
-                  padding: '9px 12px', fontSize: 13, cursor: 'pointer',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  color: hovCourse === course ? '#fff' : 'rgba(255,255,255,0.8)',
-                  backgroundColor: hovCourse === course ? 'rgba(255,255,255,0.12)' : 'transparent',
-                  fontWeight: course === 'SCT' ? 600 : 400,
-                }}
-              >
-                {course}
-                {course !== 'SCT' && <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>}
-              </div>
-            ))}
-          </div>
-
-          {/* Col 2: Events */}
-          <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
-            {hovCourse && hovCourse !== 'SCT' ? (
-              getEventsForCourse(hovCourse).map(ev => {
-                const code = ev.code || ev.id || '';
-                const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
-                return (
-                  <div
-                    key={code}
-                    onClick={() => {
-                      onChange(code, ev.flightOrSimHours || ev.duration || undefined);
-                      setOpen(false);
-                      setHovCourse(null);
-                    }}
-                    style={{
-                      padding: '9px 12px', fontSize: 13, cursor: 'pointer',
-                      color: isNext ? '#22c55e' : '#fff',
-                      backgroundColor: isNext ? 'rgba(34,197,94,0.12)' : 'transparent',
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={e => (e.currentTarget.style.backgroundColor = isNext ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.1)')}
-                    onMouseLeave={e => (e.currentTarget.style.backgroundColor = isNext ? 'rgba(34,197,94,0.12)' : 'transparent')}
-                    title={ev.eventDescription || code}
-                  >
-                    <span>{code}</span>
-                    {isNext && <span style={{ fontSize: 10, color: '#22c55e', marginLeft: 6 }}>NEXT</span>}
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ padding: '20px 12px', color: 'rgba(255,255,255,0.35)', fontSize: 12, textAlign: 'center' }}>
-                {hovCourse === 'SCT' ? 'SCT selected' : 'Hover a course'}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {dropdownPanel}
     </div>
   );
 };
+
 
 // ─── Large Interactive Flight Tile ─────────────────────────────────────────
 // Layout mirrors real FlightTile.tsx exactly:
