@@ -91,29 +91,37 @@ function computeCurrencyCounts(
 // ─── Traffic Light Circle ────────────────────────────────────────────────────
 
 const TrafficCircle: React.FC<{ color: 'red' | 'amber' | 'green' | 'grey'; count: number }> = ({ color, count }) => {
-  const bgClass = {
-    red:   'bg-red-500',
-    amber: 'bg-amber-400',
-    green: 'bg-green-500',
-    grey:  'bg-gray-500',
+  const filled = count > 0;
+
+  const solidClass = {
+    red:   'bg-red-500 border-red-500 text-white',
+    amber: 'bg-amber-400 border-amber-400 text-white',
+    green: 'bg-green-500 border-green-500 text-white',
+    grey:  'bg-gray-500 border-gray-500 text-white',
+  }[color];
+
+  const outlineClass = {
+    red:   'bg-transparent border-red-500 text-red-400',
+    amber: 'bg-transparent border-amber-400 text-amber-300',
+    green: 'bg-transparent border-green-500 text-green-400',
+    grey:  'bg-transparent border-gray-500 text-gray-400',
   }[color];
 
   return (
-    <div className={`w-9 h-9 rounded-full ${bgClass} flex items-center justify-center shadow-md`}>
-      <span className="text-white text-sm font-bold leading-none">{count}</span>
+    <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center shadow-sm ${filled ? solidClass : outlineClass}`}>
+      <span className="text-sm font-bold leading-none">{count}</span>
     </div>
   );
 };
 
 // ─── Person currency row ─────────────────────────────────────────────────────
 
-const PersonCurrencyRow: React.FC<{ label: string; role: string; counts: CurrencyCounts }> = ({ label, role, counts }) => (
+const PersonCurrencyRow: React.FC<{ label: string; counts: CurrencyCounts }> = ({ label, counts }) => (
   <div className="flex items-center gap-3 py-2.5">
     <div className="flex-1 min-w-0">
       <p className="text-sm font-semibold text-gray-200 truncate">{label}</p>
-      <p className="text-xs text-gray-500">{role}</p>
     </div>
-    <div className="flex items-center gap-2.5 shrink-0">
+    <div className="flex items-center gap-4 shrink-0">
       <TrafficCircle color="red"   count={counts.expired} />
       <TrafficCircle color="amber" count={counts.approaching} />
       <TrafficCircle color="green" count={counts.current} />
@@ -340,18 +348,12 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
         <legend className="px-2 text-sm font-semibold text-gray-300">Currencies</legend>
 
         {/* Column headers */}
-        <div className="flex items-center justify-end gap-2.5 mb-1 pr-1">
+        <div className="flex items-end justify-end gap-4 mb-1 pr-1">
           {(
-            [
-              { color: 'bg-red-500',   label: 'Expired'  },
-              { color: 'bg-amber-400', label: 'Due Soon' },
-              { color: 'bg-green-500', label: 'Current'  },
-              { color: 'bg-gray-500',  label: 'Inactive' },
-            ] as const
-          ).map(({ color, label }) => (
-            <div key={label} className="w-9 flex flex-col items-center gap-0.5">
-              <span className={`w-2.5 h-2.5 rounded-full inline-block ${color}`} />
-              <span className="text-[9px] text-gray-500 leading-tight">{label}</span>
+            ['Expired', 'Due', 'Current', 'Inactive'] as const
+          ).map((label) => (
+            <div key={label} className="w-10 flex justify-center">
+              <span className="text-xs font-medium text-gray-400 leading-tight">{label}</span>
             </div>
           ))}
         </div>
@@ -360,14 +362,12 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
           {instructorLabel && (
             <PersonCurrencyRow
               label={instructorLabel}
-              role="Instructor / PIC"
               counts={instructorCounts}
             />
           )}
           {studentLabel && (
             <PersonCurrencyRow
               label={studentLabel}
-              role={studentRecord?.isTrainee ? 'Student' : 'Co-Pilot'}
               counts={studentCounts}
             />
           )}

@@ -62871,68 +62871,68 @@ function computeCurrencyCounts(currencyStatus, allDefs) {
   return counts;
 }
 const TrafficCircle = ({ color, count }) => {
-  const bgClass = {
-    red: "bg-red-500",
-    amber: "bg-amber-400",
-    green: "bg-green-500",
-    grey: "bg-gray-500"
+  const filled = count > 0;
+  const solidClass = {
+    red: "bg-red-500 border-red-500 text-white",
+    amber: "bg-amber-400 border-amber-400 text-white",
+    green: "bg-green-500 border-green-500 text-white",
+    grey: "bg-gray-500 border-gray-500 text-white"
   }[color];
-  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-9 h-9 rounded-full ${bgClass} flex items-center justify-center shadow-md`, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-sm font-bold leading-none", children: count }, void 0, false, {
+  const outlineClass = {
+    red: "bg-transparent border-red-500 text-red-400",
+    amber: "bg-transparent border-amber-400 text-amber-300",
+    green: "bg-transparent border-green-500 text-green-400",
+    grey: "bg-transparent border-gray-500 text-gray-400"
+  }[color];
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-10 h-10 rounded-full border-2 flex items-center justify-center shadow-sm ${filled ? solidClass : outlineClass}`, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-bold leading-none", children: count }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-    lineNumber: 103,
+    lineNumber: 112,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-    lineNumber: 102,
+    lineNumber: 111,
     columnNumber: 5
   }, void 0);
 };
-const PersonCurrencyRow = ({ label, role, counts }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3 py-2.5", children: [
-  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: [
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm font-semibold text-gray-200 truncate", children: label }, void 0, false, {
-      fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 113,
-      columnNumber: 7
-    }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-500", children: role }, void 0, false, {
-      fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 114,
-      columnNumber: 7
-    }, void 0)
-  ] }, void 0, true, {
+const PersonCurrencyRow = ({ label, counts }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3 py-2.5", children: [
+  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm font-semibold text-gray-200 truncate", children: label }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-    lineNumber: 112,
+    lineNumber: 122,
+    columnNumber: 7
+  }, void 0) }, void 0, false, {
+    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
+    lineNumber: 121,
     columnNumber: 5
   }, void 0),
-  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2.5 shrink-0", children: [
+  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4 shrink-0", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TrafficCircle, { color: "red", count: counts.expired }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 117,
+      lineNumber: 125,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TrafficCircle, { color: "amber", count: counts.approaching }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 118,
+      lineNumber: 126,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TrafficCircle, { color: "green", count: counts.current }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 119,
+      lineNumber: 127,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(TrafficCircle, { color: "grey", count: counts.grey }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 120,
+      lineNumber: 128,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-    lineNumber: 116,
+    lineNumber: 124,
     columnNumber: 5
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-  lineNumber: 111,
+  lineNumber: 120,
   columnNumber: 3
 }, void 0);
 const InfoRow = ({ label, value }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-sm py-1 border-b border-gray-700/50", children: [
@@ -62941,17 +62941,17 @@ const InfoRow = ({ label, value }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDE
     ":"
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-    lineNumber: 145,
+    lineNumber: 153,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-200", children: value || "N/A" }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-    lineNumber: 146,
+    lineNumber: 154,
     columnNumber: 9
   }, void 0)
 ] }, void 0, true, {
   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-  lineNumber: 144,
+  lineNumber: 152,
   columnNumber: 5
 }, void 0);
 const AuthorisationFlyout = ({
@@ -63127,32 +63127,20 @@ const AuthorisationFlyout = ({
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Currencies" }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-        lineNumber: 340,
+        lineNumber: 348,
         columnNumber: 9
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-end gap-2.5 mb-1 pr-1", children: [
-        { color: "bg-red-500", label: "Expired" },
-        { color: "bg-amber-400", label: "Due Soon" },
-        { color: "bg-green-500", label: "Current" },
-        { color: "bg-gray-500", label: "Inactive" }
-      ].map(({ color, label }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-9 flex flex-col items-center gap-0.5", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2.5 h-2.5 rounded-full inline-block ${color}` }, void 0, false, {
-          fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-          lineNumber: 353,
-          columnNumber: 15
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-500 leading-tight", children: label }, void 0, false, {
-          fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-          lineNumber: 354,
-          columnNumber: 15
-        }, void 0)
-      ] }, label, true, {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-end justify-end gap-4 mb-1 pr-1", children: ["Expired", "Due", "Current", "Inactive"].map((label) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-10 flex justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-medium text-gray-400 leading-tight", children: label }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-        lineNumber: 352,
+        lineNumber: 356,
+        columnNumber: 15
+      }, void 0) }, label, false, {
+        fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
+        lineNumber: 355,
         columnNumber: 13
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-        lineNumber: 343,
+        lineNumber: 351,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "divide-y divide-gray-700/50", children: [
@@ -63160,14 +63148,13 @@ const AuthorisationFlyout = ({
           PersonCurrencyRow,
           {
             label: instructorLabel,
-            role: "Instructor / PIC",
             counts: instructorCounts
           },
           void 0,
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-            lineNumber: 361,
+            lineNumber: 363,
             columnNumber: 13
           },
           void 0
@@ -63176,21 +63163,20 @@ const AuthorisationFlyout = ({
           PersonCurrencyRow,
           {
             label: studentLabel,
-            role: studentRecord?.isTrainee ? "Student" : "Co-Pilot",
             counts: studentCounts
           },
           void 0,
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-            lineNumber: 368,
+            lineNumber: 369,
             columnNumber: 13
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-        lineNumber: 359,
+        lineNumber: 361,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-[9px] text-gray-600 mt-2 text-right", children: [
@@ -63203,7 +63189,7 @@ const AuthorisationFlyout = ({
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AuthorisationFlyout.tsx",
-      lineNumber: 339,
+      lineNumber: 347,
       columnNumber: 7
     }, void 0);
   };
