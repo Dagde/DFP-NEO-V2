@@ -99791,14 +99791,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             instructors: events2.map((e) => e.instructor)
           })));
           eventsByDate.forEach((events2, eventDate) => {
-            const currentScheduleForDate2 = newSchedules[eventDate] || [];
+            const currentScheduleForDate = newSchedules[eventDate] || [];
             console.log(`🟢 Processing date ${eventDate}:`, {
-              currentEventsCount: currentScheduleForDate2.length,
+              currentEventsCount: currentScheduleForDate.length,
               eventsToSaveCount: events2.length
             });
             const existingEventIds = new Set(events2.map((e) => e.id));
-            const otherEvents = currentScheduleForDate2.filter((e) => !existingEventIds.has(e.id));
-            console.log(`🟢 Filtered out ${currentScheduleForDate2.length - otherEvents.length} existing events`);
+            const otherEvents = currentScheduleForDate.filter((e) => !existingEventIds.has(e.id));
+            console.log(`🟢 Filtered out ${currentScheduleForDate.length - otherEvents.length} existing events`);
             newSchedules[eventDate] = [...otherEvents, ...events2];
             console.log(`🟢 Saved ${events2.length} events to date ${eventDate}`);
             console.log(`🟢 New total for ${eventDate}:`, newSchedules[eventDate].length);
@@ -101043,7 +101043,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
     }, 500);
     updates.forEach((update) => {
-      const event = currentScheduleForDate.find((e) => e.id === update.eventId);
+      const event = updatedEventsForDate.find((e) => e.id === update.eventId);
       if (event) {
         const originalStartTime = event.startTime;
         const originalResourceId = event.resourceId;
@@ -102289,7 +102289,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 timestamp: snapshotTs.toISOString(),
                 date: record.date,
                 availableCount: currentAvailable,
-                totalFleet: totalAircraftCount,
+                totalAircraft: totalAircraftCount,
                 changeType: "change",
                 recordedBy: sessionUser?.userId ?? null,
                 notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,

@@ -9453,7 +9453,7 @@ useEffect(() => {
            
         // Log the updates to audit trail
 updates.forEach(update => {
-               const event = currentScheduleForDate.find(e => e.id === update.eventId);
+               const event = updatedEventsForDate.find(e => e.id === update.eventId);
                if (event) {
                       // Capture original values BEFORE they change
                       const originalStartTime = event.startTime;
@@ -11064,7 +11064,7 @@ updates.forEach(update => {
                                    timestamp: snapshotTs.toISOString(),
                                    date: record.date,
                                    availableCount: currentAvailable,
-                                   totalFleet: totalAircraftCount,
+                                   totalAircraft: totalAircraftCount,
                                    changeType: 'change',
                                    recordedBy: sessionUser?.userId ?? null,
                                    notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
