@@ -21517,6 +21517,36 @@ const RANK_ORDER = {
   PLTOFF: 5,
   Mr: 6
 };
+const twClassToHex = (twClass) => {
+  const map = {
+    "bg-gray-500": "#6b7280",
+    "bg-sky-500": "#0ea5e9",
+    "bg-sky-400": "#38bdf8",
+    "bg-sky-400/50": "#38bdf8",
+    "bg-violet-500": "#8b5cf6",
+    "bg-purple-500": "#a855f7",
+    "bg-purple-400/50": "#c084fc",
+    "bg-emerald-500": "#10b981",
+    "bg-green-500": "#22c55e",
+    "bg-rose-500": "#f43f5e",
+    "bg-red-500": "#ef4444",
+    "bg-amber-500": "#f59e0b",
+    "bg-yellow-500": "#eab308",
+    "bg-yellow-400/50": "#facc15",
+    "bg-orange-500": "#f97316",
+    "bg-teal-500": "#14b8a6",
+    "bg-cyan-500": "#06b6d4",
+    "bg-pink-500": "#ec4899",
+    "bg-pink-400/50": "#f472b6",
+    "bg-indigo-500": "#6366f1",
+    "bg-blue-500": "#3b82f6",
+    "bg-blue-400/50": "#60a5fa",
+    "bg-lime-500": "#84cc16",
+    "bg-fuchsia-500": "#d946ef"
+  };
+  const base = twClass.replace(/\/\d+$/, "");
+  return map[twClass] || map[base] || "#7a6a2a";
+};
 const PersonDropdown = ({
   value,
   displayValue,
@@ -21596,7 +21626,7 @@ const PersonDropdown = ({
               false,
               {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 181,
+                lineNumber: 204,
                 columnNumber: 11
               },
               void 0
@@ -21623,7 +21653,7 @@ const PersonDropdown = ({
                   unit,
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 203,
+                    lineNumber: 226,
                     columnNumber: 13
                   }, void 0)
                 ]
@@ -21632,14 +21662,14 @@ const PersonDropdown = ({
               true,
               {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 191,
+                lineNumber: 214,
                 columnNumber: 11
               },
               void 0
             ))
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 179,
+            lineNumber: 202,
             columnNumber: 7
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { width: 130, borderRight: "1px solid rgba(255,255,255,0.12)", overflowY: "auto", maxHeight: 300, backgroundColor: "#16293f" }, children: hovUnit ? getLayer2(hovUnit).map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21662,7 +21692,7 @@ const PersonDropdown = ({
                 opt,
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 225,
+                  lineNumber: 248,
                   columnNumber: 15
                 }, void 0)
               ]
@@ -21671,17 +21701,17 @@ const PersonDropdown = ({
             true,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 212,
+              lineNumber: 235,
               columnNumber: 13
             },
             void 0
           )) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: "Select unit" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 229,
+            lineNumber: 252,
             columnNumber: 11
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 209,
+            lineNumber: 232,
             columnNumber: 7
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { flex: 1, overflowY: "auto", maxHeight: 300, backgroundColor: "#122437" }, children: hovUnit && hovL2 ? getNames(hovUnit, hovL2).map((person) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21709,17 +21739,17 @@ const PersonDropdown = ({
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 239,
+              lineNumber: 262,
               columnNumber: 13
             },
             void 0
           )) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "16px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: hovUnit ? "Select category" : "Select unit" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 260,
+            lineNumber: 283,
             columnNumber: 11
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 236,
+            lineNumber: 259,
             columnNumber: 7
           }, void 0)
         ]
@@ -21728,7 +21758,7 @@ const PersonDropdown = ({
       true,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 160,
+        lineNumber: 183,
         columnNumber: 5
       },
       void 0
@@ -21762,7 +21792,7 @@ const PersonDropdown = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 271,
+        lineNumber: 294,
         columnNumber: 7
       },
       void 0
@@ -21770,7 +21800,7 @@ const PersonDropdown = ({
     dropdownPanel
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 270,
+    lineNumber: 293,
     columnNumber: 5
   }, void 0);
 };
@@ -21853,7 +21883,7 @@ const EventDropdown = ({
                 course,
                 course !== "SCT" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 380,
+                  lineNumber: 403,
                   columnNumber: 34
                 }, void 0)
               ]
@@ -21862,13 +21892,13 @@ const EventDropdown = ({
             true,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 362,
+              lineNumber: 385,
               columnNumber: 11
             },
             void 0
           )) }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 360,
+            lineNumber: 383,
             columnNumber: 7
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: hovCourse && hovCourse !== "SCT" ? getEventsForCourse(hovCourse).map((ev) => {
@@ -21899,12 +21929,12 @@ const EventDropdown = ({
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: code }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 410,
+                    lineNumber: 433,
                     columnNumber: 17
                   }, void 0),
                   isNext && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 10, color: "#22c55e", marginLeft: 6 }, children: "NEXT" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 411,
+                    lineNumber: 434,
                     columnNumber: 28
                   }, void 0)
                 ]
@@ -21913,18 +21943,18 @@ const EventDropdown = ({
               true,
               {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 392,
+                lineNumber: 415,
                 columnNumber: 15
               },
               void 0
             );
           }) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "20px 12px", color: "rgba(255,255,255,0.35)", fontSize: 12, textAlign: "center" }, children: hovCourse === "SCT" ? "SCT selected" : "Hover a course" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 416,
+            lineNumber: 439,
             columnNumber: 11
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-            lineNumber: 386,
+            lineNumber: 409,
             columnNumber: 7
           }, void 0)
         ]
@@ -21933,7 +21963,7 @@ const EventDropdown = ({
       true,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 341,
+        lineNumber: 364,
         columnNumber: 5
       },
       void 0
@@ -21969,7 +21999,7 @@ const EventDropdown = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 427,
+        lineNumber: 450,
         columnNumber: 7
       },
       void 0
@@ -21977,7 +22007,7 @@ const EventDropdown = ({
     dropdownPanel
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 426,
+    lineNumber: 449,
     columnNumber: 5
   }, void 0);
 };
@@ -22023,7 +22053,6 @@ const FlightTile = ({
   onExitEditMode,
   onDragPosition
 }) => {
-  const TILE_BG = "#7a6a2a";
   const TILE_BORDER = "#1a2340";
   const WHITE_FULL = "rgba(255,255,255,0.95)";
   const WHITE_DIM = "rgba(255,255,255,0.75)";
@@ -22111,7 +22140,7 @@ const FlightTile = ({
     ...style
   }, children }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 619,
+    lineNumber: 642,
     columnNumber: 5
   }, void 0);
   const AbsElem = ({ elemKey, children, draggable: isDraggable = false }) => {
@@ -22144,7 +22173,7 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 636,
+        lineNumber: 659,
         columnNumber: 7
       },
       void 0
@@ -22154,17 +22183,17 @@ const FlightTile = ({
     elemRefs.current[elemKey] = el;
   }, style: { display: "inline-flex", ...style }, children }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 662,
+    lineNumber: 685,
     columnNumber: 5
   }, void 0);
   const startTimeContent = (zOverride) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative" }, children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Oval, { px: 12, py: 6, minW: 72, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontFamily: monoFamily, fontSize: 22, fontWeight: 600, color: WHITE_FULL, lineHeight: 1, letterSpacing: 1 }, children: formatTime$3(startTime) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 671,
+      lineNumber: 694,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 670,
+      lineNumber: 693,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22175,7 +22204,7 @@ const FlightTile = ({
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: timeOptions.map((o) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 677,
+          lineNumber: 700,
           columnNumber: 31
         }, void 0))
       },
@@ -22183,14 +22212,14 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 675,
+        lineNumber: 698,
         columnNumber: 7
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 669,
+    lineNumber: 692,
     columnNumber: 5
   }, void 0);
   const picNameContent = () => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22211,7 +22240,7 @@ const FlightTile = ({
     false,
     {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 683,
+      lineNumber: 706,
       columnNumber: 5
     },
     void 0
@@ -22220,7 +22249,6 @@ const FlightTile = ({
     PersonDropdown,
     {
       value: studentName,
-      displayValue: studentName ? getDisplayLabel(studentName) : void 0,
       onChange: (name) => onStudentNameChange(name),
       allUnits,
       getLayer2,
@@ -22236,7 +22264,7 @@ const FlightTile = ({
     false,
     {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 690,
+      lineNumber: 713,
       columnNumber: 7
     },
     void 0
@@ -22252,7 +22280,7 @@ const FlightTile = ({
     false,
     {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 694,
+      lineNumber: 717,
       columnNumber: 7
     },
     void 0
@@ -22264,11 +22292,11 @@ const FlightTile = ({
       "]"
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 703,
+      lineNumber: 726,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 702,
+      lineNumber: 725,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22279,7 +22307,7 @@ const FlightTile = ({
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: durationOptions.map((o) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 707,
+          lineNumber: 730,
           columnNumber: 35
         }, void 0))
       },
@@ -22287,14 +22315,14 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 705,
+        lineNumber: 728,
         columnNumber: 7
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 701,
+    lineNumber: 724,
     columnNumber: 5
   }, void 0);
   const eventContent = () => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Oval, { px: 10, py: 5, minW: 58, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22313,27 +22341,27 @@ const FlightTile = ({
     false,
     {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 715,
+      lineNumber: 738,
       columnNumber: 9
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 714,
+    lineNumber: 737,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 713,
+    lineNumber: 736,
     columnNumber: 5
   }, void 0);
   const areaContent = (zOverride) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative" }, children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Oval, { px: 10, py: 5, minW: 42, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 18, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : "rgba(255,220,60,0.95)", lineHeight: 1 }, children: area || "-" }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 724,
+      lineNumber: 747,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 723,
+      lineNumber: 746,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22344,7 +22372,7 @@ const FlightTile = ({
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: areaOptions.map((o) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 728,
+          lineNumber: 751,
           columnNumber: 31
         }, void 0))
       },
@@ -22352,14 +22380,14 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 726,
+        lineNumber: 749,
         columnNumber: 7
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 722,
+    lineNumber: 745,
     columnNumber: 5
   }, void 0);
   const aircraftContent = (zOverride) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative" }, children: [
@@ -22368,7 +22396,7 @@ const FlightTile = ({
       aircraftNumber || "001"
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 735,
+      lineNumber: 758,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22379,7 +22407,7 @@ const FlightTile = ({
         style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: aircraftOptions.map((o) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 738,
+          lineNumber: 761,
           columnNumber: 35
         }, void 0))
       },
@@ -22387,14 +22415,14 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 736,
+        lineNumber: 759,
         columnNumber: 7
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 734,
+    lineNumber: 757,
     columnNumber: 5
   }, void 0);
   const callsignContent = (zOverride) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative", display: "inline-flex", alignItems: "center", gap: 2 }, children: [
@@ -22423,7 +22451,7 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 746,
+        lineNumber: 769,
         columnNumber: 7
       },
       void 0
@@ -22431,7 +22459,7 @@ const FlightTile = ({
     callsignOptions.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative", display: "inline-flex", alignItems: "center" }, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 8, color: "rgba(255,255,255,0.45)", pointerEvents: "none", lineHeight: 1 }, children: "▼" }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 761,
+        lineNumber: 784,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22452,12 +22480,12 @@ const FlightTile = ({
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", style: { background: "#1a2f4a" }, children: "— select —" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 770,
+              lineNumber: 793,
               columnNumber: 13
             }, void 0),
             callsignOptions.map((cs) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: cs, style: { background: "#1a2f4a" }, children: cs }, cs, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 772,
+              lineNumber: 795,
               columnNumber: 15
             }, void 0))
           ]
@@ -22466,192 +22494,192 @@ const FlightTile = ({
         true,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 762,
+          lineNumber: 785,
           columnNumber: 11
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 760,
+      lineNumber: 783,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 744,
+    lineNumber: 767,
     columnNumber: 5
   }, void 0);
   const normalFlexLayout = /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "center", paddingLeft: 14, paddingRight: 10, flex: 1, minWidth: 0, gap: 14 }, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "startTime", style: { position: "relative", flexShrink: 0, marginTop: -15 }, children: startTimeContent() }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 784,
+        lineNumber: 807,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "picName", children: picNameContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 788,
+          lineNumber: 811,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "coPilot", children: coPilotContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 789,
+          lineNumber: 812,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 787,
+        lineNumber: 810,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 783,
+      lineNumber: 806,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-evenly", paddingRight: 16, paddingLeft: 8, paddingTop: 10, paddingBottom: 10, flexShrink: 0, gap: 6 }, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "duration", children: durationContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 794,
+          lineNumber: 817,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "event", children: eventContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 795,
+          lineNumber: 818,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 793,
+        lineNumber: 816,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "area", children: areaContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 798,
+          lineNumber: 821,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "aircraft", children: aircraftContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 799,
+          lineNumber: 822,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(FlexElem, { elemKey: "callsign", children: callsignContent() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 800,
+          lineNumber: 823,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 797,
+        lineNumber: 820,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 792,
+      lineNumber: 815,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 782,
+    lineNumber: 805,
     columnNumber: 5
   }, void 0);
   const savedAbsLayout = /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "startTime", children: startTimeContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 809,
+      lineNumber: 832,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "picName", children: picNameContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 810,
+      lineNumber: 833,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "coPilot", children: coPilotContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 811,
+      lineNumber: 834,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "duration", children: durationContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 812,
+      lineNumber: 835,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "event", children: eventContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 813,
+      lineNumber: 836,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "area", children: areaContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 814,
+      lineNumber: 837,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "aircraft", children: aircraftContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 815,
+      lineNumber: 838,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "callsign", children: callsignContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 816,
+      lineNumber: 839,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 808,
+    lineNumber: 831,
     columnNumber: 5
   }, void 0);
   const editAbsLayout = /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.12)", borderRadius: 8, zIndex: 1, pointerEvents: "none" } }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 823,
+      lineNumber: 846,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "startTime", draggable: true, children: startTimeContent(110) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 824,
+      lineNumber: 847,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "picName", draggable: true, children: picNameContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 825,
+      lineNumber: 848,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "coPilot", draggable: true, children: coPilotContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 826,
+      lineNumber: 849,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "duration", draggable: true, children: durationContent(110) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 827,
+      lineNumber: 850,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "event", draggable: true, children: eventContent() }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 828,
+      lineNumber: 851,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "area", draggable: true, children: areaContent(110) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 829,
+      lineNumber: 852,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "aircraft", draggable: true, children: aircraftContent(110) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 830,
+      lineNumber: 853,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AbsElem, { elemKey: "callsign", draggable: true, children: callsignContent(110) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 831,
+      lineNumber: 854,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 822,
+    lineNumber: 845,
     columnNumber: 5
   }, void 0);
   const showAbsolute = editMode || layoutSaved;
@@ -22668,7 +22696,7 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 842,
+        lineNumber: 865,
         columnNumber: 11
       },
       void 0
@@ -22685,7 +22713,7 @@ const FlightTile = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 848,
+          lineNumber: 871,
           columnNumber: 13
         },
         void 0
@@ -22702,18 +22730,18 @@ const FlightTile = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 852,
+          lineNumber: 875,
           columnNumber: 13
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 847,
+      lineNumber: 870,
       columnNumber: 11
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 840,
+      lineNumber: 863,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -22724,7 +22752,7 @@ const FlightTile = ({
           position: "relative",
           width: "100%",
           height: TILE_H,
-          backgroundColor: TILE_BG,
+          backgroundColor: twClassToHex(color),
           border: editMode ? `3px solid rgba(255,220,60,0.7)` : `3px solid ${TILE_BORDER}`,
           borderRadius: 10,
           boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
@@ -22740,19 +22768,19 @@ const FlightTile = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-        lineNumber: 861,
+        lineNumber: 884,
         columnNumber: 7
       },
       void 0
     ),
     editMode && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { style: { fontSize: 11, color: "rgba(255,220,60,0.75)", marginTop: 6, textAlign: "center", letterSpacing: 0.3 }, children: "Drag any element to reposition it · Click SAVE LAYOUT to lock positions" }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 881,
+      lineNumber: 904,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-    lineNumber: 838,
+    lineNumber: 861,
     columnNumber: 5
   }, void 0);
 };
@@ -23201,32 +23229,32 @@ const AddFlightTileModal = ({
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: "Add Flight Tile" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1382,
+                lineNumber: 1405,
                 columnNumber: 11
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "text-gray-400 hover:text-white transition-colors", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1385,
+                lineNumber: 1408,
                 columnNumber: 15
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1384,
+                lineNumber: 1407,
                 columnNumber: 13
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1383,
+                lineNumber: 1406,
                 columnNumber: 11
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 1381,
+              lineNumber: 1404,
               columnNumber: 9
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-6 space-y-5", children: [
               !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Event Category" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1395,
+                  lineNumber: 1418,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-2", children: Object.entries(categoryLabels).map(([key, label]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23241,24 +23269,24 @@ const AddFlightTileModal = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1398,
+                    lineNumber: 1421,
                     columnNumber: 19
                   },
                   void 0
                 )) }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1396,
+                  lineNumber: 1419,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1394,
+                lineNumber: 1417,
                 columnNumber: 13
               }, void 0),
               !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Flight Tile" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1417,
+                  lineNumber: 1440,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "0 2px" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23309,23 +23337,23 @@ const AddFlightTileModal = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1419,
+                    lineNumber: 1442,
                     columnNumber: 17
                   },
                   void 0
                 ) }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1418,
+                  lineNumber: 1441,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-500 mt-2", children: "Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right. Click SOLO badge to switch to Dual." }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1462,
+                  lineNumber: 1485,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1416,
+                lineNumber: 1439,
                 columnNumber: 13
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-700 pt-4", children: [
@@ -23345,32 +23373,32 @@ const AddFlightTileModal = ({
                     false,
                     {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1471,
+                      lineNumber: 1494,
                       columnNumber: 15
                     },
                     void 0
                   ),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-white", children: "Add Deployment Tile" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1477,
+                    lineNumber: 1500,
                     columnNumber: 15
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1470,
+                  lineNumber: 1493,
                   columnNumber: 13
                 }, void 0),
                 isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-semibold text-white mb-3", children: "Deployment Details" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1482,
+                    lineNumber: 1505,
                     columnNumber: 17
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-3", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "Start Date" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1485,
+                        lineNumber: 1508,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23385,20 +23413,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1486,
+                          lineNumber: 1509,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1484,
+                      lineNumber: 1507,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "Start Time (24hr)" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1490,
+                        lineNumber: 1513,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23413,20 +23441,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1491,
+                          lineNumber: 1514,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1489,
+                      lineNumber: 1512,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "End Date" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1495,
+                        lineNumber: 1518,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23441,20 +23469,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1496,
+                          lineNumber: 1519,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1494,
+                      lineNumber: 1517,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "End Time (24hr)" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1500,
+                        lineNumber: 1523,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23469,20 +23497,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1501,
+                          lineNumber: 1524,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1499,
+                      lineNumber: 1522,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "col-span-2", children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "Aircraft Count" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1505,
+                        lineNumber: 1528,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23499,31 +23527,31 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1506,
+                          lineNumber: 1529,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1504,
+                      lineNumber: 1527,
                       columnNumber: 19
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1483,
+                    lineNumber: 1506,
                     columnNumber: 17
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1481,
+                  lineNumber: 1504,
                   columnNumber: 15
                 }, void 0),
                 !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4 mb-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1519,
+                      lineNumber: 1542,
                       columnNumber: 21
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-2", children: [
@@ -23539,7 +23567,7 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1521,
+                          lineNumber: 1544,
                           columnNumber: 23
                         },
                         void 0
@@ -23556,30 +23584,30 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1528,
+                          lineNumber: 1551,
                           columnNumber: 23
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1520,
+                      lineNumber: 1543,
                       columnNumber: 21
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1518,
+                    lineNumber: 1541,
                     columnNumber: 19
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1517,
+                    lineNumber: 1540,
                     columnNumber: 17
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1540,
+                        lineNumber: 1563,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23591,12 +23619,12 @@ const AddFlightTileModal = ({
                           children: [
                             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Local", children: "Local" }, void 0, false, {
                               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                              lineNumber: 1546,
+                              lineNumber: 1569,
                               columnNumber: 23
                             }, void 0),
                             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Land Away", children: "Land Away" }, void 0, false, {
                               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                              lineNumber: 1547,
+                              lineNumber: 1570,
                               columnNumber: 23
                             }, void 0)
                           ]
@@ -23605,41 +23633,41 @@ const AddFlightTileModal = ({
                         true,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1541,
+                          lineNumber: 1564,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1539,
+                      lineNumber: 1562,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1551,
+                        lineNumber: 1574,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1552,
+                        lineNumber: 1575,
                         columnNumber: 21
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1550,
+                      lineNumber: 1573,
                       columnNumber: 19
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1538,
+                    lineNumber: 1561,
                     columnNumber: 17
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1558,
+                      lineNumber: 1581,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23655,24 +23683,24 @@ const AddFlightTileModal = ({
                       false,
                       {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1559,
+                        lineNumber: 1582,
                         columnNumber: 19
                       },
                       void 0
                     )
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1557,
+                    lineNumber: 1580,
                     columnNumber: 17
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1516,
+                  lineNumber: 1539,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1469,
+                lineNumber: 1492,
                 columnNumber: 11
               }, void 0),
               errors.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-red-900/30 border border-red-700 rounded-lg p-3", children: errors.map((e, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-red-300 text-sm", children: [
@@ -23680,16 +23708,16 @@ const AddFlightTileModal = ({
                 e
               ] }, i, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1574,
+                lineNumber: 1597,
                 columnNumber: 37
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1573,
+                lineNumber: 1596,
                 columnNumber: 13
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 1390,
+              lineNumber: 1413,
               columnNumber: 9
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-[1px] px-6 py-4 border-t border-gray-700 flex-shrink-0", children: [
@@ -23704,7 +23732,7 @@ const AddFlightTileModal = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1581,
+                  lineNumber: 1604,
                   columnNumber: 11
                 },
                 void 0
@@ -23720,14 +23748,14 @@ const AddFlightTileModal = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1587,
+                  lineNumber: 1610,
                   columnNumber: 11
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 1580,
+              lineNumber: 1603,
               columnNumber: 9
             }, void 0)
           ]
@@ -23736,7 +23764,7 @@ const AddFlightTileModal = ({
         true,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 1375,
+          lineNumber: 1398,
           columnNumber: 7
         },
         void 0
@@ -23746,7 +23774,7 @@ const AddFlightTileModal = ({
     false,
     {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-      lineNumber: 1371,
+      lineNumber: 1394,
       columnNumber: 5
     },
     void 0

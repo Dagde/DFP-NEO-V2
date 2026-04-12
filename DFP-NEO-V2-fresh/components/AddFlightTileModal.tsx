@@ -101,6 +101,29 @@ const ghostStyle = (
   textAlign,
 });
 
+// ─── Maps Tailwind bg colour classes to CSS hex values for inline styles ───
+const twClassToHex = (twClass: string): string => {
+  const map: Record<string, string> = {
+    'bg-gray-500':    '#6b7280',
+    'bg-sky-500':     '#0ea5e9',  'bg-sky-400':     '#38bdf8',
+    'bg-sky-400/50':  '#38bdf8',
+    'bg-violet-500':  '#8b5cf6',  'bg-purple-500':  '#a855f7',
+    'bg-purple-400/50':'#c084fc',
+    'bg-emerald-500': '#10b981',  'bg-green-500':   '#22c55e',
+    'bg-rose-500':    '#f43f5e',  'bg-red-500':     '#ef4444',
+    'bg-amber-500':   '#f59e0b',  'bg-yellow-500':  '#eab308',
+    'bg-yellow-400/50':'#facc15',
+    'bg-orange-500':  '#f97316',  'bg-teal-500':    '#14b8a6',
+    'bg-cyan-500':    '#06b6d4',  'bg-pink-500':    '#ec4899',
+    'bg-pink-400/50': '#f472b6',
+    'bg-indigo-500':  '#6366f1',  'bg-blue-500':    '#3b82f6',
+    'bg-blue-400/50': '#60a5fa',
+    'bg-lime-500':    '#84cc16',  'bg-fuchsia-500': '#d946ef',
+  };
+  const base = twClass.replace(/\/\d+$/, '');
+  return map[twClass] || map[base] || '#7a6a2a';  // fallback to gold
+};
+
 // ─── Cascading dropdown for Person selection (3 layers: Unit→Staff/Course→Names) ─
 interface PersonDropdownProps {
   value: string;
@@ -687,7 +710,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   const coPilotContent = () => (
     flightType === 'Dual' ? (
-      <PersonDropdown value={studentName} displayValue={studentName ? getDisplayLabel(studentName) : undefined} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
+      <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
         placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
         dropdownId="copilot-dropdown-portal" />
     ) : (
@@ -863,7 +886,7 @@ const FlightTile: React.FC<TileProps> = ({
           position: 'relative',
           width: '100%',
           height: TILE_H,
-          backgroundColor: TILE_BG,
+          backgroundColor: twClassToHex(color),
           border: editMode ? `3px solid rgba(255,220,60,0.7)` : `3px solid ${TILE_BORDER}`,
           borderRadius: 10,
           boxShadow: '0 4px 18px rgba(0,0,0,0.55)',
