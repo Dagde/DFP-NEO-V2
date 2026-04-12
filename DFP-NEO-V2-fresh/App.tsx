@@ -13030,6 +13030,10 @@ updates.forEach(update => {
                     currentUserName={currentUserName}
                     currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                     currentUserUnit={currentUser?.unit}
+                    instructorsData={instructorsData}
+                    traineesData={traineesData}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
                 />
             }
             {showAddRemedialPackage && selectedTraineeForRemedial && (

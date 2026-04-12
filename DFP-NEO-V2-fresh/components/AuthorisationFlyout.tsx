@@ -1,10 +1,128 @@
 import React, { useState, useMemo } from 'react';
-import { ScheduleEvent } from '../types';
+import { ScheduleEvent, PersonCurrencyStatus, MasterCurrency, CurrencyRequirement, Instructor, Trainee } from '../types';
 import AuthorisationConfirmation from './AuthorisationConfirmation';
 import PinEntryFlyout from './PinEntryFlyout';
 import ClearAuthConfirmation from './ClearAuthConfirmation';
 import StaffSearchDropdown from './StaffSearchDropdown';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
+
+// ─── Currency helpers (mirrors CurrencyPanel logic) ─────────────────────────
+
+const AMBER_THRESHOLD_DAYS = 30;
+
+function parseDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + 'T00:00:00Z');
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
+function addDaysToDate(dateStr: string, days: number): string {
+  const d = parseDate(dateStr);
+  if (!d) return '';
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function getDaysRemaining(expiryDateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = parseDate(expiryDateStr);
+  if (!expiry) return 0;
+  expiry.setHours(0, 0, 0, 0);
+  return Math.ceil((expiry.getTime() - today.getTime()) / 86400000);
+}
+
+interface CurrencyCounts {
+  expired: number;
+  approaching: number;
+  current: number;
+  grey: number;
+}
+
+function computeCurrencyCounts(
+  currencyStatus: PersonCurrencyStatus[] | undefined,
+  allDefs: Array<{ name: string; validityDays: number | null }>
+): CurrencyCounts {
+  const counts: CurrencyCounts = { expired: 0, approaching: 0, current: 0, grey: 0 };
+
+  for (const def of allDefs) {
+    const record = currencyStatus?.find(s => s.currencyName === def.name);
+
+    // Inactive → grey
+    if (record?.isInactive) {
+      counts.grey++;
+      continue;
+    }
+
+    // No record or no date → grey (unassigned)
+    if (!record || !record.lastEventDate) {
+      counts.grey++;
+      continue;
+    }
+
+    if (def.validityDays === null) {
+      // Composite currency — use calculatedExpiry if present
+      if (record.calculatedExpiry) {
+        const days = getDaysRemaining(record.calculatedExpiry);
+        if (days <= 0) counts.expired++;
+        else if (days <= AMBER_THRESHOLD_DAYS) counts.approaching++;
+        else counts.current++;
+      } else if (record.isCurrent === false) {
+        counts.expired++;
+      } else if (record.isCurrent === true) {
+        counts.current++;
+      } else {
+        counts.grey++;
+      }
+    } else {
+      const expiryStr = addDaysToDate(record.lastEventDate, def.validityDays);
+      if (!expiryStr) { counts.grey++; continue; }
+      const days = getDaysRemaining(expiryStr);
+      if (days <= 0) counts.expired++;
+      else if (days <= AMBER_THRESHOLD_DAYS) counts.approaching++;
+      else counts.current++;
+    }
+  }
+
+  return counts;
+}
+
+// ─── Traffic Light Circle ────────────────────────────────────────────────────
+
+const TrafficCircle: React.FC<{ color: 'red' | 'amber' | 'green' | 'grey'; count: number }> = ({ color, count }) => {
+  const bgClass = {
+    red:   'bg-red-500',
+    amber: 'bg-amber-400',
+    green: 'bg-green-500',
+    grey:  'bg-gray-500',
+  }[color];
+
+  return (
+    <div className={`w-9 h-9 rounded-full ${bgClass} flex items-center justify-center shadow-md`}>
+      <span className="text-white text-sm font-bold leading-none">{count}</span>
+    </div>
+  );
+};
+
+// ─── Person currency row ─────────────────────────────────────────────────────
+
+const PersonCurrencyRow: React.FC<{ label: string; role: string; counts: CurrencyCounts }> = ({ label, role, counts }) => (
+  <div className="flex items-center gap-3 py-2.5">
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-semibold text-gray-200 truncate">{label}</p>
+      <p className="text-xs text-gray-500">{role}</p>
+    </div>
+    <div className="flex items-center gap-2.5 shrink-0">
+      <TrafficCircle color="red"   count={counts.expired} />
+      <TrafficCircle color="amber" count={counts.approaching} />
+      <TrafficCircle color="green" count={counts.current} />
+      <TrafficCircle color="grey"  count={counts.grey} />
+    </div>
+  </div>
+);
+
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 interface AuthorisationFlyoutProps {
   event: ScheduleEvent;
@@ -15,6 +133,11 @@ interface AuthorisationFlyoutProps {
   currentUserName: string;
   currentUserRank: string;
   currentUserUnit?: string;
+  // Currency data (optional — box is hidden if not provided)
+  instructorsData?: Instructor[];
+  traineesData?: Trainee[];
+  masterCurrencies?: MasterCurrency[];
+  currencyRequirements?: CurrencyRequirement[];
 }
 
 const InfoRow: React.FC<{ label: string; value: string | undefined }> = ({ label, value }) => (
@@ -24,6 +147,8 @@ const InfoRow: React.FC<{ label: string; value: string | undefined }> = ({ label
     </div>
 );
 
+// ─── Main component ──────────────────────────────────────────────────────────
+
 const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({ 
   event, 
   onClose, 
@@ -32,7 +157,11 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   instructorsList, 
   currentUserName, 
   currentUserRank, 
-  currentUserUnit 
+  currentUserUnit,
+  instructorsData = [],
+  traineesData = [],
+  masterCurrencies = [],
+  currencyRequirements = [],
 }) => {
   const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
   const [notes, setNotes] = useState(event.authNotes ?? '');
@@ -45,10 +174,8 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   
   const picName = useMemo(() => event.instructor || event.pilot, [event]);
   
-  // Current user display name
   const currentUserDisplayName = useMemo(() => `${currentUserRank} ${currentUserName}`, [currentUserRank, currentUserName]);
   
-  // Default values when no signatures exist
   const defaultAutho = useMemo(() => currentUserDisplayName, [currentUserDisplayName]);
   const defaultCaptain = useMemo(() => {
     if (event.instructor) {
@@ -62,82 +189,79 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     return '';
   }, [event.instructor, event.pilot, instructorsList]);
 
-  // State for selected signers - properly initialized with defaults
-  const [selectedAutho, setSelectedAutho] = useState(() => {
-    return event.authoSignedBy || defaultAutho;
-  });
-  const [selectedCaptain, setSelectedCaptain] = useState(() => {
-    return event.captainSignedBy || defaultCaptain;
-  });
+  const [selectedAutho, setSelectedAutho] = useState(() => event.authoSignedBy || defaultAutho);
+  const [selectedCaptain, setSelectedCaptain] = useState(() => event.captainSignedBy || defaultCaptain);
 
-  // Effect to sync AUTHO with Captain when verbal auth is enabled
   React.useEffect(() => {
     if (isVerbal && !event.authoSignedBy && !event.captainSignedBy) {
-      // When verbal auth is enabled and not yet signed, sync AUTHO to Captain
       setSelectedAutho(selectedCaptain);
     }
   }, [isVerbal, selectedCaptain, event.authoSignedBy, event.captainSignedBy]);
 
-  const handleSignClick = (role: 'autho' | 'captain') => {
-    // Check if a signer is selected
-    if (role === 'autho' && !selectedAutho) {
-      return;
+  // ─── Currency computation ────────────────────────────────────────────────
+
+  const allCurrencyDefs = useMemo((): Array<{ name: string; validityDays: number | null }> => {
+    const defs: Array<{ name: string; validityDays: number | null }> = [];
+    for (const req of currencyRequirements) {
+      if (req.isVisible !== false) {
+        defs.push({ name: req.name, validityDays: req.validityDays ?? null });
+      }
     }
-    if (role === 'captain' && !selectedCaptain) {
-      return;
+    for (const master of masterCurrencies) {
+      if (master.isVisible !== false) {
+        defs.push({ name: master.name, validityDays: null });
+      }
     }
-    
-    // For verbal auth, both AUTHO and PIC must use the same person
-    if (isVerbal && selectedAutho !== selectedCaptain) {
-      return;
+    return defs;
+  }, [currencyRequirements, masterCurrencies]);
+
+  const instructorRecord = useMemo(() => {
+    const name = event.instructor || event.pilot;
+    if (!name) return null;
+    return instructorsData.find(i => i.name === name) ?? null;
+  }, [event.instructor, event.pilot, instructorsData]);
+
+  const studentName = useMemo(() => {
+    if (!event.student) return null;
+    return event.student.split(' – ')[0] || event.student;
+  }, [event.student]);
+
+  const studentRecord = useMemo(() => {
+    if (!studentName) return null;
+    const trainee = traineesData.find(t => t.name === studentName || t.fullName === studentName);
+    if (trainee) return { name: trainee.name || trainee.fullName, currencyStatus: trainee.currencyStatus, isTrainee: true };
+    const inst = instructorsData.find(i => i.name === studentName);
+    if (inst) return { name: inst.name, currencyStatus: inst.currencyStatus, isTrainee: false };
+    return null;
+  }, [studentName, traineesData, instructorsData]);
+
+  const instructorCounts = useMemo(
+    () => computeCurrencyCounts(instructorRecord?.currencyStatus, allCurrencyDefs),
+    [instructorRecord, allCurrencyDefs]
+  );
+
+  const studentCounts = useMemo(
+    () => computeCurrencyCounts(studentRecord?.currencyStatus, allCurrencyDefs),
+    [studentRecord, allCurrencyDefs]
+  );
+
+  const hasCurrencyData = allCurrencyDefs.length > 0 && (instructorRecord !== null || studentRecord !== null);
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  const getAircraftType = (resourceId: string | undefined) => {
+    if (!resourceId) return '';
+    const spaceIndex = resourceId.lastIndexOf(' ');
+    if (spaceIndex > 0) {
+      const lastPart = resourceId.substring(spaceIndex + 1);
+      if (!isNaN(Number(lastPart))) return resourceId.substring(0, spaceIndex);
     }
-    
-    setSigningRole(role);
-    if (role === 'autho') {
-        setShowAuthConfirmation(true);
-    } else {
-        setShowPinEntry(true);
-    }
+    return resourceId;
   };
 
-  const handleConfirmAuthForSign = () => {
-    setShowAuthConfirmation(false);
-    setShowPinEntry(true);
-  };
-
-  const handleCancelAuthForSign = () => {
-    setShowAuthConfirmation(false);
-    setSigningRole(null);
-  };
-
-  const handleCorrectPinForSign = () => {
-    if (signingRole) {
-      // Use the correct selected person based on the role being signed
-      const selectedPerson = signingRole === 'autho' ? selectedAutho : selectedCaptain;
-      // Extract just the name from the display string (e.g., "SQNLDR Smith" -> "Smith")
-      const signerName = selectedPerson.split(' ').slice(1).join(' ') || selectedPerson;
-      onAuthorise(event.id, notes, signingRole, isVerbal, selectedPerson);
-    }
-    setShowPinEntry(false);
-    setSigningRole(null);
-  };
-  
-  const handleProceedToPinForClear = () => {
-    setShowClearConfirmation(false);
-    setIsClearingAuth(true);
-    setShowPinEntry(true);
-  };
-
-  const handleCorrectPinForClear = () => {
-    onClearAuth(event.id);
-    setShowPinEntry(false);
-    setIsClearingAuth(false);
-  };
-
-  const handleCancelPin = () => {
-    setShowPinEntry(false);
-    setSigningRole(null);
-    setIsClearingAuth(false);
+  const getStudentName = (student: string | undefined) => {
+    if (!student) return '';
+    return student.split(' – ')[0] || student;
   };
 
   const formatAuthTime = (timestamp: string | undefined) => {
@@ -148,53 +272,121 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     const year = String(date.getFullYear()).slice(-2);
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    
     return `${day} ${month} ${year} ${hours}:${minutes}`;
   };
-  
-  const hasAnySignature = !!(event.authoSignedBy ?? event.captainSignedBy);
-  const isFullyAuthorised = !!(event.authoSignedBy && event.captainSignedBy);
 
-  // Default PIN for all users is 1111
-  const pinForVerification = '1111';
+  // ─── Action handlers ─────────────────────────────────────────────────────
 
-  // Handle verbal auth checkbox change
+  const handleSignClick = (role: 'autho' | 'captain') => {
+    if (role === 'autho' && !selectedAutho) return;
+    if (role === 'captain' && !selectedCaptain) return;
+    if (isVerbal && selectedAutho !== selectedCaptain) return;
+    setSigningRole(role);
+    if (role === 'autho') setShowAuthConfirmation(true);
+    else setShowPinEntry(true);
+  };
+
+  const handleConfirmAuthForSign = () => { setShowAuthConfirmation(false); setShowPinEntry(true); };
+  const handleCancelAuthForSign  = () => { setShowAuthConfirmation(false); setSigningRole(null); };
+
+  const handleCorrectPinForSign = () => {
+    if (signingRole) {
+      const selectedPerson = signingRole === 'autho' ? selectedAutho : selectedCaptain;
+      onAuthorise(event.id, notes, signingRole, isVerbal, selectedPerson);
+    }
+    setShowPinEntry(false);
+    setSigningRole(null);
+  };
+
+  const handleProceedToPinForClear = () => { setShowClearConfirmation(false); setIsClearingAuth(true); setShowPinEntry(true); };
+  const handleCorrectPinForClear  = () => { onClearAuth(event.id); setShowPinEntry(false); setIsClearingAuth(false); };
+  const handleCancelPin           = () => { setShowPinEntry(false); setSigningRole(null); setIsClearingAuth(false); };
+
   const handleVerbalAuthChange = (checked: boolean) => {
     setIsVerbal(checked);
-    if (checked && !event.authoSignedBy && !event.captainSignedBy) {
-      // When enabling verbal auth and not yet signed, sync AUTHO to Captain
-      setSelectedAutho(selectedCaptain);
-    }
+    if (checked && !event.authoSignedBy && !event.captainSignedBy) setSelectedAutho(selectedCaptain);
   };
 
-  // Helper function to extract aircraft type without line number
-  const getAircraftType = (resourceId: string | undefined) => {
-    if (!resourceId) return '';
-    // Check if resourceId has a space followed by a number (e.g., "PC-21 2")
-    const spaceIndex = resourceId.lastIndexOf(' ');
-    if (spaceIndex > 0) {
-      const lastPart = resourceId.substring(spaceIndex + 1);
-      if (!isNaN(Number(lastPart))) {
-        // Last part after space is a number, remove it
-        return resourceId.substring(0, spaceIndex);
+  const hasAnySignature  = !!(event.authoSignedBy ?? event.captainSignedBy);
+  const isFullyAuthorised = !!(event.authoSignedBy && event.captainSignedBy);
+  const pinForVerification = '1111';
+
+  // ─── Currencies Box (inline component — accesses outer scope) ────────────
+
+  const CurrenciesBox = () => {
+    if (!hasCurrencyData) return null;
+
+    const getInstructorLabel = () => {
+      if (!instructorRecord) return null;
+      const inst = instructorsData.find(i => i.name === instructorRecord.name);
+      return inst ? `${inst.rank} ${inst.name}` : instructorRecord.name;
+    };
+
+    const getStudentLabel = () => {
+      if (!studentRecord) return null;
+      if (studentRecord.isTrainee) {
+        const t = traineesData.find(t => t.name === studentRecord.name || t.fullName === studentRecord.name);
+        return t ? `${t.rank} ${t.name || t.fullName}` : studentRecord.name;
       }
-    }
-    return resourceId;
+      const inst = instructorsData.find(i => i.name === studentRecord.name);
+      return inst ? `${inst.rank} ${inst.name}` : studentRecord.name;
+    };
+
+    const instructorLabel = getInstructorLabel();
+    const studentLabel    = getStudentLabel();
+
+    return (
+      <fieldset className="p-4 border border-gray-600 rounded-lg">
+        <legend className="px-2 text-sm font-semibold text-gray-300">Currencies</legend>
+
+        {/* Column headers */}
+        <div className="flex items-center justify-end gap-2.5 mb-1 pr-1">
+          {(
+            [
+              { color: 'bg-red-500',   label: 'Expired'  },
+              { color: 'bg-amber-400', label: 'Due Soon' },
+              { color: 'bg-green-500', label: 'Current'  },
+              { color: 'bg-gray-500',  label: 'Inactive' },
+            ] as const
+          ).map(({ color, label }) => (
+            <div key={label} className="w-9 flex flex-col items-center gap-0.5">
+              <span className={`w-2.5 h-2.5 rounded-full inline-block ${color}`} />
+              <span className="text-[9px] text-gray-500 leading-tight">{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className="divide-y divide-gray-700/50">
+          {instructorLabel && (
+            <PersonCurrencyRow
+              label={instructorLabel}
+              role="Instructor / PIC"
+              counts={instructorCounts}
+            />
+          )}
+          {studentLabel && (
+            <PersonCurrencyRow
+              label={studentLabel}
+              role={studentRecord?.isTrainee ? 'Student' : 'Co-Pilot'}
+              counts={studentCounts}
+            />
+          )}
+        </div>
+
+        <p className="text-[9px] text-gray-600 mt-2 text-right">
+          {allCurrencyDefs.length} currencies tracked
+        </p>
+      </fieldset>
+    );
   };
 
-  // Helper function to extract student name without course
-  const getStudentName = (student: string | undefined) => {
-    if (!student) return '';
-    return student.split(' – ')[0] || student;
-  };
+  // ─── Render: fully authorised ─────────────────────────────────────────────
 
-  // Render completed authorisation view
   if (isFullyAuthorised) {
     return (
       <>
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in" onClick={onClose}>
             <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
-                {/* Header */}
                 <div className="p-3 border-b border-gray-700 flex justify-between items-center bg-gray-900">
                     <div className="flex items-center space-x-2">
                         <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -211,7 +403,6 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     {isFrozen && !freezeAllowedActions.flightAuthorisation && (
                         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                     )}
-                    {/* Approval Banner */}
                     <div className="bg-gray-700/50 rounded-lg p-3 text-center border border-gray-600">
                         <div className="flex items-center justify-center mb-1">
                             <svg className="h-5 w-5 text-green-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -222,55 +413,30 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                         <p className="text-gray-400 text-xs">This flight has been fully authorised and is cleared to proceed</p>
                     </div>
 
-                    {/* Flight Summary */}
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
                         <h3 className="text-sm font-semibold text-gray-300 mb-2">Flight Summary</h3>
                         <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Syllabus:</span>
-                                <span className="text-white font-medium">{event.flightNumber}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Start Time:</span>
-                                <span className="text-white font-medium">{Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Instructor:</span>
-                                <span className="text-white font-medium">{event.instructor}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Student:</span>
-                                <span className="text-white font-medium">{getStudentName(event.student)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Aircraft:</span>
-                                <span className="text-white font-medium">{getAircraftType(event.resourceId)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-400">Route:</span>
-                                <span className="text-white font-medium">{event.origin}-{event.destination}</span>
-                            </div>
+                            <div className="flex justify-between"><span className="text-gray-400">Syllabus:</span><span className="text-white font-medium">{event.flightNumber}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Start Time:</span><span className="text-white font-medium">{Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Instructor:</span><span className="text-white font-medium">{event.instructor}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Student:</span><span className="text-white font-medium">{getStudentName(event.student)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Aircraft:</span><span className="text-white font-medium">{getAircraftType(event.resourceId)}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-400">Route:</span><span className="text-white font-medium">{event.origin}-{event.destination}</span></div>
                         </div>
                     </div>
 
-                    {/* Authorising Officer */}
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
                         <div className="flex items-center mb-2">
-                            <svg className="h-4 w-4 text-green-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                            <svg className="h-4 w-4 text-green-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                             <h3 className="text-sm font-semibold text-gray-300">Authorising Officer (AUTHO)</h3>
                         </div>
                         <p className="text-green-400 font-bold text-base ml-6">{event.authoSignedBy}</p>
                         <p className="text-gray-400 text-xs ml-6">Signed: {formatAuthTime(event.authoSignedAt)}</p>
                     </div>
 
-                    {/* Captain (PIC) */}
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
                         <div className="flex items-center mb-2">
-                            <svg className="h-4 w-4 text-green-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                            <svg className="h-4 w-4 text-green-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                             <h3 className="text-sm font-semibold text-gray-300">Captain (PIC)</h3>
                         </div>
                         <p className="text-green-400 font-bold text-base ml-6">{event.captainSignedBy}</p>
@@ -278,31 +444,20 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div className="px-4 py-3 bg-gray-900 border-t border-gray-700 flex justify-between items-center">
-                    <button
-                        onClick={() => setShowClearConfirmation(true)}
-                        className="px-4 py-2 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 transition-colors"
-                    >
-                        Clear Auth
-                    </button>
+                    <button onClick={() => setShowClearConfirmation(true)} className="px-4 py-2 bg-red-600 text-white rounded text-sm font-semibold hover:bg-red-700 transition-colors">Clear Auth</button>
                     <button onClick={onClose} className="px-4 py-2 bg-gray-600 text-white rounded text-sm font-semibold hover:bg-gray-700 transition-colors">Close</button>
                 </div>
             </div>
         </div>
-        {showPinEntry && (
-            <PinEntryFlyout
-                correctPin={pinForVerification}
-                onConfirm={handleCorrectPinForClear}
-                onCancel={handleCancelPin}
-            />
-        )}
+        {showPinEntry && <PinEntryFlyout correctPin={pinForVerification} onConfirm={handleCorrectPinForClear} onCancel={handleCancelPin} />}
         {showClearConfirmation && <ClearAuthConfirmation onConfirm={handleProceedToPinForClear} onCancel={() => setShowClearConfirmation(false)} />}
       </>
     );
   }
 
-  // Render in-progress authorisation view
+  // ─── Render: in-progress authorisation ───────────────────────────────────
+
   return (
     <>
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in" onClick={onClose}>
@@ -318,20 +473,24 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                     {isFrozen && !freezeAllowedActions.flightAuthorisation && (
                         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                     )}
+
+                    {/* Flight Summary */}
                     <fieldset className="p-4 border border-gray-600 rounded-lg">
                         <legend className="px-2 text-sm font-semibold text-gray-300">Flight Summary</legend>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-1">
-                            <InfoRow label="Syllabus" value={event.flightNumber} />
+                            <InfoRow label="Syllabus"   value={event.flightNumber} />
                             <InfoRow label="Start Time" value={`${Math.floor(event.startTime)}:${String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}`} />
                             <InfoRow label="Instructor" value={event.instructor} />
-                            <InfoRow label="Student" value={getStudentName(event.student)} />
-                            <InfoRow label="Aircraft" value={getAircraftType(event.resourceId)} />
-                             <InfoRow label="Route" value={`${event.origin}-${event.destination}`} />
+                            <InfoRow label="Student"    value={getStudentName(event.student)} />
+                            <InfoRow label="Aircraft"   value={getAircraftType(event.resourceId)} />
+                            <InfoRow label="Route"      value={`${event.origin}-${event.destination}`} />
                         </div>
                     </fieldset>
-                    
-                    
-                    
+
+                    {/* ── Currencies box (between Flight Summary and Notes) ── */}
+                    <CurrenciesBox />
+
+                    {/* Notes */}
                     <div>
                         <label htmlFor="auth-notes" className="block text-sm font-medium text-gray-400">Notes</label>
                         <textarea
@@ -344,8 +503,10 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                             placeholder="Enter any authorisation notes here..."
                         />
                     </div>
-                    
+
+                    {/* Signature blocks */}
                     <div className="space-y-3">
+                        {/* AUTHO */}
                         <div className="p-3 bg-gray-900/50 rounded-lg">
                              <div className="mb-3">
                                 <h3 className="font-semibold text-gray-300 mb-2">Authorising Officer (AUTHO)</h3>
@@ -374,7 +535,8 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                 )}
                              </div>
                         </div>
-                        
+
+                        {/* PIC */}
                         <div className="p-3 bg-gray-900/50 rounded-lg">
                              <div className="mb-3">
                                 <h3 className="font-semibold text-gray-300 mb-2">Captain (PIC) - {picName}</h3>
@@ -385,10 +547,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                             selectedStaff={selectedCaptain}
                                             onSelect={(newSelection) => {
                                                 setSelectedCaptain(newSelection);
-                                                if (isVerbal && !event.authoSignedBy) {
-                                                    // When verbal auth is enabled, sync AUTHO to Captain
-                                                    setSelectedAutho(newSelection);
-                                                }
+                                                if (isVerbal && !event.authoSignedBy) setSelectedAutho(newSelection);
                                             }}
                                             placeholder="Select Captain (PIC)..."
                                             disabled={!!(event.authoSignedBy && !event.isVerbalAuth)}
@@ -434,10 +593,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-between items-center">
                     <div>
                         {hasAnySignature && (
-                            <button
-                                onClick={() => setShowClearConfirmation(true)}
-                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold"
-                            >
+                            <button onClick={() => setShowClearConfirmation(true)} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold">
                                 Clear Auth
                             </button>
                         )}
