@@ -113,15 +113,29 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
         setShowErrors(false);
     };
     
+    // Returns "dd Mmm" e.g. "12 Apr"
     const formatDate = (dateString: string): string => {
         if (!dateString) return '';
         const date = new Date(`${dateString}T00:00:00Z`);
-        return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+        return `${day} ${month}`;
     };
 
+    // Returns "HHMM" e.g. "0900"
     const formatMilitaryTime = (timeString: string | undefined): string => {
         if (!timeString) return '';
         return timeString.replace(':', '');
+    };
+
+    // Returns "tttt dd Mmm" e.g. "0900 12 Apr"
+    const formatDateTime = (timeString: string | undefined, dateString: string): string => {
+        const t = formatMilitaryTime(timeString);
+        const d = formatDate(dateString);
+        if (!t && !d) return '';
+        if (!t) return d;
+        if (!d) return t;
+        return `${t} ${d}`;
     };
 
     return (
@@ -265,13 +279,12 @@ const AddUnavailabilityFlyout: React.FC<AddUnavailabilityFlyoutProps> = ({ onClo
                                         const dateRange = p.startDate === lastDayStr ? startDisplayDate : `${startDisplayDate} to ${lastDayDisplay}`;
                                         displayString = `${dateRange} @ All Day`;
                                     } else {
-                                        const endDisplayDate = formatDate(p.endDate);
-                                        const startTimeDisplay = formatMilitaryTime(p.startTime);
-                                        const endTimeDisplay = formatMilitaryTime(p.endTime);
+                                        const startDisplay = formatDateTime(p.startTime, p.startDate);
+                                        const endDisplay   = formatDateTime(p.endTime,   p.endDate);
                                         if (p.startDate === p.endDate) {
-                                            displayString = `${startTimeDisplay} ${startDisplayDate} - ${endTimeDisplay} ${endDisplayDate}`;
+                                            displayString = `${startDisplay} - ${endDisplay}`;
                                         } else {
-                                            displayString = `${startTimeDisplay} ${startDisplayDate} to ${endTimeDisplay} ${endDisplayDate}`;
+                                            displayString = `${startDisplay} to ${endDisplay}`;
                                         }
                                     }
 

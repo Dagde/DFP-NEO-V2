@@ -106,10 +106,13 @@ const InstrumentGauge: React.FC<{ sim: number; actual: number }> = ({ sim, actua
   </div>
 );
 
+// Returns "dd Mmm" e.g. "12 Apr"
 const formatDate = (dateString: string): string => {
   if (!dateString) return '';
   const date = new Date(`${dateString}T00:00:00Z`);
-  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+  return `${day} ${month}`;
 };
 
 const initialExperience: LogbookExperience = {
@@ -506,13 +509,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                   </div>
                   <div className="space-y-1 mb-4 max-h-64 overflow-y-auto">
                     {unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map(p => {
-                      const startDisplay = formatDate(p.startDate);
-                      const endDisplay = formatDate(p.endDate);
-                      const timeStr = p.allDay ? 'All Day' : `${formatMilitaryTime(p.startTime)}-${formatMilitaryTime(p.endTime)}`;
+                      let periodDisplay = '';
+                      if (p.allDay) {
+                        const startDisplay = formatDate(p.startDate);
+                        const endDisplay = formatDate(p.endDate);
+                        periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
+                      } else {
+                        const startDisplay = `${formatMilitaryTime(p.startTime)} ${formatDate(p.startDate)}`;
+                        const endDisplay   = `${formatMilitaryTime(p.endTime)} ${formatDate(p.endDate)}`;
+                        periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
+                      }
                       return (
                         <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                           <span className="text-white font-medium">{p.reason}</span>
-                          <span className="text-gray-300 font-mono">{startDisplay}{p.startDate !== p.endDate ? ` – ${endDisplay}` : ''} {timeStr}</span>
+                          <span className="text-gray-300 font-mono">{periodDisplay}</span>
                           <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
                         </div>
                       );
@@ -840,13 +850,20 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                 <h4 className="text-xs font-semibold text-gray-300 mb-2">Unavailability</h4>
                 <div className="space-y-1 max-h-32 overflow-y-auto">
                   {unavailabilityPeriods.length > 0 ? unavailabilityPeriods.map(p => {
-                    const startDisplay = formatDate(p.startDate);
-                    const endDisplay = formatDate(p.endDate);
-                    const timeStr = p.allDay ? 'All Day' : `${formatMilitaryTime(p.startTime)}-${formatMilitaryTime(p.endTime)}`;
+                    let periodDisplay = '';
+                    if (p.allDay) {
+                      const startDisplay = formatDate(p.startDate);
+                      const endDisplay = formatDate(p.endDate);
+                      periodDisplay = p.startDate !== p.endDate ? `${startDisplay} – ${endDisplay} @ All Day` : `${startDisplay} @ All Day`;
+                    } else {
+                      const startDisplay = `${formatMilitaryTime(p.startTime)} ${formatDate(p.startDate)}`;
+                      const endDisplay   = `${formatMilitaryTime(p.endTime)} ${formatDate(p.endDate)}`;
+                      periodDisplay = p.startDate !== p.endDate ? `${startDisplay} to ${endDisplay}` : `${startDisplay} - ${endDisplay}`;
+                    }
                     return (
                       <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                         <span className="text-white font-medium">{p.reason}</span>
-                        <span className="text-gray-300 font-mono">{startDisplay}{p.startDate !== p.endDate ? ` – ${endDisplay}` : ''} {timeStr}</span>
+                        <span className="text-gray-300 font-mono">{periodDisplay}</span>
                       </div>
                     );
                   }) : <p className="text-sm text-gray-500 text-center italic py-2">No unavailability periods scheduled.</p>}

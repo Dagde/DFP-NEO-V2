@@ -181,10 +181,13 @@ const EventDetailCard: React.FC<{
   );
 };
 
+// Returns "dd Mmm" e.g. "12 Apr"
 const formatDate = (dateString: string): string => {
     if (!dateString) return '';
     const date = new Date(`${dateString}T00:00:00Z`);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = date.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' });
+    return `${day} ${month}`;
 };
 
 const LastEventCard: React.FC<{
@@ -940,12 +943,24 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                         </div>
                         <div className="space-y-2">
-                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => (
-                            <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
-                              <span className="text-white">{p.startDate}{p.endDate !== p.startDate ? ` → ${p.endDate}` : ''}</span>
-                              <span className="text-gray-300">{p.reason}</span>
-                            </div>
-                          )) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
+                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => {
+                            let periodDisplay = '';
+                            if (p.allDay) {
+                              const sd = formatDate(p.startDate);
+                              const ed = formatDate(p.endDate);
+                              periodDisplay = p.startDate !== p.endDate ? `${sd} – ${ed} @ All Day` : `${sd} @ All Day`;
+                            } else {
+                              const sd = `${formatMilitaryTime(p.startTime)} ${formatDate(p.startDate)}`;
+                              const ed = `${formatMilitaryTime(p.endTime)} ${formatDate(p.endDate)}`;
+                              periodDisplay = p.startDate !== p.endDate ? `${sd} to ${ed}` : `${sd} - ${ed}`;
+                            }
+                            return (
+                              <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
+                                <span className="text-white font-medium">{p.reason}</span>
+                                <span className="text-gray-300 font-mono">{periodDisplay}</span>
+                              </div>
+                            );
+                          }) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
                         </div>
                         <button onClick={() => { setShowAddUnavailability(true); setActiveTab(null); }} className="mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded">+ Add Unavailability</button>
                       </div>

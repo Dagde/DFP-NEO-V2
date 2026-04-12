@@ -9171,25 +9171,27 @@ useEffect(() => {
 
     const handleDeploymentUnavailability = async (updatedSchedule: ScheduleEvent[]) => {
         const deploymentTiles = updatedSchedule.filter(e => e.type === 'deployment');
+
+        const flightTiles = updatedSchedule.filter(e =>
+            e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground'
+        );
+
         if (deploymentTiles.length === 0) {
-            // No deployments — remove any lingering Deployed periods tagged to this schedule
-            const flightTiles = updatedSchedule.filter(e => e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground');
+            // No deployments — remove any lingering Deployed periods tagged to all flight tiles
             for (const flight of flightTiles) {
                 await removeDeployedUnavailability(flight.id);
             }
             return;
         }
 
-        const flightTiles = updatedSchedule.filter(e =>
-            e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground'
-        );
-
         for (const flight of flightTiles) {
-            // Check if this flight overlaps any deployment tile in time
+            // A flight is "on a deployment" if the flight's date falls within the
+            // deployment's date range (deploymentStartDate → deploymentEndDate).
+            // We use date-string comparison (YYYY-MM-DD) which is lexicographically correct.
             const overlappingDeploy = deploymentTiles.find(dep => {
-                const flightEnd = flight.startTime + flight.duration;
-                const depEnd = dep.startTime + dep.duration;
-                return flight.startTime < depEnd && flightEnd > dep.startTime;
+                const depStart = dep.deploymentStartDate || dep.date;
+                const depEnd   = dep.deploymentEndDate   || dep.date;
+                return flight.date >= depStart && flight.date <= depEnd;
             });
 
             if (overlappingDeploy) {
