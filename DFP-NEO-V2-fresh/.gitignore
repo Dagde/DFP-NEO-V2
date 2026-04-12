@@ -30,3 +30,4 @@ Screenshot*.png
 *.sw?
 outputs/
 summarized_conversations/
+.github_pat

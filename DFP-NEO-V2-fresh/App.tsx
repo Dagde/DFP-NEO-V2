@@ -4060,33 +4060,7 @@ const App: React.FC = () => {
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
-    
-    // Monitor allInstructorsData for duplicates
-    useEffect(() => {
-        const instructorIds = new Map();
-        const duplicates: any[] = [];
-        allInstructorsData.forEach((instructor: any) => {
-            if (instructorIds.has(instructor.idNumber)) {
-                duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
-            }
-            instructorIds.set(instructor.idNumber, instructor);
-        });
-        
-        if (duplicates.length > 0) {
-            console.error('🔴 DUPLICATES FOUND IN allInstructorsData STATE:', duplicates.length);
-            console.error('Duplicate details:', duplicates);
-            console.error('All Burns entries in state:', allInstructorsData.filter((i: any) => i.name.includes('Burns')));
-        } else {
-            console.log('🟢 allInstructorsData state is clean - no duplicates');
-        }
-    }, [allInstructorsData]);
 
-// DATA TRACKING: Initial data load
-useEffect(() => {
-  console.log('🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors');
-  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', allInstructorsData.length);
-  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', allInstructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
-}, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
     const [allTraineesData, setTraineesData] = useState<Trainee[]>([]);
@@ -4483,39 +4457,33 @@ useEffect(() => {
         }
 
         const loadInitialData = async () => {
-            console.log('🔄 Starting to load initial data...');
             try {
                 const data = await initializeData();
-                console.log('📦 Data received from initializeData:', {
-                    instructorsCount: data.instructors.length,
-                    traineesCount: data.trainees.length,
-                    aircraftCount: data.aircraft.length,
-                    scoresCount: Object.keys(data.scores).length,
-                    eventsCount: data.events.length,
-                });
                 
-                // Check for duplicates before setting state
-                const instructorIds = new Map();
-                const duplicates: any[] = [];
-                data.instructors.forEach((instructor: any) => {
-                    if (instructorIds.has(instructor.idNumber)) {
-                        duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
+                // Strip any leftover __deploy__ tags from DB data at load time
+                // (These may have been left in DB if cleanup failed in a previous session)
+                const stripDeployTags = (person: any) => {
+                    if (!person.unavailability || !Array.isArray(person.unavailability)) return person;
+                    const cleaned = person.unavailability.filter((p: any) => !p?.notes?.startsWith('__deploy__'));
+                    if (cleaned.length !== person.unavailability.length) {
+                        console.log('[StartupCleanup] Stripped', person.unavailability.length - cleaned.length, '__deploy__ tag(s) from', person.name || person.fullName);
                     }
-                    instructorIds.set(instructor.idNumber, instructor);
-                });
-                
-                if (duplicates.length > 0) {
-                    console.error('❌ DUPLICATES IN initializeData() RESULT:', duplicates.length);
-                    console.error('Duplicate details:', duplicates);
-                    console.error('All Burns entries:', data.instructors.filter((i: any) => i.name.includes('Burns')));
-                } else {
-                    console.log('✅ No duplicates found in initializeData() result');
-                }
-                
-                setInstructorsData(data.instructors);
+                    return { ...person, unavailability: cleaned };
+                };
+                const cleanedInstructors = data.instructors.map(stripDeployTags);
+                const cleanedTrainees    = data.trainees.map(stripDeployTags);
+                setInstructorsData(cleanedInstructors);
                 setIsStaffLoaded(true);
-                setTraineesData(data.trainees);
+                setTraineesData(cleanedTrainees);
                 setIsTraineeLoaded(true);
+                // Also clean the DB asynchronously so future loads are clean too
+                fetch('/api/cleanup-deploy-unavailability', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include'
+                }).then(r => r.json()).then(d => {
+                    if (d.personnelFixed > 0 || d.traineesFixed > 0) {
+                        console.log('[StartupCleanup] DB cleanup fixed', d.personnelFixed, 'personnel and', d.traineesFixed, 'trainees');
+                    }
+                }).catch(e => console.warn('[StartupCleanup] DB cleanup failed:', e));
                 setEvents(data.events);
 
                 // Load courses from DB if any exist
@@ -5872,22 +5840,18 @@ useEffect(() => {
             });
             
             deploymentCount = overlappingDeployments.length;
-            console.log(`Deployments overlapping with ${date}:`, overlappingDeployments);
         } else if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)) {
             // For next day build, check if any deployment exists in nextDayBuildEvents
             const deploymentEvents = nextDayBuildEvents.filter(event => event.type === 'deployment');
             deploymentCount = deploymentEvents.length;
-            console.log('Next day build deployment events:', deploymentEvents);
         }
         
-        console.log('deploymentCount:', deploymentCount);
         
         // Build PC-21 resources, replacing the last N with "Deployed X" if needed
         const pc21Resources = Array.from({ length: pc21Count }, (_, i) => {
             const deploymentIndex = pc21Count - i;
             if (deploymentIndex <= deploymentCount) {
                 const deployNum = deploymentCount - deploymentIndex + 1;
-                console.log(`Transforming PC-21 ${i + 1} to Deployed ${deployNum}`);
                 return `Deployed ${deployNum}`;
             }
             return `PC-21 ${i + 1}`;
@@ -6860,7 +6824,35 @@ useEffect(() => {
                 newConflicts.set(event.id, [...new Set(conflictedNamesForEvent)]);
             }
         }
-        
+
+        // ── DATA TRACKING: log what's causing red tiles ──────────────────────────────────
+        if (newConflicts.size > 0) {
+            console.group('[UnavailConflicts] ' + newConflicts.size + ' tile(s) are red on ' + (eventsForDate?.[0]?.date || 'unknown date'));
+            newConflicts.forEach((names, eventId) => {
+                const evt = eventsToCheck.find(e => e.id === eventId);
+                const evtDesc = evt ? (evt.type + ' ' + (evt.instructor || evt.student || evt.pilot || '?') + ' @' + evt.startTime) : eventId;
+                // Find the specific unavailability period(s) causing the conflict
+                names.forEach(name => {
+                    const person = personMap.get(name);
+                    if (person?.unavailability) {
+                        const deployTags = person.unavailability.filter((p: any) => p?.notes?.startsWith('__deploy__'));
+                        const otherPeriods = person.unavailability.filter((p: any) => !p?.notes?.startsWith('__deploy__'));
+                        console.log(
+                            '  RED: [' + evtDesc + '] person=' + name +
+                            (deployTags.length > 0 ? ' DEPLOY_TAGS=' + JSON.stringify(deployTags.map((p: any) => p.notes)) : '') +
+                            (otherPeriods.length > 0 ? ' other_periods=' + otherPeriods.length : '')
+                        );
+                    } else {
+                        console.log('  RED: [' + evtDesc + '] person=' + name + ' (no unavailability data found)');
+                    }
+                });
+            });
+            console.groupEnd();
+        } else {
+            console.log('[UnavailConflicts] No conflicts on', eventsForDate?.[0]?.date || 'unknown date');
+        }
+        // ─────────────────────────────────────────────────────────────────────────────────
+
         return newConflicts;
     }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
 
@@ -7378,9 +7370,6 @@ useEffect(() => {
             // Generate the correct number of Deployed resources
             const deployedResources = Array.from({ length: totalDeploymentCount }, (_, i) => `Deployed ${i + 1}`);
             
-            console.log('Available Deployed resources:', deployedResources);
-            console.log('Checking deployment event:', eventToPlace);
-            console.log('Against existing events:', existingEvents.filter(e => e.type === 'deployment'));
             
             // Find the first available Deployed resource
             for (const resourceId of deployedResources) {
@@ -7390,13 +7379,11 @@ useEffect(() => {
                 console.log(`Checking ${resourceId}:`, conflictingEvents.length > 0 ? 'OCCUPIED' : 'AVAILABLE', conflictingEvents);
                 
                 if (conflictingEvents.length === 0) {
-                    console.log(`Assigning deployment to ${resourceId}`);
                     return resourceId;
                 }
             }
             
             // If all are occupied, return the next available number
-            console.log('All Deployed resources occupied, creating new one');
             return `Deployed ${totalDeploymentCount}`;
         }
         
@@ -9204,32 +9191,11 @@ useEffect(() => {
             e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground'
         );
 
-        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
-        console.group('[DeployUnavail] handleDeploymentUnavailability');
-        console.log('Total events in updatedSchedule:', updatedSchedule.length);
-        console.log('Deployment tiles found:', deploymentTiles.length, deploymentTiles.map(d => ({
-            id: d.id,
-            date: d.date,
-            deploymentStartDate: d.deploymentStartDate,
-            deploymentEndDate:   d.deploymentEndDate,
-            deploymentStartTime: d.deploymentStartTime,
-            deploymentEndTime:   d.deploymentEndTime,
-            startTime: d.startTime,
-            duration:  d.duration,
-        })));
-        console.log('Flight/FTD/CPT tiles found:', flightTiles.length, flightTiles.map(f => ({
-            id: f.id,
-            type: f.type,
-            date: f.date,
-            startTime: f.startTime,
-            instructor: f.instructor,
-            student: f.student,
-        })));
-        // ────────────────────────────────────────────────────────────────────
+        // Deployment unavailability check
+        console.log('[DeployUnavail] handleDeploymentUnavailability: deployments=' + deploymentTiles.length + ' flights=' + flightTiles.length);
 
         if (deploymentTiles.length === 0) {
-            console.log('[DeployUnavail] No deployment tiles — cleaning up any lingering Deployed periods');
-            console.groupEnd();
+            console.log('[DeployUnavail] No deployment tiles - removing all lingering Deployed periods');
             // No deployments — remove any lingering Deployed periods tagged to all flight tiles
             for (const flight of flightTiles) {
                 await removeDeployedUnavailability(flight.id);
@@ -9261,27 +9227,18 @@ useEffect(() => {
                 const depEnd   = dep.deploymentEndDate   || dep.date;
                 const matches  = flight.date >= depStart && flight.date <= depEnd;
 
-                // ── DIAGNOSTIC LOGGING ──────────────────────────────────────
-                console.log(
-                    '[DeployUnavail] Flight "' + flight.id + '" (' + flight.type + ') date="' + flight.date + '"' +
-                    ' vs deployment "' + dep.id + '" depStart="' + depStart + '" depEnd="' + depEnd + '"' +
-                    ' matches=' + matches
-                );
-                // ────────────────────────────────────────────────────────────
+
 
                 return matches;
             });
 
             if (overlappingDeploy) {
-                console.log('[DeployUnavail] MATCH: Flight "' + flight.id + '" (' + (flight.instructor || flight.student || '?') + ') is ON deployment - upsert');
                 await upsertDeployedUnavailability(flight, overlappingDeploy);
             } else {
-                console.log('[DeployUnavail] NO MATCH: Flight "' + flight.id + '" (' + (flight.instructor || flight.student || '?') + ') is NOT on deployment - remove');
                 await removeDeployedUnavailability(flight.id);
             }
         }
 
-        console.groupEnd();
     };
 
     const upsertDeployedUnavailability = async (flight: ScheduleEvent, deployment: ScheduleEvent) => {
@@ -9322,12 +9279,6 @@ useEffect(() => {
             notes: tag,
         };
 
-        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
-        console.group('[DeployUnavail] upsertDeployedUnavailability');
-        console.log('Flight:', { id: flight.id, type: flight.type, date: flight.date, startTime: flight.startTime, instructor: flight.instructor, student: flight.student, pilot: flight.pilot, crew: flight.crew });
-        console.log('Deployment:', { id: deployment.id, date: deployment.date, deploymentStartDate: deployment.deploymentStartDate, deploymentEndDate: deployment.deploymentEndDate, deploymentStartTime: deployment.deploymentStartTime, deploymentEndTime: deployment.deploymentEndTime });
-        console.log('Computed period:', { tag, startDate: flightDateStr, startTime, endDate: endDateStr, endTime });
-        // ────────────────────────────────────────────────────────────────────
 
         // Collect personnel on this flight
         const personnelNames: string[] = [];
@@ -9339,9 +9290,6 @@ useEffect(() => {
         if (flight.pilot) personnelNames.push(flight.pilot);
         if (flight.crew) personnelNames.push(flight.crew);
 
-        // ── DIAGNOSTIC LOGGING ──────────────────────────────────────────────
-        console.log('Personnel to tag:', personnelNames);
-        // ────────────────────────────────────────────────────────────────────
 
         // Use refs for latest data (avoid stale closures)
         const latestInstructorsForUpsert = allInstructorsDataRef.current;
@@ -9396,7 +9344,6 @@ useEffect(() => {
             }
         }
 
-        console.groupEnd(); // upsertDeployedUnavailability
     };
 
     const removeDeployedUnavailability = async (flightId: string) => {
@@ -9497,7 +9444,6 @@ useEffect(() => {
                 // deployment tiles that may live on a different date than the dragged flight.
                 setPublishedSchedules(prevSchedules => {
                     const allEvents = Object.values(prevSchedules).flat();
-                    console.log('[DeployUnavail] Calling handleDeploymentUnavailability with', allEvents.length, 'total events across', Object.keys(prevSchedules).length, 'dates. Dates:', Object.keys(prevSchedules));
                     handleDeploymentUnavailability(allEvents);
                     return prevSchedules; // no state change, just reading
                 });
@@ -12252,17 +12198,9 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
-                                console.log('🔍 [DATA TRACKING] Instructor update/save called');
-                                console.log('🔍 [DATA TRACKING] Instructor data:', data);
-                                console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
-                                console.log('🔍 [DATA TRACKING] Instructor name:', data.name);
-                                console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
-                                console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
-                                console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
 
                                 try {
                                     // Call API to save to database
-                                    console.log('🔍 [DATA TRACKING] Calling /api/personnel POST endpoint');
                                     const response = await fetch('/api/personnel', {
                                         method: 'POST',
                                         credentials: 'include',
@@ -12279,26 +12217,19 @@ updates.forEach(update => {
                                     }
 
                                     const result = await response.json();
-                                    console.log('✅ [DATA TRACKING] Saved to database successfully');
-                                    console.log('✅ [DATA TRACKING] API Response:', result);
 
                                 } catch (error) {
                                     console.error('❌ [DATA TRACKING] Error saving to database:', error);
                                     // Continue with local state update even if API fails
-                                    console.log('⚠️ [DATA TRACKING] Continuing with local state update');
                                 }
 
                                 // Update local state
                                 setInstructorsData(prev => {
                                     const exists = prev.some(i => i.idNumber === data.idNumber);
                                     if (exists) {
-                                        console.log('🔍 [DATA TRACKING] Updating existing instructor');
                                         return prev.map(i => i.idNumber === data.idNumber ? data : i);
                                     }
-                                    console.log('🔍 [DATA TRACKING] Adding new instructor to state');
-                                    console.log('🔍 [DATA TRACKING] Total instructors before:', prev.length);
                                     const result = [...prev, data];
-                                    console.log('🔍 [DATA TRACKING] Total instructors after:', result.length);
                                     return result;
                                 });
                             }}
@@ -12342,17 +12273,9 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
-                                console.log('🔍 [DATA TRACKING] Instructor update/save called');
-                                console.log('🔍 [DATA TRACKING] Instructor data:', data);
-                                console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
-                                console.log('🔍 [DATA TRACKING] Instructor name:', data.name);
-                                console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
-                                console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
-                                console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
 
                                 try {
                                     // Call API to save to database
-                                    console.log('🔍 [DATA TRACKING] Calling /api/personnel POST endpoint');
                                     const response = await fetch('/api/personnel', {
                                         method: 'POST',
                                         credentials: 'include',
@@ -12369,26 +12292,19 @@ updates.forEach(update => {
                                     }
 
                                     const result = await response.json();
-                                    console.log('✅ [DATA TRACKING] Saved to database successfully');
-                                    console.log('✅ [DATA TRACKING] API Response:', result);
 
                                 } catch (error) {
                                     console.error('❌ [DATA TRACKING] Error saving to database:', error);
                                     // Continue with local state update even if API fails
-                                    console.log('⚠️ [DATA TRACKING] Continuing with local state update');
                                 }
 
                                 // Update local state
                                 setInstructorsData(prev => {
                                     const exists = prev.some(i => i.idNumber === data.idNumber);
                                     if (exists) {
-                                        console.log('🔍 [DATA TRACKING] Updating existing instructor');
                                         return prev.map(i => i.idNumber === data.idNumber ? data : i);
                                     }
-                                    console.log('🔍 [DATA TRACKING] Adding new instructor to state');
-                                    console.log('🔍 [DATA TRACKING] Total instructors before:', prev.length);
                                     const result = [...prev, data];
-                                    console.log('🔍 [DATA TRACKING] Total instructors after:', result.length);
                                     return result;
                                 });
                             }}
