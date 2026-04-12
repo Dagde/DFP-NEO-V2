@@ -5846,6 +5846,10 @@ useEffect(() => {
             
             const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
             const overlappingDeployments = allEvents.filter(event => {
+                if (!event.date || typeof event.date !== 'string' || !event.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    console.warn('[DeploymentCount] Event has invalid date format, skipping:', event.id, event.date);
+                    return false;
+                }
                 if (event.type !== 'deployment') return false;
                 
                 const eventDateObj = safeParseDate(event.date);
@@ -6129,6 +6133,11 @@ useEffect(() => {
         const seenEIds = new Set<string>();
         const allEvents = rawEvents.filter(e => {
             if (seenEIds.has(e.id)) return false;
+            // Validate that the event has a proper date string in YYYY-MM-DD format
+            if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                console.warn('[eventSegmentsForDate] Event has invalid date format, filtering out:', e.id, e.date);
+                return false;
+            }
             seenEIds.add(e.id);
             return true;
         });
