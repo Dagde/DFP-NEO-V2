@@ -101,28 +101,46 @@ const ghostStyle = (
   textAlign,
 });
 
-// ─── Maps Tailwind bg colour classes to CSS hex values for inline styles ───
-const twClassToHex = (twClass: string): string => {
-  const map: Record<string, string> = {
-    'bg-gray-500':    '#6b7280',
-    'bg-sky-500':     '#0ea5e9',  'bg-sky-400':     '#38bdf8',
-    'bg-sky-400/50':  '#38bdf8',
-    'bg-violet-500':  '#8b5cf6',  'bg-purple-500':  '#a855f7',
-    'bg-purple-400/50':'#c084fc',
-    'bg-emerald-500': '#10b981',  'bg-green-500':   '#22c55e',
-    'bg-rose-500':    '#f43f5e',  'bg-red-500':     '#ef4444',
-    'bg-amber-500':   '#f59e0b',  'bg-yellow-500':  '#eab308',
-    'bg-yellow-400/50':'#facc15',
-    'bg-orange-500':  '#f97316',  'bg-teal-500':    '#14b8a6',
-    'bg-cyan-500':    '#06b6d4',  'bg-pink-500':    '#ec4899',
-    'bg-pink-400/50': '#f472b6',
-    'bg-indigo-500':  '#6366f1',  'bg-blue-500':    '#3b82f6',
-    'bg-blue-400/50': '#60a5fa',
-    'bg-lime-500':    '#84cc16',  'bg-fuchsia-500': '#d946ef',
+// ─── Convert Tailwind bg class to rgba matching FlightTile.tsx rendering ────
+// Uses the same TAILWIND_COLORS palette and alpha mapping as FlightTile.tsx
+// so the Add Flight Tile preview matches the actual schedule tile appearance.
+const twClassToRgba = (cls: string): string => {
+  const TAILWIND_COLORS: Record<string, Record<string, [number, number, number]>> = {
+    sky:     { '400': [56,189,248],   '500': [14,165,233] },
+    purple:  { '400': [192,132,252],  '500': [168,85,247] },
+    yellow:  { '400': [250,204,21],   '500': [234,179,8] },
+    pink:    { '400': [244,114,182],  '500': [236,72,153] },
+    teal:    { '400': [45,212,191],   '500': [20,184,166] },
+    indigo:  { '400': [129,140,248],  '500': [99,102,241] },
+    cyan:    { '400': [34,211,238],   '500': [6,182,212] },
+    blue:    { '400': [96,165,250],   '500': [59,130,246] },
+    green:   { '400': [74,222,128],   '500': [34,197,94] },
+    orange:  { '400': [251,146,60],   '500': [249,115,22] },
+    red:     { '400': [248,113,113],  '500': [239,68,68],  '800': [153,27,27], '900': [127,29,29] },
+    gray:    { '400': [156,163,175],  '500': [107,114,128],'600': [75,85,99] },
+    amber:   { '400': [251,191,36],   '500': [245,158,11], '700': [180,83,9] },
+    fuchsia: { '400': [232,121,249],  '500': [217,70,239] },
+    lime:    { '400': [163,230,53],   '500': [132,204,22] },
+    violet:  { '400': [167,139,250],  '500': [139,92,246] },
+    rose:    { '400': [251,113,133],  '500': [244,63,94] },
+    emerald: { '400': [52,211,153],   '500': [16,185,129] },
   };
-  const base = twClass.replace(/\/\d+$/, '');
-  return map[twClass] || map[base] || '#7a6a2a';  // fallback to gold
+  if (!cls || !cls.startsWith('bg-')) return 'rgba(107,114,128,0.57)'; // gray fallback
+  const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
+  if (!match) return 'rgba(107,114,128,0.57)';
+  const [, colorName, shade, opacityStr] = match;
+  const rgb = TAILWIND_COLORS[colorName]?.[shade];
+  if (!rgb) return 'rgba(107,114,128,0.57)';
+  const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
+  let alpha: number;
+  if (opacity >= 75) alpha = 0.57;
+  else if (opacity >= 45) alpha = 0.42;
+  else if (opacity >= 30) alpha = 0.35;
+  else alpha = (opacity / 100) * 0.7;
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
 };
+// Keep twClassToHex as an alias for backward-compat
+const twClassToHex = twClassToRgba;
 
 // ─── Cascading dropdown for Person selection (3 layers: Unit→Staff/Course→Names) ─
 interface PersonDropdownProps {

@@ -7581,108 +7581,103 @@ useEffect(() => {
     // Reads the current publishedSchedules state for a given date and saves it
     // to the DailySnapshot database so manually added/edited/deleted/cancelled
     // events survive a hard refresh or server restart.
-    const persistScheduleForDate = (targetDate: string) => {
-        // Small delay to allow setPublishedSchedules to settle first
-        setTimeout(() => {
-            setPublishedSchedules(currentSchedules => {
-                const allEventsForDate = currentSchedules[targetDate] || [];
+    // persistScheduleForDate: saves the full schedule for a date to the DB.
+    // Pass allEventsForDate directly (after setPublishedSchedules has been called)
+    // to avoid race conditions with React's async state updates.
+    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[]) => {
+        // Skip seed data
+        if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
+            console.log('[Persist] Skipped seed data for', targetDate);
+            return;
+        }
+        if (allEventsForDate.length === 0) {
+            console.log('[Persist] No events for', targetDate, '- nothing to persist');
+            return;
+        }
 
-                // Skip seed data
-                if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
-                    console.log('[Persist] Skipped seed data for', targetDate);
-                    return currentSchedules;
+        const apiBase = getApiBaseUrl();
+        const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+
+        const staffEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
+            e.instructor && !e.student && e.type !== 'logbook'
+        );
+        const traineeEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
+            !!e.student
+        );
+
+        // Build per-staff currency map
+        const staffCurrencyMap: Record<string, any> = {};
+        instructorsData.forEach((inst: any) => {
+            if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+                staffCurrencyMap[inst.name] = inst.currencyStatus;
+            }
+        });
+
+        // Build trainee profiles snapshot
+        const traineeProfilesSnapshot = traineesData.map((t: any) => ({
+            idNumber: t.idNumber,
+            fullName: t.fullName,
+            name: t.name,
+            rank: t.rank,
+            course: t.course,
+            lmpType: t.lmpType,
+            service: t.service,
+            unit: t.unit,
+            primaryInstructor: t.primaryInstructor,
+            currencyStatus: t.currencyStatus || [],
+            isPaused: t.isPaused || false,
+        }));
+
+        // Build per-trainee LMP completedEventIds map
+        const lmpCompletedIdsMap: Record<string, string[]> = {};
+        traineesData.forEach((t: any) => {
+            const individualLMP = traineeLMPs.get(t.fullName);
+            if (individualLMP) {
+                const completedIds = (individualLMP as any[])
+                    .filter((item: any) => item.completedAt || item.isComplete)
+                    .map((item: any) => (item.id || item.code || '').replace('*', ''));
+                if (completedIds.length > 0) {
+                    lmpCompletedIdsMap[t.fullName] = completedIds;
                 }
-                if (allEventsForDate.length === 0) {
-                    console.log('[Persist] No events for', targetDate, '- nothing to persist');
-                    return currentSchedules;
-                }
+            }
+        });
 
-                const apiBase = getApiBaseUrl();
-                const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+        // Convert pt051Assessments Map to plain object
+        const pt051AssessmentsObj: Record<string, any> = {};
+        pt051Assessments.forEach((assessment: any, key: string) => {
+            pt051AssessmentsObj[key] = assessment;
+        });
 
-                const staffEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
-                    e.instructor && !e.student && e.type !== 'logbook'
-                );
-                const traineeEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
-                    !!e.student
-                );
+        const snapshotPayload = {
+            date: targetDate,
+            scheduleEvents: allEventsForDate,
+            staffEvents: staffEventsForDate,
+            traineeEvents: traineeEventsForDate,
+            pt051Assessments: pt051AssessmentsObj,
+            traineeProfiles: traineeProfilesSnapshot,
+            lmpCompletedIds: lmpCompletedIdsMap,
+            staffCurrency: staffCurrencyMap,
+            staffLogbook: {},
+            savedBy,
+        };
 
-                // Build per-staff currency map
-                const staffCurrencyMap: Record<string, any> = {};
-                instructorsData.forEach((inst: any) => {
-                    if (inst.currencyStatus && inst.currencyStatus.length > 0) {
-                        staffCurrencyMap[inst.name] = inst.currencyStatus;
-                    }
-                });
-
-                // Build trainee profiles snapshot
-                const traineeProfilesSnapshot = traineesData.map((t: any) => ({
-                    idNumber: t.idNumber,
-                    fullName: t.fullName,
-                    name: t.name,
-                    rank: t.rank,
-                    course: t.course,
-                    lmpType: t.lmpType,
-                    service: t.service,
-                    unit: t.unit,
-                    primaryInstructor: t.primaryInstructor,
-                    currencyStatus: t.currencyStatus || [],
-                    isPaused: t.isPaused || false,
-                }));
-
-                // Build per-trainee LMP completedEventIds map
-                const lmpCompletedIdsMap: Record<string, string[]> = {};
-                traineesData.forEach((t: any) => {
-                    const individualLMP = traineeLMPs.get(t.fullName);
-                    if (individualLMP) {
-                        const completedIds = (individualLMP as any[])
-                            .filter((item: any) => item.completedAt || item.isComplete)
-                            .map((item: any) => (item.id || item.code || '').replace('*', ''));
-                        if (completedIds.length > 0) {
-                            lmpCompletedIdsMap[t.fullName] = completedIds;
-                        }
-                    }
-                });
-
-                // Convert pt051Assessments Map to plain object
-                const pt051AssessmentsObj: Record<string, any> = {};
-                pt051Assessments.forEach((assessment: any, key: string) => {
-                    pt051AssessmentsObj[key] = assessment;
-                });
-
-                const snapshotPayload = {
-                    date: targetDate,
-                    scheduleEvents: allEventsForDate,
-                    staffEvents: staffEventsForDate,
-                    traineeEvents: traineeEventsForDate,
-                    pt051Assessments: pt051AssessmentsObj,
-                    traineeProfiles: traineeProfilesSnapshot,
-                    lmpCompletedIds: lmpCompletedIdsMap,
-                    staffCurrency: staffCurrencyMap,
-                    staffLogbook: {},
-                    savedBy,
-                };
-
-                fetch(`${apiBase}/daily-snapshot/save`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(snapshotPayload),
-                })
-                .then(res => res.json())
-                .then(result => {
-                    if (result.success) {
-                        console.log(`✅ [Persist] Saved snapshot for ${targetDate}, ${allEventsForDate.length} events`);
-                    } else {
-                        console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
-                    }
-                })
-                .catch(err => {
-                    console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
-                });
-
-                return currentSchedules; // no state change — read-only access
-            });
-        }, 600);
+        console.log(`[Persist] Saving snapshot for ${targetDate}, ${allEventsForDate.length} events...`);
+        fetch(`${apiBase}/daily-snapshot/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(snapshotPayload),
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.success) {
+                console.log(`✅ [Persist] Saved snapshot for ${targetDate}, ${allEventsForDate.length} events`);
+            } else {
+                console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
+            }
+        })
+        .catch(err => {
+            console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
+        });
     };
     // ────────────────────────────────────────────────────────────────────────────
 
@@ -7905,8 +7900,15 @@ useEffect(() => {
                 }, 500);
 
                 // Persist all affected dates to database immediately
+                // We compute the merged events per date right here (same logic as setPublishedSchedules above)
                 const _affectedDates = new Set<string>(eventsToSave.map(e => e.date));
-                _affectedDates.forEach(d => persistScheduleForDate(d));
+                _affectedDates.forEach(d => {
+                    const _prevForDate = publishedSchedules[d] || [];
+                    const _newEventIds = new Set(eventsToSave.filter(e => e.date === d).map(e => e.id));
+                    const _otherEvents = _prevForDate.filter((e: ScheduleEvent) => !_newEventIds.has(e.id));
+                    const _newEventsForDate = eventsToSave.filter(e => e.date === d);
+                    persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]);
+                });
             }
         }
     
@@ -8087,7 +8089,11 @@ useEffect(() => {
                 return { ...prev, [eventDate]: updatedSchedule };
             });
             // Persist cancellation to database immediately
-            persistScheduleForDate(eventDate);
+            setPublishedSchedules(prev => {
+                const _updated = (prev[eventDate] || []).map((e: ScheduleEvent) => e.id === selectedEvent.id ? cancelledEvent : e);
+                persistScheduleForDate(eventDate, _updated);
+                return prev; // no state change here — already updated above
+            });
         }
         
         // Remove from highest priority events
@@ -8136,7 +8142,11 @@ useEffect(() => {
                 return { ...prev, [eventDate]: newScheduleForDate };
             });
             // Persist deletion to database immediately
-            persistScheduleForDate(eventDate);
+            setPublishedSchedules(prev => {
+                const _updated = (prev[eventDate] || []).filter((e: ScheduleEvent) => e.id !== selectedEvent.id);
+                persistScheduleForDate(eventDate, _updated);
+                return prev; // no state change here — already updated above
+            });
         }
         
         // NEW APPROACH: Trigger PT-051 sync after deletion (only for Active DFP)
@@ -10785,7 +10795,7 @@ updates.forEach(update => {
                                    timestamp: snapshotTs.toISOString(),
                                    date: record.date,
                                    availableCount: currentAvailable,
-                                   totalAircraft: totalAircraftCount,
+                                   totalFleet: totalAircraftCount,
                                    changeType: 'change',
                                    recordedBy: sessionUser?.userId ?? null,
                                    notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
