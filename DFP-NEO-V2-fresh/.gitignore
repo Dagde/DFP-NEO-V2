@@ -1,0 +1,33 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist-ssr
+dist/
+# Build assets are now tracked - do not ignore them
+# dfp-neo-platform/public/flight-school-app/assets/
+# dfp-neo-platform/public/flight-school-app/index.html
+# dfp-neo-platform/public/flight-school-app/index-v2.html
+*.local
+Screenshot*.jpg
+Screenshot*.png
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+outputs/
+summarized_conversations/
+.github_pat

@@ -11,6 +11,17 @@ const createSyllabusItem = (
     description: string,
     courses: string[] = ['BPC+IPC'] // Default to the standard pilot course
 ): SyllabusItemDetail => {
+    // Safety checks for undefined parameters with error tracking
+    if (!code) {
+        console.error('❌ ERROR: createSyllabusItem called with undefined/null code parameter');
+        console.trace();
+    }
+    if (!description) {
+        console.error('❌ ERROR: createSyllabusItem called with undefined/null description parameter');
+        console.trace();
+    }
+    code = code || '';
+    description = description || '';
     
     let phase = 'BGF';
     if (code.startsWith('BIF')) phase = 'BIF';
@@ -83,15 +94,16 @@ const createSyllabusItem = (
         location = 'Airfield';
     }
 
-    const cleanedDescription = description.replace(/\n/g, ' ').replace(/;/g, '; ').replace(/\s\s+/g, ' ').trim();
+    const cleanedDescription = (description || "").replace(/\n/g, ' ').replace(/;/g, '; ').replace(/\s\s+/g, ' ').trim();
     const eventDetails = cleanedDescription.split(';').map(s => s.trim()).filter(Boolean);
-    const itemCode = code.replace('*', '');
+    const itemCode = (code || "").replace('*', '');
     
     const isGround = type === 'Ground School';
     
     // Determine Day/Night classification
-    // BNF events are Night flights, all others are Day by default
-    const dayNight: 'Day' | 'Night' | 'Day/Night' = code.startsWith('BNF') ? 'Night' : 'Day';
+    // BNF events are Night flights, Night SCT is Night, all others are Day by default
+    const dayNight: 'Day' | 'Night' | 'Day/Night' = 
+        code.startsWith('BNF') || code === 'Night SCT' ? 'Night' : 'Day';
 
     return {
         id: itemCode,
@@ -112,6 +124,8 @@ const createSyllabusItem = (
         postFlightTime,
         type,
         sortieType,
+           twrDiReqd: (code === 'BGF11' || code === 'BGF18') ? 'YES' : 'NO',
+           cctOnly: (code === 'BGF10') ? 'YES' : 'NO',
         location,
         methodOfDelivery,
         methodOfAssessment: ['Practical Assessment', 'Debrief'],
@@ -224,6 +238,7 @@ const syllabusItems: SyllabusItemDetail[] = [
     createSyllabusItem('SCT IF', 'Sector Instrument Flying'),
     createSyllabusItem('SCT NAV', 'Sector Navigation'),
     createSyllabusItem('SCT FORM', 'Sector Formation'),
+    createSyllabusItem('Night SCT', 'Night Sector Training'),
 
     // FIC Items
     createSyllabusItem('FIC MB1', 'Instructional Technique Overview', ['FIC', 'FIC(I)']),
@@ -524,6 +539,7 @@ const generateTraineesForCourse = (courseName: string, rankDistribution: { rank:
       const nameParts = name.split(', ');
       const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase();
       
+      const traineeCallsign = `CHLE${Math.floor(Math.random() * 101) + 300}`;
       trainees.push({
         idNumber: generateRandomIdNumber(),
         fullName: `${name} – ${courseName}`,
@@ -539,6 +555,7 @@ const generateTraineesForCourse = (courseName: string, rankDistribution: { rank:
         phoneNumber,
         email,
         unavailability: [],
+           traineeCallsign,
         permissions: ['Trainee'],
         // lastEventDate and lastFlightDate will be populated by the scoring simulation
       });
@@ -557,9 +574,12 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     const isESL = targetLocation === 'ESL';
 
     // --- Generate Executives (WGCDR, SQNLDR) ---
-    // 6 Executives
+    // ESL: 4 for 1FTS, 2 for CFS | PEA: 6 for 2FTS
+    const num1FTSExecutives = isESL ? 4 : 0;
     const executiveRanks: InstructorRank[] = ['WGCDR', ...Array(5).fill('SQNLDR')];
-    for (const rank of executiveRanks) {
+    
+    for (let i = 0; i < executiveRanks.length; i++) {
+        const rank = executiveRanks[i];
         let service: 'RAAF' | 'RAN' | 'ARA' = 'RAAF';
         const randService = Math.random();
         if (randService > 0.95) service = 'ARA';
@@ -587,7 +607,7 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isCommandingOfficer,
             isCFI,
             location: isESL ? 'East Sale' : 'Pearce',
-            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+            unit: isESL ? (i < num1FTSExecutives ? '1FTS' : 'CFS') : '2FTS',
             unavailability: [],
             email,
             permissions: ['Staff', 'Course Supervisor', 'Admin'],
@@ -596,7 +616,14 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
     }
     
     // --- Generate FLTLTs ---
-    const numFltlts = isESL ? 30 : 31;
+    // ESL: 28 for 1FTS + 11 for CFS = 39 FLTLTs
+    // Total ESL: 4 exec (1FTS) + 28 FLTLT (1FTS) = 32 for 1FTS
+    //            2 exec (CFS) + 11 FLTLT (CFS) + 1 Joe Bloggs (CFS) = 14 for CFS
+    // PEA: 31 for 2FTS
+    const num1FTSFltlts = isESL ? 32 : 0;
+    const numCFSFltlts = isESL ? 16 : 0;
+    const num2FTSFltlts = isESL ? 0 : 31;
+    const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
     
     for (let i = 0; i < numFltlts; i++) {
         let service: 'RAAF' | 'RAN' | 'ARA' = 'RAAF';
@@ -625,7 +652,7 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
             isTestingOfficer: false,
             isIRE: isExecutive && Math.random() < 0.2,
             location: isESL ? 'East Sale' : 'Pearce',
-            unit: isESL ? (Math.random() < 0.8 ? '1FTS' : 'CFS') : '2FTS',
+            unit: isESL ? (i < num1FTSFltlts ? '1FTS' : 'CFS') : '2FTS',
             flight: getRandomFlight(),
             phoneNumber,
             email,
@@ -678,8 +705,9 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
         qfis.push(joeBloggs);
     }
 
-    // Generate SIM IPs (4)
-    for (let i = 0; i < 4; i++) {
+    // Generate SIM IPs (4 for ESL, 4 for PEA)
+    const numSimIps = 4;
+    for (let i = 0; i < numSimIps; i++) {
         const phoneNumber = `04${Math.floor(10000000 + Math.random() * 90000000)}`.substring(0, 10);
         const name = generateRandomName();
         const nameParts = name.split(', ');
@@ -731,12 +759,13 @@ const generateInstructors = (targetLocation: 'ESL' | 'PEA'): Instructor[] => {
 
 // --- COURSE PROGRESS & SCORE SIMULATION ---
 const courseProgressRanges: { [key: string]: { start: string; end: string } } = {
-  'CSE 301': { start: 'BIF4', end: 'BGF23' },
-  'CSE 302': { start: 'BGF15', end: 'BIF4' },
-  'CSE 303': { start: 'BGF6', end: 'BGF17' },
+  'ADF301': { start: 'BIF4', end: 'BGF23' },
+  'ADF302': { start: 'BGF15', end: 'BIF4' },
+  'ADF303': { start: 'BGF6', end: 'BGF17' },
   'FIC 210': { start: 'BGF1', end: 'BGF5' },
-  'CSE 304': { start: 'BGF1', end: 'BGF10' },
-  'CSE 305': { start: 'BGF5', end: 'BGF15' },
+  'FIC211': { start: 'BGF1', end: 'BGF10' },
+  'ADF304': { start: 'BGF1', end: 'BGF10' },
+  'ADF305': { start: 'BGF5', end: 'BGF15' },
   'IFF 6': { start: 'BIF1', end: 'BIF5' },
 };
 
@@ -1114,16 +1143,18 @@ const generateHistoricalEvents = (instructors: Instructor[], trainees: Trainee[]
 // --- EXPORTED DATA ---
 
 const eslCourses: Course[] = [
-    { name: 'CSE 301', color: 'bg-sky-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 15, navyStart: 5, armyStart: 5 },
-    { name: 'CSE 302', color: 'bg-purple-400/50', startDate: '2025-07-01', gradDate: '2026-04-01', raafStart: 18, navyStart: 7, armyStart: 0 },
-    { name: 'CSE 303', color: 'bg-yellow-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 20, navyStart: 5, armyStart: 0 },
+    { name: 'ADF301', color: 'bg-sky-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 15, navyStart: 5, armyStart: 5 },
+    { name: 'ADF302', color: 'bg-purple-400/50', startDate: '2025-07-01', gradDate: '2026-04-01', raafStart: 18, navyStart: 7, armyStart: 0 },
+    { name: 'ADF303', color: 'bg-yellow-400/50', startDate: '2025-07-01', gradDate: '2026-02-01', raafStart: 20, navyStart: 5, armyStart: 0 },
     { name: 'FIC 210', color: 'bg-pink-400/50', startDate: '2025-10-01', gradDate: '2026-04-01', raafStart: 4, navyStart: 0, armyStart: 0 },
-];
+       { name: 'FIC211', color: 'bg-orange-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
+   ];
 
 const peaCourses: Course[] = [
-    { name: 'CSE 304', color: 'bg-teal-400/50', startDate: '2023-02-15', gradDate: '2023-07-20', raafStart: 12, navyStart: 0, armyStart: 0 },
-    { name: 'CSE 305', color: 'bg-indigo-400/50', startDate: '2023-04-10', gradDate: '2023-10-05', raafStart: 10, navyStart: 2, armyStart: 0 },
+    { name: 'ADF304', color: 'bg-teal-400/50', startDate: '2023-02-15', gradDate: '2023-07-20', raafStart: 12, navyStart: 0, armyStart: 0 },
+    { name: 'ADF305', color: 'bg-indigo-400/50', startDate: '2023-04-10', gradDate: '2023-10-05', raafStart: 10, navyStart: 2, armyStart: 0 },
     { name: 'IFF 6', color: 'bg-cyan-400/50', startDate: '2023-06-01', gradDate: '2023-08-15', raafStart: 4, navyStart: 0, armyStart: 0 },
+       { name: 'FIC211', color: 'bg-orange-400/50', startDate: '2025-12-01', gradDate: '2026-06-01', raafStart: 8, navyStart: 2, armyStart: 0 },
 ];
 
 const generateDataSet = (location: 'ESL' | 'PEA') => {
@@ -1148,8 +1179,20 @@ const generateDataSet = (location: 'ESL' | 'PEA') => {
     // Simulate Scores/Progress
     const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
 
-    // Generate Events for today
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Generate Events for today (timezone-aware to match App.tsx logic)
+    const getLocalDateString = (date: Date = new Date()): string => {
+        // Apply timezone offset (same as App.tsx - default UTC+11)
+        const timezoneOffset = 11; // Default to UTC+11 (AEDT)
+        const offsetMs = timezoneOffset * 60 * 60 * 1000;
+        const adjustedDate = new Date(date.getTime() + offsetMs);
+        
+        const year = adjustedDate.getUTCFullYear();
+        const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(adjustedDate.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+    
+    const todayStr = getLocalDateString();
     let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
     
     // Add Historical Events

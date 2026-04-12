@@ -1,9 +1,331 @@
+import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest } from '../types';
+import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import CancelConfirmationFlyout from './CancelConfirmationFlyout';
+import CancelEventFlyout from './CancelEventFlyout';
+import PinEntryFlyout from './PinEntryFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
+import { VisualAdjustModal } from './VisualAdjustModal';
+
+// ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
+
+const parseJ = (raw: any, fallback: any) => {
+  if (!raw) return fallback;
+  if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return fallback; } }
+  return raw;
+};
+
+const parseProgressionFull = (raw: any): { grades: number[]; labels: string[] } => {
+  const arr = parseJ(raw, []);
+  if (!Array.isArray(arr)) return { grades: [], labels: [] };
+  const filtered = arr
+    .map((item: any, i: number) => {
+      const grade = typeof item === 'number' ? item
+        : (item && typeof item === 'object') ? (item.grade ?? item.score ?? item.avgGrade ?? 0) : 0;
+      const label = (item && typeof item === 'object' && item.event) ? String(item.event) : `#${i + 1}`;
+      return { grade, label };
+    })
+    .filter(x => x.grade > 0);
+  return {
+    grades: filtered.map(x => x.grade),
+    labels: filtered.map(x => x.label),
+  };
+};
+
+const safeN = (n: number | undefined | null): number => {
+  if (n === undefined || n === null || isNaN(Number(n))) return 0;
+  return Number(n);
+};
+
+const safe = (n: number | undefined | null, d = 2): string => {
+  if (n === undefined || n === null || isNaN(Number(n))) return '\u2014';
+  return Number(n).toFixed(d);
+};
+
+const gradeColor = (v: number): string => {
+  if (v >= 4.5) return 'text-emerald-400';
+  if (v >= 3.5) return 'text-green-400';
+  if (v >= 3.0) return 'text-yellow-400';
+  if (v >= 2.5) return 'text-orange-400';
+  return 'text-red-400';
+};
+
+const trendIcon = (dir: string): string => {
+  if (dir === 'improving') return '\u2191';
+  if (dir === 'worsening') return '\u2193';
+  return '\u2192';
+};
+
+const trendColor = (dir: string): string => {
+  if (dir === 'improving') return 'text-emerald-400';
+  if (dir === 'worsening') return 'text-red-400';
+  return 'text-gray-400';
+};
+
+interface TraineeGradeSparkLineProps {
+  data: number[];
+  labels?: string[];
+  width?: number;
+  height?: number;
+  color?: string;
+  interactive?: boolean;
+}
+
+const TraineeGradeSparkLine: React.FC<TraineeGradeSparkLineProps> = ({
+  data, labels, width = 100, height = 32, color = '#60a5fa', interactive = false
+}) => {
+  const [tooltip, setTooltip] = React.useState<{ i: number; pageX: number; pageY: number } | null>(null);
+  const svgRef = React.useRef<SVGSVGElement>(null);
+
+  if (!data || data.length < 2) return <span className="text-gray-600 text-xs">\u2014</span>;
+
+  const YMIN = 0, YMAX = 5;
+  const PAD_TOP = 8, PAD_BOT = 8;
+  const usableH = height - PAD_TOP - PAD_BOT;
+
+  const getX = (i: number) => (data.length === 1 ? width / 2 : (i / (data.length - 1)) * width);
+  const getY = (v: number) => PAD_TOP + usableH * (1 - Math.max(0, Math.min(1, (v - YMIN) / (YMAX - YMIN))));
+
+  const pts = data.map((v, i) => `${getX(i)},${getY(v)}`).join(' ');
+  const hoveredVal = tooltip !== null ? data[tooltip.i] : null;
+  const gc = (v: number) => v >= 4.5 ? '#34d399' : v >= 3.5 ? '#4ade80' : v >= 3.0 ? '#facc15' : v >= 2.5 ? '#fb923c' : '#f87171';
+  const gridLines = interactive ? [0, 1, 2, 3, 4, 5] : [];
+
+  return (
+    <div className="relative" style={{ display: 'inline-block', overflow: 'visible' }}>
+      <svg
+        ref={svgRef}
+        width={width}
+        height={height}
+        className="overflow-visible"
+        style={{ cursor: interactive ? 'crosshair' : 'default', display: 'block' }}
+      >
+        {gridLines.map(v => {
+          const y = getY(v);
+          return (
+            <line key={v} x1={0} y1={y} x2={width} y2={y}
+              stroke="#374151" strokeWidth="0.5" strokeDasharray="3,3" />
+          );
+        })}
+        <polyline points={pts} fill="none" stroke={color} strokeWidth={interactive ? 2 : 1.5} strokeLinejoin="round" />
+        {interactive && (
+          <polygon
+            points={`0,${getY(data[0])} ${pts} ${getX(data.length - 1)},${height} 0,${height}`}
+            fill={color} fillOpacity={0.07}
+          />
+        )}
+        {data.map((v, i) => {
+          const x = getX(i);
+          const y = getY(v);
+          const isHov = tooltip?.i === i;
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={interactive ? (isHov ? 6 : 4) : 2} fill={color}
+                stroke={isHov ? '#fff' : 'none'} strokeWidth={1.5} />
+              {interactive && (
+                <circle
+                  cx={x} cy={y} r={14} fill="transparent"
+                  onMouseEnter={(e) => {
+                    const rect = svgRef.current?.getBoundingClientRect();
+                    if (rect) {
+                      setTooltip({ i, pageX: rect.left + x * (rect.width / width), pageY: rect.top + y * (rect.height / height) });
+                    }
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                />
+              )}
+            </g>
+          );
+        })}
+      </svg>
+      {tooltip !== null && hoveredVal !== null && (
+        <div
+          className="fixed z-[9999] pointer-events-none px-2 py-1 rounded bg-gray-900 border border-gray-600 text-xs shadow-xl"
+          style={{ left: tooltip.pageX + 12, top: tooltip.pageY - 32 }}
+        >
+          <span className="text-gray-400">{labels?.[tooltip.i] ?? `#${tooltip.i + 1}`}: </span>
+          <span className="font-bold" style={{ color: gc(hoveredVal) }}>{hoveredVal.toFixed(2)}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface TraineeScoresModalProps {
+  trainee: { fullName: string; course?: string };
+  onClose: () => void;
+}
+
+const TraineeScoresModal: React.FC<TraineeScoresModalProps> = ({ trainee, onClose }) => {
+  const [loading, setLoading] = React.useState(true);
+  const [tieData, setTieData] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
+
+  // Strip course suffix from fullName (format: "Evans, Linda – ADF302" -> "Evans, Linda")
+  const traineeNameOnly = trainee.fullName.split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        let found: any = null;
+
+        // Strategy 1: Use course-based endpoint (same as Build Intelligence) if course is known
+        if (trainee.course) {
+          try {
+            const courseRes = await fetch(`/api/tie/trainees/${encodeURIComponent(trainee.course)}`);
+            if (courseRes.ok) {
+              const courseRows = await courseRes.json();
+              if (Array.isArray(courseRows)) {
+                // Match by traineeFullName - stored as "Edwards, Luna – ADF302"
+                found = courseRows.find((r: any) => {
+                  const namePart = (r.traineeFullName || '').split(/\s*[\u2013\u2014-]\s*/)[0].trim();
+                  return namePart.toLowerCase() === traineeNameOnly.toLowerCase();
+                }) || null;
+              }
+            }
+          } catch (e) { /* fall through to strategy 2 */ }
+        }
+
+        // Strategy 2: Use single trainee endpoint with LIKE matching
+        if (!found) {
+          const encodedName = encodeURIComponent(traineeNameOnly);
+          const res = await fetch(`/api/tie/trainee/${encodedName}`);
+          if (res.ok) {
+            const rows = await res.json();
+            if (Array.isArray(rows) && rows.length > 0) {
+              found = rows[0];
+            }
+          }
+        }
+
+        // Parse gradeProgression if it's a string (JSONB might come back as string)
+        if (found && typeof found.gradeProgression === 'string') {
+          try { found.gradeProgression = JSON.parse(found.gradeProgression); } catch (e) {}
+        }
+
+        setTieData(found);
+      } catch (e: any) {
+        setError(e.message || 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [traineeNameOnly, trainee.course]);
+
+  const progression = tieData ? parseProgressionFull(tieData.gradeProgression) : { grades: [], labels: [] };
+  const { grades, labels } = progression;
+  const trend = tieData?.overallTrend || 'stable';
+  const color = trend === 'improving' ? '#10b981' : trend === 'worsening' ? '#ef4444' : '#60a5fa';
+  const avgVal = grades.length > 0 ? grades.reduce((s: number, v: number) => s + v, 0) / grades.length : 0;
+  const minVal = grades.length > 0 ? Math.min(...grades) : 0;
+  const maxVal = grades.length > 0 ? Math.max(...grades) : 0;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="bg-gray-900 border border-gray-600 rounded-xl p-6 shadow-2xl w-full mx-4"
+        style={{ maxWidth: '860px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-white font-bold text-lg">{traineeNameOnly} &mdash; Grade Progression</h3>
+            {tieData && (
+              <p className="text-gray-400 text-sm mt-0.5">
+                {grades.length} assessments &middot; Course: {tieData.courseName || 'N/A'} &middot; hover over a point to see details
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-3xl leading-none ml-4 flex-shrink-0">&times;</button>
+        </div>
+
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-gray-400 text-sm">Loading grade progression data...</div>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-red-400 text-sm">Error loading data: {error}</div>
+          </div>
+        )}
+
+        {!loading && !error && !tieData && (
+          <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <div className="text-gray-400 text-sm">No TIE analytics data found for {traineeNameOnly}</div>
+            <div className="text-gray-600 text-xs">Run Build Intelligence analytics to generate grade progression data</div>
+          </div>
+        )}
+
+        {!loading && tieData && grades.length < 2 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-2">
+            <div className="text-gray-400 text-sm">Insufficient grade data to display progression chart</div>
+            <div className="text-gray-600 text-xs">At least 2 assessments are required</div>
+          </div>
+        )}
+
+        {!loading && tieData && grades.length >= 2 && (
+          <>
+            <div className="bg-gray-800 rounded-xl p-5">
+              <div className="flex gap-3">
+                <div className="flex flex-col justify-between text-xs text-gray-500 py-1 flex-shrink-0 text-right" style={{ width: 28, height: 220 }}>
+                  <span>5</span><span>4</span><span>3</span><span>2</span><span>1</span><span>0</span>
+                </div>
+                <div className="flex-1 overflow-x-auto">
+                  <TraineeGradeSparkLine
+                    data={grades}
+                    labels={labels}
+                    width={Math.max(760, grades.length * 48)}
+                    height={220}
+                    color={color}
+                    interactive={true}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-gray-500 mt-2 ml-9 px-1">
+                <span>Assessment 1</span>
+                <span>Assessment {grades.length}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 mt-4">
+              {([
+                { label: 'Minimum', value: minVal },
+                { label: 'Average', value: avgVal },
+                { label: 'Maximum', value: maxVal },
+              ] as Array<{label: string; value: number}>).map((s) => (
+                <div key={s.label} className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{s.label}</p>
+                  <p className={`text-xl font-bold font-mono ${gradeColor(s.value)}`}>{s.value.toFixed(2)}</p>
+                </div>
+              ))}
+              <div className="bg-gray-800 rounded-lg px-4 py-3 text-center border border-gray-700">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Trend</p>
+                <p className={`text-base font-bold ${trendColor(trend)}`}>{trendIcon(trend)} {trend || 'stable'}</p>
+              </div>
+            </div>
+
+            {tieData.narrativeSummary && (
+              <div className="mt-4 p-3 bg-gray-800 rounded-lg border border-gray-700">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Analytics Summary</p>
+                <p className="text-gray-300 text-sm">{tieData.narrativeSummary}</p>
+              </div>
+            )}
+          </>
+        )}
+
+        <p className="text-gray-600 text-xs mt-3 text-center">Click outside or &times; to close</p>
+      </div>
+    </div>
+  );
+};
 
 interface EventDetailModalProps {
   event: ScheduleEvent;
@@ -28,6 +350,7 @@ interface EventDetailModalProps {
   onOpenPostFlight: (event: ScheduleEvent) => void;
   isConflict: boolean;
   onNeoClick: (event: ScheduleEvent) => void;
+  traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   oracleContextForModal?: {
       availableInstructors: string[];
       availableTraineesAnalysis: OracleTraineeAnalysis[];
@@ -40,6 +363,14 @@ interface EventDetailModalProps {
   nextDayBuildEvents?: ScheduleEvent[];
   activeView?: string;
   isAddingTile?: boolean;
+    formationCallsigns?: FormationCallsign[];
+    currentLocation?: string;
+    onVisualAdjustStart?: (event: ScheduleEvent) => void;
+    onVisualAdjustEnd?: (event: ScheduleEvent) => void;
+    onSavePT051Assessment?: (assessment: any) => void;
+    cancellationCodes?: CancellationCode[];
+    onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
+    onRestoreEvent?: (eventId: string) => void;
 }
 
 interface CrewMember {
@@ -64,7 +395,20 @@ const getEventTypeFromSyllabus = (syllabusId: string, syllabusDetails: SyllabusI
 };
 
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false }) => {
+const formatTime = (time: number) => {
+    const hours = Math.floor(time);
+    const minutes = Math.round((time % 1) * 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+const convertTimeToDecimal = (timeStr: string): number => {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    if (isNaN(hours) || isNaN(minutes)) return 0;
+    return hours + (minutes / 60);
+};
+
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -75,22 +419,39 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         pilot: event.pilot,
         isSct: event.isSct
     });
+
+    const { isFrozen, allowedActions: freezeAllowedActions } = useSystemFreeze();
     const [isEditing, setIsEditing] = useState(isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
+    const [showDeleteChoice, setShowDeleteChoice] = useState(false);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [showRemovePin, setShowRemovePin] = useState(false);
+    const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
     const [showMassBriefComplete, setShowMassBriefComplete] = useState(false);
     const [showMassBriefConfirmation, setShowMassBriefConfirmation] = useState(false);
     const [completedTrainees, setCompletedTrainees] = useState<Trainee[]>([]);
 
     // Event Category State (New)
-    const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat'>(event.eventCategory || 'lmp_event');
+    const [eventCategory, setEventCategory] = useState<'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di'>(event.eventCategory || 'lmp_event');
 
     const [flightNumber, setFlightNumber] = useState(event.flightNumber);
     const [duration, setDuration] = useState<number | ''>(event.duration);
     const [eventType, setEventType] = useState(event.type);
-    const [startTime, setStartTime] = useState(event.startTime);
+    const [startTime, setStartTime] = useState(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
     const [area, setArea] = useState(event.area || 'A');
+    const [aircraftNumber, setAircraftNumber] = useState(event.aircraftNumber || '001');
     const [aircraftCount, setAircraftCount] = useState(1);
+    const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
+    const [visualAdjustEndTime, setVisualAdjustEndTime] = useState(event.startTime + event.duration);
+    
+    // Sync visual adjust times when event changes (from parent drag updates)
+    useEffect(() => {
+        if (isVisualAdjustMode) {
+            setVisualAdjustStartTime(event.startTime);
+            setVisualAdjustEndTime(event.startTime + event.duration);
+        }
+    }, [event.startTime, event.duration, isVisualAdjustMode]);
     const [crew, setCrew] = useState<CrewMember[]>([{
         flightType: event.flightType,
         instructor: event.instructor || '',
@@ -101,6 +462,71 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }]);
     
     console.log('Initial crew state:', crew);
+
+    // Helper function to get Dual/Solo status from Individual LMP
+    // Helper function to get Dual/Solo status from Individual LMP
+    const getDualSoloFromIndividualLMP = (flightNumber: string, traineeName: string): 'Dual' | 'Solo' => {
+        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Called with flightNumber: ${flightNumber}, traineeName: ${traineeName}`);
+        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] traineeLMPs available: ${!!traineeLMPs}, traineeLMPs size: ${traineeLMPs?.size || 0}`);
+        
+        if (!traineeLMPs || !traineeName) {
+            console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - missing traineeLMPs or traineeName`);
+            return 'Dual'; // Default to Dual if no data available
+        }
+
+        const individualLMP = traineeLMPs.get(traineeName);
+        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] individualLMP found for ${traineeName}:`, !!individualLMP, individualLMP ? individualLMP.length : 0, 'items');
+        
+        if (!individualLMP) {
+            console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no Individual LMP found for ${traineeName}`);
+            return 'Dual'; // Default to Dual if no Individual LMP found
+        }
+
+        const syllabusItem = individualLMP.find(item => 
+            item.id === flightNumber || item.code === flightNumber
+        );
+        
+        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Searching for flightNumber: ${flightNumber}, found item:`, !!syllabusItem);
+        if (syllabusItem) {
+            console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Found syllabus item:`, {
+                id: syllabusItem.id,
+                code: syllabusItem.code,
+                sortieType: syllabusItem.sortieType
+            });
+        }
+
+        if (syllabusItem && syllabusItem.sortieType) {
+            console.log(`ud83cudfaf [Dual/Solo] Found ${syllabusItem.sortieType} for ${traineeName} - ${flightNumber}`);
+            return syllabusItem.sortieType;
+        }
+
+        console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no sortieType found for ${flightNumber}`);
+        return 'Dual'; // Default to Dual if not specified
+    };
+
+    // Apply Solo logic (trainee as PIC, clear crew) when flightType changes to Solo
+    const applySoloLogic = () => {
+        // Check the first crew member's flightType
+        if (crew[0]?.flightType === 'Solo') {
+            // For Solo events, set trainee as PIC
+            const traineeName = crew[0]?.student || crew[0]?.pilot;
+            if (traineeName) {
+                // Update the first crew member: set trainee as pilot and clear instructor
+                setCrew(prevCrew => {
+                    const newCrew = [...prevCrew];
+                    if (newCrew.length > 0) {
+                        newCrew[0] = { 
+                            ...newCrew[0], 
+                            pilot: traineeName, 
+                            instructor: '' // Clear instructor for solo flights
+                        };
+                    }
+                    return newCrew;
+                });
+                console.log(`✈️ [Solo Logic] Applied: ${traineeName} as PIC, flightType set to Solo`);
+            }
+        }
+    };
 
     const [locationType, setLocationType] = useState(event.locationType || 'Local');
     const [origin, setOrigin] = useState(event.origin || school);
@@ -124,6 +550,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     
     // Oracle state
     const [syllabusSelectionError, setSyllabusSelectionError] = useState(false);
+    const [showTraineeScoresModal, setShowTraineeScoresModal] = useState(false);
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
     const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map(t => t.trainee.fullName) : trainees;
@@ -145,6 +572,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             options = syllabusDetails
                 .filter(item => item.lmpType === 'Staff CAT')
                 .map(item => item.id);
+        } else if (eventCategory === 'twr_di') {
+            // TWR DI can use any syllabus items (no filtering)
+            options = syllabusDetails.map(item => item.id);
         } else {
             options = dynamicSyllabusOptions;
         }
@@ -373,6 +803,38 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
     };
 
+    // Auto-set Dual/Solo from Individual LMP when adding new events
+    useEffect(() => {
+        if (isAddingTile && flightNumber && crew[0]) {
+            const traineeName = crew[0]?.student || crew[0]?.pilot;
+            if (traineeName && traineeLMPs) {
+                const individualLMPFlightType = getDualSoloFromIndividualLMP(flightNumber, traineeName);
+                // Only update if the flightType is different to avoid infinite loop
+                if (crew[0].flightType !== individualLMPFlightType) {
+                    setCrew(prevCrew => {
+                        const newCrew = [...prevCrew];
+                        if (newCrew.length > 0) {
+                            newCrew[0] = { ...newCrew[0], flightType: individualLMPFlightType };
+                        }
+                        return newCrew;
+                    });
+                    console.log(`🎯 [Auto Dual/Solo] Set to ${individualLMPFlightType} from Individual LMP for ${traineeName}`);
+                }
+            }
+        }
+    }, [isAddingTile, flightNumber, traineeLMPs]);
+
+    // Auto-set Dual/Solo from Individual LMP when creating new events (not just tiles)
+    useEffect(() => {
+        if (crew[0]?.flightType === 'Solo') {
+            const traineeName = crew[0]?.student || crew[0]?.pilot;
+            // Only apply if pilot is not already set correctly
+            if (traineeName && crew[0].pilot !== traineeName) {
+                applySoloLogic();
+            }
+        }
+    }, [crew[0]?.flightType, crew[0]?.student, crew[0]?.pilot]);
+
     // Effect to set default values based on event category
     useEffect(() => {
         if (eventCategory === 'sct') {
@@ -386,12 +848,22 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         } else if (eventCategory === 'staff_cat') {
             // Set default duration to 1.2 for Staff CAT
             if (!duration) setDuration(1.2);
+        } else if (eventCategory === 'twr_di') {
+            // TWR DI defaults to Solo
+            setCrew(prev => prev.map(c => ({ ...c, flightType: 'Solo' })));
+            // Set default duration to 1.2 for TWR DI
+            if (!duration) setDuration(1.2);
+            // Set default start time to 0800 only for new events
+            if (isAddingTile || !event.startTime || event.startTime === 0) {
+                setStartTime('08:00');
+            }
         }
     }, [eventCategory]);
 
     // Effect to pull Type (Dual/Solo) from syllabus when flight number changes
+    // IMPORTANT: SCT is explicitly excluded because SCT events default to Solo and should not be overridden by syllabus
     useEffect(() => {
-        if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat')) {
+        if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && eventCategory !== 'sct') {
             const syllabusItem = syllabusDetails.find(item => item.id === flightNumber);
             if (syllabusItem && syllabusItem.flightType) {
                 setCrew(prev => prev.map(c => ({ ...c, flightType: syllabusItem.flightType as 'Dual' | 'Solo' })));
@@ -399,7 +871,107 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
     }, [flightNumber, eventCategory, syllabusDetails]);
 
-    const formationTypes = school === 'ESL' ? ['MERL', 'VANG'] : ['COBR', 'HAWK'];
+    // Effect to set Dual/Solo from Individual LMP when flight number changes (before pilot selection)
+    useEffect(() => {
+        if (isAddingTile || (isEditingDefault && (!event.id || event.id.startsWith('2d1b6a22')))) {
+            // This is a new event or tile (check for generated IDs that start with our prefix)
+            console.log(`\ud83d\udcdd [Flight Number Change] isAddingTile: ${isAddingTile}, isEditingDefault: ${isEditingDefault}, event.id: ${event.id}, flightNumber: ${flightNumber}`);
+            
+            if (flightNumber && crew[0] && traineeLMPs) {
+                const traineeName = crew[0]?.student || crew[0]?.pilot;
+                
+                if (traineeName) {
+                    // If pilot is selected, use their Individual LMP
+                    console.log(`\ud83d\udcdd [Flight Number Change] Using selected trainee: ${traineeName}`);
+                    const individualLMPFlightType = getDualSoloFromIndividualLMP(flightNumber, traineeName);
+                    
+                    if (crew[0].flightType !== individualLMPFlightType) {
+                        setCrew(prevCrew => {
+                            const newCrew = [...prevCrew];
+                            if (newCrew.length > 0) {
+                                newCrew[0] = { ...newCrew[0], flightType: individualLMPFlightType };
+                            }
+                            return newCrew;
+                        });
+                        console.log(`\ud83c\udfaf [Auto Dual/Solo] Set to ${individualLMPFlightType} from Individual LMP for selected trainee ${traineeName}`);
+                    }
+                } else {
+                    // No pilot selected yet - find first trainee with this LMP and use their Individual LMP as default
+                    console.log(`\ud83d\udcdd [Flight Number Change] No pilot selected - searching for default from any trainee with LMP ${flightNumber}`);
+                    
+                    let defaultFlightType: 'Dual' | 'Solo' = 'Dual'; // Default to Dual if nothing found
+                    let foundTrainee = '';
+                    
+                    // Search through all trainees to find someone who has this LMP in their Individual LMP
+                    for (const [traineeName, individualLMP] of traineeLMPs.entries()) {
+                        const syllabusItem = individualLMP.find(item => 
+                            item.id === flightNumber || item.code === flightNumber
+                        );
+                        
+                        if (syllabusItem && syllabusItem.sortieType) {
+                            defaultFlightType = syllabusItem.sortieType;
+                            foundTrainee = traineeName;
+                            console.log(`\ud83d\udcdd [Flight Number Change] Found default ${defaultFlightType} from ${foundTrainee}'s Individual LMP`);
+                            break; // Use the first one found
+                        }
+                    }
+                    
+                    if (crew[0].flightType !== defaultFlightType) {
+                        setCrew(prevCrew => {
+                            const newCrew = [...prevCrew];
+                            if (newCrew.length > 0) {
+                                newCrew[0] = { ...newCrew[0], flightType: defaultFlightType };
+                            }
+                            return newCrew;
+                        });
+                        console.log(`\ud83c\udfaf [Auto Dual/Solo] Set to ${defaultFlightType} as default from ${foundTrainee || 'system'} for LMP ${flightNumber}`);
+                    }
+                }
+            }
+        }
+    }, [flightNumber, traineeLMPs, isAddingTile, isEditingDefault, event.id]);
+
+    // Effect to update Dual/Solo from Individual LMP when trainee changes (after initial flight number selection)
+    useEffect(() => {
+        if (isAddingTile || (isEditingDefault && (!event.id || event.id.startsWith('2d1b6a22')))) {
+            if (flightNumber && crew[0] && traineeLMPs) {
+                const traineeName = crew[0]?.student || crew[0]?.pilot;
+                
+                if (traineeName) {
+                    // Update when specific trainee is selected (may override the default)
+                    const individualLMPFlightType = getDualSoloFromIndividualLMP(flightNumber, traineeName);
+                    
+                    if (crew[0].flightType !== individualLMPFlightType) {
+                        setCrew(prevCrew => {
+                            const newCrew = [...prevCrew];
+                            if (newCrew.length > 0) {
+                                newCrew[0] = { ...newCrew[0], flightType: individualLMPFlightType };
+                            }
+                            return newCrew;
+                        });
+                        console.log(`\ud83c\udfaf [Trainee Change] Updated to ${individualLMPFlightType} from Individual LMP for selected trainee ${traineeName}`);
+                    }
+                }
+            }
+        }
+    }, [crew[0]?.student, crew[0]?.pilot, flightNumber, traineeLMPs, isAddingTile, isEditingDefault, event.id]);
+
+    // Filter formation callsigns by current location
+    const filteredCallsigns = useMemo(() => {
+        if (formationCallsigns && formationCallsigns.length > 0 && currentLocation) {
+            const filtered = formationCallsigns.filter(cs => cs.location === currentLocation);
+            return filtered.length > 0 ? filtered : null;
+        }
+        return null;
+    }, [formationCallsigns, currentLocation]);
+
+    // Backwards compatible formationTypes (just codes)
+    const formationTypes = useMemo(() => {
+        if (filteredCallsigns) {
+            return filteredCallsigns.map(cs => cs.code);
+        }
+        return school === 'ESL' ? ['MERL', 'VANG'] : ['COBR', 'HAWK'];
+    }, [filteredCallsigns, school]);
     const areas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
 
     const courses = useMemo(() => Object.keys(courseColors).sort(), [courseColors]);
@@ -408,7 +980,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const coursesStruct = useMemo(() => {
         return courses.map(courseName => ({
             name: courseName,
-            trainees: traineesData.filter(t => t.course === courseName).sort((a,b) => (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown'))
+            trainees: traineesData.filter(t => t.course === courseName).sort((a,b) => a.name.localeCompare(b.name))
         }));
     }, [courses, traineesData]);
 
@@ -429,8 +1001,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
 
         setEventType(event.type);
-        setStartTime(event.startTime);
+        setStartTime(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
         setArea(event.area || 'A');
+        setAircraftNumber(event.aircraftNumber || '001');
         setAircraftCount(1);
         setCrew([{ 
             flightType: event.flightType, 
@@ -468,11 +1041,13 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const newSize = isFormation ? aircraftCount : 1;
         if (crew.length !== newSize) {
              const newCrew = Array.from({ length: newSize }, (_, i) => {
-                return crew[i] || { flightType: 'Dual' as 'Dual' | 'Solo', instructor: '', student: '', pilot: '', group: '', groupTraineeIds: [] };
+                // For SCT FORM with SCT category, default to Solo
+                const defaultFlightType = (isFormation && eventCategory === 'sct') ? 'Solo' : 'Dual';
+                return crew[i] || { flightType: defaultFlightType as 'Dual' | 'Solo', instructor: '', student: '', pilot: '', group: '', groupTraineeIds: [] };
             });
             setCrew(newCrew);
         }
-    }, [aircraftCount, flightNumber, crew]);
+    }, [aircraftCount, flightNumber, crew, eventCategory]);
 
     useEffect(() => {
       setEventType(getEventTypeFromSyllabus(flightNumber, syllabusDetails));
@@ -691,8 +1266,30 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             setFormationType(formationTypes[0]);
         }
         
-        if (newFlightNumber !== 'SCT FORM') {
-            setAircraftCount(1);
+           
+           if (newFlightNumber === 'SCT FORM' && eventCategory === 'sct') {
+               // Set defaults for SCT FORM
+               setAircraftCount(2);
+               // Update crew to Solo
+               setCrew(crew.map(member => ({
+                   ...member,
+                   flightType: 'Solo'
+               })));
+           } else if (newFlightNumber !== 'SCT FORM') {
+               setAircraftCount(1);
+           }
+    };
+    const handleAircraftCountChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const newCount = parseInt(e.target.value);
+        setAircraftCount(newCount);
+        // When changing aircraft count for SCT FORM, ensure all existing crew are Solo
+        if (flightNumber === 'SCT FORM' && eventCategory === 'sct') {
+            setTimeout(() => {
+                setCrew(prevCrew => prevCrew.map(member => ({
+                    ...member,
+                    flightType: 'Solo' as 'Dual' | 'Solo'
+                })));
+            }, 100);
         }
     };
 
@@ -712,7 +1309,39 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
     };
 
-    const handleSave = () => {
+    const handleVisualAdjust = () => {
+        console.log("Visual Adjust clicked");
+        // Call parent callback FIRST before changing local state
+        if (onVisualAdjustStart) {
+            onVisualAdjustStart(event);
+        }
+        // Then set local state
+        setIsVisualAdjustMode(true);
+    };
+
+    const handleVisualAdjustContinue = () => {
+        setIsVisualAdjustMode(false);
+        const updatedEvent = {
+            ...event,
+            startTime: visualAdjustStartTime,
+            duration: visualAdjustEndTime - visualAdjustStartTime
+        };
+        if (onVisualAdjustEnd) {
+            onVisualAdjustEnd(updatedEvent);
+        }
+        setStartTime(formatTime(visualAdjustStartTime));
+        setDuration(visualAdjustEndTime - visualAdjustStartTime);
+    };
+    const handleSave = async () => {
+        // System freeze check - read directly from localStorage to avoid stale closure
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                await showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
         const eventsToSave: ScheduleEvent[] = crew.map((c, index) => {
             let eventColor = event.color;
             
@@ -750,10 +1379,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 id: eventId,
                 type: eventType,
                 flightNumber,
-                startTime,
+                startTime: typeof startTime === 'string' ? convertTimeToDecimal(startTime) : startTime,
                 resourceId,
                 duration: typeof duration === 'number' ? duration : 0, // Ensure duration is a number
                 area: eventType === 'flight' ? area : undefined,
+                aircraftNumber: eventType === 'flight' ? aircraftNumber : undefined,
                 color: eventColor,
                 flightType: c.flightType,
                 instructor: c.instructor,
@@ -897,8 +1527,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     
     const handleTraineeScoresClick = () => {
         if (traineeObject) {
-            onNavigateToHateSheet(traineeObject);
-            onClose();
+            setShowTraineeScoresModal(true);
         }
     };
 
@@ -939,35 +1568,43 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     };
 
     const handleMassBriefComplete = (confirmedTrainees: Trainee[]) => {
-        // Here we would:
-        // 1. Set DCO radio button in each trainee's PT-051
-        // 2. Mark the event as complete for these trainees
-        // 3. Update the scores/progress
-        
         console.log('Mass Brief completed for trainees:', confirmedTrainees.map(t => t.fullName));
         
-        // Create completion scores for ground events
         const currentDate = new Date().toISOString().split('T')[0];
-        const completionScores = confirmedTrainees.map(trainee => ({
-            traineeName: trainee.fullName,
-            event: event.flightNumber,
-            score: 5 as const, // Use 5 to indicate complete
-            date: currentDate,
-            instructor: 'System', // Or current instructor
-            notes: 'Ground event completed via Mass Brief completion',
-            details: [] as { criteria: string; score: number; comment: string; }[]
-        }));
+        const instructor = event.instructor || 'System';
         
-        // Call the callback to save scores if it exists
-        console.log('Calling onScoresCreated with scores:', completionScores);
-        if (onScoresCreated) {
-            onScoresCreated(completionScores);
-            console.log('onScoresCreated callback executed successfully');
+        // Create PT051 assessments for each trainee
+        if (onSavePT051Assessment) {
+            confirmedTrainees.forEach(trainee => {
+                const assessment = {
+                    id: `${trainee.idNumber}_${event.id}_${currentDate}`,
+                    traineeName: trainee.name,
+                    traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
+                    eventId: event.id,
+                    flightNumber: event.flightNumber,
+                    date: currentDate,
+                    instructorName: instructor,
+                    dcoResult: 'DCO', // Check DCO box
+                    overallGrade: 'No Grade', // Set to "No Grade"
+                    overallResult: null, // null for ground events
+                    overallComments: `Ground event completed via Mass Brief completion on ${currentDate}`, // String format for compatibility
+                    scores: [], // Empty scores array for ground events
+                    isCompleted: true,
+                    groundSchoolAssessment: {
+                        isAssessment: false,
+                        result: 0
+                    }
+                };
+                
+                console.log('Saving PT051 assessment for:', trainee.fullName, assessment);
+                onSavePT051Assessment(assessment);
+            });
+            console.log('PT051 assessments saved successfully');
         } else {
-            console.warn('onScoresCreated callback is not defined!');
+            console.warn('onSavePT051Assessment callback is not defined!');
         }
         
-        // Show styled confirmation instead of alert
+        // Show styled confirmation
         setCompletedTrainees(confirmedTrainees);
         setShowMassBriefConfirmation(true);
     };
@@ -983,20 +1620,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
         : `Aircraft ${index + 1}`;
     
     // Determine if we should use staff-only instructors
-    const useStaffOnly = eventCategory === 'lmp_currency' || eventCategory === 'sct' || eventCategory === 'staff_cat';
+    const useStaffOnly = eventCategory === 'lmp_currency' || eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di';
     
     // Determine if we should show Trainee/Group fields (only for LMP Event and LMP Currency)
     const showTraineeFields = eventCategory === 'lmp_event' || eventCategory === 'lmp_currency';
     
     // Determine if we should show Crew field (only for SCT and Staff CAT when Dual)
-    const showCrewField = (eventCategory === 'sct' || eventCategory === 'staff_cat') && crewMember.flightType === 'Dual';
+    const showCrewField = (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && crewMember.flightType === 'Dual';
     
     return (
         <div key={index} className={`space-y-4 ${crew.length > 1 ? 'p-3 bg-gray-700/50 rounded-lg' : ''}`}>
             {crew.length > 1 && <h4 className="text-sm font-bold text-sky-400">{formationCallsign}</h4>}
 
             <div>
-                <label className="block text-sm font-medium text-gray-400">Type</label>
+                <label className="block text-sm font-medium text-gray-400">Dual/Solo</label>
                 <select value={crewMember.flightType} onChange={e => handleCrewChange(index, 'flightType', e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
                     <option value="Dual">Dual</option>
                     <option value="Solo">Solo</option>
@@ -1011,7 +1648,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             // For SCT, use pilot field; for others, use instructor field
                             eventCategory === 'sct' ? crewMember.pilot : crewMember.instructor,
                             (value) => handleCrewChange(index, eventCategory === 'sct' ? 'pilot' : 'instructor', value),
-                            (eventCategory === 'sct' || eventCategory === 'staff_cat') ? 'Pilot' : 'Instructor',
+                            (eventCategory === 'sct' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') ? 'Pilot' : 'Instructor',
                             isDeploy
                         )
                        ) : (
@@ -1182,13 +1819,32 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
         </div>
     );
 };    
+    if (isVisualAdjustMode) {
+        return (
+            <VisualAdjustModal
+                event={event}
+                startTime={visualAdjustStartTime}
+                endTime={visualAdjustEndTime}
+                onContinue={handleVisualAdjustContinue}
+                onClose={() => setIsVisualAdjustMode(false)}
+            />
+        );
+    }
+
     return (
         <>
+            {/* Trainee Scores Modal */}
+            {showTraineeScoresModal && traineeObject && (
+                <TraineeScoresModal
+                    trainee={{ fullName: traineeObject.fullName, course: traineeObject.course }}
+                    onClose={() => setShowTraineeScoresModal(false)}
+                />
+            )}
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center" onClick={onClose}>
-                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl border border-gray-700 transform transition-all animate-fade-in flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
-                    <div className={`p-4 border-b border-gray-700 flex justify-between items-center ${event.color} flex-shrink-0`}>
+                <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                    <div className={`py-[5px] px-2 border-b border-gray-700 flex justify-center items-center relative ${event.color} flex-shrink-0 min-h-[65px]`}>
                         <h2 className="text-xl font-bold text-white">{modalTitle}</h2>
-                        <div className="flex items-center space-x-4">
+                        <div className="absolute right-2 flex items-center space-x-4">
                             {isEditing && eventType === 'flight' && (
                                 <label className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-black/20">
                                     <input
@@ -1206,13 +1862,72 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-sm font-semibold text-white">Add Deployment</span>
                                 </label>
                             )}
-                            <button onClick={() => setShowCancelConfirm(true)} className="px-4 py-1 text-sm font-semibold rounded-md btn-red-brushed" aria-label="Delete Event">
-                                Delete
-                            </button>
+                            <div className="relative">
+                                {isFrozen && (
+                                    <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                )}
+                                <button onClick={() => setShowDeleteChoice(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
+                                    Delete
+                                </button>
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex-1 flex flex-row overflow-hidden">
+                        {/* Left Button Panel */}
+                        <div className="w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
+                            <div className="flex-grow" /> {/* Spacer */}
+                            {!isEditing && (
+                                <>
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button
+                                            onClick={handleTraineeScoresClick}
+                                            disabled={!traineeObject}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <span className="text-center leading-tight">Trainee<br/>Scores</span>
+                                        </button>
+                                    </div>
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button
+                                            onClick={handleLmpClick}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                        >
+                                            <span className="text-center leading-tight">LMP</span>
+                                        </button>
+                                    </div>
+                                    {/* PT-051 button - frozen unless pt051Entries is allowed */}
+                                    {traineeObject && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && !freezeAllowedActions.pt051Entries && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handlePt051Click}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">PT-051</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button onClick={() => setIsEditing(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                            <span className="text-center leading-tight">Edit</span>
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
                         {/* Main Content */}
                         <div className="flex-1 overflow-y-auto p-6">
                             {isEditing ? (
@@ -1220,7 +1935,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                        {/* Event Category Selector */}
                                        <div className="mb-6">
                                            <label className="block text-sm font-medium text-gray-400 mb-3">Event Category</label>
-                                           <div className="grid grid-cols-4 gap-3">
+                                           <div className="grid grid-cols-5 gap-3">
                                                <button
                                                    type="button"
                                                    onClick={() => setEventCategory('lmp_event')}
@@ -1265,7 +1980,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                >
                                                    Staff CAT
                                                </button>
-                                           </div>
+<button
+                                                      type="button"
+                                                      onClick={() => setEventCategory('twr_di')}
+                                                      className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                          eventCategory === 'twr_di'
+                                                              ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                                      }`}
+                                                  >
+                                                      TWR DI
+                                                  </button>                                           </div>
                                        </div>
 
                                     <div className={`grid grid-cols-1 ${eventType === 'flight' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
@@ -1289,12 +2014,20 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             )}
                                         </div>
                                         {eventType === 'flight' && (
+                                        <>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Area</label>
                                             <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
                                                 {areas.map(a => <option key={a} value={a}>{a}</option>)}
                                             </select>
                                         </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Aircraft Number</label>
+                                            <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num}>{num}</option>)}
+                                            </select>
+                                        </div>
+                                        </>
                                         )}
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Start Time</label>
@@ -1417,9 +2150,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <h3 className="font-semibold text-gray-300">Formation Details</h3>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-400">Formation Type</label>
+                                                    <label className="block text-sm font-medium text-gray-400">Formation Callsign</label>
                                                     <select value={formationType} onChange={e => setFormationType(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
-                                                        {formationTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                                                           {filteredCallsigns ? (
+                                                               filteredCallsigns.map(cs => (
+                                                                   <option key={cs.code} value={cs.code}>
+                                                                       {cs.name} ({cs.code}) - {cs.unit}
+                                                                   </option>
+                                                               ))
+                                                           ) : (
+                                                               formationTypes.map(type => <option key={type} value={type}>{type}</option>)
+                                                           )}
                                                     </select>
                                                 </div>
                                                 <div>
@@ -1475,7 +2216,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <p><strong>Syllabus Item:</strong> {event.flightNumber}</p>
                                     {event.type === 'flight' && <p><strong>Route:</strong> {event.origin}-{event.destination}</p>}
                                     {event.type === 'flight' && event.area && <p><strong>Area:</strong> {event.area}</p>}
-                                    <p><strong>Type:</strong> <span className="font-semibold">{event.flightType}</span></p>
+                                    <p><strong>Dual/Solo:</strong> <span className="font-semibold">{event.flightType}</span></p>
                                     {event.flightType === 'Dual' ? (
                                         <>
                                             {event.eventCategory === 'sct' ? (
@@ -1498,90 +2239,289 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <p><strong>Student:</strong> {event.student || event.group}</p>
                                             )}
                                         </>
-                                    ) : <p><strong>Pilot:</strong> {event.pilot}</p>}
+                                    ) : (
+                                        <>
+                                            <p><strong>PIC:</strong> {event.pilot}</p>
+                                            <p className="flex items-center gap-2">
+                                                <strong>Second Position:</strong>
+                                                <span className="inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold">
+                                                    SOLO
+                                                </span>
+                                            </p>
+                                        </>
+                                    )}
                                     <p><strong>Duration:</strong> {event.duration.toFixed(1)} hours</p>
                                     <p><strong>Start Time:</strong> {Math.floor(event.startTime)}:{String(Math.round((event.startTime % 1) * 60)).padStart(2, '0')}</p>
                                 </div>
                             )}
                         </div>
                         
-                        {/* Button Panel */}
-                        <div className="w-56 flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-4 flex flex-col space-y-3">
+                        {/* Right Button Panel */}
+                        <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
                             {!isEditing && (
                                 <>
-                                    <div className="p-3 border border-gray-600 rounded-lg text-center">
-                                        <label className="block text-sm font-semibold text-gray-400">Conflict?</label>
+                                    <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50 mb-[1px]">
+                                        <label className="block text-[10px] font-semibold text-gray-400">Conflict?</label>
                                         {isConflict ? (
-                                            <p className="text-2xl font-bold text-red-500">YES</p>
+                                            <p className="text-lg font-bold text-red-500">YES</p>
                                         ) : (
-                                            <p className="text-2xl font-bold text-green-500">NO</p>
+                                            <p className="text-lg font-bold text-green-500">NO</p>
                                         )}
                                     </div>
-                                    <button
-                                        onClick={() => onNeoClick(event)}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-orange-brushed"
-                                    >
-                                        NEO
-                                    </button>
-                                    <button
-                                        onClick={handleTraineeScoresClick}
-                                        disabled={!traineeObject}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        Trainee Scores
-                                    </button>
-                                    <button
-                                        onClick={handleLmpClick}
-                                        className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
-                                    >
-                                        LMP
-                                    </button>
-                                    {event.type === 'flight' && (
-                                        <button onClick={handleAuthClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed">
-                                            Auth
+                                    {/* NEO button - always frozen when system is frozen */}
+                                    <div className="relative w-[75px]">
+                                        {isFrozen && (
+                                            <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                        )}
+                                        <button
+                                            onClick={() => onNeoClick(event)}
+                                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                        >
+                                            <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO</span>
                                         </button>
+                                    </div>
+                                    {/* Auth button - frozen unless flightAuthorisation is allowed */}
+                                    {event.type === 'flight' && (
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && !freezeAllowedActions.flightAuthorisation && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button onClick={handleAuthClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
+                                                <span className="text-center leading-tight">Auth</span>
+                                            </button>
+                                        </div>
                                     )}
+                                    {/* Complete button - always frozen when system is frozen */}
                                     {((traineeObject && event.type === 'ground') || (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB'))) && (
-                                        <button
-                                            onClick={handleCompleteClick}
-                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
-                                        >
-                                            Complete
-                                        </button>
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button
+                                                onClick={handleCompleteClick}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight">Complete</span>
+                                            </button>
+                                        </div>
                                     )}
-                                    {traineeObject && (
-                                        <button
-                                            onClick={handlePt051Click}
-                                            className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-aluminium-brushed"
-                                        >
-                                            PT-051
-                                        </button>
-                                    )}
+                                    {/* Post Flight button - frozen unless postFlightTimes is allowed */}
                                     {event.type === 'flight' && (
-                                        <button onClick={handlePostFlightClick} className="w-full px-4 py-2 rounded-md text-sm font-semibold shadow-md text-center btn-shape-fill">
-                                            Post Flight
-                                        </button>
+                                        <div className="relative w-[75px]">
+                                            {isFrozen && !freezeAllowedActions.postFlightTimes && (
+                                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+                                            )}
+                                            <button onClick={handlePostFlightClick} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
+                                                <span className="text-center leading-tight">Post<br/>Flight</span>
+                                            </button>
+                                        </div>
                                     )}
                                 </>
                             )}
                             <div className="flex-grow" /> {/* Spacer */}
                             {isEditing ? (
-                                <button onClick={handleSave} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-sky-600 hover:bg-sky-700 disabled:bg-gray-500 disabled:cursor-not-allowed">Save</button>
-                            ) : (
-                                <button onClick={() => setIsEditing(true)} className="w-full px-4 py-2 text-white rounded-md transition-colors text-sm font-semibold shadow-md text-center bg-gray-600 hover:bg-gray-700">Edit</button>
-                            )}
+                                   <>
+                                <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]">
+                                    <span className="text-center leading-tight">Save</span>
+                                </button>
+                                       <button onClick={handleVisualAdjust} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[15px]">
+                                           <span className="text-center leading-tight">Visual<br/>Adjust</span>
+                                       </button>
+                                   </>
+                            ) : null}
+                                <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md">
+                                    <span className="text-center leading-tight">Close</span>
+                                </button>
                         </div>
-                    </div>
-                    
-                    <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end flex-shrink-0">
-                        <button onClick={onClose} className="px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm">Close</button>
                     </div>
                 </div>
             </div>
+            {/* ── Delete Choice Modal ─────────────────────────────────────────────────── */}
+            {showDeleteChoice && (
+                <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowDeleteChoice(false)}>
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-red-500/50" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <h2 className="text-lg font-bold text-red-400">
+                                {event.isCancelled ? 'Cancelled Event Options' : 'Delete Event'}
+                            </h2>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-6 space-y-3">
+                            <p className="text-gray-300 text-sm">
+                                {event.isCancelled
+                                    ? 'This event is cancelled. What would you like to do?'
+                                    : 'What would you like to do with this event?'}
+                            </p>
+
+                            {/* CANCELLED TILE: Restore option */}
+                            {event.isCancelled && (
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteChoice(false);
+                                        setShowRestoreConfirm(true);
+                                    }}
+                                    className="w-full flex items-start gap-3 p-4 bg-green-900/20 border border-green-600/40 rounded-lg hover:bg-green-900/40 transition-colors text-left"
+                                >
+                                    <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-green-600/20 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div className="text-green-300 font-semibold text-sm">Restore to Schedule</div>
+                                        <div className="text-gray-400 text-xs mt-0.5">Removes the cancellation and restores this event to active status with full functionality.</div>
+                                    </div>
+                                </button>
+                            )}
+
+                            {/* ACTIVE TILE: Cancel Flight option */}
+                            {!event.isCancelled && (
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteChoice(false);
+                                        setShowCancelConfirm(true);
+                                    }}
+                                    className="w-full flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-600/40 rounded-lg hover:bg-amber-900/40 transition-colors text-left"
+                                >
+                                    <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-amber-600/20 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div className="text-amber-300 font-semibold text-sm">Cancel Flight</div>
+                                        <div className="text-gray-400 text-xs mt-0.5">Stays on the schedule with a redline through it. Requires a cancellation code.</div>
+                                    </div>
+                                </button>
+                            )}
+
+                            {/* Remove from Schedule option (always shown) */}
+                            <button
+                                onClick={() => {
+                                    setShowDeleteChoice(false);
+                                    setShowRemovePin(true);
+                                }}
+                                className="w-full flex items-start gap-3 p-4 bg-red-900/20 border border-red-600/40 rounded-lg hover:bg-red-900/40 transition-colors text-left"
+                            >
+                                <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-red-600/20 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="text-red-300 font-semibold text-sm">Remove from Schedule</div>
+                                    <div className="text-gray-400 text-xs mt-0.5">Permanently removes the event. Not visible on the schedule and deleted from the database.</div>
+                                </div>
+                            </button>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-3 bg-gray-900/50 border-t border-gray-700 flex justify-end">
+                            <button
+                                onClick={() => setShowDeleteChoice(false)}
+                                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
+                            >
+                                Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Remove from Schedule — Warning + PIN ────────────────────────────────── */}
+            {showRemovePin && (
+                <PinEntryFlyout
+                    correctPin="1111"
+                    onConfirm={() => {
+                        setShowRemovePin(false);
+                        onDeleteRequest();
+                    }}
+                    onCancel={() => setShowRemovePin(false)}
+                    title="Confirm Permanent Removal"
+                    message="⚠ This will permanently remove this event from the schedule and cannot be undone. Enter your PIN to confirm."
+                />
+            )}
+
+            {/* ── Restore Cancelled Event Confirmation ────────────────────────────────── */}
+            {showRestoreConfirm && (
+                <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowRestoreConfirm(false)}>
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-green-500/50" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-700 bg-green-900/20 flex items-center space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <h2 className="text-xl font-bold text-green-400">Restore Event</h2>
+                        </div>
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
+                            <p className="text-gray-300">
+                                You are about to restore this cancelled event back to the active schedule.
+                            </p>
+                            <div className="bg-green-900/20 border border-green-600/40 rounded-md p-3 space-y-1">
+                                <p className="text-green-300 text-sm font-semibold">What this will do:</p>
+                                <p className="text-gray-300 text-sm">• Remove the cancellation mark and redline</p>
+                                <p className="text-gray-300 text-sm">• Restore the event to its original position</p>
+                                <p className="text-gray-300 text-sm">• Re-enable full scheduling functionality</p>
+                            </div>
+                            {event.cancellationCode && (
+                                <div className="bg-gray-700/30 border border-gray-600 rounded-md p-3">
+                                    <p className="text-gray-400 text-sm">
+                                        <strong className="text-white">Previous cancellation code:</strong> {event.cancellationCode}
+                                        {(event as any).cancellationManualEntry && ` (${(event as any).cancellationManualEntry})`}
+                                    </p>
+                                    {(event as any).cancelledBy && (
+                                        <p className="text-gray-400 text-sm mt-1">
+                                            <strong className="text-white">Cancelled by:</strong> {(event as any).cancelledBy}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        {/* Footer */}
+                        <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowRestoreConfirm(false)}
+                                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowRestoreConfirm(false);
+                                    if (onRestoreEvent) {
+                                        onRestoreEvent(event.id);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold"
+                            >
+                                Yes, Restore Event
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showCancelConfirm && (
-                <CancelConfirmationFlyout 
-                    onConfirm={onDeleteRequest}
+                <CancelEventFlyout 
+                    eventId={event.id}
+                    eventType={event.type === 'ftd' ? 'ftd' : 'flight'}
+                    onConfirm={(eventId, cancellationCode, manualCodeEntry) => {
+                        if (onCancelEvent) {
+                            onCancelEvent(eventId, cancellationCode, manualCodeEntry);
+                        } else {
+                            // Fallback to old delete behavior if onCancelEvent not provided
+                            onDeleteRequest();
+                        }
+                        setShowCancelConfirm(false);
+                    }}
                     onClose={() => setShowCancelConfirm(false)}
+                    cancellationCodes={cancellationCodes}
                 />
             )}
             {showMassBriefComplete && (
@@ -1589,23 +2529,110 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     isOpen={showMassBriefComplete}
                     onClose={() => setShowMassBriefComplete(false)}
                     event={event}
-                    trainees={event.attendees ? event.attendees.map(attendeeName => {
-                        // Find the trainee object from the trainees list
-                        const trainee = trainees.find(t => {
-                            const fullName = `${t.rank} ${t.name}`;
-                            return fullName === attendeeName.split(' – ')[0];
-                        });
-                        return trainee || {
-                            fullName: attendeeName.split(' – ')[0],
-                            name: attendeeName.split(' – ')[0].split(' ').slice(1).join(' '),
-                            rank: attendeeName.split(' – ')[0].split(' ')[0],
-                            course: '',
-                            isPaused: false,
-                            id: 0,
-                            position: 0,
-                            status: ''
-                        };
-                    }) : []}
+                    trainees={
+                        (() => {
+                            console.log('🔍 Processing trainees for MassBriefCompleteFlyout');
+                            console.log('🔍 Event:', event);
+                            console.log('🔍 Event.attendees:', event.attendees);
+                            console.log('🔍 Event.group:', event.group);
+                            console.log('🔍 Event.selectedTrainees:', event.selectedTrainees);
+                            console.log('🔍 Event.trainees:', event.trainees);
+                            console.log('🔍 Event keys:', Object.keys(event));
+                            console.log('🔍 Available trainees (strings):', trainees);
+                            console.log('🔍 Available traineesData (objects):', traineesData);
+                            
+                            // First try attendees array
+                            if (event.attendees) {
+                                console.log('🔍 Processing attendees array');
+                                const processedAttendees = event.attendees.map((attendeeName, index) => {
+                                    console.log(`🔍 Processing attendee ${index}: "${attendeeName}"`);
+                                    
+                                    // Find the trainee object from the traineesData list
+                                    const trainee = traineesData.find(t => {
+                                        const fullName = `${t.rank} ${t.name}`;
+                                        console.log(`🔍 Comparing "${fullName}" with "${attendeeName.split(' – ')[0]}"`);
+                                        return fullName === attendeeName.split(' – ')[0];
+                                    });
+                                    
+                                    if (trainee) {
+                                        console.log('🔍 Found matching trainee:', trainee);
+                                        return trainee;
+                                    } else {
+                                        console.log('🔍 Creating fallback trainee object');
+                                        const nameParts = attendeeName.split(' – ');
+                                        const fullName = nameParts[0];
+                                        const course = nameParts[1] || '';
+                                        
+                                        // Parse "Last, First" format
+                                        let rank = '';
+                                        let name = fullName;
+                                        const commaIndex = fullName.indexOf(',');
+                                        if (commaIndex !== -1) {
+                                            const lastName = fullName.substring(0, commaIndex).trim();
+                                            const firstName = fullName.substring(commaIndex + 1).trim();
+                                            name = `${firstName} ${lastName}`;
+                                        } else {
+                                            // Try "Rank Last First" format
+                                            const parts = fullName.trim().split(' ');
+                                            if (parts.length >= 2) {
+                                                rank = parts[0];
+                                                name = parts.slice(1).join(' ');
+                                            }
+                                        }
+                                        
+                                        const fallbackTrainee = {
+                                            idNumber: 0,
+                                            fullName: fullName,
+                                            name: name,
+                                            rank: rank,
+                                            course: course,
+                                            isPaused: false,
+                                            unit: '',
+                                            seatConfig: 'Pilot' as any,
+                                            id: fullName
+                                        };
+                                        console.log('🔍 Fallback trainee:', fallbackTrainee);
+                                        return fallbackTrainee;
+                                    }
+                                });
+                                console.log('🔍 Final processed attendees:', processedAttendees);
+                                return processedAttendees;
+                            }
+                            
+                            // If no attendees, try to get trainees from the course (for mass events)
+                            if (event.group && event.group.includes('Trainees Selected')) {
+                                console.log('🔍 Mass event detected, filtering trainees by course');
+                                
+                                // Extract course from event if available
+                                let eventCourse = '';
+                                if (event.course) {
+                                    eventCourse = event.course;
+                                    console.log('🔍 Event course:', eventCourse);
+                                } else if (trainees.length > 0 && typeof trainees[0] === 'string') {
+                                    // Try to extract course from first trainee string
+                                    const firstTrainee = trainees[0];
+                                    const parts = firstTrainee.split(' – ');
+                                    if (parts.length > 1) {
+                                        eventCourse = parts[1];
+                                        console.log('🔍 Extracted course from trainees:', eventCourse);
+                                    }
+                                }
+                                
+                                // Filter traineesData by course
+                                const filteredTrainees = eventCourse 
+                                    ? traineesData.filter(t => t.course === eventCourse)
+                                    : traineesData;
+                                
+                                console.log('🔍 Filtered trainees count:', filteredTrainees.length);
+                                console.log('🔍 Filtered trainees:', filteredTrainees);
+                                
+                                return filteredTrainees;
+                            }
+                            
+                            console.log('🔍 No attendees or mass event, returning empty array');
+                            return [];
+                        })()
+                    }
                     onConfirm={handleMassBriefComplete}
                 />
             )}

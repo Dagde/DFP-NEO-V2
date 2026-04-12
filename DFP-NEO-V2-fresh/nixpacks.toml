@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_23", "openssl"]
+
+[phases.install]
+cmds = ["npm ci --engine-strict=false"]
+
+[phases.build]
+cmds = ["echo 'Build complete - using pre-built static assets'"]
+
+[start]
+cmd = "node server.js"

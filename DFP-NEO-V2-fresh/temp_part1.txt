@@ -1,0 +1,401 @@
+
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { initDB, seedDefaultTemplates } from './utils/db';
+import LogbookView from './components/LogbookView';
+import { AlgoContext } from './components/App';
+import CurrencyBuilderView from './components/CurrencyBuilderView';
+   import { seedTestAuditLogs } from './utils/seedAuditLogs';
+   import { logAudit } from './utils/auditLogger';
+   import { debouncedAuditLog } from './utils/auditDebounce';
+
+
+// Import types
+import { 
+    ScheduleEvent, 
+    Instructor, 
+    Trainee, 
+    SyllabusItemDetail, 
+    Conflict, 
+    PersonnelConflict, 
+    Score, 
+    PersonCurrencyStatus, 
+    Pt051Assessment, 
+    UnavailabilityPeriod, 
+    NeoProblemTile, 
+    NeoRemedy, 
+    NeoInstructorRemedy, 
+    NeoTimeShiftRemedy, 
+    Course, 
+    EventLimits, 
+    PhraseBank,
+    SctRequest,
+    RemedialRequest,
+    MasterCurrency,
+    CurrencyRequirement,
+    CurrencyDefinition,
+    OracleAnalysisResult,
+    OracleInstructorAnalysis,
+    OracleTraineeAnalysis,
+    NeoTraineeRemedy,
+    EventSegment
+} from './types';
+import { NewCourseData } from './components/AddCourseFlyout';
+
+// Import components
+import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import ScheduleView from './components/ScheduleView';
+import InstructorScheduleView from './components/InstructorScheduleView';
+import TraineeScheduleView from './components/TraineeScheduleView';
+import CourseRosterView from './components/CourseRosterView';
+import HateSheetView from './components/HateSheetView';
+import ScoreDetailView from './components/ScoreDetailView';
+import { EventDetailModal } from './components/FlightDetailModal';
+import ConflictModal from './components/ConflictModal';
+import AddGroundEventFlyout from './components/AddGroundEventFlyout';
+import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
+import MyDashboard from './components/MyDashboard';
+import SupervisorDashboard from './components/SupervisorDashboard';
+import { NextDayBuildView } from './components/NextDayBuildView';
+import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
+import ProgramDataView from './components/ProgramDataView';
+import BuildDfpLoadingFlyout from './components/BuildDfpLoadingFlyout';
+import BuildDateWarningFlyout from './components/BuildDateWarningFlyout';
+import UnavailabilityConflictFlyout from './components/UnavailabilityConflictFlyout';
+import Magnifier from './components/Magnifier';
+import SuccessNotification from './components/SuccessNotification';
+import InstructorListView from './components/InstructorListView';
+import SyllabusView from './components/SyllabusView';
+import { InstructorProfileFlyout } from './components/InstructorProfileFlyout';
+import TraineeProfileFlyout from './components/TraineeProfileFlyout';
+import PublishConfirmationFlyout from './components/PublishConfirmationFlyout';
+import CurrencyView from './components/CurrencyView';
+// FIX: Corrected import to be a named import as per module export.
+import { CurrencySetupFlyout } from './components/CurrencySetupFlyout';
+import UnsavedChangesWarning from './components/UnsavedChangesWarning';
+import PT051View from './components/PT051View';
+import AuthorisationFlyout from './components/AuthorisationFlyout';
+// FIX: Corrected import to be a named import as per module export.
+import { SettingsViewWithMenu } from './components/SettingsViewWithMenu';
+import AuthorisationView from './components/AuthorisationView';
+import LocalityChangeFlyout from './components/LocalityChangeFlyout';
+import { PostFlightView } from './components/PostFlightView';
+import TraineeLmpView from './components/TraineeLmpView';
+import AddRemedialPackageFlyout from './components/AddRemedialPackageFlyout';
+import CourseProgressView from './components/CourseProgressView';
+import NightFlyingInfoFlyout from './components/NightFlyingInfoFlyout';
+import NeoRemedyFlyout from './components/NeoRemedyFlyout';
+import UnavailabilityReportModal from './components/UnavailabilityReportModal';
+import InfoNotification from './components/InfoNotification';
+import DutyWarningFlyout from './components/DutyWarningFlyout';
+import SctRequestFlyout from './components/SctRequestFlyout';
+import NextDayInstructorScheduleView from './components/NextDayInstructorScheduleView';
+import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleView';
+
+
+// --- MOCK DATA ---
+import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES } from './data/currencies';
+
+// --- PT-051 STRUCTURE ---
+const PT051_STRUCTURE = [
+  { category: 'Core Dimensions', elements: ['Airmanship', 'Preparation', 'Technique'] },
+  { category: 'Procedural Framework', elements: ['Pre-Post Flight', 'Walk Around', 'Strap-in', 'Ground Checks', 'Airborne Checks'] },
+  { category: 'Takeoff', elements: ['Stationary'] },
+  { category: 'Departure', elements: ['Visual'] },
+  { category: 'Core Handling Skills', elements: ['Effects of Control', 'Trimming', 'Straight and Level'] },
+  { category: 'Turns', elements: ['Level medium Turn', 'Level Steep turn'] },
+  { category: 'Recovery', elements: ['Visual - Initial &amp; Pitch'] },
+  { category: 'Landing', elements: ['Landing', 'Crosswind'] },
+  { category: 'Domestics', elements: ['Radio Comms', 'Situational Awareness', 'Lookout', 'Knowledge'] },
+];
+
+const ALL_ELEMENTS = PT051_STRUCTURE.flatMap(cat => cat.elements);
+
+// --- UTILITY FUNCTIONS ---
+const isOverlapping = (f1: Omit<ScheduleEvent, 'date'>, f2: Omit<ScheduleEvent, 'date'>): boolean => {
+    if (!f1 || !f2 || f1.duration <= 0 || f2.duration <= 0) return false;
+    const f1_end = f1.startTime + f1.duration;
+    const f2_end = f2.startTime + f2.duration;
+    return f1.startTime < f2_end && f1_end > f2.startTime;
+};
+
+const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): string[] => {
+    const personnel = new Set<string>();
+    if (event.instructor) personnel.add(event.instructor);
+    if (event.flightType === 'Solo') {
+        if (event.pilot) personnel.add(event.pilot);
+    } else {
+        if (event.student) personnel.add(event.student);
+    }
+    if (event.attendees) event.attendees.forEach(p => personnel.add(p));
+    if (event.groupTraineeIds && event.groupTraineeIds.length > 0) {
+        // In a real app you'd resolve these IDs to names, but for conflict checks, the presence of people is enough.
+        // For now, let's assume if there are group IDs, the main people are already in instructor/student fields for conflict checks.
+        // This function is mainly for conflict detection, not display.
+    }
+    return Array.from(personnel);
+};
+
+const getEventBookingWindow = (
+    event: ScheduleEvent,
+    syllabusDetails: SyllabusItemDetail[]
+): { start: number, end: number } => {
+    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber);
+    if (syllabusItem) {
+        const start = event.startTime - (syllabusItem.preFlightTime || 0);
+        const end = event.startTime + event.duration + (syllabusItem.postFlightTime || 0);
+        return { start, end };
+    }
+    return { start: event.startTime, end: event.startTime + event.duration };
+};
+
+const getEventBookingWindowForAlgo = (
+    event: Omit<ScheduleEvent, 'date'> | { startTime: number, flightNumber: string, duration: number },
+    syllabusDetails: SyllabusItemDetail[]
+): { start: number, end: number } => {
+    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber);
+    if (syllabusItem) {
+        const start = event.startTime - syllabusItem.preFlightTime;
+        const end = event.startTime + event.duration + syllabusItem.postFlightTime;
+        return { start, end };
+    }
+    return { start: event.startTime, end: event.startTime + event.duration };
+};
+
+const calculateTotalDutyHoursForPeriod = (instructorName: string, events: ScheduleEvent[], startTime: number, endTime: number, syllabusDetails: SyllabusItemDetail[]): number => {
+    const instructorEvents = events.filter(e => 
+        getPersonnel(e).includes(instructorName) && 
+        // Check if event overlaps with the specified time period (considering booking windows)
+        (() => {
+            const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return bookingWindow.start < endTime && bookingWindow.end > startTime;
+        })()
+    );
+    
+    if (instructorEvents.length === 0) return 0;
+
+    // Calculate start/end times including pre/post brief for overlapping events
+    const overlappingWindows = instructorEvents
+        .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+        .map(window => ({
+            start: Math.max(window.start, startTime),
+            end: Math.min(window.end, endTime)
+        }))
+        .filter(window => window.start < window.end)
+        .sort((a, b) => a.start - b.start);
+
+    if (overlappingWindows.length === 0) return 0;
+
+    // Merge overlapping windows to get total duty time
+    let totalDutyTime = 0;
+    let currentStart = overlappingWindows[0].start;
+    let currentEnd = overlappingWindows[0].end;
+
+    for (let i = 1; i < overlappingWindows.length; i++) {
+        const nextWindow = overlappingWindows[i];
+        
+        if (nextWindow.start <= currentEnd) {
+            // Overlapping or adjacent windows - merge them
+            currentEnd = Math.max(currentEnd, nextWindow.end);
+        } else {
+            // Separate windows - add current window time and start new one
+            totalDutyTime += currentEnd - currentStart;
+            currentStart = nextWindow.start;
+            currentEnd = nextWindow.end;
+        }
+    }
+    
+    // Add the final window
+    totalDutyTime += currentEnd - currentStart;
+
+    return parseFloat(totalDutyTime.toFixed(1));
+};
+
+const timeStringToHours = (timeStr: string | undefined): number | null => {
+    if (!timeStr) return null;
+    
+    let hours: number;
+    let minutes: number;
+
+    if (timeStr.includes(':')) { // Supports HH:mm
+        const parts = timeStr.split(':').map(Number);
+        if (parts.length !== 2 || isNaN(parts[0]) || isNaN(parts[1])) return null;
+        [hours, minutes] = parts;
+    } else if (timeStr.length === 4 && /^\d{4}$/.test(timeStr)) { // Supports HHMM
+        hours = parseInt(timeStr.substring(0, 2), 10);
+        minutes = parseInt(timeStr.substring(2, 4), 10);
+    } else {
+        return null;
+    }
+
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours >= 24 || minutes < 0 || minutes >= 60) {
+        return null;
+    }
+    return hours + minutes / 60;
+};
+
+const formatDecimalHourToString = (decimalHour: number): string => {
+    const hours = Math.floor(decimalHour);
+    const minutes = Math.round((decimalHour % 1) * 60);
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+// New Helpers for DFP and Neo
+const calculateProjectedDuty = (
+    instructorName: string, 
+    events: (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[], 
+    newEvent: (ScheduleEvent | Omit<ScheduleEvent, 'date'>),
+    syllabusDetails: SyllabusItemDetail[] = INITIAL_SYLLABUS_DETAILS
+): number => {
+    // Filter events for the instructor
+    const instructorEvents = [...events.filter(e => getPersonnel(e).includes(instructorName)), newEvent];
+    if (instructorEvents.length === 0) return 0;
+
+    // Calculate start/end times including pre/post brief
+    const sortedWindows = instructorEvents
+        .map(e => getEventBookingWindowForAlgo(e, syllabusDetails))
+        .sort((a, b) => a.start - b.start);
+
+    const firstEventStart = sortedWindows[0].start;
+    
+    // Determine last event end time (duty end)
+    const lastEvent = instructorEvents.find(e => 
+        getEventBookingWindowForAlgo(e, syllabusDetails).end === sortedWindows[sortedWindows.length - 1].end
+    );
+    
+    // If the last event finishes after 1700, duty ends at event finish time.
+    // Otherwise, duty assumed to end at event finish time (or could be fixed 1700 if that's business rule, but sticking to simple span here)
+    const lastEventEnd = sortedWindows[sortedWindows.length - 1].end;
+
+    const dutyHours = Math.max(0, lastEventEnd - firstEventStart);
+    return parseFloat(dutyHours.toFixed(1));
+};
+
+const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
+    if (!dateStr) return 999; // Treated as very long ago if undefined
+    const eventDate = new Date(dateStr + 'T00:00:00Z');
+    const baseDate = new Date(relativeTo + 'T00:00:00Z');
+    return Math.floor((baseDate.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+
+// --- DFP GENERATION ALGORITHM ---
+
+interface DfpConfig {
+  buildDate: string;
+  instructors: Instructor[];
+  trainees: Trainee[];
+  syllabus: SyllabusItemDetail[];
+  scores: Map<string, Score[]>;
+  coursePriorities: string[];
+  coursePercentages: Map<string, number>;
+  availableAircraftCount: number;
+  ftdCount: number;
+  courseColors: { [key: string]: string };
+  school: 'ESL' | 'PEA';
+  dayStart: number;
+  dayEnd: number;
+  allowNightFlying: boolean;
+  commenceNightFlying: number;
+  ceaseNightFlying: number;
+  highestPriorityEvents: ScheduleEvent[];
+  programWithPrimaries: boolean;
+  traineeLMPs: Map<string, SyllabusItemDetail[]>;
+  flightTurnaround: number;
+  ftdTurnaround: number;
+  cptTurnaround: number;
+  preferredDutyPeriod: number;
+  maxCrewDutyPeriod: number;
+  eventLimits: EventLimits;
+  sctFlights: SctRequest[];
+  sctFtds: SctRequest[];
+  remedialRequests: RemedialRequest[];
+}
+
+// --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
+
+const isPersonStaticallyUnavailable = (
+    person: Instructor | Trainee,
+    periodStart: number,
+    periodEnd: number,
+    buildDate: string,
+    eventType: 'flight' | 'ground' | 'ftd' | 'duty_sup' | 'cpt'
+): boolean => {
+    if (!person.unavailability) return false;
+    for (const period of person.unavailability) {
+        // Correct date range check: exclusive for all-day, inclusive for timed.
+        const isInDateRange = period.allDay
+            ? (buildDate >= period.startDate && buildDate < period.endDate)
+            : (buildDate >= period.startDate && buildDate <= period.endDate);
+
+        if (isInDateRange) {
+            // Check for 'Ground Duties only' exception
+            if (period.reason === 'TMUF - Ground Duties only' && eventType !== 'flight') {
+                continue; // Not a conflict
+            }
+            
+            if (period.allDay) {
+                return true; // Conflict if it's an all-day event in range
+            }
+
+            // It's a timed event, now check for time overlap
+            const unavailableStart = timeStringToHours(period.startTime);
+            const unavailableEnd = timeStringToHours(period.endTime);
+
+            if (unavailableStart !== null && unavailableEnd !== null) {
+                // This logic correctly handles multi-day timed events
+                let dayStart = (buildDate === period.startDate) ? unavailableStart : 0;
+                let dayEnd = (buildDate === period.endDate) ? unavailableEnd : 24;
+
+                if (periodStart < dayEnd && periodEnd > dayStart) {
+                    return true; // Time overlaps
+                }
+            } else {
+                // if times are null/invalid for a timed event, treat as all-day for that date
+                return true;
+            }
+        }
+    }
+    return false; // Not unavailable
+};
+
+const findAvailableArea = (
+    startTime: number,
+    duration: number,
+    existingEvents: Omit<ScheduleEvent, 'date'>[]
+): string | null => {
+    const primaryAreas = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    const secondaryAreas = ['S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+    const newEventStart = startTime;
+    const newEventEnd = startTime + duration;
+
+    const isAreaOccupied = (area: string): boolean => {
+        return existingEvents.some(event => {
+            if (event.type !== 'flight' || event.area !== area) {
+                return false;
+            }
+            const existingEventStart = event.startTime;
+            const existingEventEnd = event.startTime + event.duration;
+            return newEventStart < existingEventEnd && newEventEnd > existingEventStart;
+        });
+    };
+
+    for (const primaryArea of primaryAreas) {
+        if (!isAreaOccupied(primaryArea)) {
+            return primaryArea;
+        }
+    }
+
+    for (const secondaryArea of secondaryAreas) {
+        if (!isAreaOccupied(secondaryArea)) {
+            return secondaryArea;
+        }
+    }
+
+    return null; // No available areas
+};
+
+// Centralized logic for determining a trainee's next event(s)

@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String                @id @default(cuid())
+  username        String                @unique
+  email           String?               @unique
+  password        String
+  role            Role                  @default(USER)
+  firstName       String?
+  lastName        String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  lastLogin       DateTime?
+  isActive        Boolean               @default(true)
+  createdById     String?
+  userId          String                @unique
+  aircraft        Aircraft[]            @relation("Aircraft")
+  AuditLog        AuditLog[]
+  cancellations   CancellationHistory[] @relation("CancellationHistory")
+  flightSchedules FlightSchedule[]      @relation("FlightSchedules")
+  personnel       Personnel?            @relation("Personnel")
+  schedules       Schedule[]
+  sessions        Session[]
+  trainees        Trainee?              @relation("Trainee")
+  createdBy       User?                 @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers    User[]                @relation("UserCreatedBy")
+  settings        UserSettings?
+
+  @@index([email])
+  @@index([username])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([entityType])
+  @@index([userId])
+}
+
+model Schedule {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String
+  data      Json
+  version   String   @default("flight-school")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, version])
+  @@index([userId])
+  @@index([date])
+}
+
+model UserSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  settings  Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DataBackup {
+  id        String   @id @default(cuid())
+  type      String
+  data      Json
+  createdAt DateTime @default(now())
+  userId    String?
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model FlightSchedule {
+  id           String   @id @default(cuid())
+  userId       String
+  date         DateTime
+  scheduleData Json
+  version      String   @default("1.0")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation("FlightSchedules", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([date])
+  @@index([userId, date])
+}
+
+model Personnel {
+  id                      String   @id @default(cuid())
+  userId                  String?  @unique
+  name                    String
+  rank                    String?
+  role                    String?
+  qualifications          Json?
+  availability            Json?
+  preferences             Json?
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  callsignNumber          Int?
+  category                String?
+  email                   String?
+  flight                  String?
+  idNumber                Int?
+  isAdminStaff            Boolean  @default(false)
+  isCFI                   Boolean  @default(false)
+  isCommandingOfficer     Boolean  @default(false)
+  isContractor            Boolean  @default(false)
+  isDeputyFlightCommander Boolean  @default(false)
+  isExecutive             Boolean  @default(false)
+  isFlyingSupervisor      Boolean  @default(false)
+  isIRE                   Boolean  @default(false)
+  isOFI                   Boolean  @default(false)
+  isQFI                   Boolean  @default(false)
+  isTestingOfficer        Boolean  @default(false)
+  location                String?
+  permissions             String[] @default([])
+  phoneNumber             String?
+  priorExperience         Json?
+  seatConfig              String?
+  service                 String?
+  unavailability          Json?
+  unit                    String?
+  user                    User?    @relation("Personnel", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([idNumber])
+  @@index([role])
+  @@index([isActive])
+}
+
+model Trainee {
+  id                  String    @id @default(cuid())
+  userId              String?   @unique
+  idNumber            Int       @unique
+  name                String
+  fullName            String
+  rank                String?
+  service             String?
+  course              String?
+  lmpType             String?   @default("BPC+IPC")
+  traineeCallsign     String?
+  seatConfig          String?
+  isPaused            Boolean   @default(false)
+  unavailability      Json?
+  unit                String?
+  flight              String?
+  location            String?
+  phoneNumber         String?
+  email               String?
+  primaryInstructor   String?
+  secondaryInstructor String?
+  lastEventDate       DateTime?
+  lastFlightDate      DateTime?
+  currencyStatus      Json?
+  permissions         String[]  @default([])
+  priorExperience     Json?
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  scores              Score[]   @relation("TraineeScores")
+  user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([idNumber])
+  @@index([course])
+  @@index([unit])
+  @@index([isActive])
+}
+
+model Aircraft {
+  id             String   @id @default(cuid())
+  userId         String
+  aircraftNumber String
+  type           String
+  status         String   @default("available")
+  configuration  Json?
+  maintenanceLog Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation("Aircraft", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, aircraftNumber])
+  @@index([userId])
+  @@index([status])
+  @@index([isActive])
+}
+
+model CancellationHistory {
+  id               String   @id @default(cuid())
+  userId           String
+  scheduleId       String?
+  eventId          String
+  eventType        String
+  cancellationCode String
+  reason           String?
+  cancelledBy      String
+  cancelledAt      DateTime @default(now())
+  originalData     Json
+  user             User     @relation("CancellationHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([scheduleId])
+  @@index([cancelledAt])
+  @@index([cancellationCode])
+}
+
+model Course {
+  id            String   @id @default(cuid())
+  name          String
+  code          String   @unique
+  startDate     String
+  endDate       String
+  totalStudents Int?
+  raafCount     Int?
+  navyCount     Int?
+  armyCount     Int?
+  location      String
+  unit          String
+  status        String   @default("ACTIVE")
+  color         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Score {
+  id         String   @id @default(cuid())
+  traineeId  String
+  event      String
+  score      Int
+  date       DateTime
+  instructor String
+  notes      String?
+  details    Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  PILOT
+  INSTRUCTOR
+  USER
+}

@@ -6,6 +6,14 @@ export type ExpiryRuleType = 'ROLLING_WINDOW' | 'LAST_EVENT_PLUS_PERIOD';
 export type ExpiryCalculation = 'EARLIEST_CHILD' | 'LATEST_CHILD';
 export type LogicOperator = 'AND' | 'OR';
 
+/**
+ * How a currency is entered in the Post-Flight page (can be combined — more than one allowed):
+ * - 'date'     → date picker (for LAST_EVENT_PLUS_PERIOD currencies — date auto-set to flight date when checkbox ticked)
+ * - 'count'    → number input (for ROLLING_WINDOW currencies — "how many did you complete today?")
+ * - 'checkbox' → simple checkbox — "completed this flight" — flight/FTD date is saved as the currency date
+ */
+export type PostFlightInputType = 'date' | 'count' | 'checkbox';
+
 export interface LogicNode {
   operator: LogicOperator;
   children: (string | LogicNode)[]; // Array of currency IDs or nested LogicNodes
@@ -21,6 +29,9 @@ export interface CurrencyRequirement {
   eventCodes: string[]; // syllabus codes that satisfy this
   requiredCount: number; // e.g., 3 for "3 approaches in 90 days"
   expiryRule: ExpiryRuleType;
+  // Post-flight integration
+  showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
+  postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
 }
 
 export interface MasterCurrency {
@@ -31,6 +42,9 @@ export interface MasterCurrency {
   isVisible: boolean;
   logicTree: LogicNode;
   expiryCalculation: ExpiryCalculation;
+  // Post-flight integration
+  showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
+  postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
 }
 
 export type CurrencyDefinition = MasterCurrency | CurrencyRequirement;
@@ -69,6 +83,7 @@ export interface PersonCurrencyStatus {
   lastEventDate: string; // For manual overrides or legacy data
   calculatedExpiry?: string;
   isCurrent?: boolean;
+  isInactive?: boolean;
 }
 
 export interface LogbookExperience {
@@ -152,6 +167,7 @@ export interface ScheduleEvent {
   formationType?: string;
   formationPosition?: number;
   callsign?: string;
+  aircraftNumber?: string;
   attendees?: string[];
   isUnavailabilityConflict?: boolean;
   authNotes?: string;
@@ -174,7 +190,7 @@ export interface ScheduleEvent {
     deploymentAircraftCount?: number;
       
       // Event Category field (for progressive display)
-      eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat';
+      eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di';
       
       // Additional fields for enhanced priority events display
       dateCreated?: string;
@@ -185,6 +201,13 @@ export interface ScheduleEvent {
       isRemedialForceSchedule?: boolean;
       traineeId?: number;
       eventCode?: string;
+      
+      // Cancellation fields
+      isCancelled?: boolean;
+      cancellationCode?: string;
+      cancellationManualEntry?: string; // For OTHER option
+      cancelledBy?: string;
+      cancelledAt?: string;
 }
 
 export interface EventSegment extends ScheduleEvent {
@@ -212,6 +235,9 @@ export interface SyllabusItemDetail {
   postFlightTime: number;
   type: 'Flight' | 'FTD' | 'Ground School';
   sortieType?: 'Dual' | 'Solo';
+     twrDiReqd?: 'YES' | 'NO'; // NEW: TWR DI Required field
+     cctOnly?: 'YES' | 'NO'; // NEW: CCT Only field
+     cctOnly?: 'YES' | 'NO'; // NEW: CCT Only field
   methodOfDelivery: string[];
   methodOfAssessment: string[];
   resourcesPhysical: string[];
@@ -240,10 +266,11 @@ export interface Trainee {
   location?: string;
   phoneNumber?: string;
   email?: string;
-  primaryInstructor?: string;
-  secondaryInstructor?: string;
+  primaryInstructor?: string | string[];
+  secondaryInstructor?: string | string[];
   lmpType?: string;
   
+     traineeCallsign?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
 }
@@ -275,12 +302,21 @@ export interface Pt051Assessment {
   overallResult: 'P' | 'F' | null;
   dcoResult?: 'DCO' | 'DPCO' | 'DNCO' | '';
   overallComments?: string;
+  // Add timing fields to preserve time data
+  startTime?: number; // in hours (e.g., 9.5 for 9:30)
+  duration?: number;  // in hours
+  endTime?: number;   // in hours
   scores: {
     element: string;
     grade: Pt051Grade | null;
     comment: string;
   }[];
   isCompleted?: boolean; // Track if PT-051 has been edited and saved
+  // Ground School Assessment
+  groundSchoolAssessment?: {
+    isAssessment: boolean;
+    result?: number; // percentage (0-100)
+  };
 }
 
 export interface Conflict {
@@ -377,6 +413,8 @@ export interface SctRequest {
     notes?: string;
     dateRequested?: string;
     requestedTime?: string; // Format: "HH:MM" (e.g., "15:00")
+    submitted?: boolean;
+    includeInBuild?: boolean; // For MEDIUM/LOW priority - user can manually include in build
 }
 
 export type PermissionRole = 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
@@ -413,3 +451,52 @@ export interface OracleTraineeAnalysis {
     nextSyllabusEvent: SyllabusItemDetail | null;
     isEligible: boolean;
 }
+   // Formation Callsign Types
+   export interface FormationCallsign {
+       name: string;           // Full name (e.g., "Avon")
+       code: string;           // Short code (e.g., "AVON")
+       unit: string;           // Unit name (e.g., "1FTS")
+       location: string;       // Location name (e.g., "East Sale")
+       locationCode: string;   // Location code (e.g., "ESL")
+   }
+
+// AC History Types
+export type CancellationCodeCategory = 'Aircraft' | 'Crew' | 'Program' | 'Weather';
+export type CancellationCodeAppliesTo = 'Flight' | 'FTD' | 'Both';
+
+export interface CancellationCode {
+  code: string;
+  category: CancellationCodeCategory;
+  description: string;
+  appliesTo: CancellationCodeAppliesTo;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+}
+
+export interface CancellationRecord {
+  eventId: string;
+  cancellationCode: string;
+  cancelledBy: string;
+  cancelledAt: string;
+  manualCodeEntry?: string; // For OTHER option
+  eventDate: string;
+  eventType: 'flight' | 'ftd';
+  resourceType: string; // Aircraft, FTD, etc.
+  eventName?: string; // Flight number or event name
+  personnelAffected?: string; // Names of personnel affected
+  notes?: string; // Additional notes
+}
+
+export interface CancellationAnalytics {
+  code: string;
+  category: CancellationCodeCategory;
+  description: string;
+  totalCount: number;
+  percentage: number;
+  trend: number; // Positive = increase, negative = decrease
+  previousCount: number;
+}
+
+export type TimePeriod = 'week' | 'month' | '6months' | 'year' | '2years' | '5years' | 'lastFY' | 'lastCY';

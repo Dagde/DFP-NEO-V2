@@ -53,7 +53,7 @@
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
     border-color: #4b5563; /* gray-600 */
     color: #111827; /* gray-900 */
-    transform: translateY(1px);
+    transform: none;
   }
   .btn-gold-brushed {
     background-color: #eab308; /* yellow-500 fallback */
@@ -71,37 +71,24 @@
     background-image: linear-gradient(to top, #fde047, #ca8a04);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
     border-color: #854d0e; /* yellow-800 */
-    transform: translateY(1px);
+    transform: none;
   }
   .btn-green-brushed {
-    /* Square button styling - unpressed - DFP button */
-    background-color: #DEE1E6;
-    background-image: linear-gradient(to bottom, #e8eaef, #DEE1E6);
-    border: 2px solid #9ca3af;
-    border-radius: 6px;
-    color: #000000;
-    font-weight: 600;
-    box-shadow: 
-      0 2px 4px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    transition: all 0.1s ease;
+    background-color: #166534; /* green-800 fallback */
+    background-image: linear-gradient(to bottom, #4ade80, #16a34a); /* green-400 to green-600 */
+    border: 1px solid #14532d; /* green-900 */
+    color: #1f2937; /* gray-800 */
+    text-shadow: 0 1px 1px rgba(255,255,255,0.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 1px 2px rgba(0,0,0,0.2);
+    transition: all 0.1s ease-in-out;
   }
   .btn-green-brushed:hover {
-    background-image: linear-gradient(145deg, #f0f0f4, #e0e0e4, #e8e8ec);
-    box-shadow: 
-      0 6px 8px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    background-image: linear-gradient(to bottom, #86efac, #22c55e); /* lighter green gradient */
   }
-  .btn-green-brushed.active, .btn-green-brushed:active {
-    /* Pressed state - slightly darker again */
-    background-color: #a0a0a0;
-    background-image: linear-gradient(to bottom, #a8a8a8, #a0a0a0);
-    border: 2px solid #9ca3af;
-    color: #ffffff;
-    box-shadow: 
-      0 2px 4px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  .btn-green-brushed:active {
+    background-image: linear-gradient(to top, #4ade80, #16a34a);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    border-color: #14532d;
     transform: none;
   }
   .btn-orange-brushed {
@@ -120,7 +107,7 @@
     background-image: linear-gradient(to top, #fbbf24, #f59e0b);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     border-color: #92400e;
-    transform: translateY(1px);
+    transform: none;
   }
   .btn-red-brushed {
     background-color: #dc2626; /* red-600 fallback */
@@ -138,7 +125,7 @@
     background-image: linear-gradient(to top, #f87171, #ef4444);
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
     border-color: #991b1b;
-    transform: translateY(1px);
+    transform: none;
   }
   .btn-gunmetal-brushed {
     background-color: #374151; /* gray-700 fallback */
@@ -156,37 +143,30 @@
     background-image: linear-gradient(to right, #111827, #374151, #111827); /* gray-900, gray-700, gray-900 */
     box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
     border-color: #000;
-    transform: translateY(1px);
+    transform: none;
   }
   .btn-aluminium-brushed {
-    /* Square button styling - unpressed */
-    background-color: #DEE1E6;
-    background-image: linear-gradient(to bottom, #e8eaef, #DEE1E6);
-    border: 2px solid #9ca3af;
-    border-radius: 6px;
-    color: #000000;
-    font-weight: 600;
-    box-shadow: 
-      0 2px 4px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
-    transition: all 0.1s ease;
+    background-color: #9ca3af; /* gray-400 fallback */
+    background-image: linear-gradient(to right, #d1d5db, #f9fafb, #d1d5db);
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #9ca3af;
+    border-left: 1px solid #9ca3af;
+    border-right: 1px solid #9ca3af;
+    color: #1f2937; /* gray-800 */
+    text-shadow: 0 1px 0 rgba(255,255,255,0.2);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 1px rgba(0,0,0,0.1);
+    transition: all 0.1s ease-in-out;
   }
   .btn-aluminium-brushed:hover {
-    background-image: linear-gradient(145deg, #f0f0f4, #e0e0e4, #e8e8ec);
-    box-shadow: 
-      0 6px 8px rgba(0, 0, 0, 0.25),
-      inset  0 1px 0 rgba(255, 255, 255, 0.5),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    background-image: linear-gradient(to right, #e5e7eb, #ffffff, #e5e7eb);
   }
   .btn-aluminium-brushed.active, .btn-aluminium-brushed:active {
-    /* Pressed state - slightly darker again */
-    background-color: #a0a0a0;
-    background-image: linear-gradient(to bottom, #a8a8a8, #a0a0a0);
-    border: 2px solid #9ca3af;
-    color: #ffffff;
-    box-shadow: 
-      0 2px 4px rgba(0, 0, 0, 0.15),
-      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    background-image: linear-gradient(to right, #9ca3af, #d1d5db, #9ca3af);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+    border-top-color: #9ca3af;
+    border-bottom-color: #d1d5db;
+    border-left-color: #9ca3af;
+    border-right-color: #9ca3af;
     transform: none;
   }
   .changed-bar-stripes {
@@ -199,7 +179,8 @@
     );
   }
   </style>
-  <script type="module" crossorigin src="./assets/index-BVQnpOB4.js"></script>
+  <script type="module" crossorigin src="./assets/index-2i0lrqdF.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Cz3inMS_.css">
 </head>
     <body class="bg-gray-800 text-white">
       <div id="root"></div>
