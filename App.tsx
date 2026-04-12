@@ -18,6 +18,7 @@ import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 import DarkMessageModal from './components/DarkMessageModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
+import DataLoadingMonitor from './components/DataLoadingMonitor';
 
 
 // Import types
@@ -31,7 +32,8 @@ import {
     Score, 
     PersonCurrencyStatus, 
     Pt051Assessment, 
-    UnavailabilityPeriod, 
+    UnavailabilityPeriod,
+    UnavailabilityReason,
     NeoProblemTile, 
     NeoRemedy, 
     NeoInstructorRemedy, 
@@ -66,6 +68,7 @@ import CourseRosterView from './components/CourseRosterView';
 import HateSheetView from './components/HateSheetView';
 import ScoreDetailView from './components/ScoreDetailView';
 import { EventDetailModal } from './components/FlightDetailModal';
+import AddFlightTileModal from './components/AddFlightTileModal';
 import ConflictModal from './components/ConflictModal';
 import AddGroundEventFlyout from './components/AddGroundEventFlyout';
 import CptConflictWarningFlyout from './components/CptConflictWarningFlyout';
@@ -118,8 +121,13 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS, DEFAULT_PHRASE_BANK } from './mockData';
+import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
 import { initializeData } from './lib/dataService';
+// --- SYLLABUS SERVICE (loads from DB at startup) ---
+import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
+// --- DEFAULT PHRASE BANK (configuration data - not mock data) ---
+import { DEFAULT_PHRASE_BANK } from './config/phraseBankConfig';
+import { saveCourse as saveCourseToDB, deleteCourse as deleteCourseFromDB } from './lib/api';
 import { INITIAL_CURRENCY_REQUIREMENTS, INITIAL_MASTER_CURRENCIES, mergeWithInitialCurrencies } from './data/currencies';
 import { initialCancellationCodes } from './data/cancellationCodes';
 
@@ -313,7 +321,7 @@ const calculateProjectedDuty = (
     instructorName: string, 
     events: (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[], 
     newEvent: (ScheduleEvent | Omit<ScheduleEvent, 'date'>),
-    syllabusDetails: SyllabusItemDetail[] = INITIAL_SYLLABUS_DETAILS
+    syllabusDetails: SyllabusItemDetail[] = []
 ): number => {
     // Filter events for the instructor
     const instructorEvents = [...events.filter(e => getPersonnel(e).includes(instructorName)), newEvent];
@@ -341,9 +349,8 @@ const calculateProjectedDuty = (
 
 const daysSince = (dateStr: string | undefined, relativeTo: string): number => {
     if (!dateStr) return 999; // Treated as very long ago if undefined
-    const eventDate = safeParseDate(dateStr);
-    const baseDate = safeParseDate(relativeTo);
-    if (!eventDate || !baseDate) return 999; // Invalid dates - treat as very long ago
+    const eventDate = new Date(dateStr + 'T00:00:00Z');
+    const baseDate = new Date(relativeTo + 'T00:00:00Z');
     return Math.floor((baseDate.getTime() - eventDate.getTime()) / (1000 * 60 * 60 * 24));
 };
 
@@ -512,8 +519,7 @@ const getEffectiveLastCompletedEvent = (
     buildDate: string
 ): string | null => {
     // Calculate yesterday's date
-    const buildDateObj = safeParseDate(buildDate);
-    if (!buildDateObj) { return []; }
+    const buildDateObj = new Date(buildDate + 'T00:00:00Z');
     buildDateObj.setDate(buildDateObj.getDate() - 1);
     const yesterdayStr = buildDateObj.toISOString().split('T')[0];
     
@@ -597,11 +603,11 @@ const computeNextEventsForTrainee = (
     // Find Next Event
     for (let i = 0; i < individualLMP.length; i++) {
         const item = individualLMP[i];
-        if (completedEventIds.has(item.id) || item.code.includes(' MB')) {
+        if (completedEventIds.has(item.id) || completedEventIds.has(item.code) || item.code.includes(' MB')) {
             continue;
         }
 
-        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
+        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p) || completedEventIds.has(p));
         if (prereqsMet) {
             nextEvt = item;
             nextEventIndex = i;
@@ -637,17 +643,9 @@ const calculateTraineePriorityScore = (
     traineeProgress: number,
     isRemedial: boolean
 ): number => {
-    const todayDate = safeParseDate(buildDate);
-    if (!todayDate) { return 999; } // Invalid build date
-    const today = todayDate.getTime();
-    const lastEvent = trainee.lastEventDate ? (() => {
-        const d = safeParseDate(trainee.lastEventDate);
-        return d ? d.getTime() : 0;
-    })() : 0;
-    const lastFlight = trainee.lastFlightDate ? (() => {
-        const d = safeParseDate(trainee.lastFlightDate);
-        return d ? d.getTime() : 0;
-    })() : 0;
+    const today = new Date(buildDate + 'T00:00:00Z').getTime();
+    const lastEvent = trainee.lastEventDate ? new Date(trainee.lastEventDate + 'T00:00:00Z').getTime() : 0;
+    const lastFlight = trainee.lastFlightDate ? new Date(trainee.lastFlightDate + 'T00:00:00Z').getTime() : 0;
 
     const daysSinceEvent = lastEvent === 0 ? 100 : Math.floor((today - lastEvent) / (1000 * 3600 * 24));
     const daysSinceFlight = lastFlight === 0 ? 100 : Math.floor((today - lastFlight) / (1000 * 3600 * 24));
@@ -796,12 +794,13 @@ function analyzeBuildResults(
     syllabusDetails: SyllabusDetail[],
     publishedSchedules: Map<string, Omit<ScheduleEvent, 'date'>[]>
 ): BuildAnalysis {
-    // Filter out non-scheduled events (Duty Sup, STBY)
-    const scheduledEvents = events.filter(e => 
-        !e.flightNumber.includes('Duty Sup') && 
-        !e.resourceId.startsWith('STBY') && 
-        !e.resourceId.startsWith('BNF-STBY')
-    );
+    // Filter out Duty Sup events and STBY events from analytics.
+    // STBY events are not shown in build analytics until moved to the active Daily schedule.
+    const scheduledEvents = events.filter(e => {
+        if (e.flightNumber.includes('Duty Sup')) return false;
+        if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
+        return true;
+    });
     
     const totalEvents = scheduledEvents.length;
     
@@ -1684,12 +1683,10 @@ function generateDfpInternal(
     const courseMedians = new Map<string, number>();
     coursePriorities.forEach(c => courseMedians.set(c, getMedianProgress(c)));
 
-    const today = safeParseDate(buildDate);
-    if (!today) { return []; } // Invalid build date - cannot proceed
+    const today = new Date(buildDate + 'T00:00:00Z');
     const daysSince = (dateStr?: string): number => {
         if (!dateStr) return 999;
-        const eventDate = safeParseDate(dateStr);
-        if (!eventDate) return 999; // Invalid date - treat as very long ago
+        const eventDate = new Date(dateStr + 'T00:00:00Z');
         return Math.floor((today.getTime() - eventDate.getTime()) / (1000 * 3600 * 24));
     };
 
@@ -1800,6 +1797,8 @@ function generateDfpInternal(
     // Uses deficit-based allocation: courses that are behind their target get priority
 const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (!rankedList.length) return [];
+        // If no course priorities configured, return list as-is (no mixing needed)
+        if (!coursePriorities.length) return rankedList;
         
         // STEP 1: Identify and extract Solo-with-TWR-DI block
         const soloWithTwrDiIndices: number[] = [];
@@ -1946,7 +1945,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         
         // CRITICAL: Filter out instructors who already have day events (including from Active DFP)
         const nightEligiblePool = originalInstructors.filter(ip => {
-            if (ip.role !== 'QFI') return false;
+            if (ip.role !== 'QFI' && !ip.isQFI) return false;
             if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, 'flight')) return false;
             
             // NEW: Check if instructor has day events (including Active DFP)
@@ -1972,7 +1971,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // Track this instructor for night assignments
                 intendedNightStaff.add(nfi.name);
 
-                const instructorToUpdate = instructors.find(i => i.idNumber === nfi.idNumber);
+                const instructorToUpdate = instructors.find(i => i.name === nfi.name);
                 if (instructorToUpdate) {
                     const reservationPeriod: UnavailabilityPeriod = {
                         id: `night-res-${nfi.idNumber}`,
@@ -2397,20 +2396,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
             if (type === 'ftd') {
-                // FTD: SIM IPs first, then QFIs
+                // FTD: SIM IPs first, then QFIs (role='QFI' OR isQFI=true)
                 const simIps = instructors.filter(i =>
                     i.role === 'SIM IP' &&
                     !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
                 );
                 const availableQfis = instructors.filter(i =>
-                    i.role === 'QFI' &&
+                    (i.role === 'QFI' || i.isQFI === true) &&
                     !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
                 );
                 candidates = [...simIps, ...availableQfis];
             } else {
-                // FLIGHT = QFI only; CPT/GROUND = any instructor
+                // FLIGHT = QFI only (role='QFI' OR isQFI=true); CPT/GROUND = any instructor
                 candidates = instructors.filter(ip => {
-                    if (type === 'flight' && ip.role !== 'QFI') return false;
+                    if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
                     if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
                     return true;
                 });
@@ -3237,6 +3236,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // STBY flights are extra flights added on top of the main DFP when aircraft run out
     setProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
     
+    
+    
     // Helper: Check if a flight start time already exists (aircraft or STBY flights only)
     const hasFlightStartTime = (time: number, events: Omit<ScheduleEvent, 'date'>[]): boolean => {
         return events.some(e => 
@@ -3287,7 +3288,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return false; // No violation
     };
     
-    // Helper: Check if instructor is available for entire event duration
+    // Helper: Check if instructor is available for entire event duration (uses full brief window)
     const isInstructorAvailableForEvent = (
         instructorName: string,
         startTime: number,
@@ -3307,6 +3308,30 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return eventStart < existingBookingWindow.end && eventEnd > existingBookingWindow.start;
         });
     };
+
+    // Helper: Check if instructor is available for a STBY event.
+    // Respects pre/post flight times of both the proposed STBY event and all existing events,
+    // so e.g. an instructor finishing a flight with 45min post-flight cannot be assigned to a
+    // STBY event with 60min pre-flight unless there is at least 105 minutes between them.
+    const isInstructorAvailableForStby = (
+        instructorName: string,
+        startTime: number,
+        duration: number,
+        syllabusItem: SyllabusItemDetail,
+        events: Omit<ScheduleEvent, 'date'>[]
+    ): boolean => {
+        const preTime = syllabusItem.preFlightTime || 0;
+        const postTime = syllabusItem.postFlightTime || 0;
+        const stbyStart = startTime - preTime;
+        const stbyEnd = startTime + duration + postTime;
+
+        return !events.some(e => {
+            if (!getPersonnel(e).includes(instructorName)) return false;
+            // Use full booking window (pre+post) of the existing event
+            const existingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return stbyStart < existingWindow.end && stbyEnd > existingWindow.start;
+        });
+    };
     
     // Helper: Find best available instructor
     const findBestInstructorForStby = (
@@ -3320,16 +3345,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Get qualified instructors
         let candidates: Instructor[] = [];
         
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Input instructors:', instructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit, location: i.location })));
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - School:', config.school);
-        
         // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
+        // Use same fallback-to-unit logic as instructorsData useMemo to handle DB staff with null location
+        const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
         const locationFilteredInstructors = instructors.filter(i => {
-            const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
-            return i.location === locationFullName;
+            if (i.location) return i.location === locationFullName;
+            if (i.unit) {
+                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true; // No location or unit info - include by default
         });
-        
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
         
         if (type === 'ftd') {
             const simIps = locationFilteredInstructors.filter(i => i.role === 'SIM IP');
@@ -3338,13 +3364,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         } else {
             candidates = locationFilteredInstructors.filter(i => i.role === 'QFI' || i.isQFI === true);
         }
-        
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Filtered candidates:', candidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
-        console.log('🔍 [NEO BUILD DEBUG] generateInstructorCandidates - Event type:', type);
-        
-        // Filter to only available instructors
-        const available = candidates.filter(ip => 
-            isInstructorAvailableForEvent(ip.name, startTime, duration, syllabusItem, events)
+
+        // Apply unit eligibility check (respects staffSharingEnabled setting)
+        const afterUnitFilter = candidates.filter(ip => isInstructorEligibleByUnit(ip, trainee));
+        candidates = afterUnitFilter;
+
+        // Filter to only available instructors using STBY-specific availability check.
+        // Respects pre/post flight times of both the STBY event and all existing events.
+        const available = candidates.filter(ip =>
+            isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
         );
         
         if (available.length === 0) return null;
@@ -3406,150 +3434,127 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return Math.max(4, lineEvents.size) + 1;
     };
     
-    // Build list of trainees who need STBY flights (unscheduled on aircraft)
+    // STBY INSTRUCTOR ASSIGNMENT
+    // Strategy: STBY events already exist in generatedEvents (placed by scheduleList via hardModeStby
+    // with instructor='', or placed by prior STBY logic). We need to:
+    //   PASS 1: Try to assign a real instructor to each existing STBY flight event (in-place update)
+    //   PASS 2: Any remaining STBY events without an instructor get 'TBA'
+    // We do NOT create duplicate STBY events — we only update existing ones.
+
+    // Find all existing STBY flight events that have no instructor assigned yet
+    const unassignedStbyFlights = generatedEvents.filter(e =>
+        e.type === 'flight' &&
+        e.resourceId.startsWith('STBY') &&
+        (!e.instructor || e.instructor === '' || e.instructor === 'TBA')
+    );
+
+    // PASS 1: Try to assign a real instructor to each unassigned STBY event
+    let stbyWithInstructor = 0;
+    let stbyWithTBA = 0;
+
+    for (const stbyEvent of unassignedStbyFlights) {
+        // Find the trainee object for this event
+        const trainee = (config.trainees as Trainee[]).find(t => t.fullName === stbyEvent.student);
+        if (!trainee) {
+            stbyEvent.instructor = 'TBA';
+            stbyWithTBA++;
+            continue;
+        }
+
+        // Find the syllabus item for this event
+        const syllabusItem = syllabusDetails.find(s => s.id === stbyEvent.flightNumber);
+        if (!syllabusItem) {
+            stbyEvent.instructor = 'TBA';
+            stbyWithTBA++;
+            continue;
+        }
+
+        // Temporarily remove this event from generatedEvents so it doesn't block the instructor check
+        const eventIdx = generatedEvents.indexOf(stbyEvent);
+        if (eventIdx !== -1) generatedEvents.splice(eventIdx, 1);
+
+        // Try to find an available instructor for this STBY event at its scheduled time
+        const instructor = findBestInstructorForStby(
+            trainee,
+            syllabusItem,
+            stbyEvent.startTime,
+            stbyEvent.duration,
+            'flight',
+            generatedEvents
+        );
+
+        // Re-add the event (use 0 if splice removed it, otherwise use original position)
+        const reinsertIdx = eventIdx !== -1 ? eventIdx : generatedEvents.length;
+        generatedEvents.splice(reinsertIdx, 0, stbyEvent);
+
+        if (instructor) {
+            stbyEvent.instructor = instructor;
+            stbyWithInstructor++;
+        } else {
+            stbyEvent.instructor = 'TBA';
+            stbyWithTBA++;
+        }
+    }
+
+    
+
+    // Also handle trainees in nextEventLists.flight who have NO STBY event yet at all
+    // (e.g. trainees not caught by hardModeStby but still without a scheduled flight)
     const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next) return false;
-        // Check if this trainee's next flight was scheduled on an aircraft
-        return !generatedEvents.some(e => 
-            e.student === trainee.fullName && 
+        // Check if this trainee has ANY flight event (aircraft or STBY)
+        return !generatedEvents.some(e =>
+            e.student === trainee.fullName &&
             e.flightNumber === next.id &&
-            e.type === 'flight' &&
-            !e.resourceId.startsWith('STBY')
+            e.type === 'flight'
         );
     });
+
     
-    console.log('Trainees needing STBY flights:', traineesNeedingStby.length);
-    
-    // TWO-PASS APPROACH: Maximize instructor-allocated STBY events
-    const timeIncrement = 5 / 60; // 5 minutes
-    const scheduledTrainees = new Set<string>();
-    
-    // PASS 1: Schedule STBY events ONLY where instructor is available
-    console.log('PASS 1: Scheduling STBY with instructors available...');
-    console.log(`Flying window: ${flyingStartTime.toFixed(2)} to ${flyingEndTime.toFixed(2)}`);
-    
-    for (const trainee of traineesNeedingStby) {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
-        if (!next) continue;
-        
-        let placed = false;
-        // Try to find a time slot where an instructor IS available
-        for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
-            // Debug logging for 10:00-10:20 window
-            const isDebugWindow = time >= 10.0 && time <= 10.33;
-            
-            // Check if flight already starts at this time
-            if (hasFlightStartTime(time, generatedEvents)) {
-                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Flight already exists`);
-                continue;
+
+    if (traineesNeedingStby.length > 0) {
+        const timeIncrement = 5 / 60;
+        for (const trainee of traineesNeedingStby) {
+            const { next } = traineeNextEventMap.get(trainee.fullName)!;
+            if (!next) continue;
+
+            // Try to find a slot with an instructor
+            let placed = false;
+            for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+                if (hasFlightStartTime(time, generatedEvents)) continue;
+                const flightEndTime = time + next.duration;
+                if (flightEndTime > flyingEndTime) continue;
+                if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
+
+                const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
+                const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
+
+                generatedEvents.push({
+                    id: uuidv4(),
+                    type: 'flight',
+                    instructor: instructor || 'TBA',
+                    student: trainee.fullName,
+                    flightNumber: next.id,
+                    duration: next.duration,
+                    startTime: time,
+                    resourceId: `STBY ${stbyLine}`,
+                    color: courseColors[trainee.course] || 'bg-gray-500',
+                    flightType: 'Dual',
+                    locationType: 'Local',
+                    origin: school,
+                    destination: school,
+                    preStart: next.preFlightTime,
+                    postEnd: next.postFlightTime
+                });
+
+                placed = true;
+                break;
             }
-            
-            // Check if flight block time fits within flying window
-            const flightEndTime = time + next.duration;
-            if (flightEndTime > flyingEndTime) {
-                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Would exceed flying window`);
-                continue;
-            }
-            
-            // Check "8 flights per hour" rule
-            if (wouldViolate8PerHourRule(time, generatedEvents)) {
-                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: Would violate 8-per-hour rule`);
-                continue;
-            }
-            
-            // Try to find available instructor
-            const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
-            
-            // ONLY schedule if instructor is available (skip TBA for now)
-            if (!instructor) {
-                if (isDebugWindow) console.log(`  ${time.toFixed(2)}: No instructor available`);
-                continue;
-            }
-            
-            // Find available STBY line
-            const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
-            
-            // Create STBY flight event with instructor
-            generatedEvents.push({
-                id: uuidv4(),
-                type: 'flight',
-                instructor: instructor,
-                student: trainee.fullName,
-                flightNumber: next.id,
-                duration: next.duration,
-                startTime: time,
-                resourceId: `STBY ${stbyLine}`,
-                color: courseColors[trainee.course] || 'bg-gray-500',
-                flightType: 'Dual',
-                locationType: 'Local',
-                origin: school,
-                destination: school,
-                preStart: next.preFlightTime,
-                postEnd: next.postFlightTime
-            });
-            
-            console.log(`PASS 1: STBY at ${time.toFixed(2)} for ${trainee.fullName}, instructor: ${instructor}`);
-            scheduledTrainees.add(trainee.fullName);
-            placed = true;
-            break; // Move to next trainee
-        }
-        
-        if (!placed) {
-            console.log(`PASS 1: Could not place ${trainee.fullName} anywhere in flying window`);
         }
     }
+
     
-    console.log(`PASS 1 complete: ${scheduledTrainees.size} STBY flights with instructors`);
-    
-    // PASS 2: Go back to beginning and schedule remaining trainees with TBA
-    // This ensures we fill ALL available slots, starting from the beginning of the day
-    console.log('PASS 2: Going back to beginning to schedule remaining STBY with TBA...');
-    const remainingTrainees = traineesNeedingStby.filter(t => !scheduledTrainees.has(t.fullName));
-    console.log(`Remaining trainees needing STBY: ${remainingTrainees.length}`);
-    
-    // Restart from beginning of flying window for Pass 2
-    for (const trainee of remainingTrainees) {
-        const { next } = traineeNextEventMap.get(trainee.fullName)!;
-        if (!next) continue;
-        
-        // Scan from START of flying window (not where Pass 1 left off)
-        for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
-            if (hasFlightStartTime(time, generatedEvents)) continue;
-            
-            const flightEndTime = time + next.duration;
-            if (flightEndTime > flyingEndTime) continue;
-            
-            if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
-            
-            const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
-            
-            // Create STBY flight event with TBA (no instructor available)
-            generatedEvents.push({
-                id: uuidv4(),
-                type: 'flight',
-                instructor: 'TBA',
-                student: trainee.fullName,
-                flightNumber: next.id,
-                duration: next.duration,
-                startTime: time,
-                resourceId: `STBY ${stbyLine}`,
-                color: courseColors[trainee.course] || 'bg-gray-500',
-                flightType: 'Dual',
-                locationType: 'Local',
-                origin: school,
-                destination: school,
-                preStart: next.preFlightTime,
-                postEnd: next.postFlightTime
-            });
-            
-            console.log(`PASS 2: STBY at ${time.toFixed(2)} for ${trainee.fullName}, instructor: TBA`);
-            scheduledTrainees.add(trainee.fullName);
-            break; // Move to next trainee
-        }
-    }
-    
-    console.log(`PASS 2 complete: Total STBY flights: ${scheduledTrainees.size} (Pass 1: ${scheduledTrainees.size - remainingTrainees.length}, Pass 2: ${remainingTrainees.length})`);
     
     
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
@@ -3946,6 +3951,20 @@ const App: React.FC = () => {
         return `${year}-${month}-${day}`;
     };
 
+    // Helper: safely parse a date string to Date object if valid, otherwise return null
+    const safeParseDate = (dateStr: string | undefined | null): Date | null => {
+        if (!dateStr || typeof dateStr !== 'string' || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            console.warn('[safeParseDate] Invalid date string provided:', dateStr);
+            return null;
+        }
+        const dateObj = new Date(`${dateStr}T00:00:00Z`);
+        if (isNaN(dateObj.getTime())) {
+            console.warn('[safeParseDate] Failed to parse date string:', dateStr);
+            return null;
+        }
+        return dateObj;
+    };
+
     // Dark Message Modal utility functions
     const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info', autoCloseDelay?: number) => {
         return new Promise<void>((resolve) => {
@@ -3987,7 +4006,7 @@ const App: React.FC = () => {
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => getLocalDateString());
-    const [events, setEvents] = useState<ScheduleEvent[]>(ESL_DATA.events);
+    const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
     const [highlightedField, setHighlightedField] = useState<'startTime' | 'instructor' | 'student' | null>(null);
@@ -4013,6 +4032,7 @@ const App: React.FC = () => {
     
     // Visual Adjust state
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const _scheduleUpdatePersistTimer = useRef<number | null>(null);
     const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
 
     // Data Source Settings - manages which sources are active (drives immediate filtering)
@@ -4039,48 +4059,43 @@ const App: React.FC = () => {
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
-    const [allInstructorsData, setInstructorsData] = useState<Instructor[]>(ESL_DATA.instructors);
-    
-    // Monitor allInstructorsData for duplicates
-    useEffect(() => {
-        const instructorIds = new Map();
-        const duplicates: any[] = [];
-        allInstructorsData.forEach((instructor: any) => {
-            if (instructorIds.has(instructor.idNumber)) {
-                duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
-            }
-            instructorIds.set(instructor.idNumber, instructor);
-        });
-        
-        if (duplicates.length > 0) {
-            console.error('🔴 DUPLICATES FOUND IN allInstructorsData STATE:', duplicates.length);
-            console.error('Duplicate details:', duplicates);
-            console.error('All Burns entries in state:', allInstructorsData.filter((i: any) => i.name.includes('Burns')));
-        } else {
-            console.log('🟢 allInstructorsData state is clean - no duplicates');
-        }
-    }, [allInstructorsData]);
+    const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
 
-// DATA TRACKING: Initial data load
-useEffect(() => {
-  console.log('🔍 [DATA TRACKING] App initialized with ESL_DATA.instructors');
-  console.log('🔍 [DATA TRACKING v3] Total instructors from mockdata:', allInstructorsData.length);
-  console.log('🔍 [DATA TRACKING v3] First 3 instructors:', allInstructorsData.slice(0, 3).map(i => ({ id: i.idNumber, name: i.name, category: i.category })));
-}, []);
 
     const [archivedInstructorsData, setArchivedInstructorsData] = useState<Instructor[]>([]);
-    const [allTraineesData, setTraineesData] = useState<Trainee[]>(ESL_DATA.trainees.map(t => ({ ...t, _dataSource: 'mockdata' as const })));
+    const [allTraineesData, setTraineesData] = useState<Trainee[]>([]);
     const [archivedTraineesData, setArchivedTraineesData] = useState<Trainee[]>([]);
+
+    // Refs so async callbacks always read latest instructor/trainee data (avoids stale closures)
+    const allInstructorsDataRef = useRef<Instructor[]>([]);
+    const allTraineesDataRef    = useRef<Trainee[]>([]);
+    useEffect(() => { allInstructorsDataRef.current = allInstructorsData; }, [allInstructorsData]);
+    useEffect(() => { allTraineesDataRef.current    = allTraineesData;    }, [allTraineesData]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
+    // Also filters by location (ESL = East Sale, PEA = Pearce) to prevent wrong-location staff entering the build
     const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
+        const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+
+        // Location filter: same logic as traineesData
+        const locationFiltered = allInstructorsData.filter((i: any) => {
+            // If no location and no unit info, include by default (don't exclude unknowns)
+            if (!i.location && !i.unit) return true;
+            if (i.location) return i.location === locationFullName;
+            if (i.unit) {
+                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true;
+        });
+
         if (!mockOn && !dbOn) return [];
-        if (mockOn && dbOn) return allInstructorsData;
-        if (mockOn && !dbOn) return allInstructorsData.filter(i => (i as any)._dataSource !== 'database');
-        return allInstructorsData.filter(i => (i as any)._dataSource === 'database');
-    }, [allInstructorsData, dataSourceSettings]);
+        if (mockOn && dbOn) return locationFiltered;
+        if (mockOn && !dbOn) return locationFiltered.filter((i: any) => (i as any)._dataSource !== 'database');
+        return locationFiltered.filter((i: any) => (i as any)._dataSource === 'database');
+    }, [allInstructorsData, dataSourceSettings, school]);
 
     const traineesData = useMemo(() => {
         const { trainee: mockOn, traineeDb: dbOn } = dataSourceSettings;
@@ -4150,6 +4165,12 @@ useEffect(() => {
         const auditUserString = rank ? `${rank} ${formattedName}` : formattedName;
         setCurrentUser(auditUserString);
         console.log('[AUDIT] setCurrentUser ->', auditUserString);
+
+        // Feed the real rank back into sessionUser so the bottom-right display shows correct rank
+        if (rank) {
+            setSessionUser(prev => prev ? { ...prev, militaryRank: rank } : prev);
+            console.log('[RANK] Updated sessionUser.militaryRank ->', rank);
+        }
     };
 
     // Check for existing session on app load
@@ -4355,57 +4376,129 @@ useEffect(() => {
             setCurrentUser(userString);
         }
     }, [authUser, currentUser, currentUserName]);
+    // Syllabus state declared here before useEffects that reference it to avoid TDZ errors
+    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
+    const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
+    const [syllabusError, setSyllabusError] = useState<string | null>(null);
+
+// Load syllabus from DB on mount (startup loading with cache)
+    useEffect(() => {
+        const loadSyllabus = async () => {
+            setSyllabusLoading(true);
+            setSyllabusError(null);
+            try {
+                const result = await loadSyllabusFromDB();
+                if (result.syllabus.length > 0) {
+                    // Check if DB syllabus uses wrong codes (e.g. BGF_GND_001 instead of BGF1)
+                    // Wrong codes don't match PT-051 score records, so fall back to mockData syllabus
+                    const firstItem = result.syllabus[0];
+                    const hasWrongCodes = (firstItem?.code?.includes('_GND_') ||
+                                          firstItem?.code?.includes('_FLT_') ||
+                                          firstItem?.code?.includes('_SIM_')) ?? false;
+                    if (hasWrongCodes) {
+                        console.warn(`⚠️ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Falling back to built-in syllabus (${INITIAL_SYLLABUS_DETAILS.length} items). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix permanently.`);
+                        clearSyllabusCache(); // Clear bad cache so next load re-fetches from DB
+                        setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                    } else {
+                        // Validate items have courses field; fall back to INITIAL if missing
+                        const hasValidCourses = result.syllabus.every(item => item.courses && item.courses.length > 0);
+                        if (hasValidCourses) {
+                            setSyllabusDetails(result.syllabus);
+                            if (result.source === 'expired-cache') {
+                                console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
+                                setSyllabusError(result.error || null);
+                            } else {
+                                console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
+                            }
+                        } else {
+                            console.warn(`⚠️ [Syllabus] DB syllabus items missing courses field. Falling back to built-in syllabus.`);
+                            setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                        }
+                    }
+                } else {
+                    console.warn('⚠️ [Syllabus] No DB syllabus available - falling back to built-in syllabus');
+                    setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                    setSyllabusError(result.error || null);
+                }
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Unknown error';
+                console.error('❌ [Syllabus] Failed to load syllabus:', msg);
+                // Always fall back to INITIAL_SYLLABUS_DETAILS on error
+                setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                setSyllabusError(msg);
+            } finally {
+                setSyllabusLoading(false);
+            }
+        };
+        loadSyllabus();
+    }, []);
+
 // Load data from API on mount — credentials:include sends session cookie automatically
     useEffect(() => {
-        // One-time migration: force mock data toggles OFF permanently
-        // Clears any stale localStorage 'staff: true' settings from old defaults
+        // One-time migration: reset mock data toggles to OFF if they were previously defaulted ON
+        // This prevents mock data contaminating real staff/trainee lists after DB is populated
         try {
             const stored = localStorage.getItem('dataSourceSettings');
             if (stored) {
                 const parsed = JSON.parse(stored);
-                if (parsed.staff === true || parsed.trainee === true) {
+                // If mock data toggles were saved as true (old default), reset them to false
+                // We detect "old default" by checking if staffDb is also true (new installs have DB on, mock off)
+                if (parsed.staff === true && parsed.staffDb === true && !parsed._mockDataMigrated) {
                     parsed.staff = false;
                     parsed.trainee = false;
+                    parsed._mockDataMigrated = true;
                     localStorage.setItem('dataSourceSettings', JSON.stringify(parsed));
                     setDataSourceSettings(prev => ({ ...prev, staff: false, trainee: false }));
-                    console.log('🔧 Migrated dataSourceSettings: mock data toggles forced OFF');
+                    console.log('🔧 Migrated dataSourceSettings: mock data toggles reset to OFF');
                 }
             }
-        } catch (e) {}
+        } catch (e) {
+            console.warn('Could not migrate dataSourceSettings');
+        }
 
         const loadInitialData = async () => {
-            console.log('🔄 Starting to load initial data...');
             try {
                 const data = await initializeData();
-                console.log('📦 Data received from initializeData:', {
-                    instructorsCount: data.instructors.length,
-                    traineesCount: data.trainees.length,
-                    aircraftCount: data.aircraft.length,
-                    scoresCount: Object.keys(data.scores).length,
-                    eventsCount: data.events.length,
-                });
                 
-                // Check for duplicates before setting state
-                const instructorIds = new Map();
-                const duplicates: any[] = [];
-                data.instructors.forEach((instructor: any) => {
-                    if (instructorIds.has(instructor.idNumber)) {
-                        duplicates.push({ id: instructor.idNumber, name: instructor.name, existing: instructorIds.get(instructor.idNumber).name });
+                // Strip any leftover __deploy__ tags from DB data at load time
+                // (These may have been left in DB if cleanup failed in a previous session)
+                const stripDeployTags = (person: any) => {
+                    if (!person.unavailability || !Array.isArray(person.unavailability)) return person;
+                    const cleaned = person.unavailability.filter((p: any) => !p?.notes?.startsWith('__deploy__'));
+                    if (cleaned.length !== person.unavailability.length) {
+                        console.log('[StartupCleanup] Stripped', person.unavailability.length - cleaned.length, '__deploy__ tag(s) from', person.name || person.fullName);
                     }
-                    instructorIds.set(instructor.idNumber, instructor);
-                });
-                
-                if (duplicates.length > 0) {
-                    console.error('❌ DUPLICATES IN initializeData() RESULT:', duplicates.length);
-                    console.error('Duplicate details:', duplicates);
-                    console.error('All Burns entries:', data.instructors.filter((i: any) => i.name.includes('Burns')));
-                } else {
-                    console.log('✅ No duplicates found in initializeData() result');
-                }
-                
-                setInstructorsData(data.instructors);
-                setTraineesData(data.trainees);
+                    return { ...person, unavailability: cleaned };
+                };
+                const cleanedInstructors = data.instructors.map(stripDeployTags);
+                const cleanedTrainees    = data.trainees.map(stripDeployTags);
+                setInstructorsData(cleanedInstructors);
+                setIsStaffLoaded(true);
+                setTraineesData(cleanedTrainees);
+                setIsTraineeLoaded(true);
+                // Also clean the DB asynchronously so future loads are clean too
+                fetch('/api/cleanup-deploy-unavailability', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include'
+                }).then(r => r.json()).then(d => {
+                    if (d.personnelFixed > 0 || d.traineesFixed > 0) {
+                        console.log('[StartupCleanup] DB cleanup fixed', d.personnelFixed, 'personnel and', d.traineesFixed, 'trainees');
+                    }
+                }).catch(e => console.warn('[StartupCleanup] DB cleanup failed:', e));
                 setEvents(data.events);
+
+                // Load courses from DB if any exist
+                if (data.courses && data.courses.length > 0) {
+                    console.log('🎓 Loading', data.courses.length, 'courses from DB');
+                    setCourses(data.courses);
+                    // Rebuild courseColors from loaded courses
+                    const colors: { [key: string]: string } = {};
+                    data.courses.forEach((c: any) => { if (c.name && c.color) colors[c.name] = c.color; });
+                    setCourseColors(prev => ({ ...prev, ...colors }));
+                    setIsCoursesLoaded(true); // FIX: was never called when courses exist in DB
+                } else {
+                    setIsCoursesLoaded(true);
+                    console.log('🎓 No courses in DB yet - keeping existing course state');
+                }
 
                 // --- Individual LMP Sync ---
                 // For each trainee, read their completed PT-051 Score records from DB,
@@ -4420,10 +4513,10 @@ useEffect(() => {
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
-                        const bpcIpcSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                        const bpcIpcSyllabus = syllabusDetails.filter(
                             (item: any) => !item.lmpType || item.lmpType === 'Master LMP'
                         );
-                        const ficSyllabus = INITIAL_SYLLABUS_DETAILS.filter(
+                        const ficSyllabus = syllabusDetails.filter(
                             (item: any) => item.courses && item.courses.includes('FIC')
                         );
                         const syllabusData: Record<string, any[]> = {
@@ -4586,7 +4679,7 @@ useEffect(() => {
                             const alreadySet = newLMPs.has(trainee.fullName);
 
                             if (!alreadySet || isFicTrainee) {
-                                const masterLMP = INITIAL_SYLLABUS_DETAILS.filter(item => {
+                                const masterLMP = syllabusDetails.filter(item => {
                                     if (lmpType === 'BPC+IPC') {
                                         return !item.lmpType || item.lmpType === 'Master LMP';
                                     }
@@ -4625,9 +4718,9 @@ useEffect(() => {
                 // Without this, DB-only mode shows zero trainees because CourseRosterView
                 // only renders courses that exist in courseColors
                 const defaultColors = [
-                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
-                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
-                    'bg-red-400/50', 'bg-cyan-400/50'
+                    'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',
+                    'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
+                    'bg-red-400/80', 'bg-cyan-400/80'
                 ];
                 const dbTraineesFromLoad = data.trainees.filter((t: any) => t._dataSource === 'database');
                 const dbCourseNamesFromLoad = [...new Set(dbTraineesFromLoad.map((t: any) => t.course).filter(Boolean))] as string[];
@@ -4653,6 +4746,47 @@ useEffect(() => {
         };
         loadInitialData();
     }, []);
+
+    // Re-initialize traineeLMPs whenever syllabusDetails loads (fixes race condition where
+    // loadInitialData runs before syllabusDetails is populated, leaving all LMPs empty)
+    useEffect(() => {
+        if (!syllabusDetails.length || !allTraineesData.length) return;
+        console.log(`[LMP Re-init] syllabusDetails loaded (${syllabusDetails.length} items), re-initializing traineeLMPs for ${allTraineesData.length} trainees`);
+        setTraineeLMPs(prev => {
+            const newLMPs = new Map(prev);
+            allTraineesData.forEach((trainee: any) => {
+                // Derive lmpType
+                let lmpType = trainee.lmpType || 'BPC+IPC';
+                if (lmpType === 'BPC+IPC' && trainee.course) {
+                    const courseUpper = (trainee.course as string).toUpperCase();
+                    if (courseUpper.startsWith('FIC')) {
+                        lmpType = 'FIC';
+                    }
+                }
+                const isFicTrainee = lmpType === 'FIC';
+                const alreadySet = newLMPs.has(trainee.fullName);
+                // Always set for FIC trainees; set for others only if not yet initialized
+                if (!alreadySet || isFicTrainee) {
+                    const masterLMP = syllabusDetails.filter(item => {
+                        if (lmpType === 'BPC+IPC') {
+                            return !item.lmpType || item.lmpType === 'Master LMP';
+                        }
+                        return item.courses && item.courses.includes(lmpType);
+                    });
+                    if (masterLMP.length > 0) {
+                        newLMPs.set(trainee.fullName, [...masterLMP]);
+                        console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
+                    } else {
+                        // Fallback: use entire syllabus if no specific match
+                        newLMPs.set(trainee.fullName, [...syllabusDetails]);
+                        console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => fallback to full syllabus (${syllabusDetails.length} events)`);
+                    }
+                }
+            });
+            console.log(`[LMP Re-init] Done. ${newLMPs.size} LMPs set.`);
+            return newLMPs;
+        });
+    }, [syllabusDetails, allTraineesData]);
 
     // Load persisted daily snapshots (last 5 days) + legacy historical data from DB
     useEffect(() => {
@@ -4861,15 +4995,62 @@ useEffect(() => {
     const authUserPermissions = getPermissionsFromAuthRole(authUser?.role);
     const combinedPermissions = [...authUserPermissions, ...(currentUser?.permissions || [])];
     const currentUserPermission = getHighestPermission(combinedPermissions);
-    const [scores, setScores] = useState<Map<string, Score[]>>(ESL_DATA.scores);
-    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(ESL_DATA.pt051Assessments);
-    const [courses, setCourses] = useState<Course[]>(ESL_DATA.courses);
-    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>(ESL_DATA.courseColors);
-    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>(ESL_DATA.archivedCourses);
-    const [coursePriorities, setCoursePriorities] = useState<string[]>(ESL_DATA.coursePriorities);
-    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(ESL_DATA.coursePercentages);
-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
-    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(ESL_DATA.traineeLMPs);
+    const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
+    const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
+    const [courses, setCourses] = useState<Course[]>([]);
+    const [courseColors, setCourseColors] = useState<{ [key: string]: string }>({});
+    const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
+    const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
+    const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
+    const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
+
+    // Auto-populate coursePriorities & coursePercentages from traineesData (locality-filtered).
+    // traineesData is already filtered by the active school (ESL/PEA), so only courses
+    // belonging to the current locality are included. If saved priorities exist (from DB
+    // settings load), this will only add any NEW locality courses not already in the list,
+    // and will remove courses that no longer belong to the current locality.
+    // NOTE: placed here (after state declarations) to avoid temporal dead zone errors.
+    useEffect(() => {
+        // Derive unique course names from locality-filtered trainees that also exist in courseColors
+        const localityCourseNames = [...new Set(
+            traineesData
+                .map(t => t.course)
+                .filter(c => c && courseColors[c])
+        )];
+        if (localityCourseNames.length === 0) return;
+
+        setCoursePriorities(prev => {
+            // Keep only courses that belong to the current locality
+            const localitySet = new Set(localityCourseNames);
+            const filtered = prev.filter(c => localitySet.has(c));
+            const existingSet = new Set(filtered);
+            const newCourses = localityCourseNames.filter(c => !existingSet.has(c));
+            if (newCourses.length === 0 && filtered.length === prev.length) return prev;
+            return [...filtered, ...newCourses];
+        });
+
+        setCoursePercentages(prev => {
+            const updated = new Map(prev);
+            let changed = false;
+            const localitySet = new Set(localityCourseNames);
+            // Remove courses not in current locality
+            for (const key of updated.keys()) {
+                if (!localitySet.has(key)) {
+                    updated.delete(key);
+                    changed = true;
+                }
+            }
+            // Add missing locality courses
+            localityCourseNames.forEach(course => {
+                if (!updated.has(course)) {
+                    const equalShare = Math.max(5, Math.floor(100 / localityCourseNames.length));
+                    updated.set(course, equalShare);
+                    changed = true;
+                }
+            });
+            return changed ? updated : prev;
+        });
+    }, [traineesData, courseColors]);
     
     // Event Limits State (Lifted from SettingsView)
     const [eventLimits, setEventLimits] = useState<EventLimits>({
@@ -4931,6 +5112,9 @@ useEffect(() => {
     const [ftdTurnaround, setFtdTurnaround] = useState(0.5);
     const [cptTurnaround, setCptTurnaround] = useState(0.5);
     const [isBuildingDfp, setIsBuildingDfp] = useState(false);
+    const [isStaffLoaded, setIsStaffLoaded] = useState(false);
+    const [isTraineeLoaded, setIsTraineeLoaded] = useState(false);
+    const [isCoursesLoaded, setIsCoursesLoaded] = useState(false);
     const [dfpBuildProgress, setDfpBuildProgress] = useState({ message: '', percentage: 0 });
     const [showDateWarning, setShowDateWarning] = useState(false);
     const [unavailabilityNotifications, setUnavailabilityNotifications] = useState<string[]>([]);
@@ -5430,6 +5614,11 @@ useEffect(() => {
 
     // Settings state
     const [locations, setLocations] = useState<string[]>(['East Sale', 'Pearce', 'Williamtown', 'Amberley', 'Tindal', 'Edinburgh']);
+    const [locationOpAreas, setLocationOpAreas] = useState<Record<string, string[]>>({
+        'East Sale': ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'],
+        'Pearce': [],
+        'Williamtown': [],
+    });
     const [sctEvents, setSctEvents] = useState<string[]>(['SCT GF', 'SCT IF', 'SCT FORM', 'SCT Nav', 'Night SCT']);
     const [units, setUnits] = useState<string[]>(['1FTS', 'CFS', '2FTS', '76SQN', '77SQN', '1SQN', '6SQN', '2SQN', '10SQN']);
     const [unitLocations, setUnitLocations] = useState<Record<string, string>>({
@@ -5468,6 +5657,7 @@ useEffect(() => {
                 if (saved.locations?.length) setLocations(saved.locations);
                 if (saved.units?.length) setUnits(saved.units);
                 if (saved.unitLocations) setUnitLocations(saved.unitLocations);
+                if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
                 if (saved.eventLimits) setEventLimits(saved.eventLimits);
                 if (saved.preferredDutyPeriod != null) setPreferredDutyPeriod(saved.preferredDutyPeriod);
                 if (saved.maxCrewDutyPeriod != null) setMaxCrewDutyPeriod(saved.maxCrewDutyPeriod);
@@ -5490,6 +5680,12 @@ useEffect(() => {
                 if (saved.sctEvents?.length) setSctEvents(saved.sctEvents);
                 if (saved.formationCallsigns?.length) setFormationCallsigns(saved.formationCallsigns);
                 if (saved.courseColors && Object.keys(saved.courseColors).length) setCourseColors(saved.courseColors);
+                if (saved.coursePercentages && Object.keys(saved.coursePercentages).length) {
+                    setCoursePercentages(new Map(Object.entries(saved.coursePercentages).map(([k, v]) => [k, v as number])));
+                }
+                if (saved.coursePriorities && saved.coursePriorities.length) {
+                    setCoursePriorities(saved.coursePriorities);
+                }
                 if (saved.phraseBank && Object.keys(saved.phraseBank).length) setPhraseBank(saved.phraseBank);
                 if (saved.cancellationCodes?.length) setCancellationCodes(saved.cancellationCodes);
                 // Merge DB currencies with initial defaults — ensures new fields/currencies are always present
@@ -5500,7 +5696,11 @@ useEffect(() => {
                     setMasterCurrencies(merged.masters);
                     setCurrencyRequirements(merged.requirements);
                 }
-                if (saved.syllabusDetails?.length) setSyllabusDetails(saved.syllabusDetails);
+                // NOTE: syllabusDetails intentionally NOT loaded from settings DB.
+                // syllabusDetails is always set from INITIAL_SYLLABUS_DETAILS (mockData) or a live DB
+                // syllabus fetch. Old saved settings may have items missing the `courses` field,
+                // which would break SyllabusView filtering (shows "No events found").
+                // The loadSyllabus useEffect above handles all syllabus loading with proper fallback.
                 if (saved.organisationSettings) {
                     console.log('[App] 🏢 Setting organisationSettings from DB:', JSON.stringify(saved.organisationSettings));
                     setOrganisationSettings(saved.organisationSettings);
@@ -5543,6 +5743,7 @@ useEffect(() => {
             locations,
             units,
             unitLocations,
+            locationOpAreas,
             eventLimits,
             preferredDutyPeriod,
             maxCrewDutyPeriod,
@@ -5569,14 +5770,19 @@ useEffect(() => {
             cancellationCodes,
             masterCurrencies,
             currencyRequirements,
-            syllabusDetails,
+            // NOTE: syllabusDetails intentionally excluded from settings save.
+            // Syllabus is always loaded from INITIAL_SYLLABUS_DETAILS or DB syllabus API,
+            // never from the general settings blob. This prevents stale data overwriting
+            // the built-in syllabus with items that may lack the 'courses' field.
             organisationSettings,
+            coursePriorities,
+            coursePercentages: Object.fromEntries(coursePercentages),
         });
 
         saveSettingsToDB(snapshot, sessionUser?.userId);
     }, [
         settingsLoaded,
-        locations, units, unitLocations,
+        locations, units, unitLocations, locationOpAreas,
         eventLimits,
         preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
         flightTurnaround, ftdTurnaround, cptTurnaround,
@@ -5587,7 +5793,8 @@ useEffect(() => {
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
         masterCurrencies, currencyRequirements,
-        syllabusDetails, organisationSettings,
+        organisationSettings,
+        coursePriorities, coursePercentages,
     ]);
 
     // Baseline schedule state
@@ -5608,42 +5815,43 @@ useEffect(() => {
         
         if (activeView === 'Program Schedule' || activeView === 'DailyFlyingProgram' || activeView === 'InstructorSchedule' || activeView === 'TraineeSchedule') {
             // Check all events across all dates for deployments that overlap with current date
-            const todayDate = safeParseDate(date);
-            if (!todayDate) { return resources; }
-            const todayStart = todayDate.getTime();
+            const todayStart = new Date(`${date}T00:00:00Z`).getTime();
             const todayEnd = new Date(todayStart);
             todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
             const todayEndTime = todayEnd.getTime();
             
             const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
             const overlappingDeployments = allEvents.filter(event => {
+                if (!event.date || typeof event.date !== 'string' || !event.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    console.warn('[DeploymentCount] Event has invalid date format, skipping:', event.id, event.date);
+                    return false;
+                }
                 if (event.type !== 'deployment') return false;
                 
-                const eventDate = safeParseDate(event.date);
-                if (!eventDate) { return false; }
-                const eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
+                const eventDateObj = safeParseDate(event.date);
+                if (!eventDateObj) {
+                    console.warn('[DeploymentCount] Event has invalid date, skipping:', event.id, event.date);
+                    return false;
+                }
+                const eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
                 const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
                 
                 return eventStartMs < todayEndTime && eventEndMs > todayStart;
             });
             
             deploymentCount = overlappingDeployments.length;
-            console.log(`Deployments overlapping with ${date}:`, overlappingDeployments);
         } else if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView)) {
             // For next day build, check if any deployment exists in nextDayBuildEvents
             const deploymentEvents = nextDayBuildEvents.filter(event => event.type === 'deployment');
             deploymentCount = deploymentEvents.length;
-            console.log('Next day build deployment events:', deploymentEvents);
         }
         
-        console.log('deploymentCount:', deploymentCount);
         
         // Build PC-21 resources, replacing the last N with "Deployed X" if needed
         const pc21Resources = Array.from({ length: pc21Count }, (_, i) => {
             const deploymentIndex = pc21Count - i;
             if (deploymentIndex <= deploymentCount) {
                 const deployNum = deploymentCount - deploymentIndex + 1;
-                console.log(`Transforming PC-21 ${i + 1} to Deployed ${deployNum}`);
                 return `Deployed ${deployNum}`;
             }
             return `PC-21 ${i + 1}`;
@@ -5878,27 +6086,45 @@ useEffect(() => {
     }, [eventsForDate]);
     
     const nextDayEventsForStaffTraineeSchedule = useMemo(() => {
-        return nextDayBuildEvents.filter(e => !e.resourceId.startsWith('STBY'));
+        // Include ALL events including STBY in the staff/trainee schedule view.
+        // STBY events show the trainee (and instructor if assigned) their upcoming commitment.
+        // STBY events are still excluded from build analytics until moved to the active Daily schedule.
+        return nextDayBuildEvents;
     }, [nextDayBuildEvents]);
 
     const eventSegmentsForDate = useMemo(() => {
         const segments: EventSegment[] = [];
-        const todayDate = safeParseDate(date);
-        if (!todayDate) { return segments; }
-        const todayStart = todayDate.getTime();
+        const todayStart = new Date(`${date}T00:00:00Z`).getTime();
         const todayEnd = new Date(todayStart);
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
     
-        // FIX: Explicitly type allEvents to aid TypeScript's inference.
-        const allEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
+        // FIX: Only load events for the currently viewed date to avoid ghost tiles from other dates.
+        const rawEvents: ScheduleEvent[] = (publishedSchedules[date] || []);
+        // Deduplicate by event ID - publishedSchedules[date] may contain duplicate IDs causing stacked tiles
+        const seenEIds = new Set<string>();
+        const allEvents = rawEvents.filter(e => {
+            if (seenEIds.has(e.id)) return false;
+            // Validate that the event has a proper date string in YYYY-MM-DD format
+            if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                console.warn('[eventSegmentsForDate] Event has invalid date format, filtering out:', e.id, e.date);
+                return false;
+            }
+            seenEIds.add(e.id);
+            return true;
+        });
     
         for (const event of allEvents) {
+            // Skip events with invalid dates
+            const eventDateObj = safeParseDate(event.date);
+            if (!eventDateObj) {
+                console.warn('[eventSegmentsForDate] Event has invalid date, skipping:', event.id, event.date);
+                continue;
+            }
+            
             let eventStartMs: number, eventEndMs: number;
     
-            const eventDate = safeParseDate(event.date);
-            if (!eventDate) { continue; }
-            eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
+            eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
             eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
     
             if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
@@ -5935,9 +6161,7 @@ useEffect(() => {
         console.log('🚀 [NEO-Build] nextDayBuildEvents.length:', nextDayBuildEvents.length);
         
         const segments: EventSegment[] = [];
-        const todayDate = safeParseDate(buildDfpDate);
-        if (!todayDate) { return segments; }
-        const todayStart = todayDate.getTime();
+        const todayStart = new Date(`${buildDfpDate}T00:00:00Z`).getTime();
         const todayEnd = new Date(todayStart);
         todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
         const todayEndTime = todayEnd.getTime();
@@ -5945,16 +6169,16 @@ useEffect(() => {
         const buildEventsWithDate: ScheduleEvent[] = nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}));
         console.log('🚀 [NEO-Build] buildEventsWithDate.length:', buildEventsWithDate.length);
         
-        const dayBeforeBuild = new Date(todayStart);
-        dayBeforeBuild.setUTCDate(dayBeforeBuild.getUTCDate() - 1);
-        const dayBeforeBuildStr = dayBeforeBuild.toISOString().split('T')[0];
-
-        const allEvents = [...(publishedSchedules[dayBeforeBuildStr] || []), ...buildEventsWithDate];
+        const allEvents = buildEventsWithDate;
 
         for (const event of allEvents) {
-            const eventDate = safeParseDate(event.date);
-            if (!eventDate) { continue; }
-            eventStartMs = eventDate.getTime() + (event.startTime * 60 * 60 * 1000);
+            const eventDateObj = safeParseDate(event.date);
+            if (!eventDateObj) {
+                console.warn('[NEO-Build] Event has invalid date, skipping:', event.id, event.date);
+                continue;
+            }
+            
+            const eventStartMs = eventDateObj.getTime() + (event.startTime * 60 * 60 * 1000);
             const eventEndMs = eventStartMs + (event.duration * 60 * 60 * 1000);
 
             if (eventStartMs < todayEndTime && eventEndMs > todayStart) {
@@ -5982,8 +6206,15 @@ useEffect(() => {
                 });
             }
         }
-        console.log('🚀 [NEO-Build] Final segments.length:', segments.length);
-        return segments;
+        // Deduplicate segments by event ID to prevent stacked tiles (alpha compositing makes dupes look too bright)
+        const seenIds = new Set();
+        const uniqueSegments = segments.filter(seg => {
+            if (seenIds.has(seg.id)) return false;
+            seenIds.add(seg.id);
+            return true;
+        });
+        console.log('🚀 [NEO-Build] Final segments.length:', segments.length, '→ after dedup:', uniqueSegments.length);
+        return uniqueSegments;
     }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
 
     useEffect(() => {
@@ -5999,7 +6230,7 @@ useEffect(() => {
         const callsignPrefix = school === 'ESL' ? 'ROLR' : 'VIPR';
         
         instructorsData.forEach(instructor => {
-            if (instructor.name && instructor.role === 'QFI' && instructor.callsignNumber > 0) {
+            if (instructor.name && (instructor.role === 'QFI' || instructor.isQFI) && instructor.callsignNumber > 0) {
                 data.set(instructor.name, {
                     callsignPrefix,
                     callsignNumber: instructor.callsignNumber
@@ -6593,7 +6824,35 @@ useEffect(() => {
                 newConflicts.set(event.id, [...new Set(conflictedNamesForEvent)]);
             }
         }
-        
+
+        // ── DATA TRACKING: log what's causing red tiles ──────────────────────────────────
+        if (newConflicts.size > 0) {
+            console.group('[UnavailConflicts] ' + newConflicts.size + ' tile(s) are red on ' + (eventsForDate?.[0]?.date || 'unknown date'));
+            newConflicts.forEach((names, eventId) => {
+                const evt = eventsToCheck.find(e => e.id === eventId);
+                const evtDesc = evt ? (evt.type + ' ' + (evt.instructor || evt.student || evt.pilot || '?') + ' @' + evt.startTime) : eventId;
+                // Find the specific unavailability period(s) causing the conflict
+                names.forEach(name => {
+                    const person = personMap.get(name);
+                    if (person?.unavailability) {
+                        const deployTags = person.unavailability.filter((p: any) => p?.notes?.startsWith('__deploy__'));
+                        const otherPeriods = person.unavailability.filter((p: any) => !p?.notes?.startsWith('__deploy__'));
+                        console.log(
+                            '  RED: [' + evtDesc + '] person=' + name +
+                            (deployTags.length > 0 ? ' DEPLOY_TAGS=' + JSON.stringify(deployTags.map((p: any) => p.notes)) : '') +
+                            (otherPeriods.length > 0 ? ' other_periods=' + otherPeriods.length : '')
+                        );
+                    } else {
+                        console.log('  RED: [' + evtDesc + '] person=' + name + ' (no unavailability data found)');
+                    }
+                });
+            });
+            console.groupEnd();
+        } else {
+            console.log('[UnavailConflicts] No conflicts on', eventsForDate?.[0]?.date || 'unknown date');
+        }
+        // ─────────────────────────────────────────────────────────────────────────────────
+
         return newConflicts;
     }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
 
@@ -6650,12 +6909,14 @@ useEffect(() => {
     };
 
     const handleBuildDateChange = (direction: 'prev' | 'next') => {
-        const currentDate = safeParseDate(buildDfpDate);
+        const currentDate = new Date(buildDfpDate + 'T00:00:00Z');
         if (direction === 'prev') {
             currentDate.setUTCDate(currentDate.getUTCDate() - 1);
         } else {
             currentDate.setUTCDate(currentDate.getUTCDate() + 1);
         }
+        // Clear build events when navigating to a different date to prevent ghost tiles
+        setNextDayBuildEvents([]);
         setBuildDfpDate(getLocalDateString(currentDate));
     };
     
@@ -6842,20 +7103,17 @@ useEffect(() => {
         setPublishedSchedules({}); // Clear published schedules on school change
     };
     
-    useEffect(() => {
-        const initialData = school === 'ESL' ? ESL_DATA : PEA_DATA;
-        setEvents(initialData.events);
-        setCourses(initialData.courses);
-        const todayStr = getLocalDateString();
-        setPublishedSchedules({ [todayStr]: initialData.events.filter(e => e.date === todayStr) });
-    }, [school]);
+    // NOTE: School switch no longer resets events/courses to mock data.
+    // Real DB data stays in memory when switching schools.
+    // Components filter by the 'school' state to show only relevant data.
+    // Published schedules are cleared in changeSchool() which is the correct behaviour.
 
     // Training Records Handlers
-    const handleAddCourseFromTrainingRecords = (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
-        // Add to courseColors
+    const handleAddCourseFromTrainingRecords = async (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
+        // Add to courseColors (local state)
         setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
         
-        // Add to courses array
+        // Add to courses array (local state)
         const newCourse: Course = {
             name: data.number,
             color: data.color,
@@ -6866,6 +7124,26 @@ useEffect(() => {
             armyStart: data.armyStart
         };
         setCourses(prev => [...prev, newCourse]);
+        
+        // Save to database
+        try {
+            const result = await saveCourseToDB({
+                name: data.number,
+                color: data.color,
+                startDate: data.startDate,
+                gradDate: data.gradDate,
+                raafStart: data.raafStart,
+                navyStart: data.navyStart,
+                armyStart: data.armyStart,
+                status: 'ACTIVE',
+                location: school === 'ESL' ? 'East Sale' : 'Pearce'
+            });
+            if (!result.success) {
+                console.error('Failed to save course to DB:', result.error);
+            }
+        } catch (error) {
+            console.error('Error saving course to DB:', error);
+        }
         
         setSuccessMessage(`Course ${data.number} added successfully!`);
     };
@@ -6884,6 +7162,16 @@ useEffect(() => {
             // Remove from courses array
             setCourses(prev => prev.filter(c => c.name !== courseName));
             
+            // Delete from database (since archived courses no longer exist in DB for now)
+            try {
+                const result = await deleteCourseFromDB(courseName);
+                if (!result.success) {
+                    console.error('Failed to delete course from DB:', result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting course from DB:', error);
+            }
+            
             setSuccessMessage(`Course ${courseName} archived successfully!`);
         } else {
             // Permanently delete the course
@@ -6894,6 +7182,16 @@ useEffect(() => {
             // Remove from courses array
             setCourses(prev => prev.filter(c => c.name !== courseName));
             
+            // Delete from database
+            try {
+                const result = await deleteCourseFromDB(courseName);
+                if (!result.success) {
+                    console.error('Failed to delete course from DB:', result.error);
+                }
+            } catch (error) {
+                console.error('Error deleting course from DB:', error);
+            }
+            
             setSuccessMessage(`Course ${courseName} deleted permanently!`);
         }
     };
@@ -6903,6 +7201,10 @@ useEffect(() => {
         handleNavigation('CourseRoster');
     };
 
+    const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
+        // Navigate to Archived Courses view
+        handleNavigation('ArchivedCourses');
+    };
     const handleUpdateCourseDatesFromTrainingRecords = async (courseName: string, startDate: string, gradDate: string) => {
         // Update local state
         setCourses(prevCourses =>
@@ -6943,11 +7245,6 @@ useEffect(() => {
         }
     };
 
-    const handleNavigateToArchivedCoursesFromTrainingRecords = () => {
-        // Navigate to Archived Courses view
-        handleNavigation('ArchivedCourses');
-    };
-
     const handleUnarchiveCourseFromArchivedView = async (courseName: string) => {
         const color = archivedCourses[courseName];
         if (!color) return;
@@ -6960,10 +7257,41 @@ useEffect(() => {
         // Add back to active courses
         setCourseColors(prev => ({ ...prev, [courseName]: color }));
 
-        // Add back to courses array (recreate from mock data)
-        const courseFromMockData = ESL_DATA.courses.find(c => c.name === courseName);
-        if (courseFromMockData) {
-            setCourses(prev => [...prev, courseFromMockData]);
+        // Add back to courses array using real data we already have.
+        // archivedCourses only stores { name: color } so we reconstruct with
+        // name and color. The other fields (dates, service numbers) were not
+        // preserved on archive - they default to empty/zero here.
+        // TODO: In a future step, store full course details on archive so they
+        // can be fully restored.
+        const restoredCourse: Course = {
+            name: courseName,
+            color: color,
+            startDate: '',
+            gradDate: '',
+            raafStart: 0,
+            navyStart: 0,
+            armyStart: 0,
+        };
+        setCourses(prev => [...prev, restoredCourse]);
+        
+        // Save back to database
+        try {
+            const result = await saveCourseToDB({
+                name: courseName,
+                color: color,
+                startDate: '',
+                gradDate: '',
+                raafStart: 0,
+                navyStart: 0,
+                armyStart: 0,
+                status: 'ACTIVE',
+                location: school === 'ESL' ? 'East Sale' : 'Pearce'
+            });
+            if (!result.success) {
+                console.error('Failed to save unarchived course to DB:', result.error);
+            }
+        } catch (error) {
+            console.error('Error saving unarchived course to DB:', error);
         }
 
         setSuccessMessage(`Course ${courseName} unarchived successfully!`);
@@ -6978,11 +7306,26 @@ useEffect(() => {
         // Remove from courses array if it exists there
         setCourses(prev => prev.filter(c => c.name !== courseName));
 
+        // Delete from database if it exists there
+        try {
+            const result = await deleteCourseFromDB(courseName);
+            if (!result.success) {
+                console.error('Failed to delete course from DB:', result.error);
+            }
+        } catch (error) {
+            console.error('Error deleting course from DB:', error);
+        }
+
         setSuccessMessage(`Course ${courseName} deleted permanently!`);
     };
 
     const handleDateChange = (increment: number) => {
-        const currentDate = safeParseDate(date);
+        const currentDateObj = safeParseDate(date);
+        if (!currentDateObj) {
+            console.error('[handleDateChange] Invalid current date state:', date);
+            return;
+        }
+        const currentDate = new Date(currentDateObj);
         currentDate.setUTCDate(currentDate.getUTCDate() + increment);
         const newDateStr = currentDate.toISOString().split('T')[0];
         setDate(newDateStr);
@@ -7027,9 +7370,6 @@ useEffect(() => {
             // Generate the correct number of Deployed resources
             const deployedResources = Array.from({ length: totalDeploymentCount }, (_, i) => `Deployed ${i + 1}`);
             
-            console.log('Available Deployed resources:', deployedResources);
-            console.log('Checking deployment event:', eventToPlace);
-            console.log('Against existing events:', existingEvents.filter(e => e.type === 'deployment'));
             
             // Find the first available Deployed resource
             for (const resourceId of deployedResources) {
@@ -7039,13 +7379,11 @@ useEffect(() => {
                 console.log(`Checking ${resourceId}:`, conflictingEvents.length > 0 ? 'OCCUPIED' : 'AVAILABLE', conflictingEvents);
                 
                 if (conflictingEvents.length === 0) {
-                    console.log(`Assigning deployment to ${resourceId}`);
                     return resourceId;
                 }
             }
             
             // If all are occupied, return the next available number
-            console.log('All Deployed resources occupied, creating new one');
             return `Deployed ${totalDeploymentCount}`;
         }
         
@@ -7233,6 +7571,110 @@ useEffect(() => {
             return newLMPs;
         });
     };
+
+    // ─── persistScheduleForDate ─────────────────────────────────────────────────
+    // Reads the current publishedSchedules state for a given date and saves it
+    // to the DailySnapshot database so manually added/edited/deleted/cancelled
+    // events survive a hard refresh or server restart.
+    // persistScheduleForDate: saves the full schedule for a date to the DB.
+    // Pass allEventsForDate directly (after setPublishedSchedules has been called)
+    // to avoid race conditions with React's async state updates.
+    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[]) => {
+        // Skip seed data
+        if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
+            console.log('[Persist] Skipped seed data for', targetDate);
+            return;
+        }
+        if (allEventsForDate.length === 0) {
+            console.log('[Persist] No events for', targetDate, '- nothing to persist');
+            return;
+        }
+
+        const apiBase = getApiBaseUrl();
+        const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+
+        const staffEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
+            e.instructor && !e.student && e.type !== 'logbook'
+        );
+        const traineeEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
+            !!e.student
+        );
+
+        // Build per-staff currency map
+        const staffCurrencyMap: Record<string, any> = {};
+        instructorsData.forEach((inst: any) => {
+            if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+                staffCurrencyMap[inst.name] = inst.currencyStatus;
+            }
+        });
+
+        // Build trainee profiles snapshot
+        const traineeProfilesSnapshot = traineesData.map((t: any) => ({
+            idNumber: t.idNumber,
+            fullName: t.fullName,
+            name: t.name,
+            rank: t.rank,
+            course: t.course,
+            lmpType: t.lmpType,
+            service: t.service,
+            unit: t.unit,
+            primaryInstructor: t.primaryInstructor,
+            currencyStatus: t.currencyStatus || [],
+            isPaused: t.isPaused || false,
+        }));
+
+        // Build per-trainee LMP completedEventIds map
+        const lmpCompletedIdsMap: Record<string, string[]> = {};
+        traineesData.forEach((t: any) => {
+            const individualLMP = traineeLMPs.get(t.fullName);
+            if (individualLMP) {
+                const completedIds = (individualLMP as any[])
+                    .filter((item: any) => item.completedAt || item.isComplete)
+                    .map((item: any) => (item.id || item.code || '').replace('*', ''));
+                if (completedIds.length > 0) {
+                    lmpCompletedIdsMap[t.fullName] = completedIds;
+                }
+            }
+        });
+
+        // Convert pt051Assessments Map to plain object
+        const pt051AssessmentsObj: Record<string, any> = {};
+        pt051Assessments.forEach((assessment: any, key: string) => {
+            pt051AssessmentsObj[key] = assessment;
+        });
+
+        const snapshotPayload = {
+            date: targetDate,
+            scheduleEvents: allEventsForDate,
+            staffEvents: staffEventsForDate,
+            traineeEvents: traineeEventsForDate,
+            pt051Assessments: pt051AssessmentsObj,
+            traineeProfiles: traineeProfilesSnapshot,
+            lmpCompletedIds: lmpCompletedIdsMap,
+            staffCurrency: staffCurrencyMap,
+            staffLogbook: {},
+            savedBy,
+        };
+
+        console.log(`[Persist] Saving snapshot for ${targetDate}, ${allEventsForDate.length} events...`);
+        fetch(`${apiBase}/daily-snapshot/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(snapshotPayload),
+        })
+        .then(res => res.json())
+        .then(result => {
+            if (result.success) {
+                console.log(`✅ [Persist] Saved snapshot for ${targetDate}, ${allEventsForDate.length} events`);
+            } else {
+                console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
+            }
+        })
+        .catch(err => {
+            console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
+        });
+    };
+    // ────────────────────────────────────────────────────────────────────────────
 
     const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
         console.log('🔵 ========== handleSaveEvents START ==========');
@@ -7451,6 +7893,17 @@ useEffect(() => {
                         return currentSchedules;
                     });
                 }, 500);
+
+                // Persist all affected dates to database immediately
+                // We compute the merged events per date right here (same logic as setPublishedSchedules above)
+                const _affectedDates = new Set<string>(eventsToSave.map(e => e.date));
+                _affectedDates.forEach(d => {
+                    const _prevForDate = publishedSchedules[d] || [];
+                    const _newEventIds = new Set(eventsToSave.filter(e => e.date === d).map(e => e.id));
+                    const _otherEvents = _prevForDate.filter((e: ScheduleEvent) => !_newEventIds.has(e.id));
+                    const _newEventsForDate = eventsToSave.filter(e => e.date === d);
+                    persistScheduleForDate(d, [..._otherEvents, ..._newEventsForDate]);
+                });
             }
         }
     
@@ -7630,6 +8083,12 @@ useEffect(() => {
                 const updatedSchedule = scheduleForDate.map(e => e.id === selectedEvent.id ? cancelledEvent : e);
                 return { ...prev, [eventDate]: updatedSchedule };
             });
+            // Persist cancellation to database immediately
+            setPublishedSchedules(prev => {
+                const _updated = (prev[eventDate] || []).map((e: ScheduleEvent) => e.id === selectedEvent.id ? cancelledEvent : e);
+                persistScheduleForDate(eventDate, _updated);
+                return prev; // no state change here — already updated above
+            });
         }
         
         // Remove from highest priority events
@@ -7648,6 +8107,27 @@ useEffect(() => {
         const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Marked as cancelled`;
         
         logAudit(pageName, "Cancel", description, changes);
+
+        // ── Deployment unavailability cleanup after cancel ─────────────────────────────
+        // When a flight is cancelled, remove its __deploy__ tag from all personnel
+        // (the person is no longer required to fly, so the Deployed unavailability block
+        // created for this flight should be removed).
+        // If it was a deployment tile being cancelled, re-run the full check.
+        const _cancelledId   = selectedEvent.id;
+        const _cancelledType = selectedEvent.type;
+        setTimeout(() => {
+            if (_cancelledType === 'deployment') {
+                setPublishedSchedules(prevSchedules => {
+                    const allEvents = Object.values(prevSchedules).flat();
+                    handleDeploymentUnavailability(allEvents);
+                    return prevSchedules;
+                });
+            } else {
+                removeDeployedUnavailability(_cancelledId);
+            }
+        }, 600);
+        // ─────────────────────────────────────────────────────────────────────────────
+
         setSelectedEvent(null);
         
         
@@ -7677,6 +8157,12 @@ useEffect(() => {
                 const newScheduleForDate = (prev[eventDate] || []).filter(e => e.id !== selectedEvent.id);
                 return { ...prev, [eventDate]: newScheduleForDate };
             });
+            // Persist deletion to database immediately
+            setPublishedSchedules(prev => {
+                const _updated = (prev[eventDate] || []).filter((e: ScheduleEvent) => e.id !== selectedEvent.id);
+                persistScheduleForDate(eventDate, _updated);
+                return prev; // no state change here — already updated above
+            });
         }
         
         // NEW APPROACH: Trigger PT-051 sync after deletion (only for Active DFP)
@@ -7702,8 +8188,79 @@ useEffect(() => {
            const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs`;
            
            logAudit(pageName, "Delete", description, changes);
+
+        // ── Deployment unavailability cleanup after delete ────────────────────
+        // Capture the deleted event's id and type before clearing selectedEvent
+        const _deletedId   = selectedEvent.id;
+        const _deletedType = selectedEvent.type;
+        setTimeout(() => {
+            if (_deletedType === 'deployment') {
+                // A deployment tile was removed — re-run the full check on the
+                // updated schedule so all previously tagged Deployed unavailabilities
+                // are cleaned up for everyone.
+                setPublishedSchedules(prevSchedules => {
+                    const allEvents = Object.values(prevSchedules).flat();
+                    handleDeploymentUnavailability(allEvents);
+                    return prevSchedules;
+                });
+            } else {
+                // A flight/FTD/CPT tile was removed — remove its specific tag only
+                removeDeployedUnavailability(_deletedId);
+            }
+        }, 600); // slight delay to allow state to settle after delete
+        // ─────────────────────────────────────────────────────────────────────
+
         setSelectedEvent(null);
     };
+    const handleRestoreEvent = async (eventId: string) => {
+        // System freeze check
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
+        if (!selectedEvent || selectedEvent.id !== eventId) return;
+
+        const eventDate = selectedEvent.date;
+
+        // Build the restored event — strip all cancellation fields
+        const { isCancelled, cancellationCode, cancellationManualEntry, cancelledBy, cancelledAt, ...rest } = selectedEvent as any;
+        const restoredEvent: ScheduleEvent = { ...rest };
+
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+
+        if (isNextDay) {
+            setNextDayBuildEvents(prev =>
+                prev.map(e => e.id === eventId ? restoredEvent : e)
+            );
+        } else {
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const scheduleForDate = prev[eventDate] || [];
+                const updated = scheduleForDate.map(e => e.id === eventId ? restoredEvent : e);
+                return { ...prev, [eventDate]: updated };
+            });
+            // Persist immediately
+            setPublishedSchedules(prev => {
+                const _updated = (prev[eventDate] || []).map((e: ScheduleEvent) => e.id === eventId ? restoredEvent : e);
+                persistScheduleForDate(eventDate, _updated);
+                return prev;
+            });
+        }
+
+        // Log to audit trail
+        const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+        const eventType = selectedEvent.type || 'event';
+        const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
+        const description = `Restored ${eventType} event for ${personName} (was cancelled with code: ${(selectedEvent as any).cancellationCode || 'N/A'})`;
+        const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Restored to active`;
+        logAudit(pageName, 'Restore', description, changes);
+
+        setSelectedEvent(null);
+    };
+
     
     // Visual Adjust handlers
     const handleVisualAdjustStart = async (event: ScheduleEvent) => {
@@ -7806,7 +8363,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
+                    color: 'bg-gray-500/80', // SCT events use grey color (red is for conflicts)
                     flightType: sctReq.flightType,
                     soloOrDual: sctReq.flightType,
                     locationType: 'Local',
@@ -7883,7 +8440,7 @@ useEffect(() => {
                     duration: duration,
                     startTime: startTime, // Use requested time
                     resourceId: '', // Will be assigned during scheduling
-                    color: 'bg-gray-500/50', // SCT events use grey color (red is for conflicts)
+                    color: 'bg-gray-500/80', // SCT events use grey color (red is for conflicts)
                     flightType: 'Dual',
                     soloOrDual: 'Dual',
                     locationType: 'Local',
@@ -7971,7 +8528,7 @@ useEffect(() => {
                             duration: duration,
                             startTime: 8.0, // Default start time
                             resourceId: '', // Will be assigned during scheduling
-                            color: 'bg-orange-500/50', // Highlight as remedial
+                            color: 'bg-orange-500/80', // Highlight as remedial
                             flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
                             locationType: 'Local',
                             origin: school,
@@ -8523,7 +9080,16 @@ useEffect(() => {
         // Close the confirmation flyout immediately
         setShowPublishConfirm(false);
         
-        const newEventsForDate = nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
+        // Deduplicate build events by ID before publishing to prevent stacked tiles
+        const seenPublishIds = new Set<string>();
+        const dedupedBuildEvents = nextDayBuildEvents.filter(e => {
+            if (seenPublishIds.has(e.id)) return false;
+            seenPublishIds.add(e.id);
+            return true;
+        });
+        console.log('[PUBLISH] nextDayBuildEvents:', nextDayBuildEvents.length, '→ after dedup:', dedupedBuildEvents.length);
+        
+        const newEventsForDate = dedupedBuildEvents.map(e => ({ ...e, date: buildDfpDate }));
         
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
             ...prev,
@@ -8681,10 +9247,244 @@ useEffect(() => {
     };
 
 
+    // ─── Deployment-driven unavailability ──────────────────────────────────────
+    // When a flight tile is dragged onto (overlapping) a deployment tile, automatically
+    // insert a "Deployed" unavailability for the flight's personnel that spans from the
+    // flight's start time to the end of the deployment.
+    // When a tile is dragged away, the matching unavailability is removed.
+    // Each auto-inserted period uses notes = `__deploy__${eventId}` as an internal tag.
+
+    const handleDeploymentUnavailability = async (updatedSchedule: ScheduleEvent[]) => {
+        const deploymentTiles = updatedSchedule.filter(e => e.type === 'deployment');
+
+        const flightTiles = updatedSchedule.filter(e =>
+            e.type === 'flight' || e.type === 'ftd' || e.type === 'cpt' || e.type === 'ground'
+        );
+
+        // Deployment unavailability check
+        console.log('[DeployUnavail] handleDeploymentUnavailability: deployments=' + deploymentTiles.length + ' flights=' + flightTiles.length);
+
+        if (deploymentTiles.length === 0) {
+            console.log('[DeployUnavail] No deployment tiles - removing all lingering Deployed periods');
+            // No deployments — remove any lingering Deployed periods tagged to all flight tiles
+            for (const flight of flightTiles) {
+                await removeDeployedUnavailability(flight.id);
+            }
+            // Also call server-side cleanup to remove any __deploy__ tags that may still be in the DB
+            // (catches cases where previous PATCH calls failed or the data was loaded from a stale DB state)
+            try {
+                const cleanupRes = await fetch('/api/cleanup-deploy-unavailability', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                });
+                if (cleanupRes.ok) {
+                    const cleanupData = await cleanupRes.json();
+                    if (cleanupData.personnelFixed > 0 || cleanupData.traineesFixed > 0) {
+                        console.log('[DeployUnavail] Server cleanup fixed', cleanupData.personnelFixed, 'personnel and', cleanupData.traineesFixed, 'trainees in DB');
+                    }
+                }
+            } catch (err) { console.error('[DeployUnavail] Server cleanup call failed:', err); }
+            return;
+        }
+
+        for (const flight of flightTiles) {
+            // A flight is "on a deployment" if the flight's date falls within the
+            // deployment's date range (deploymentStartDate → deploymentEndDate).
+            // We use date-string comparison (YYYY-MM-DD) which is lexicographically correct.
+            const overlappingDeploy = deploymentTiles.find(dep => {
+                const depStart = dep.deploymentStartDate || dep.date;
+                const depEnd   = dep.deploymentEndDate   || dep.date;
+                const matches  = flight.date >= depStart && flight.date <= depEnd;
+
+
+
+                return matches;
+            });
+
+            if (overlappingDeploy) {
+                await upsertDeployedUnavailability(flight, overlappingDeploy);
+            } else {
+                await removeDeployedUnavailability(flight.id);
+            }
+        }
+
+    };
+
+    const upsertDeployedUnavailability = async (flight: ScheduleEvent, deployment: ScheduleEvent) => {
+        // Calculate unavailability period: flight startTime on flight.date → deployment end
+        const flightDateStr = flight.date; // YYYY-MM-DD
+        const flightStartHour = Math.floor(flight.startTime);
+        const flightStartMin  = Math.round((flight.startTime % 1) * 60);
+        const startTime = `${String(flightStartHour).padStart(2, '0')}${String(flightStartMin).padStart(2, '0')}`;
+
+        // Deployment end: use deploymentEndDate/Time if available, else calculate from startTime+duration
+        let endDateStr: string;
+        let endTime: string;
+
+        if (deployment.deploymentEndDate && deployment.deploymentEndTime) {
+            endDateStr = deployment.deploymentEndDate;
+            endTime = deployment.deploymentEndTime.replace(':', '');
+        } else {
+            // Calculate from startTime + duration (duration may span days)
+            const totalEndHours = deployment.startTime + deployment.duration;
+            const daysOffset = Math.floor(totalEndHours / 24);
+            const endHour = Math.floor(totalEndHours % 24);
+            const endMin  = Math.round(((totalEndHours % 24) % 1) * 60);
+            const baseDate = new Date(deployment.date + 'T00:00:00Z');
+            baseDate.setUTCDate(baseDate.getUTCDate() + daysOffset);
+            endDateStr = baseDate.toISOString().slice(0, 10);
+            endTime = `${String(endHour).padStart(2, '0')}${String(endMin).padStart(2, '0')}`;
+        }
+
+        const tag = `__deploy__${flight.id}`;
+        const newPeriod: Omit<UnavailabilityPeriod, 'id'> & { id: string } = {
+            id: `deploy-${flight.id}`,
+            startDate: flightDateStr,
+            endDate: endDateStr,
+            startTime,
+            endTime,
+            allDay: false,
+            reason: 'Deployed' as UnavailabilityReason,
+            notes: tag,
+        };
+
+
+        // Collect personnel on this flight
+        const personnelNames: string[] = [];
+        if (flight.instructor) personnelNames.push(flight.instructor);
+        if (flight.student) {
+            const studentName = flight.student.split(' – ')[0] || flight.student;
+            personnelNames.push(studentName);
+        }
+        if (flight.pilot) personnelNames.push(flight.pilot);
+        if (flight.crew) personnelNames.push(flight.crew);
+
+
+        // Use refs for latest data (avoid stale closures)
+        const latestInstructorsForUpsert = allInstructorsDataRef.current;
+        const latestTraineesForUpsert    = allTraineesDataRef.current;
+
+        for (const personName of personnelNames) {
+            // Check instructors
+            const instructor = latestInstructorsForUpsert.find(i => i.name === personName);
+            if (instructor) {
+                const existing = (instructor.unavailability || []);
+                const alreadyHas = existing.some(p => p.notes === tag);
+                if (!alreadyHas) {
+                    const updated = [...existing, newPeriod];
+                    const updatedInstructor = { ...instructor, unavailability: updated };
+                    setInstructorsData((prev: Instructor[]) => prev.map(i => i.name === personName ? updatedInstructor : i));
+                    // Persist to DB
+                    const dbId = (instructor as any).id;
+                    if (dbId && (instructor as any)._dataSource === 'database') {
+                        try {
+                            await fetch(`/api/personnel/${dbId}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ unavailability: updated }),
+                            });
+                        } catch (err) { console.error('Failed to persist Deployed unavailability for instructor:', personName, err); }
+                    }
+                }
+                continue;
+            }
+            // Check trainees
+            const trainee = latestTraineesForUpsert.find(t => t.name === personName || t.fullName === personName);
+            if (trainee) {
+                const existing = (trainee.unavailability || []);
+                const alreadyHas = existing.some(p => p.notes === tag);
+                if (!alreadyHas) {
+                    const updated = [...existing, newPeriod];
+                    const updatedTrainee = { ...trainee, unavailability: updated };
+                    setTraineesData((prev: Trainee[]) => prev.map(t => (t.name === personName || t.fullName === personName) ? updatedTrainee : t));
+                    const dbId = (trainee as any).id;
+                    if (dbId && (trainee as any)._dataSource === 'database') {
+                        try {
+                            await fetch(`/api/trainees/${dbId}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ unavailability: updated }),
+                            });
+                        } catch (err) { console.error('Failed to persist Deployed unavailability for trainee:', personName, err); }
+                    }
+                }
+            }
+        }
+
+    };
+
+    const removeDeployedUnavailability = async (flightId: string) => {
+        const tag = `__deploy__${flightId}`;
+
+        // Use refs to always read the LATEST instructor/trainee data (avoids stale closures
+        // when called from setTimeout or inside state-setter callbacks).
+        const latestInstructors = allInstructorsDataRef.current;
+        const latestTrainees    = allTraineesDataRef.current;
+
+        // Diagnostic logging
+        const instructorsWithTag = latestInstructors.filter(i => (i.unavailability || []).some(p => p.notes === tag));
+        const traineesWithTag    = latestTrainees.filter(t => (t.unavailability || []).some(p => p.notes === tag));
+        console.log('[DeployUnavail] removeDeployedUnavailability flightId="' + flightId + '" tag="' + tag + '"',
+            'instructors with tag:', instructorsWithTag.map(i => i.name),
+            'trainees with tag:', traineesWithTag.map(t => t.name)
+        );
+
+        // Instructors
+        const affectedInstructors = latestInstructors.filter(i =>
+            (i.unavailability || []).some(p => p.notes === tag)
+        );
+        for (const instructor of affectedInstructors) {
+            const updated = (instructor.unavailability || []).filter(p => p.notes !== tag);
+            const updatedInstructor = { ...instructor, unavailability: updated };
+            setInstructorsData((prev: Instructor[]) => prev.map(i => i.name === instructor.name ? updatedInstructor : i));
+            const dbId = (instructor as any).id;
+            if (dbId && (instructor as any)._dataSource === 'database') {
+                try {
+                    const resp = await fetch(`/api/personnel/${dbId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ unavailability: updated }),
+                    });
+                    if (!resp.ok) console.error('[DeployUnavail] PATCH instructor failed:', instructor.name, resp.status);
+                    else console.log('[DeployUnavail] PATCH instructor OK:', instructor.name, 'removed tag', tag);
+                } catch (err) { console.error('[DeployUnavail] Failed to remove Deployed unavailability for instructor:', instructor.name, err); }
+            }
+        }
+
+        // Trainees
+        const affectedTrainees = latestTrainees.filter(t =>
+            (t.unavailability || []).some(p => p.notes === tag)
+        );
+        for (const trainee of affectedTrainees) {
+            const updated = (trainee.unavailability || []).filter(p => p.notes !== tag);
+            const updatedTrainee = { ...trainee, unavailability: updated };
+            setTraineesData((prev: Trainee[]) => prev.map(t => (t.name === trainee.name || t.fullName === trainee.fullName) ? updatedTrainee : t));
+            const dbId = (trainee as any).id;
+            if (dbId && (trainee as any)._dataSource === 'database') {
+                try {
+                    const resp = await fetch(`/api/trainees/${dbId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ unavailability: updated }),
+                    });
+                    if (!resp.ok) console.error('[DeployUnavail] PATCH trainee failed:', trainee.name, resp.status);
+                    else console.log('[DeployUnavail] PATCH trainee OK:', trainee.name, 'removed tag', tag);
+                } catch (err) { console.error('[DeployUnavail] Failed to remove Deployed unavailability for trainee:', trainee.name, err); }
+            }
+        }
+    };
+    // ───────────────────────────────────────────────────────────────────────────
+
     const handleScheduleUpdate = (updates: { eventId: string; newStartTime?: number; newResourceId?: string; }[]) => {
         if (!updates || updates.length === 0) return;
     
         // Simple event update - no formation linking
+        let updatedEventsForDate: ScheduleEvent[] = [];
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
             const scheduleForDate = prev[date] || [];
             const updatesMap = new Map(updates.map(u => [u.eventId, u]));
@@ -8700,12 +9500,29 @@ useEffect(() => {
                 }
                 return event;
             });
+            updatedEventsForDate = newScheduleForDate; // capture for persist
             return { ...prev, [date]: newScheduleForDate };
         });
+        // Persist the updated positions to database immediately
+        // Use a short debounce (500ms) to avoid hammering DB during a drag
+        if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
+        _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
+            if (updatedEventsForDate.length > 0) {
+                persistScheduleForDate(date, updatedEventsForDate);
+                // Handle deployment-driven unavailability after drag settles.
+                // IMPORTANT: pass the FULL schedule across all dates so we can find
+                // deployment tiles that may live on a different date than the dragged flight.
+                setPublishedSchedules(prevSchedules => {
+                    const allEvents = Object.values(prevSchedules).flat();
+                    handleDeploymentUnavailability(allEvents);
+                    return prevSchedules; // no state change, just reading
+                });
+            }
+        }, 500);
            
         // Log the updates to audit trail
 updates.forEach(update => {
-               const event = currentScheduleForDate.find(e => e.id === update.eventId);
+               const event = updatedEventsForDate.find(e => e.id === update.eventId);
                if (event) {
                       // Capture original values BEFORE they change
                       const originalStartTime = event.startTime;
@@ -8958,6 +9775,10 @@ updates.forEach(update => {
                     // and other in-memory reads can find it at person.currencyStatus
                     currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
+                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
+                    unavailability: Array.isArray(p.unavailability)
+                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : p.unavailability,
                 }));
                 
                 // Update instructors - remove old database entries and add fresh ones
@@ -8975,6 +9796,10 @@ updates.forEach(update => {
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
                     ...t,
                     _dataSource: 'database' as const,
+                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
+                    unavailability: Array.isArray(t.unavailability)
+                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : t.unavailability,
                 }));
                 
                 // Update trainees - replace old database entries with fresh ones, preserve mock
@@ -8985,9 +9810,9 @@ updates.forEach(update => {
 
                 // Register any DB trainee courses that aren't in courseColors yet
                 const defaultColors = [
-                    'bg-sky-400/50', 'bg-purple-400/50', 'bg-yellow-400/50', 'bg-pink-400/50',
-                    'bg-orange-400/50', 'bg-teal-400/50', 'bg-indigo-400/50', 'bg-green-400/50',
-                    'bg-red-400/50', 'bg-cyan-400/50'
+                    'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',
+                    'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
+                    'bg-red-400/80', 'bg-cyan-400/80'
                 ];
                 const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
                 setCourseColors(prev => {
@@ -9075,7 +9900,7 @@ updates.forEach(update => {
             instructor: data.instructor,
             attendees: data.attendees,
             resourceId: data.resourceId,
-            color: 'bg-teal-400/50',
+            color: 'bg-teal-400/80',
             flightType: 'Dual',
             locationType: 'Local',
             origin: school,
@@ -10182,7 +11007,7 @@ updates.forEach(update => {
             duration: oraclePreviewEvent.duration,
             startTime: oraclePreviewEvent.startTime,
             resourceId: oraclePreviewEvent.resourceId,
-            color: 'bg-sky-400/50',
+            color: 'bg-sky-400/80',
             flightType: 'Dual',
             locationType: 'Local',
             origin: school,
@@ -11032,6 +11857,7 @@ updates.forEach(update => {
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu 
+                    school={school}
                     coursePriorities={coursePriorities}
                     onUpdatePriorities={setCoursePriorities}
                     coursePercentages={coursePercentages}
@@ -11263,7 +12089,7 @@ updates.forEach(update => {
                             events={nextDayBuildEvents.map(e => ({...e, date: buildDfpDate}))}
                             instructorsData={instructorsData}
                             traineesData={traineesData}
-                            activeCourses={coursePriorities}
+                            activeCourses={coursePriorities.length > 0 ? coursePriorities : [...new Set(traineesData.map(t => t.course).filter(c => c && courseColors[c]))]}
                             onNavigateAndSelectPerson={(name) => {
                                 const person = [...allInstructorsData, ...allTraineesData].find(p => p.name === name || ('fullName' in p && p.fullName === name));
                                 if (person) {
@@ -11450,17 +12276,9 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
-                                console.log('🔍 [DATA TRACKING] Instructor update/save called');
-                                console.log('🔍 [DATA TRACKING] Instructor data:', data);
-                                console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
-                                console.log('🔍 [DATA TRACKING] Instructor name:', data.name);
-                                console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
-                                console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
-                                console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
 
                                 try {
                                     // Call API to save to database
-                                    console.log('🔍 [DATA TRACKING] Calling /api/personnel POST endpoint');
                                     const response = await fetch('/api/personnel', {
                                         method: 'POST',
                                         credentials: 'include',
@@ -11477,26 +12295,19 @@ updates.forEach(update => {
                                     }
 
                                     const result = await response.json();
-                                    console.log('✅ [DATA TRACKING] Saved to database successfully');
-                                    console.log('✅ [DATA TRACKING] API Response:', result);
 
                                 } catch (error) {
                                     console.error('❌ [DATA TRACKING] Error saving to database:', error);
                                     // Continue with local state update even if API fails
-                                    console.log('⚠️ [DATA TRACKING] Continuing with local state update');
                                 }
 
                                 // Update local state
                                 setInstructorsData(prev => {
                                     const exists = prev.some(i => i.idNumber === data.idNumber);
                                     if (exists) {
-                                        console.log('🔍 [DATA TRACKING] Updating existing instructor');
                                         return prev.map(i => i.idNumber === data.idNumber ? data : i);
                                     }
-                                    console.log('🔍 [DATA TRACKING] Adding new instructor to state');
-                                    console.log('🔍 [DATA TRACKING] Total instructors before:', prev.length);
                                     const result = [...prev, data];
-                                    console.log('🔍 [DATA TRACKING] Total instructors after:', result.length);
                                     return result;
                                 });
                             }}
@@ -11540,17 +12351,9 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
-                                console.log('🔍 [DATA TRACKING] Instructor update/save called');
-                                console.log('🔍 [DATA TRACKING] Instructor data:', data);
-                                console.log('🔍 [DATA TRACKING] Instructor ID:', data.idNumber);
-                                console.log('🔍 [DATA TRACKING] Instructor name:', data.name);
-                                console.log('🔍 [DATA TRACKING] Instructor category:', data.category);
-                                console.log('🔍 [DATA TRACKING] Instructor unit:', data.unit);
-                                console.log('🔍 [DATA TRACKING] Instructor role:', data.role);
 
                                 try {
                                     // Call API to save to database
-                                    console.log('🔍 [DATA TRACKING] Calling /api/personnel POST endpoint');
                                     const response = await fetch('/api/personnel', {
                                         method: 'POST',
                                         credentials: 'include',
@@ -11567,26 +12370,19 @@ updates.forEach(update => {
                                     }
 
                                     const result = await response.json();
-                                    console.log('✅ [DATA TRACKING] Saved to database successfully');
-                                    console.log('✅ [DATA TRACKING] API Response:', result);
 
                                 } catch (error) {
                                     console.error('❌ [DATA TRACKING] Error saving to database:', error);
                                     // Continue with local state update even if API fails
-                                    console.log('⚠️ [DATA TRACKING] Continuing with local state update');
                                 }
 
                                 // Update local state
                                 setInstructorsData(prev => {
                                     const exists = prev.some(i => i.idNumber === data.idNumber);
                                     if (exists) {
-                                        console.log('🔍 [DATA TRACKING] Updating existing instructor');
                                         return prev.map(i => i.idNumber === data.idNumber ? data : i);
                                     }
-                                    console.log('🔍 [DATA TRACKING] Adding new instructor to state');
-                                    console.log('🔍 [DATA TRACKING] Total instructors before:', prev.length);
                                     const result = [...prev, data];
-                                    console.log('🔍 [DATA TRACKING] Total instructors after:', result.length);
                                     return result;
                                 });
                             }}
@@ -11725,6 +12521,8 @@ updates.forEach(update => {
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}
                     onUpdateUnitLocations={setUnitLocations}
+                    locationOpAreas={locationOpAreas}
+                    onUpdateLocationOpAreas={setLocationOpAreas}
                     instructorsData={instructorsData}
                     traineesData={traineesData}
                     onDataSourceSettingsChange={(newSettings) => setDataSourceSettings(newSettings)}
@@ -11967,8 +12765,7 @@ updates.forEach(update => {
                                                 if (!dateValue) continue;
                                                 
                                                 const validityDays = 'validityDays' in def ? def.validityDays : 365;
-                                                const expiryDate = safeParseDate(dateValue);
-                                                if (!expiryDate) { continue; }
+                                                const expiryDate = new Date(dateValue + 'T00:00:00Z');
                                                 expiryDate.setDate(expiryDate.getDate() + validityDays);
                                                 const expStr = expiryDate.toISOString().slice(0, 10);
                                                 const today = new Date();
@@ -12127,6 +12924,11 @@ updates.forEach(update => {
     return (
     <>
         <SystemFreezeBanner />
+        <DataLoadingMonitor 
+            isStaffLoaded={isStaffLoaded}
+            isTraineeLoaded={isTraineeLoaded}
+            isCoursesLoaded={isCoursesLoaded}
+        />
         <div id="app-content" data-theme={theme} className="flex h-screen bg-gray-900 text-white">
             <Sidebar
                 activeView={activeView}
@@ -12207,7 +13009,33 @@ updates.forEach(update => {
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 
-            {selectedEvent && (
+            {selectedEvent && isAddingTile && (
+                <AddFlightTileModal
+                    onClose={() => {
+                        setSelectedEvent(null);
+                        setIsAddingTile(false);
+                    }}
+                    onSave={(events) => {
+                        handleSaveEvents(events, false);
+                        setSelectedEvent(null);
+                        setIsAddingTile(false);
+                    }}
+                    instructors={instructorsData.map(i => i.name)}
+                    trainees={allTraineesData.map(t => t.fullName)}
+                    syllabusDetails={syllabusDetails}
+                    school={school}
+                    traineesData={traineesData}
+                    instructorsData={instructorsData}
+                    courseColors={courseColors}
+                    date={selectedEvent.date || date}
+                    traineeLMPs={traineeLMPs}
+                    scores={scores}
+                    locationOpAreas={locationOpAreas}
+                    formationCallsigns={formationCallsigns}
+                    userId={getCurrentUserId() ?? undefined}
+                />
+            )}
+            {selectedEvent && !isAddingTile && (
                 <EventDetailModal
                     key={`${selectedEvent.id}-${selectedEvent.instructor || 'no-instructor'}`}
                     event={isVisualAdjustMode && visualAdjustEvent ? visualAdjustEvent : selectedEvent}
@@ -12290,7 +13118,7 @@ updates.forEach(update => {
                                     lmpType = 'FIC';
                                 }
 
-                                const masterSyllabus = INITIAL_SYLLABUS_DETAILS.filter((item: any) => {
+                                const masterSyllabus = syllabusDetails.filter((item: any) => {
                                     if (lmpType === 'BPC+IPC') return !item.lmpType || item.lmpType === 'Master LMP';
                                     return item.courses && item.courses.includes(lmpType);
                                 });
@@ -12344,6 +13172,7 @@ updates.forEach(update => {
                     onSavePT051Assessment={onSavePT051Assessment}
                     cancellationCodes={cancellationCodes}
                     onCancelEvent={handleCancelEvent}
+                    onRestoreEvent={handleRestoreEvent}
                 />
             )}
             
@@ -12507,6 +13336,10 @@ updates.forEach(update => {
                     currentUserName={currentUserName}
                     currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
                     currentUserUnit={currentUser?.unit}
+                    instructorsData={instructorsData}
+                    traineesData={traineesData}
+                    masterCurrencies={masterCurrencies}
+                    currencyRequirements={currencyRequirements}
                 />
             }
             {showAddRemedialPackage && selectedTraineeForRemedial && (
