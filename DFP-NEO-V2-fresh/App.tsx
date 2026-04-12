@@ -4031,6 +4031,7 @@ const App: React.FC = () => {
     
     // Visual Adjust state
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
+    const _scheduleUpdatePersistTimer = useRef<number | null>(null);
     const [visualAdjustEvent, setVisualAdjustEvent] = useState<ScheduleEvent | null>(null);
 
     // Data Source Settings - manages which sources are active (drives immediate filtering)
@@ -9164,6 +9165,7 @@ useEffect(() => {
         if (!updates || updates.length === 0) return;
     
         // Simple event update - no formation linking
+        let updatedEventsForDate: ScheduleEvent[] = [];
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
             const scheduleForDate = prev[date] || [];
             const updatesMap = new Map(updates.map(u => [u.eventId, u]));
@@ -9179,8 +9181,17 @@ useEffect(() => {
                 }
                 return event;
             });
+            updatedEventsForDate = newScheduleForDate; // capture for persist
             return { ...prev, [date]: newScheduleForDate };
         });
+        // Persist the updated positions to database immediately
+        // Use a short debounce (500ms) to avoid hammering DB during a drag
+        if (_scheduleUpdatePersistTimer.current) clearTimeout(_scheduleUpdatePersistTimer.current);
+        _scheduleUpdatePersistTimer.current = window.setTimeout(() => {
+            if (updatedEventsForDate.length > 0) {
+                persistScheduleForDate(date, updatedEventsForDate);
+            }
+        }, 500);
            
         // Log the updates to audit trail
 updates.forEach(update => {
