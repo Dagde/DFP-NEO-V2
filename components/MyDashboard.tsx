@@ -14,6 +14,10 @@ interface MyDashboardProps {
     sctRequests: SctRequest[];
     pt051Assessments: Map<string, Pt051Assessment>;
     onSelectPt051: (assessment: Pt051Assessment) => void;
+    authUser?: { userId: string; displayName: string; role: string; firstName: string | null; lastName: string | null } | null;
+    onShowAdminPanel?: () => void;
+    onShowChangePassword?: () => void;
+    onLogout?: () => void;
 }
 
 const formatTime = (time: number) => {
@@ -47,10 +51,14 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
     onSelectMySct, 
     sctRequests, 
     pt051Assessments, 
-    onSelectPt051 
+    onSelectPt051,
+    authUser,
+    onShowAdminPanel,
+    onShowChangePassword,
+    onLogout
 }) => {
     const sortedEvents = [...events].sort((a, b) => a.startTime - b.startTime);
-    
+    const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
     const mySctRequests = sctRequests.filter(req => req.name === userName.split(' ').reverse().join(', '));
     
     // Get incomplete PT-051 assessments assigned to current user (not yet edited/saved)
@@ -92,25 +100,63 @@ const MyDashboard: React.FC<MyDashboardProps> = ({
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* My Hub */}
-                <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-                    <h2 className="text-xl font-semibold text-sky-400 mb-4">My Hub</h2>
-                    <div className="space-y-3">
-                        <button onClick={onSelectMyProfile} className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors">
+                {/* Admin Window */}
+                {authUser && (
+                    <div className="bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-700 flex flex-col self-start">
+                        <h2 className="text-lg font-semibold text-sky-400 mb-3">Admin</h2>
+                        <div className="space-y-2 flex-1">
+                            <button 
+                                onClick={onShowChangePassword} 
+                                className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold text-sm transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                                Change Password
+                            </button>
+                            {isSuperAdmin && (
+                                <button 
+                                    onClick={onShowAdminPanel} 
+                                    className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold text-sm transition-colors flex items-center gap-2"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                    Admin Panel
+                                </button>
+                            )}
+                            <button 
+                                onClick={onLogout} 
+                                className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-red-400 font-semibold text-sm transition-colors flex items-center gap-2"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Weather Widget */}
+                <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 overflow-hidden" style={{ height: '524px' }}>
+                    <TafWeatherWidget />
+                </div>
+
+                {/* My Hub - compact version */}
+                <div className="bg-gray-800 rounded-lg shadow-lg p-4 border border-gray-700 flex flex-col" style={{ height: '250px' }}>
+                    <h2 className="text-lg font-semibold text-sky-400 mb-3">My Hub</h2>
+                    <div className="space-y-2 flex-1">
+                        <button onClick={onSelectMyProfile} className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold text-sm transition-colors">
                             My Profile
                         </button>
-                        <button onClick={onSelectMyCurrency} className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors">
+                        <button onClick={onSelectMyCurrency} className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold text-sm transition-colors">
                             My Currency
                         </button>
-                        <button onClick={onSelectMySct} className="w-full text-left px-4 py-3 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold transition-colors">
+                        <button onClick={onSelectMySct} className="w-full text-left px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white font-semibold text-sm transition-colors">
                             My SCT
                         </button>
                     </div>
-                </div>
-
-                {/* Weather Widget */}
-                <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-                    <TafWeatherWidget />
                 </div>
                 
                 {/* My Active SCT Requests */}
