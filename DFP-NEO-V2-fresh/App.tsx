@@ -118,6 +118,7 @@ import NextDayInstructorScheduleView from './components/NextDayInstructorSchedul
 import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleView';
 import AircraftAvailabilitySettings from './components/AircraftAvailabilitySettings';
 import { DailyAvailabilityRecord } from './types/AircraftAvailability';
+import PauseFlightOpsModal, { PauseBuildConfig } from './components/PauseFlightOpsModal';
 
 
 // --- MOCK DATA ---
@@ -5573,6 +5574,7 @@ const App: React.FC = () => {
     // Aircraft Availability State
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
+    const [showPauseFlightOps, setShowPauseFlightOps] = useState(false);
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
@@ -7674,6 +7676,165 @@ const App: React.FC = () => {
             console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
         });
     };
+
+    // ── Pause Flight Ops: handlePauseBuild ────────────────────────────────────
+    const handlePauseBuild = async (config: PauseBuildConfig): Promise<ScheduleEvent[]> => {
+        const {
+            date: pauseDate,
+            pauseStart,
+            pauseEnd,
+            pauseRule,
+            affectedTypes,
+            completedEventIds,
+            flyingStartTime: dayStart,
+            flyingEndTime: dayEnd,
+            ftdStartTime: pFtdStart,
+            ftdEndTime: pFtdEnd,
+            existingEvents,
+        } = config;
+
+        console.log('[PauseBuild] Starting pause build for', pauseDate);
+
+        // 1. Determine which events are impacted
+        const isImpacted = (e: ScheduleEvent): boolean => {
+            const typeKey = e.type === 'ground' ? 'ground' : e.type;
+            if (!(affectedTypes as string[]).includes(typeKey)) return false;
+            if (e.isCancelled) return false;
+            if (completedEventIds.has(e.id)) return false;
+            const end = e.startTime + e.duration;
+            if (pauseRule === 'no_start_during') {
+                return e.startTime >= pauseStart && e.startTime < pauseEnd;
+            } else {
+                return e.startTime < pauseEnd && end > pauseStart;
+            }
+        };
+
+        // 2. Cancel impacted events
+        const cancelledNow = new Set<string>();
+        const eventsAfterCancel = existingEvents.map(e => {
+            if (isImpacted(e)) {
+                cancelledNow.add(e.id);
+                return {
+                    ...e,
+                    isCancelled: true,
+                    cancellationCode: 'OPS_PAUSE' as any,
+                    cancelledBy: authUser?.displayName || 'Ops',
+                    cancelledAt: new Date().toISOString(),
+                };
+            }
+            return e;
+        });
+
+        console.log('[PauseBuild] Cancelled', cancelledNow.size, 'events');
+
+        // 3. Lock all non-cancelled events as time-fixed (preserve pre-pause schedule)
+        const lockedEvents: ScheduleEvent[] = eventsAfterCancel
+            .filter(e => !e.isCancelled)
+            .map(e => ({ ...e, isTimeFixed: true }));
+
+        const activeTraineesForPause = allTraineesData.filter((t: any) =>
+            !t.isPaused &&
+            !isPersonStaticallyUnavailable(t, pauseEnd, ceaseNightFlying, pauseDate, 'flight')
+        );
+
+        const pauseBuildConfig = {
+            instructors: instructorsData,
+            trainees: activeTraineesForPause,
+            syllabus: syllabusDetails,
+            scores,
+            coursePriorities,
+            coursePercentages,
+            availableAircraftCount,
+            ftdCount: availableFtdCount,
+            cptCount: availableCptCount,
+            courseColors,
+            school,
+            dayStart: pauseEnd,
+            dayEnd,
+            ftdStart: pFtdStart,
+            ftdEnd: pFtdEnd,
+            allowNightFlying,
+            commenceNightFlying,
+            ceaseNightFlying,
+            buildDate: pauseDate,
+            highestPriorityEvents: lockedEvents,
+            instructorPriority,
+            traineeLMPs,
+            flightTurnaround,
+            ftdTurnaround,
+            cptTurnaround,
+            preferredDutyPeriod,
+            maxCrewDutyPeriod,
+            eventLimits,
+            sctFtds,
+            sctFlights,
+            remedialRequests,
+            sctEvents,
+            getEventDayNightClassification,
+            staffSharingEnabled: organisationSettings.staffSharingEnabled,
+            staffSharingUnits: organisationSettings.staffSharingUnits,
+        };
+
+        return new Promise<ScheduleEvent[]>((resolve) => {
+            setTimeout(() => {
+                try {
+                    const generated = generateDfpInternal(
+                        pauseBuildConfig,
+                        (progress: { message: string; percentage: number }) => {
+                            console.log('[PauseBuild]', progress.message);
+                        },
+                        publishedSchedules
+                    );
+
+                    // Filter out STBY lines and add date field
+                    const generatedWithDate: ScheduleEvent[] = generated
+                        .filter((e: any) => {
+                            const resId = ((e as any).resourceId || '').toLowerCase();
+                            return !resId.includes('stby') && !resId.includes('standby');
+                        })
+                        .map((e: any) => ({ ...e, date: pauseDate } as ScheduleEvent));
+
+                    // Merge: include cancelled events that may not be in the new build
+                    const builtIds = new Set(generatedWithDate.map(e => e.id));
+                    const cancelledNotInBuild = eventsAfterCancel.filter(e => e.isCancelled && !builtIds.has(e.id));
+                    const final = [...generatedWithDate, ...cancelledNotInBuild];
+
+                    console.log('[PauseBuild] Complete. Total events:', final.length);
+                    resolve(final);
+                } catch (err) {
+                    console.error('[PauseBuild] Build error:', err);
+                    resolve(eventsAfterCancel);
+                }
+            }, 100);
+        });
+    };
+
+    // ── Pause Flight Ops: handlePausePublish ──────────────────────────────────
+    const handlePausePublish = (updatedEvents: ScheduleEvent[]) => {
+        const targetDate = date;
+
+        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
+            ...prev,
+            [targetDate]: updatedEvents,
+        }));
+
+        persistScheduleForDate(targetDate, updatedEvents);
+
+        const cancelledCount = updatedEvents.filter(e =>
+            e.isCancelled && (e as any).cancellationCode === 'OPS_PAUSE'
+        ).length;
+        const activeCount = updatedEvents.filter(e => !e.isCancelled).length;
+
+        logAudit(
+            'Program Schedule',
+            'Edit',
+            `Pause Flight Ops committed for ${targetDate}`,
+            `Cancelled: ${cancelledCount} (OPS PAUSE) | Active post-rebuild: ${activeCount} | By: ${authUser?.displayName || 'Unknown'}`
+        );
+
+        console.log('[PausePublish] Committed', updatedEvents.length, 'events for', targetDate);
+    };
+
     // ────────────────────────────────────────────────────────────────────────────
 
     const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
@@ -12937,6 +13098,7 @@ updates.forEach(update => {
                     
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
+                       onPauseFlightOps={activeView === 'Program Schedule' ? () => setShowPauseFlightOps(true) : undefined}
                        authUser={authUser}
                        onLogout={handleLogout}
                        onShowAdminPanel={() => setShowAdminPanel(true)}
@@ -13243,6 +13405,21 @@ updates.forEach(update => {
                     onCancel={handleUnsavedCancel}
                 />
             }
+             {/* Pause Flight Ops Modal */}
+            <PauseFlightOpsModal
+                isOpen={showPauseFlightOps}
+                onClose={() => setShowPauseFlightOps(false)}
+                date={date}
+                eventsForDate={publishedSchedules[date] || []}
+                flyingStartTime={flyingStartTime}
+                flyingEndTime={flyingEndTime}
+                ftdStartTime={ftdStartTime}
+                ftdEndTime={ftdEndTime}
+                onBuildPause={handlePauseBuild}
+                onPublish={handlePausePublish}
+                authUser={authUser}
+            />
+
              {showAddGroundEvent && (
                 <AddGroundEventFlyout
                     onClose={() => setShowAddGroundEvent(false)}

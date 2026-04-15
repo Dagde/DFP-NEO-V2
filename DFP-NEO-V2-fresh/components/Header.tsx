@@ -19,6 +19,7 @@ interface HeaderProps {
     onToggleOracleMode: () => void;
     showAircraftAvailability?: boolean;
     onToggleAircraftAvailability?: () => void;
+    onPauseFlightOps?: () => void;
     showDepartureDensityOverlay: boolean;
     onToggleDepartureDensityOverlay: () => void;
     // Auth props
@@ -44,6 +45,7 @@ const Header: React.FC<HeaderProps> = ({
     onToggleOracleMode, 
     showAircraftAvailability, 
     onToggleAircraftAvailability, 
+    onPauseFlightOps,
     showDepartureDensityOverlay, 
     onToggleDepartureDensityOverlay,
     authUser,
@@ -175,7 +177,18 @@ const Header: React.FC<HeaderProps> = ({
                             </button>
                         )}
 
-                        {/* 7. Add Ground Tile Button */}
+                        {/* 7. Pause Flight Ops Button */}
+                        {onPauseFlightOps && (
+                            <button
+                                onClick={onPauseFlightOps}
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                title="Pause Flight Ops"
+                            >
+                                <span className="text-center leading-tight">Pause<br/>Flight Ops</span>
+                            </button>
+                        )}
+
+                        {/* 8. Add Ground Tile Button */}
                         <button 
                             onClick={onAddGroundEvent}
                             className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
@@ -199,7 +212,7 @@ const Header: React.FC<HeaderProps> = ({
                             className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
                             title="NEO - Tile"
                         >
-                            <span className={`text-center leading-tight neo-tile-text ${isOracleMode ? 'animate-pulse-neo-text' : ''}`}>NEO - Tile</span>
+                            <span className={`text-center leading-tight ${isOracleMode ? 'animate-pulse-neo-text' : ''}`} style={{color: "#fb923c"}}>NEO - Tile</span>
                         </button>
 
                         {/* 10. Logged In As / User Button - shows active commit fetched from server */}
