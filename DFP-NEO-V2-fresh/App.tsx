@@ -7693,27 +7693,28 @@ const App: React.FC = () => {
             existingEvents,
         } = config;
 
-        console.log('[PauseBuild] Starting pause build for', pauseDate);
+        console.log('[PauseBuild] Starting pause build for', pauseDate, 'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd);
 
-        // 1. Determine which events are impacted
+        // 1. Determine which events are impacted by the pause
         const isImpacted = (e: ScheduleEvent): boolean => {
-            const typeKey = e.type === 'ground' ? 'ground' : e.type;
-            if (!(affectedTypes as string[]).includes(typeKey)) return false;
             if (e.isCancelled) return false;
             if (completedEventIds.has(e.id)) return false;
+            const typeKey = e.type === 'ground' ? 'ground' : e.type;
+            if (!(affectedTypes as string[]).includes(typeKey)) return false;
             const end = e.startTime + e.duration;
             if (pauseRule === 'no_start_during') {
                 return e.startTime >= pauseStart && e.startTime < pauseEnd;
             } else {
+                // conclude_by_start: any event overlapping pause start is impacted
                 return e.startTime < pauseEnd && end > pauseStart;
             }
         };
 
-        // 2. Cancel impacted events
-        const cancelledNow = new Set<string>();
-        const eventsAfterCancel = existingEvents.map(e => {
+        // 2. Build the set of cancelled events and the eventsAfterCancel array
+        const cancelledIds = new Set<string>();
+        const eventsAfterCancel: ScheduleEvent[] = existingEvents.map(e => {
             if (isImpacted(e)) {
-                cancelledNow.add(e.id);
+                cancelledIds.add(e.id);
                 return {
                     ...e,
                     isCancelled: true,
@@ -7725,12 +7726,15 @@ const App: React.FC = () => {
             return e;
         });
 
-        console.log('[PauseBuild] Cancelled', cancelledNow.size, 'events');
+        console.log('[PauseBuild] Impacted/cancelled:', cancelledIds.size);
 
-        // 3. Lock all non-cancelled events as time-fixed (preserve pre-pause schedule)
+        // 3. For the NEO Build, lock ALL non-cancelled events as time-fixed
+        //    so the algorithm preserves the entire pre-pause schedule
         const lockedEvents: ScheduleEvent[] = eventsAfterCancel
             .filter(e => !e.isCancelled)
             .map(e => ({ ...e, isTimeFixed: true }));
+
+        console.log('[PauseBuild] Locked pre-pause events:', lockedEvents.length);
 
         const activeTraineesForPause = allTraineesData.filter((t: any) =>
             !t.isPaused &&
@@ -7749,7 +7753,7 @@ const App: React.FC = () => {
             cptCount: availableCptCount,
             courseColors,
             school,
-            dayStart: pauseEnd,
+            dayStart: pauseEnd,      // Build only fills from pause end onward
             dayEnd,
             ftdStart: pFtdStart,
             ftdEnd: pFtdEnd,
@@ -7786,7 +7790,9 @@ const App: React.FC = () => {
                         publishedSchedules
                     );
 
-                    // Filter out STBY lines and add date field
+                    console.log('[PauseBuild] generateDfpInternal returned', generated.length, 'events');
+
+                    // Add date field and filter out STBY resource lines
                     const generatedWithDate: ScheduleEvent[] = generated
                         .filter((e: any) => {
                             const resId = ((e as any).resourceId || '').toLowerCase();
@@ -7794,15 +7800,24 @@ const App: React.FC = () => {
                         })
                         .map((e: any) => ({ ...e, date: pauseDate } as ScheduleEvent));
 
-                    // Merge: include cancelled events that may not be in the new build
+                    // The build output already includes all locked pre-pause events.
+                    // Now add back any originally-cancelled (OPS_PAUSE) events
+                    // that may not appear in the build output (they were excluded from scheduling).
                     const builtIds = new Set(generatedWithDate.map(e => e.id));
-                    const cancelledNotInBuild = eventsAfterCancel.filter(e => e.isCancelled && !builtIds.has(e.id));
-                    const final = [...generatedWithDate, ...cancelledNotInBuild];
+                    const opsPauseCancelledEvents = eventsAfterCancel.filter(
+                        e => e.isCancelled && cancelledIds.has(e.id) && !builtIds.has(e.id)
+                    );
 
-                    console.log('[PauseBuild] Complete. Total events:', final.length);
+                    const final = [...generatedWithDate, ...opsPauseCancelledEvents];
+
+                    console.log('[PauseBuild] Final staged events:', final.length,
+                        '(built:', generatedWithDate.length,
+                        'cancelled added back:', opsPauseCancelledEvents.length, ')');
+
                     resolve(final);
                 } catch (err) {
-                    console.error('[PauseBuild] Build error:', err);
+                    console.error('[PauseBuild] generateDfpInternal error:', err);
+                    // Fallback: just return the cancelled version with no rebuild
                     resolve(eventsAfterCancel);
                 }
             }, 100);
@@ -7813,17 +7828,50 @@ const App: React.FC = () => {
     const handlePausePublish = (updatedEvents: ScheduleEvent[]) => {
         const targetDate = date;
 
+        // Deduplicate by ID (same guard as normal publish)
+        const seenIds = new Set<string>();
+        const dedupedEvents = updatedEvents.filter(e => {
+            if (seenIds.has(e.id)) return false;
+            seenIds.add(e.id);
+            return true;
+        });
+
+        // Ensure every event has the correct date field
+        const finalEvents: ScheduleEvent[] = dedupedEvents.map(e => ({ ...e, date: targetDate }));
+
+        console.log('[PausePublish] Publishing', finalEvents.length, 'events for', targetDate);
+
+        // 1. Update publishedSchedules (triggers re-render of Program Schedule view)
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
             ...prev,
-            [targetDate]: updatedEvents,
+            [targetDate]: finalEvents,
         }));
 
-        persistScheduleForDate(targetDate, updatedEvents);
+        // 2. Snapshot as new baseline (for change-detection highlighting)
+        setBaselineSchedules((prev) => ({
+            ...prev,
+            [targetDate]: JSON.parse(JSON.stringify(finalEvents)),
+        }));
 
-        const cancelledCount = updatedEvents.filter(e =>
+        // 3. Sync PT-051s with the updated schedule
+        setTimeout(() => {
+            setPublishedSchedules(currentSchedules => {
+                setPt051Assessments(currentAssessments => {
+                    syncPt051WithActiveDfp(currentSchedules, currentAssessments);
+                    return currentAssessments;
+                });
+                return currentSchedules;
+            });
+        }, 500);
+
+        // 4. Persist to database
+        persistScheduleForDate(targetDate, finalEvents);
+
+        // 5. Audit log
+        const cancelledCount = finalEvents.filter(e =>
             e.isCancelled && (e as any).cancellationCode === 'OPS_PAUSE'
         ).length;
-        const activeCount = updatedEvents.filter(e => !e.isCancelled).length;
+        const activeCount = finalEvents.filter(e => !e.isCancelled).length;
 
         logAudit(
             'Program Schedule',
@@ -7832,7 +7880,7 @@ const App: React.FC = () => {
             `Cancelled: ${cancelledCount} (OPS PAUSE) | Active post-rebuild: ${activeCount} | By: ${authUser?.displayName || 'Unknown'}`
         );
 
-        console.log('[PausePublish] Committed', updatedEvents.length, 'events for', targetDate);
+        console.log('[PausePublish] Done. Active:', activeCount, 'Cancelled:', cancelledCount);
     };
 
     // ────────────────────────────────────────────────────────────────────────────

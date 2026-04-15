@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ScheduleEvent } from '../types';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type PauseRule = 'conclude_by_start' | 'no_start_during';
 type ActionChoice = 'cancel_only' | 'reprogram';
@@ -36,7 +36,7 @@ export interface PauseBuildConfig {
     existingEvents: ScheduleEvent[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const decToHHMM = (dec: number): string => {
     const h = Math.floor(dec);
@@ -51,7 +51,7 @@ const hhmmToDec = (hhmm: string): number => {
 
 const isValidHHMM = (s: string) => /^\d{2}:\d{2}$/.test(s);
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ───────────────────────────────────────────────────────────────
 
 const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
     isOpen,
@@ -66,7 +66,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
     onBuildPause,
     authUser,
 }) => {
-    // ── Config state ──────────────────────────────────────────────────────────
+    // ── Config state ─────────────────────────────────────────────────────────
     const [pauseStart, setPauseStart] = useState(decToHHMM(flyingStartTime + 2));
     const [pauseEnd, setPauseEnd] = useState(decToHHMM(flyingStartTime + 3));
     const [pauseRule, setPauseRule] = useState<PauseRule>('no_start_during');
@@ -135,7 +135,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
         return eventsForDate.filter(e => e.startTime >= pauseEndDec && !e.isCancelled);
     }, [eventsForDate, pauseEndDec]);
 
-    // ── Reset when opened ──────────────────────────────────────────────────────
+    // ── Reset when opened ──────────────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
             setPauseStart(decToHHMM(flyingStartTime + 2));
@@ -152,7 +152,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
         }
     }, [isOpen, flyingStartTime]);
 
-    // ── Helpers for completed selection ───────────────────────────────────────
+    // ── Helpers for completed selection ───────────────────────────────────
     const toggleCompleted = useCallback((eventId: string) => {
         setCompletedEventIds(prev => {
             const next = new Set(prev);
@@ -181,7 +181,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
         isDraggingRef.current = false;
     }, []);
 
-    // ── Actions ───────────────────────────────────────────────────────────────
+    // ── Actions ───────────────────────────────────────────────────────────
     const handleToggleType = (t: EventTypeKey) => {
         setAffectedTypes(prev => {
             const next = new Set(prev);
@@ -246,24 +246,65 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
         onClose();
     };
 
-    // ── Tile visual state ─────────────────────────────────────────────────────
-    const getTileState = (e: ScheduleEvent): 'completed' | 'impacted' | 'cancelled' | 'normal' | 'rebuilt' => {
-        if (phase === 'review') {
-            const staged = stagedEvents.find(s => s.id === e.id);
-            if (staged?.isCancelled && !e.isCancelled) return 'cancelled';
-        }
+    // ── Review panel: derive bands from stagedEvents ───────────────────────
+    // These memos are only meaningful during review phase
+    const reviewPrePause = useMemo(() => {
+        if (phase !== 'review' || !pauseStartDec) return [];
+        return stagedEvents.filter(e => (e.startTime + e.duration) <= pauseStartDec);
+    }, [phase, stagedEvents, pauseStartDec]);
+
+    const reviewPauseWindow = useMemo(() => {
+        if (phase !== 'review' || !pauseStartDec || !pauseEndDec) return [];
+        // Events that overlap the pause window (cancelled ones will show as cancelled)
+        return stagedEvents.filter(e => {
+            const end = e.startTime + e.duration;
+            return e.startTime < pauseEndDec && end > pauseStartDec;
+        });
+    }, [phase, stagedEvents, pauseStartDec, pauseEndDec]);
+
+    const reviewPostPause = useMemo(() => {
+        if (phase !== 'review' || !pauseEndDec) return [];
+        return stagedEvents.filter(e => e.startTime >= pauseEndDec);
+    }, [phase, stagedEvents, pauseEndDec]);
+
+    // Count summary for review
+    const reviewCancelledCount = useMemo(() =>
+        stagedEvents.filter(e => e.isCancelled && (e as any).cancellationCode === 'OPS_PAUSE').length,
+        [stagedEvents]
+    );
+    const reviewActiveCount = useMemo(() =>
+        stagedEvents.filter(e => !e.isCancelled).length,
+        [stagedEvents]
+    );
+    const reviewPostPauseActive = useMemo(() =>
+        reviewPostPause.filter(e => !e.isCancelled).length,
+        [reviewPostPause]
+    );
+
+    // ── Tile visual state ──────────────────────────────────────────────────
+    // During configure phase: show impacted/completed state based on live events
+    // During review phase: show actual state from stagedEvents
+    const getConfigTileState = (e: ScheduleEvent): 'completed' | 'impacted' | 'cancelled' | 'normal' => {
         if (completedEventIds.has(e.id)) return 'completed';
         if (impactedEvents.some(ie => ie.id === e.id)) return 'impacted';
         if (e.isCancelled) return 'cancelled';
         return 'normal';
     };
 
-    const getTileStyle = (state: ReturnType<typeof getTileState>) => {
+    const getReviewTileState = (e: ScheduleEvent): 'completed' | 'impacted' | 'cancelled' | 'normal' | 'rebuilt' => {
+        if (e.isCancelled) return 'cancelled';
+        // Check if this event existed before and is now "rebuilt" (new id or startTime changed)
+        const original = eventsForDate.find(orig => orig.id === e.id);
+        if (!original) return 'rebuilt'; // new event from build
+        return 'normal';
+    };
+
+    const getTileStyle = (state: 'completed' | 'impacted' | 'cancelled' | 'normal' | 'rebuilt') => {
         switch (state) {
             case 'completed': return 'ring-2 ring-green-500 bg-green-900/30';
             case 'impacted':  return 'ring-2 ring-amber-400 bg-amber-900/20';
             case 'cancelled': return 'opacity-60 ring-2 ring-red-500';
-            case 'rebuilt':   return 'ring-1 ring-sky-400/60';
+            case 'rebuilt':   return 'ring-2 ring-sky-400 bg-sky-900/20';
             default:          return '';
         }
     };
@@ -323,6 +364,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                                         value={pauseStart}
                                         onChange={e => setPauseStart(e.target.value)}
                                         className={inputCls}
+                                        disabled={phase !== 'configure'}
                                     />
                                 </div>
                                 <div className="text-gray-500 mt-4">→</div>
@@ -333,6 +375,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                                         value={pauseEnd}
                                         onChange={e => setPauseEnd(e.target.value)}
                                         className={inputCls}
+                                        disabled={phase !== 'configure'}
                                     />
                                 </div>
                             </div>
@@ -343,15 +386,16 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                             )}
                         </div>
 
-                        {/* ── Affected event types ──────────────────────────────────── */}
+                        {/* ── Affected event types ─────────────────────────────────── */}
                         <div>
                             <p className={sectionHead}>Affected Event Types</p>
                             <div className="flex flex-wrap gap-2">
                                 {TYPES.map(({ key, label }) => (
                                     <button
                                         key={key}
-                                        onClick={() => handleToggleType(key)}
-                                        className={`${btnBase} border ${affectedTypes.has(key) ? 'bg-sky-800/60 border-sky-500 text-sky-200' : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400'}`}
+                                        onClick={() => phase === 'configure' && handleToggleType(key)}
+                                        disabled={phase !== 'configure'}
+                                        className={`${btnBase} border ${affectedTypes.has(key) ? 'bg-sky-800/60 border-sky-500 text-sky-200' : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-400'} ${phase !== 'configure' ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
                                         {label}
                                     </button>
@@ -362,7 +406,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                             )}
                         </div>
 
-                        {/* ── Pause rule ────────────────────────────────────────────── */}
+                        {/* ── Pause rule ───────────────────────────────────────────── */}
                         <div>
                             <p className={sectionHead}>Pause Rule</p>
                             <div className="space-y-2">
@@ -380,8 +424,9 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                                 ] as const).map(opt => (
                                     <button
                                         key={opt.key}
-                                        onClick={() => setPauseRule(opt.key)}
-                                        className={`w-full text-left p-3 rounded border transition-colors ${pauseRule === opt.key ? 'bg-sky-900/40 border-sky-500/60 text-white' : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                        onClick={() => phase === 'configure' && setPauseRule(opt.key)}
+                                        disabled={phase !== 'configure'}
+                                        className={`w-full text-left p-3 rounded border transition-colors ${phase !== 'configure' ? 'opacity-60 cursor-not-allowed ' : ''}${pauseRule === opt.key ? 'bg-sky-900/40 border-sky-500/60 text-white' : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:border-gray-500'}`}
                                     >
                                         <div className="flex items-start gap-2">
                                             <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${pauseRule === opt.key ? 'border-sky-400 bg-sky-400' : 'border-gray-500'}`} />
@@ -396,29 +441,31 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                         </div>
 
                         {/* ── Completed event selection ─────────────────────────────── */}
-                        <div>
-                            <p className={sectionHead}>Completed Events</p>
-                            <p className="text-[10px] text-gray-400 mb-2 leading-snug">Mark events already completed so the rebuild skips them.</p>
-                            <div className="flex gap-2 flex-wrap">
-                                <button
-                                    onClick={() => setIsSelectingCompleted(!isSelectingCompleted)}
-                                    className={`${isSelectingCompleted ? btnActive : btnGray}`}
-                                >
-                                    {isSelectingCompleted ? '✓ Selecting...' : 'Select Completed Events'}
-                                </button>
-                                {completedEventIds.size > 0 && (
+                        {phase === 'configure' && (
+                            <div>
+                                <p className={sectionHead}>Completed Events</p>
+                                <p className="text-[10px] text-gray-400 mb-2 leading-snug">Mark events already completed so the rebuild skips them.</p>
+                                <div className="flex gap-2 flex-wrap">
                                     <button
-                                        onClick={() => setCompletedEventIds(new Set())}
-                                        className={btnGray}
+                                        onClick={() => setIsSelectingCompleted(!isSelectingCompleted)}
+                                        className={`${isSelectingCompleted ? btnActive : btnGray}`}
                                     >
-                                        Clear ({completedEventIds.size})
+                                        {isSelectingCompleted ? '✓ Selecting...' : 'Select Completed Events'}
                                     </button>
+                                    {completedEventIds.size > 0 && (
+                                        <button
+                                            onClick={() => setCompletedEventIds(new Set())}
+                                            className={btnGray}
+                                        >
+                                            Clear ({completedEventIds.size})
+                                        </button>
+                                    )}
+                                </div>
+                                {completedEventIds.size > 0 && (
+                                    <p className="mt-1 text-[10px] text-green-400">{completedEventIds.size} event{completedEventIds.size !== 1 ? 's' : ''} marked completed</p>
                                 )}
                             </div>
-                            {completedEventIds.size > 0 && (
-                                <p className="mt-1 text-[10px] text-green-400">{completedEventIds.size} event{completedEventIds.size !== 1 ? 's' : ''} marked completed</p>
-                            )}
-                        </div>
+                        )}
 
                         {/* ── Action after pause ───────────────────────────────────── */}
                         <div>
@@ -436,7 +483,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                                         desc: 'Cancel all impacted events and leave the remainder of the schedule unchanged.'
                                     }
                                 ] as const).map(opt => {
-                                    const disabled = opt.key === 'reprogram' && !!cannotReprogram;
+                                    const disabled = (opt.key === 'reprogram' && !!cannotReprogram) || phase !== 'configure';
                                     return (
                                         <button
                                             key={opt.key}
@@ -461,7 +508,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                         </div>
                     </div>
 
-                    {/* ── Footer buttons ──────────────────────────────────── */}
+                    {/* ── Footer buttons ──────────────────────────────────────── */}
                     <div className="px-5 py-4 border-t border-gray-700/60 space-y-2" style={{ background: '#1a2030' }}>
                         {phase === 'configure' && (
                             <>
@@ -519,11 +566,11 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                     </div>
                 </div>
 
-                {/* ══ RIGHT PANEL ═════════════════════════════════════════════════════ */}
+                {/* ══ RIGHT PANEL ══════════════════════════════════════════════════════ */}
                 <div className="flex-1 flex flex-col overflow-hidden">
 
                     {/* ── Completed-select banner ──────────────────────────────── */}
-                    {isSelectingCompleted && (
+                    {isSelectingCompleted && phase === 'configure' && (
                         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-green-700/50 bg-green-900/20 flex-shrink-0">
                             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                             <span className="text-xs text-green-300 font-semibold">Completed Event Selection Active — Click or drag tiles below to mark completed</span>
@@ -532,17 +579,29 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                         </div>
                     )}
 
-                    {/* Review banner */}
+                    {/* ── Review banner ────────────────────────────────────────── */}
                     {phase === 'review' && (
                         <div className="flex items-center gap-3 px-4 py-2.5 border-b border-green-700/50 bg-green-900/10 flex-shrink-0">
                             <div className="w-2 h-2 rounded-full bg-green-400" />
                             <span className="text-xs text-green-300 font-semibold">
-                                {actionChoice === 'reprogram' ? 'Post-pause rebuild complete — review then PUBLISH to commit.' : 'Cancellations staged — review then PUBLISH to commit.'}
+                                {actionChoice === 'reprogram'
+                                    ? `Post-pause rebuild complete — ${reviewCancelledCount} cancelled, ${reviewPostPauseActive} rebuilt post-pause. Review then PUBLISH.`
+                                    : `Cancellations staged — ${reviewCancelledCount} cancelled. Review then PUBLISH.`}
                             </span>
                         </div>
                     )}
 
-                    {/* ── Impact summary ─────────────────────────────────────── */}
+                    {/* ── Building progress banner ──────────────────────────────── */}
+                    {phase === 'building' && (
+                        <div className="flex items-center gap-3 px-4 py-2.5 border-b border-sky-700/50 bg-sky-900/10 flex-shrink-0">
+                            <svg className="w-4 h-4 animate-spin text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                <path d="M12 2a10 10 0 1 0 10 10" />
+                            </svg>
+                            <span className="text-xs text-sky-300 font-semibold">{buildProgress}</span>
+                        </div>
+                    )}
+
+                    {/* ── Impact summary ───────────────────────────────────────── */}
                     <div className="border-b border-gray-700/60 px-5 py-3 flex-shrink-0" style={{ background: '#1c2333' }}>
                         <div className="flex flex-wrap gap-3">
                             {/* Pause window summary */}
@@ -578,109 +637,261 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
                                     <span className="text-xs text-sky-300 font-semibold">{decToHHMM(pauseEndDec)}–{decToHHMM(flyingEndTime)}</span>
                                 </div>
                             )}
+                            {/* Review stats */}
+                            {phase === 'review' && (
+                                <>
+                                    <div className="flex items-center gap-1.5 rounded px-3 py-2 border bg-red-900/20 border-red-700/50">
+                                        <span className="text-[10px] text-gray-400">Cancelled:</span>
+                                        <span className="text-sm font-bold text-red-300">{reviewCancelledCount}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 rounded px-3 py-2 border bg-green-900/20 border-green-700/50">
+                                        <span className="text-[10px] text-gray-400">Active:</span>
+                                        <span className="text-sm font-bold text-green-300">{reviewActiveCount}</span>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
-                    {/* ── Schedule tile grid ─────────────────────────────────── */}
+                    {/* ── Schedule tile grid ─────────────────────────────────────── */}
                     <div className="flex-1 overflow-y-auto px-5 py-4">
+
                         {/* Legend */}
                         <div className="flex flex-wrap gap-3 mb-4">
-                            {[
-                                { color: 'bg-gray-500', label: 'Normal' },
-                                { color: 'bg-green-700 ring-2 ring-green-500', label: 'Completed (temp)' },
-                                { color: 'bg-amber-900/50 ring-2 ring-amber-400', label: 'Impacted' },
-                                { color: 'bg-red-900/50 ring-2 ring-red-500', label: 'Cancelled' },
-                            ].map(({ color, label }) => (
-                                <div key={label} className="flex items-center gap-1.5">
-                                    <div className={`w-3 h-3 rounded-sm ${color}`} />
-                                    <span className="text-[10px] text-gray-400">{label}</span>
-                                </div>
-                            ))}
+                            {phase === 'configure' ? (
+                                <>
+                                    {[
+                                        { color: 'bg-gray-500', label: 'Normal' },
+                                        { color: 'bg-green-700 ring-2 ring-green-500', label: 'Completed (protected)' },
+                                        { color: 'bg-amber-900/50 ring-2 ring-amber-400', label: 'Impacted' },
+                                        { color: 'bg-red-900/50 ring-2 ring-red-500', label: 'Already Cancelled' },
+                                    ].map(({ color, label }) => (
+                                        <div key={label} className="flex items-center gap-1.5">
+                                            <div className={`w-3 h-3 rounded-sm ${color}`} />
+                                            <span className="text-[10px] text-gray-400">{label}</span>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : phase === 'review' ? (
+                                <>
+                                    {[
+                                        { color: 'bg-gray-500', label: 'Unchanged' },
+                                        { color: 'bg-sky-900/60 ring-2 ring-sky-400', label: 'Rebuilt (new)' },
+                                        { color: 'bg-red-900/50 ring-2 ring-red-500', label: 'Cancelled (OPS PAUSE)' },
+                                    ].map(({ color, label }) => (
+                                        <div key={label} className="flex items-center gap-1.5">
+                                            <div className={`w-3 h-3 rounded-sm ${color}`} />
+                                            <span className="text-[10px] text-gray-400">{label}</span>
+                                        </div>
+                                    ))}
+                                </>
+                            ) : null}
                         </div>
 
-                        {/* Time band sections */}
-                        <div className="space-y-3">
-                            {/* Pre-pause events */}
-                            {eventsForDate.filter(e => !e.isCancelled && e.startTime + e.duration <= (pauseStartDec ?? 99)).length > 0 && (
-                                <div>
-                                    <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Pre-Pause</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {eventsForDate.filter(e => !e.isCancelled && e.startTime + e.duration <= (pauseStartDec ?? 99))
-                                            .map(e => <EventPill key={e.id} event={e} state={getTileState(e)} styleClass={getTileStyle(getTileState(e))} onMouseDown={handleTileMouseDown} onMouseEnter={handleTileMouseEnter} isSelectMode={isSelectingCompleted} />)}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Pause window */}
-                            {pauseStartDec && pauseEndDec && !validationError && (
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        <p className="text-[9px] font-semibold uppercase tracking-widest text-amber-500">⏸ Pause Window ({decToHHMM(pauseStartDec)}–{decToHHMM(pauseEndDec)})</p>
-                                    </div>
-                                    <div className="border border-amber-700/30 rounded bg-amber-900/5 p-2 min-h-[40px]">
+                        {/* ──────────────────────────────────────────────────────────
+                            CONFIGURE PHASE: show live events in time bands
+                            with impacted/completed highlighting
+                        ────────────────────────────────────────────────────────── */}
+                        {phase === 'configure' && (
+                            <div className="space-y-3">
+                                {/* Pre-pause band */}
+                                {eventsForDate.filter(e => !e.isCancelled && (e.startTime + e.duration) <= (pauseStartDec ?? 99)).length > 0 && (
+                                    <div>
+                                        <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Pre-Pause</p>
                                         <div className="flex flex-wrap gap-2">
-                                            {eventsForDate.filter(e => {
-                                                const end = e.startTime + e.duration;
-                                                return !e.isCancelled && e.startTime < (pauseEndDec ?? 0) && end > (pauseStartDec ?? 0);
-                                            }).length === 0 && (
-                                                <p className="text-[10px] text-gray-600 italic">No events in pause window</p>
-                                            )}
-                                            {eventsForDate.filter(e => {
-                                                const end = e.startTime + e.duration;
-                                                return !e.isCancelled && e.startTime < (pauseEndDec ?? 0) && end > (pauseStartDec ?? 0);
-                                            }).map(e => <EventPill key={e.id} event={e} state={getTileState(e)} styleClass={getTileStyle(getTileState(e))} onMouseDown={handleTileMouseDown} onMouseEnter={handleTileMouseEnter} isSelectMode={isSelectingCompleted} />)}
+                                            {eventsForDate
+                                                .filter(e => !e.isCancelled && (e.startTime + e.duration) <= (pauseStartDec ?? 99))
+                                                .map(e => (
+                                                    <EventPill
+                                                        key={e.id}
+                                                        event={e}
+                                                        state={getConfigTileState(e)}
+                                                        styleClass={getTileStyle(getConfigTileState(e))}
+                                                        onMouseDown={handleTileMouseDown}
+                                                        onMouseEnter={handleTileMouseEnter}
+                                                        isSelectMode={isSelectingCompleted}
+                                                    />
+                                                ))
+                                            }
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
-                            {/* Post-pause events / rebuild */}
-                            {phase === 'review' ? (
-                                <div>
-                                    <p className="text-[9px] font-semibold uppercase tracking-widest text-sky-500 mb-1.5">
-                                        {actionChoice === 'reprogram' ? '⚡ Post-Pause Rebuild' : 'Post-Pause'}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {stagedEvents
-                                            .filter(e => pauseEndDec ? e.startTime >= pauseEndDec : true)
-                                            .filter(e => !e.isCancelled)
-                                            .map(e => <EventPill key={e.id} event={e} state="normal" styleClass="" onMouseDown={() => {}} onMouseEnter={() => {}} isSelectMode={false} />)}
-                                        {stagedEvents
-                                            .filter(e => pauseEndDec ? e.startTime >= pauseEndDec : true)
-                                            .filter(e => e.isCancelled)
-                                            .map(e => <EventPill key={e.id} event={e} state="cancelled" styleClass={getTileStyle('cancelled')} onMouseDown={() => {}} onMouseEnter={() => {}} isSelectMode={false} />)}
+                                {/* Pause window band */}
+                                {pauseStartDec && pauseEndDec && !validationError && (
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <p className="text-[9px] font-semibold uppercase tracking-widest text-amber-500">⏸ Pause Window ({decToHHMM(pauseStartDec)}–{decToHHMM(pauseEndDec)})</p>
+                                        </div>
+                                        <div className="border border-amber-700/30 rounded bg-amber-900/5 p-2 min-h-[40px]">
+                                            <div className="flex flex-wrap gap-2">
+                                                {eventsForDate.filter(e => {
+                                                    const end = e.startTime + e.duration;
+                                                    return !e.isCancelled && e.startTime < (pauseEndDec ?? 0) && end > (pauseStartDec ?? 0);
+                                                }).length === 0 && (
+                                                    <p className="text-[10px] text-gray-600 italic">No events in pause window</p>
+                                                )}
+                                                {eventsForDate.filter(e => {
+                                                    const end = e.startTime + e.duration;
+                                                    return !e.isCancelled && e.startTime < (pauseEndDec ?? 0) && end > (pauseStartDec ?? 0);
+                                                }).map(e => (
+                                                    <EventPill
+                                                        key={e.id}
+                                                        event={e}
+                                                        state={getConfigTileState(e)}
+                                                        styleClass={getTileStyle(getConfigTileState(e))}
+                                                        onMouseDown={handleTileMouseDown}
+                                                        onMouseEnter={handleTileMouseEnter}
+                                                        isSelectMode={isSelectingCompleted}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                postPauseEvents.length > 0 && (
+                                )}
+
+                                {/* Post-pause band */}
+                                {postPauseEvents.length > 0 && (
                                     <div>
                                         <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 mb-1.5">Post-Pause (current)</p>
                                         <div className="flex flex-wrap gap-2">
-                                            {postPauseEvents.map(e => <EventPill key={e.id} event={e} state={getTileState(e)} styleClass={getTileStyle(getTileState(e))} onMouseDown={handleTileMouseDown} onMouseEnter={handleTileMouseEnter} isSelectMode={isSelectingCompleted} />)}
+                                            {postPauseEvents.map(e => (
+                                                <EventPill
+                                                    key={e.id}
+                                                    event={e}
+                                                    state={getConfigTileState(e)}
+                                                    styleClass={getTileStyle(getConfigTileState(e))}
+                                                    onMouseDown={handleTileMouseDown}
+                                                    onMouseEnter={handleTileMouseEnter}
+                                                    isSelectMode={isSelectingCompleted}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
-                                )
-                            )}
-                        </div>
+                                )}
 
-                        {/* Status messages */}
-                        <div className="mt-4 space-y-1.5">
-                            {impactedEvents.length === 0 && !validationError && pauseStartDec && (
-                                <p className="text-[11px] text-gray-500 italic">No events impacted by current pause settings.</p>
-                            )}
-                            {pauseEndDec && flyingEndTime && pauseEndDec >= flyingEndTime && !validationError && (
-                                <p className="text-[11px] text-amber-400 flex items-center gap-1"><span>⚠</span> Pause end equals or exceeds program end — no rebuild window available.</p>
-                            )}
-                            {phase === 'building' && (
-                                <p className="text-xs text-sky-400 flex items-center gap-2">
-                                    <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M12 2a10 10 0 1 0 10 10" /></svg>
-                                    {buildProgress}
-                                </p>
-                            )}
-                            {phase === 'review' && (
-                                <p className="text-[11px] text-green-400">✓ Staged. Press PUBLISH to commit to Active DFP.</p>
-                            )}
-                        </div>
+                                {/* Status messages */}
+                                <div className="mt-2 space-y-1.5">
+                                    {impactedEvents.length === 0 && !validationError && pauseStartDec && (
+                                        <p className="text-[11px] text-gray-500 italic">No events impacted by current pause settings.</p>
+                                    )}
+                                    {pauseEndDec && flyingEndTime && pauseEndDec >= flyingEndTime && !validationError && (
+                                        <p className="text-[11px] text-amber-400 flex items-center gap-1"><span>⚠</span> Pause end equals or exceeds program end — no rebuild window available.</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ──────────────────────────────────────────────────────────
+                            BUILDING PHASE: placeholder
+                        ────────────────────────────────────────────────────────── */}
+                        {phase === 'building' && (
+                            <div className="flex flex-col items-center justify-center h-48 gap-4">
+                                <svg className="w-10 h-10 animate-spin text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                    <path d="M12 2a10 10 0 1 0 10 10" />
+                                </svg>
+                                <p className="text-sm text-sky-300 font-semibold">{buildProgress}</p>
+                                <p className="text-xs text-gray-500">Running NEO Build algorithm post-pause…</p>
+                            </div>
+                        )}
+
+                        {/* ──────────────────────────────────────────────────────────
+                            REVIEW PHASE: show ALL staged events in three bands
+                            sourced from stagedEvents (NOT eventsForDate)
+                        ────────────────────────────────────────────────────────── */}
+                        {phase === 'review' && (
+                            <div className="space-y-4">
+                                {/* Pre-pause band */}
+                                {reviewPrePause.length > 0 && (
+                                    <div>
+                                        <p className="text-[9px] font-semibold uppercase tracking-widest text-gray-400 mb-1.5">
+                                            Pre-Pause ({reviewPrePause.filter(e => !e.isCancelled).length} active)
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {reviewPrePause.map(e => (
+                                                <EventPill
+                                                    key={e.id}
+                                                    event={e}
+                                                    state={getReviewTileState(e)}
+                                                    styleClass={getTileStyle(getReviewTileState(e))}
+                                                    onMouseDown={() => {}}
+                                                    onMouseEnter={() => {}}
+                                                    isSelectMode={false}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Pause window band — shows cancelled events with X overlay */}
+                                {pauseStartDec && pauseEndDec && (
+                                    <div>
+                                        <p className="text-[9px] font-semibold uppercase tracking-widest text-amber-500 mb-1.5">
+                                            ⏸ Pause Window ({decToHHMM(pauseStartDec)}–{decToHHMM(pauseEndDec)})
+                                            {reviewPauseWindow.filter(e => e.isCancelled).length > 0 &&
+                                                <span className="text-red-400 ml-1">— {reviewPauseWindow.filter(e => e.isCancelled).length} cancelled</span>}
+                                        </p>
+                                        <div className="border border-amber-700/30 rounded bg-amber-900/5 p-2 min-h-[40px]">
+                                            {reviewPauseWindow.length === 0 ? (
+                                                <p className="text-[10px] text-gray-600 italic">No events in pause window</p>
+                                            ) : (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {reviewPauseWindow.map(e => (
+                                                        <EventPill
+                                                            key={e.id}
+                                                            event={e}
+                                                            state={getReviewTileState(e)}
+                                                            styleClass={getTileStyle(getReviewTileState(e))}
+                                                            onMouseDown={() => {}}
+                                                            onMouseEnter={() => {}}
+                                                            isSelectMode={false}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Post-pause rebuild band */}
+                                <div>
+                                    <p className="text-[9px] font-semibold uppercase tracking-widest text-sky-400 mb-1.5">
+                                        {actionChoice === 'reprogram' ? '⚡ Post-Pause Rebuild' : 'Post-Pause'}
+                                        {reviewPostPause.length > 0 &&
+                                            <span className="text-gray-400 ml-1 normal-case font-normal">
+                                                — {reviewPostPauseActive} active{reviewPostPause.filter(e => !e.isCancelled && !eventsForDate.find(o => o.id === e.id)).length > 0 ? ` (${reviewPostPause.filter(e => !e.isCancelled && !eventsForDate.find(o => o.id === e.id)).length} new)` : ''}
+                                            </span>}
+                                    </p>
+                                    {reviewPostPause.length === 0 ? (
+                                        <p className="text-[10px] text-gray-500 italic">No events scheduled after pause end.</p>
+                                    ) : (
+                                        <div className="flex flex-wrap gap-2">
+                                            {reviewPostPause.map(e => (
+                                                <EventPill
+                                                    key={e.id}
+                                                    event={e}
+                                                    state={getReviewTileState(e)}
+                                                    styleClass={getTileStyle(getReviewTileState(e))}
+                                                    onMouseDown={() => {}}
+                                                    onMouseEnter={() => {}}
+                                                    isSelectMode={false}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Total summary */}
+                                <div className="mt-2 p-3 rounded border border-green-700/30 bg-green-900/10">
+                                    <p className="text-[11px] text-green-400 font-semibold">
+                                        ✓ Staged: {stagedEvents.length} total events — {reviewActiveCount} active, {reviewCancelledCount} cancelled (OPS PAUSE)
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">
+                                        Press PUBLISH to commit these changes to the Active DFP.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -688,7 +899,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
     );
 };
 
-// ── EventPill sub-component ──────────────────────────────────────────────────
+// ── EventPill sub-component ───────────────────────────────────────────────────
 
 interface EventPillProps {
     event: ScheduleEvent;
@@ -717,7 +928,7 @@ const EventPill: React.FC<EventPillProps> = ({ event, state, styleClass, onMouse
             className={`relative rounded px-2 py-1.5 text-[10px] text-white select-none transition-all ${base} ${styleClass} ${isSelectMode ? 'cursor-pointer' : 'cursor-default'}`}
             style={{ minWidth: 80 }}
         >
-            {/* Cancelled cross */}
+            {/* Cancelled cross overlay */}
             {state === 'cancelled' && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <svg className="w-4/5 h-4/5 text-red-500 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
@@ -730,6 +941,12 @@ const EventPill: React.FC<EventPillProps> = ({ event, state, styleClass, onMouse
             {state === 'completed' && (
                 <div className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full flex items-center justify-center pointer-events-none">
                     <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                </div>
+            )}
+            {/* Rebuilt indicator */}
+            {state === 'rebuilt' && (
+                <div className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-sky-500 rounded-full flex items-center justify-center pointer-events-none">
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v4m0 0l-2-2m2 2l2-2M4 12h4m0 0l-2 2m2-2l-2-2M20 12h-4m0 0l2 2m-2-2l2-2M12 20v-4m0 0l-2 2m2-2l2 2" /></svg>
                 </div>
             )}
             <p className="font-semibold leading-tight">{event.flightNumber}</p>
