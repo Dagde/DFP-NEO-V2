@@ -13459,14 +13459,21 @@ updates.forEach(update => {
                 onClose={() => setShowPauseFlightOps(false)}
                 date={date}
                 eventsForDate={(() => {
-                    // Deduplicate + validate date field, same as eventSegmentsForDate
+                    // Deduplicate + validate date field, same as eventSegmentsForDate.
+                    // Also collapse group events (e.g. ground school) that generate one event
+                    // object per attendee - we only need one representative tile per unique
+                    // flightNumber+startTime combination for display in the modal.
                     const seenIds = new Set<string>();
+                    const seenSlots = new Set<string>();
                     return (publishedSchedules[date] || []).filter((e: ScheduleEvent) => {
                         if (seenIds.has(e.id)) return false;
                         if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
-                        // Skip STBY resource rows - they are not schedulable events
                         if (e.resourceId && (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY'))) return false;
+                        // Collapse group events: deduplicate by flightNumber+startTime+type
+                        const slotKey = `${e.flightNumber}__${e.startTime}__${e.type}`;
+                        if (seenSlots.has(slotKey)) return false;
                         seenIds.add(e.id);
+                        seenSlots.add(slotKey);
                         return true;
                     });
                 })()}
