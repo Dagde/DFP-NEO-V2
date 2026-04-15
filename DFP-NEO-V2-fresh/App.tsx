@@ -13458,7 +13458,18 @@ updates.forEach(update => {
                 isOpen={showPauseFlightOps}
                 onClose={() => setShowPauseFlightOps(false)}
                 date={date}
-                eventsForDate={publishedSchedules[date] || []}
+                eventsForDate={(() => {
+                    // Deduplicate + validate date field, same as eventSegmentsForDate
+                    const seenIds = new Set<string>();
+                    return (publishedSchedules[date] || []).filter((e: ScheduleEvent) => {
+                        if (seenIds.has(e.id)) return false;
+                        if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+                        // Skip STBY resource rows - they are not schedulable events
+                        if (e.resourceId && (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY'))) return false;
+                        seenIds.add(e.id);
+                        return true;
+                    });
+                })()}
                 flyingStartTime={flyingStartTime}
                 flyingEndTime={flyingEndTime}
                 ftdStartTime={ftdStartTime}
