@@ -7690,10 +7690,15 @@ const App: React.FC = () => {
             flyingEndTime: dayEnd,
             ftdStartTime: pFtdStart,
             ftdEndTime: pFtdEnd,
-            existingEvents,
         } = config;
 
-        console.log('[PauseBuild] Starting pause build for', pauseDate, 'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd);
+        // IMPORTANT: Always use the FULL raw publishedSchedules[date] — not the filtered
+        // display subset passed as existingEvents. The full schedule includes all events
+        // (ground school per-student, deployment, etc.) that must be preserved on publish.
+        const fullRawEvents: ScheduleEvent[] = publishedSchedules[pauseDate] || [];
+        console.log('[PauseBuild] Starting pause build for', pauseDate,
+            'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd,
+            'fullRawEvents:', fullRawEvents.length);
 
         // 1. Determine which events are impacted by the pause
         const isImpacted = (e: ScheduleEvent): boolean => {
@@ -7710,9 +7715,9 @@ const App: React.FC = () => {
             }
         };
 
-        // 2. Build the set of cancelled events and the eventsAfterCancel array
+        // 2. Build the set of cancelled events using the FULL raw schedule
         const cancelledIds = new Set<string>();
-        const eventsAfterCancel: ScheduleEvent[] = existingEvents.map(e => {
+        const eventsAfterCancel: ScheduleEvent[] = fullRawEvents.map(e => {
             if (isImpacted(e)) {
                 cancelledIds.add(e.id);
                 return {
@@ -7726,12 +7731,15 @@ const App: React.FC = () => {
             return e;
         });
 
-        console.log('[PauseBuild] Impacted/cancelled:', cancelledIds.size);
+        console.log('[PauseBuild] Impacted/cancelled:', cancelledIds.size,
+            'out of', fullRawEvents.length, 'total events');
 
         // 3. For the NEO Build, lock ALL non-cancelled events as time-fixed
-        //    so the algorithm preserves the entire pre-pause schedule
+        //    so the algorithm preserves the entire pre-pause schedule.
+        //    Only pass unique events (deduplicated by ID) to the build algorithm.
+        const seenLocked = new Set<string>();
         const lockedEvents: ScheduleEvent[] = eventsAfterCancel
-            .filter(e => !e.isCancelled)
+            .filter(e => !e.isCancelled && !seenLocked.has(e.id) && (() => { seenLocked.add(e.id); return true; })())
             .map(e => ({ ...e, isTimeFixed: true }));
 
         console.log('[PauseBuild] Locked pre-pause events:', lockedEvents.length);
@@ -7824,13 +7832,16 @@ const App: React.FC = () => {
         });
     };
 
-    // ── Pause Flight Ops: handlePausePublish ──────────────────────────────────
-    const handlePausePublish = (updatedEvents: ScheduleEvent[]) => {
+    // ── Pause Flight Ops: handlePausePublish ──────────────────────────────────────────────
+    const handlePausePublish = (stagedEvents: ScheduleEvent[]) => {
         const targetDate = date;
 
-        // Deduplicate by ID (same guard as normal publish)
+        // stagedEvents comes from handlePauseBuild which used the FULL raw publishedSchedules[date].
+        // It already contains all events (including group/deployment events).
+        // We just deduplicate by ID and ensure date fields are correct.
+
         const seenIds = new Set<string>();
-        const dedupedEvents = updatedEvents.filter(e => {
+        const dedupedEvents = stagedEvents.filter(e => {
             if (seenIds.has(e.id)) return false;
             seenIds.add(e.id);
             return true;
@@ -7839,7 +7850,8 @@ const App: React.FC = () => {
         // Ensure every event has the correct date field
         const finalEvents: ScheduleEvent[] = dedupedEvents.map(e => ({ ...e, date: targetDate }));
 
-        console.log('[PausePublish] Publishing', finalEvents.length, 'events for', targetDate);
+        console.log('[PausePublish] Publishing', finalEvents.length, 'events for', targetDate,
+            '(was:', (publishedSchedules[targetDate] || []).length, 'before)');
 
         // 1. Update publishedSchedules (triggers re-render of Program Schedule view)
         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
@@ -7853,7 +7865,7 @@ const App: React.FC = () => {
             [targetDate]: JSON.parse(JSON.stringify(finalEvents)),
         }));
 
-        // 3. Sync PT-051s with the updated schedule
+        // 3. Sync PT-051s with the updated schedule (delayed to let state settle)
         setTimeout(() => {
             setPublishedSchedules(currentSchedules => {
                 setPt051Assessments(currentAssessments => {
@@ -7880,7 +7892,8 @@ const App: React.FC = () => {
             `Cancelled: ${cancelledCount} (OPS PAUSE) | Active post-rebuild: ${activeCount} | By: ${authUser?.displayName || 'Unknown'}`
         );
 
-        console.log('[PausePublish] Done. Active:', activeCount, 'Cancelled:', cancelledCount);
+        console.log('[PausePublish] Done. Total:', finalEvents.length,
+            'Active:', activeCount, 'Cancelled (OPS_PAUSE):', cancelledCount);
     };
 
     // ────────────────────────────────────────────────────────────────────────────
