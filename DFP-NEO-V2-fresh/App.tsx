@@ -12148,6 +12148,7 @@ updates.forEach(update => {
                             zoomLevel={zoomLevel}
                             showValidation={showValidation}
                             showPrePost={showPrePost}
+                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                             syllabusDetails={syllabusDetails}
                             personnelData={personnelData}
                             seatConfigs={seatConfigs}
