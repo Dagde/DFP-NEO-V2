@@ -1511,8 +1511,10 @@ function generateDfpInternal(
     console.log('🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active');
 
     // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
-    const activeDfpEvents = publishedSchedules[buildDate] || [];
-    console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
+    // Filter out cancelled events so that trainees whose flights were cancelled during
+    // a pause are NOT seen as "already scheduled" and can be re-scheduled after the pause.
+    const activeDfpEvents = (publishedSchedules[buildDate] || []).filter(e => !e.isCancelled);
+    console.log(`🔵 Active DFP has ${activeDfpEvents.length} non-cancelled events for ${buildDate}`);
     
     // Convert Active DFP events to the format needed (remove date field)
     const activeDfpEventsWithoutDate: Omit<ScheduleEvent, 'date'>[] = activeDfpEvents.map(e => {
@@ -7821,6 +7823,20 @@ const App: React.FC = () => {
             completedEventIds,  // Pass through so generateDfpInternal skips completed trainees
         };
 
+        // Build a modified publishedSchedules where the pause date is EMPTY.
+        // This is critical: generateDfpInternal initialises generatedEvents from
+        // publishedSchedules[buildDate]. If we pass the raw schedule, the algorithm sees
+        // ALL original events (including ones cancelled during the pause) and marks those
+        // trainees as "already scheduled", preventing re-scheduling after the pause.
+        // Instead we set pauseDate to empty so activeDfpEvents = [] and let
+        // highestPriorityEvents (= lockedEvents = non-cancelled pre-pause events) be the
+        // sole source of already-scheduled events fed into generatedEvents.
+        // For OTHER dates we keep the real publishedSchedules so ELCE/scoring still works.
+        const pausePublishedSchedules = {
+            ...publishedSchedules,
+            [pauseDate]: [],   // cleared — pre-pause events come via highestPriorityEvents
+        };
+
         return new Promise<ScheduleEvent[]>((resolve) => {
             setTimeout(() => {
                 try {
@@ -7829,7 +7845,7 @@ const App: React.FC = () => {
                         (progress: { message: string; percentage: number }) => {
                             console.log('[PauseBuild]', progress.message);
                         },
-                        publishedSchedules
+                        pausePublishedSchedules   // Use modified schedules with cancellations applied
                     );
 
                     console.log('[PauseBuild] generateDfpInternal returned', generated.length, 'events');
