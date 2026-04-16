@@ -2113,6 +2113,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const bucketsWithValues = Object.entries(_fbBuckets).filter(([,v]) => v > 0);
         if (bucketsWithValues.length === 0) console.log('   (ZERO rejections - flight list is likely empty)');
         else bucketsWithValues.forEach(([k,v]) => console.log('   ' + k + ': ' + v));
+        
+        // Explicitly highlight hourly dispatch limit for visibility
+        if (_fbBuckets.HOURLY_DISPATCH_LIMIT > 0) {
+            console.log(`\n⏱️  [HOURLY RATE] ${_fbBuckets.HOURLY_DISPATCH_LIMIT} flights blocked by 8/hour dispatch limit`);
+        }
         console.log('D. TIME SLOTS AFTER 0805:');
         postFirstTwo.forEach(t => {
             const key = Math.round(t * 12) / 12;
@@ -2871,8 +2876,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             
             const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
             if (takeoffsInLastHour >= 8) {
+                console.log(`[HOURLY RATE] BLOCKING ${trainee.fullName} at ${_fmtT(startTime)} - ${takeoffsInLastHour} flights in last hour (limit: 8)`);
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
+            }
+            // Log when hourly rate check passes for visibility during NEO builds
+            if (takeoffsInLastHour >= 6) {
+                console.log(`[HOURLY RATE] ${trainee.fullName} at ${_fmtT(startTime)} - ${takeoffsInLastHour} flights in last hour (limit: 8)`);
             }
             
             const takeoffConflict = nonStbyFlights.some(e => {
