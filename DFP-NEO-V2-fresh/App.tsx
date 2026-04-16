@@ -5613,6 +5613,10 @@ const App: React.FC = () => {
     // Snapshot of the original active DFP events when the Pause panel was opened —
     // used by "Revert to Original Daily Schedule" to discard all pause changes.
     const [pauseOriginalEvents, setPauseOriginalEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
+    // Pause window times (decimal hours) for the overlay on the NEO Build schedule.
+    // Set when the user runs the pause build; cleared on revert/close.
+    const [pauseOverlayStart, setPauseOverlayStart] = useState<number | null>(null);
+    const [pauseOverlayEnd,   setPauseOverlayEnd]   = useState<number | null>(null);
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
@@ -7840,6 +7844,10 @@ const App: React.FC = () => {
             [pauseDate]: [],   // cleared — pre-pause events come via highestPriorityEvents
         };
 
+        // Record the pause window for the NEO Build schedule overlay
+        setPauseOverlayStart(pauseStart);
+        setPauseOverlayEnd(pauseEnd);
+
         return new Promise<ScheduleEvent[]>((resolve) => {
             setTimeout(() => {
                 try {
@@ -7854,12 +7862,17 @@ const App: React.FC = () => {
                     console.log('[PauseBuild] generateDfpInternal returned', generated.length, 'events');
 
                     // Add date field and filter out algo-generated STBY lines
-                    // (the NEO Build algorithm places unfilled slots on STBY lines; we
-                    //  keep those but the cancelled OPS_PAUSE events get their own STBY placement below)
+                    // Filter out algo-generated STBY lines (we place cancelled events
+                    // on STBY explicitly below) AND remove any event whose ID is in
+                    // cancelledIds — those must only appear on STBY with their red X,
+                    // not also at their original PC-21 slot (which causes ghost tiles).
                     const generatedWithDate: ScheduleEvent[] = generated
                         .filter((e: any) => {
                             const resId = ((e as any).resourceId || '').toLowerCase();
-                            return !resId.includes('stby') && !resId.includes('standby');
+                            if (resId.includes('stby') || resId.includes('standby')) return false;
+                            // Remove ghost: if this event was cancelled it must not stay on PC-21
+                            if (cancelledIds.has((e as any).id)) return false;
+                            return true;
                         })
                         .map((e: any) => ({ ...e, date: pauseDate } as ScheduleEvent));
 
@@ -7869,7 +7882,15 @@ const App: React.FC = () => {
                     // original PC-21 slot, which would be re-used by the rebuild).
                     const builtIds = new Set(generatedWithDate.map(e => e.id));
                     const opsPauseCancelledEvents = eventsAfterCancel
-                        .filter(e => e.isCancelled && cancelledIds.has(e.id) && !builtIds.has(e.id));
+                        .filter(e =>
+                            e.isCancelled &&
+                            cancelledIds.has(e.id) &&
+                            !builtIds.has(e.id) &&
+                            // Never move completed events to STBY — they stay at their
+                            // original slot with green ring (shouldn't be cancelled, but
+                            // guard here too in case of ID mismatch)
+                            !completedEventIds.has(e.id)
+                        );
 
                     // Assign each cancelled event to an available STBY line.
                     // Track which STBY slots are already occupied (time-based collision).
@@ -12133,6 +12154,8 @@ updates.forEach(update => {
                                     return next;
                                 });
                             }}
+                            pauseWindowStart={showPausePanel ? pauseOverlayStart : null}
+                            pauseWindowEnd={showPausePanel ? pauseOverlayEnd : null}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu 
@@ -13304,7 +13327,8 @@ updates.forEach(update => {
                                 setPauseCompletedEventIds(new Set());
                                 setPausePanelPhase('configure');
                                 setPauseStagedEvents([]);
-                                // Restore published schedule if we were previewing staged events
+                                setPauseOverlayStart(null);
+                                setPauseOverlayEnd(null);
                             }}
                             date={date}
                             eventsForDate={(() => {
@@ -13352,9 +13376,11 @@ updates.forEach(update => {
                             onRevert={() => {
                                 // Restore the NEO Build schedule to the original active DFP snapshot
                                 setNextDayBuildEvents(pauseOriginalEvents);
-                                // Also clear completed event highlights
+                                // Clear completed event highlights and pause overlay
                                 setPauseCompletedEventIds(new Set());
                                 setPauseIsSelectingCompleted(false);
+                                setPauseOverlayStart(null);
+                                setPauseOverlayEnd(null);
                             }}
                             phase={pausePanelPhase}
                             onPhaseChange={setPausePanelPhase}

@@ -46,6 +46,9 @@ interface NextDayBuildViewProps {
   isPauseSelectMode?: boolean;
   pauseCompletedEventIds?: Set<string>;
   onPauseToggleCompleted?: (eventId: string) => void;
+  // Pause window overlay — vertical lines + shaded region
+  pauseWindowStart?: number | null;  // decimal hours, e.g. 10.0
+  pauseWindowEnd?: number | null;    // decimal hours, e.g. 11.0
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -92,7 +95,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, traineesData,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
-    isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted
+    isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
+    pauseWindowStart = null, pauseWindowEnd = null,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -448,6 +452,47 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             );
         }
 
+        // Pause window start/end labels
+        if (pauseWindowStart != null) {
+            const decToHHMM = (dec: number) => {
+                const h = Math.floor(dec);
+                const m = Math.round((dec - h) * 60);
+                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+            };
+            const psLeft = (pauseWindowStart - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+            markers.push(
+                <div
+                    key="pause-start-label"
+                    className="absolute h-full top-0 flex items-center pointer-events-none"
+                    style={{ left: psLeft }}
+                >
+                    <span
+                        className="-translate-x-1/2 text-[9px] font-bold px-1 rounded"
+                        style={{ color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.12)', whiteSpace: 'nowrap' }}
+                    >
+                        ⏸ {decToHHMM(pauseWindowStart)}
+                    </span>
+                </div>
+            );
+            if (pauseWindowEnd != null) {
+                const peLeft = (pauseWindowEnd - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+                markers.push(
+                    <div
+                        key="pause-end-label"
+                        className="absolute h-full top-0 flex items-center pointer-events-none"
+                        style={{ left: peLeft }}
+                    >
+                        <span
+                            className="-translate-x-1/2 text-[9px] font-bold px-1 rounded"
+                            style={{ color: 'rgba(255,255,255,0.9)', background: 'rgba(255,255,255,0.12)', whiteSpace: 'nowrap' }}
+                        >
+                            ▶ {decToHHMM(pauseWindowEnd)}
+                        </span>
+                    </div>
+                );
+            }
+        }
+
         return markers;
     };
 
@@ -516,6 +561,50 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         );
     };
       
+    // ── Pause Window Overlay ─────────────────────────────────────────────────
+    const renderPauseWindow = () => {
+        if (pauseWindowStart == null || pauseWindowEnd == null) return null;
+        if (pauseWindowEnd <= pauseWindowStart) return null;
+
+        const leftPx  = (pauseWindowStart - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+        const rightPx = (pauseWindowEnd   - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+        const widthPx = rightPx - leftPx;
+
+        return (
+            <>
+                {/* Filled region between pause start and end — very transparent */}
+                <div
+                    className="absolute top-0 h-full pointer-events-none z-[6]"
+                    style={{
+                        left:    `${leftPx}px`,
+                        width:   `${widthPx}px`,
+                        background: 'rgba(255,255,255,0.045)',
+                    }}
+                />
+                {/* Left vertical line — pause start */}
+                <div
+                    className="absolute top-0 h-full pointer-events-none z-[7]"
+                    style={{
+                        left:        `${leftPx}px`,
+                        width:       '2px',
+                        background:  'rgba(255,255,255,0.75)',
+                        boxShadow:   '0 0 4px rgba(255,255,255,0.3)',
+                    }}
+                />
+                {/* Right vertical line — pause end */}
+                <div
+                    className="absolute top-0 h-full pointer-events-none z-[7]"
+                    style={{
+                        left:        `${rightPx}px`,
+                        width:       '2px',
+                        background:  'rgba(255,255,255,0.75)',
+                        boxShadow:   '0 0 4px rgba(255,255,255,0.3)',
+                    }}
+                />
+            </>
+        );
+    };
+
     const renderNightShade = () => {
         const firstLightHour = timeStringToHours(daylightTimes.firstLight);
         const lastLightHour = timeStringToHours(daylightTimes.lastLight);
@@ -723,6 +812,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     {renderGridLines()}
                     {renderNightShade()}
                     {renderDaylightLines()}
+                    {renderPauseWindow()}
                     {renderCategorySeparators()}
                     {renderEvents()}
                     
