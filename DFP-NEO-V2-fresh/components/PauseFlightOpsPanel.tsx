@@ -463,7 +463,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                     <div>
                         <p className={sectionHead}>Completed Events</p>
                         <p className="text-[9px] text-gray-400 mb-2 leading-snug">
-                            Mark events already completed — the rebuild will skip them. Click tiles on the schedule below.
+                            Mark events already completed — the rebuild will skip those trainees. Click tiles on the NEO Build schedule to toggle.
                         </p>
                         <div className="flex gap-2 flex-wrap">
                             <button

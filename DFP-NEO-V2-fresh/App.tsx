@@ -417,6 +417,7 @@ interface DfpConfig {
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
+  completedEventIds?: Set<string>;
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -1638,10 +1639,35 @@ function generateDfpInternal(
 
     const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
     const nextPlusOneLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[] };
+
+    // --- Pause Flight Ops: resolve completed event IDs to trainee names ---
+    // If completedEventIds is provided (Pause Build mode), find which trainees had those
+    // events marked as completed. Those trainees are skipped when building nextEventLists
+    // so they are not re-scheduled (their completed event already flew before the pause).
+    const completedTraineeNames = new Set<string>();
+    if (config.completedEventIds && config.completedEventIds.size > 0) {
+        const allKnownEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
+        config.completedEventIds.forEach(evId => {
+            const ev = allKnownEvents.find(e => e.id === evId);
+            if (ev) {
+                if (ev.student) completedTraineeNames.add(ev.student);
+                if (ev.pilot) completedTraineeNames.add(ev.pilot);
+                if (ev.attendees) ev.attendees.forEach(a => completedTraineeNames.add(a));
+            }
+        });
+        console.log(`[PauseBuild] completedEventIds=${config.completedEventIds.size}, skipping trainees: [${Array.from(completedTraineeNames).join(', ')}]`);
+    }
     
     activeTrainees.forEach(trainee => {
         const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
         if (next) {
+            // --- Pause Flight Ops skip ---
+            // If this trainee's next event was marked as completed before the pause,
+            // skip them entirely — their slot has already been flown.
+            if (completedTraineeNames.has(trainee.fullName)) {
+                console.log(`[PauseBuild] Skipping ${trainee.fullName} — event already completed before pause`);
+                return; // do not add to any nextEventList
+            }
 
             if (next.code.startsWith('BNF') && next.type === 'Flight') {
                 // CRITICAL: Check if trainee already has day events (including Active DFP)
@@ -7792,6 +7818,7 @@ const App: React.FC = () => {
             getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
+            completedEventIds,  // Pass through so generateDfpInternal skips completed trainees
         };
 
         return new Promise<ScheduleEvent[]>((resolve) => {
@@ -12044,6 +12071,16 @@ updates.forEach(update => {
                                     );
                                 }
                             }}
+                            isPauseSelectMode={showPausePanel && pauseIsSelectingCompleted}
+                            pauseCompletedEventIds={pauseCompletedEventIds}
+                            onPauseToggleCompleted={(eventId: string) => {
+                                setPauseCompletedEventIds(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(eventId)) next.delete(eventId);
+                                    else next.add(eventId);
+                                    return next;
+                                });
+                            }}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu 
@@ -13177,8 +13214,22 @@ updates.forEach(update => {
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
                        onPauseFlightOps={activeView === 'Program Schedule' ? () => {
-                           // Open the new sidebar panel; ensure we're on Program Schedule
-                           if (activeView !== 'Program Schedule') handleNavigation('Program Schedule');
+                           // Pause Flight Ops: navigate to NEO Build for the active DFP date,
+                           // load the active DFP events as the starting schedule, then open panel.
+                           const pauseDate = date; // active DFP date
+                           setBuildDfpDate(pauseDate);
+                           // Load the active DFP events into the NEO Build schedule
+                           const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map(
+                               (e: ScheduleEvent) => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; }
+                           );
+                           setNextDayBuildEvents(activeDfpEventsForPause);
+                           // Reset pause state
+                           setPauseCompletedEventIds(new Set());
+                           setPauseIsSelectingCompleted(false);
+                           setPausePanelPhase('configure');
+                           setPauseStagedEvents([]);
+                           // Navigate to NEO Build view and open the panel
+                           handleNavigation('NextDayBuild');
                            setShowPausePanel(true);
                        } : undefined}
                        authUser={authUser}
@@ -13228,18 +13279,17 @@ updates.forEach(update => {
                             onCompletedEventIdsChange={setPauseCompletedEventIds}
                             onStagedEventsReady={(events) => {
                                 if (events !== null) {
-                                    // Live preview: temporarily update publishedSchedules with staged events
-                                    // so the schedule view shows the post-pause result
+                                    // Live preview: update nextDayBuildEvents so the NEO Build
+                                    // schedule shows the post-pause rebuild result.
                                     const seenIds = new Set<string>();
-                                    const deduped = events.filter(e => {
-                                        if (seenIds.has(e.id)) return false;
-                                        seenIds.add(e.id);
-                                        return true;
-                                    });
-                                    setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
-                                        ...prev,
-                                        [date]: deduped,
-                                    }));
+                                    const deduped = events
+                                        .filter(e => {
+                                            if (seenIds.has(e.id)) return false;
+                                            seenIds.add(e.id);
+                                            return true;
+                                        })
+                                        .map(e => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; });
+                                    setNextDayBuildEvents(deduped);
                                 }
                             }}
                             phase={pausePanelPhase}

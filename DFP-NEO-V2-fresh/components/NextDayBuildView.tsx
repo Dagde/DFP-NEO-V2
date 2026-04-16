@@ -42,6 +42,10 @@ interface NextDayBuildViewProps {
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
   onOracleMouseUp: () => void;
+  // Pause Flight Ops — completed event selection
+  isPauseSelectMode?: boolean;
+  pauseCompletedEventIds?: Set<string>;
+  onPauseToggleCompleted?: (eventId: string) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -87,7 +91,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, traineesData,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
-    isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange
+    isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
+    isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -567,6 +572,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
 
                 const isSelected = selectedEventIds.has(event.id);
                 const isChanged = false; // No baseline for NDB
+                const isPauseCompleted = isPauseSelectMode && (pauseCompletedEventIds?.has(event.id) ?? false);
 
                 return (
                     <FlightTile
@@ -575,7 +581,10 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         traineesData={traineesData}
                         onSelectEvent={() => { 
                                if (!didDragRef.current) {
-                                   if (isMultiSelectMode) {
+                                   if (isPauseSelectMode && onPauseToggleCompleted) {
+                                       // Pause mode: toggle completed state
+                                       onPauseToggleCompleted(event.id);
+                                   } else if (isMultiSelectMode) {
                                        // Toggle selection in multi-select mode
                                        const newSelectedIds = new Set(selectedEventIds);
                                        if (newSelectedIds.has(event.id)) {
@@ -604,10 +613,11 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         conflictedPersonnelName={personToHighlight}
                         personnelData={personnelData}
                         seatConfigs={seatConfigs}
-                        isDraggable={true}
+                        isDraggable={!isPauseSelectMode}
                         currentTime={currentTime}
                         isSelected={isSelected}
                         isChanged={isChanged}
+                        isPauseCompleted={isPauseCompleted}
                         
                     />
                 );
@@ -645,7 +655,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     };
 
     return (
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none">
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
