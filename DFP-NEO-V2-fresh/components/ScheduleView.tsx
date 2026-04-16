@@ -63,6 +63,10 @@ interface ScheduleViewProps {
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
+  // Pause Flight Ops selection mode
+  isPauseSelectMode?: boolean;
+  pauseCompletedEventIds?: Set<string>;
+  onPauseToggleCompleted?: (eventId: string) => void;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -133,6 +137,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
     showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -845,6 +850,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
                 const isSelected = selectedEventIds.has(event.id);
                 const isChanged = checkIsChanged(event, baselineEvents);
+                const isPauseCompleted = isPauseSelectMode && pauseCompletedEventIds?.has(event.id);
 
                 return (
                     <FlightTile
@@ -853,7 +859,10 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         traineesData={traineesData}
                         onSelectEvent={() => { 
                                if (!didDragRef.current) {
-                                   if (isMultiSelectMode) {
+                                   if (isPauseSelectMode && onPauseToggleCompleted) {
+                                       // Pause selection mode - toggle completed status
+                                       onPauseToggleCompleted(event.id);
+                                   } else if (isMultiSelectMode) {
                                        // Toggle selection in multi-select mode
                                        const newSelectedIds = new Set(selectedEventIds);
                                        if (newSelectedIds.has(event.id)) {
@@ -882,10 +891,11 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         conflictedPersonnelName={personToHighlight}
                         personnelData={personnelData}
                         seatConfigs={seatConfigs}
-                        isDraggable={true}
+                        isDraggable={!isPauseSelectMode}
                         currentTime={currentTime}
                         isSelected={isSelected}
                         isChanged={isChanged}
+                        isPauseCompleted={isPauseCompleted}
                     />
                 );
             });
@@ -893,7 +903,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     return (
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none">
+        <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,

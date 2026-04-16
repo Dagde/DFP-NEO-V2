@@ -119,6 +119,7 @@ import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleV
 import AircraftAvailabilitySettings from './components/AircraftAvailabilitySettings';
 import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 import PauseFlightOpsModal, { PauseBuildConfig } from './components/PauseFlightOpsModal';
+import PauseFlightOpsPanel, { PausePhase } from './components/PauseFlightOpsPanel';
 
 
 // --- MOCK DATA ---
@@ -5575,6 +5576,12 @@ const App: React.FC = () => {
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
     const [showPauseFlightOps, setShowPauseFlightOps] = useState(false);
+    // Pause Flight Ops Panel state (new sidebar panel)
+    const [showPausePanel, setShowPausePanel] = useState(false);
+    const [pausePanelPhase, setPausePanelPhase] = useState<PausePhase>('configure');
+    const [pauseCompletedEventIds, setPauseCompletedEventIds] = useState<Set<string>>(new Set());
+    const [pauseIsSelectingCompleted, setPauseIsSelectingCompleted] = useState(false);
+    const [pauseStagedEvents, setPauseStagedEvents] = useState<ScheduleEvent[]>([]);
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
@@ -11388,6 +11395,16 @@ updates.forEach(update => {
                                    });
                                }
                            }}
+                           isPauseSelectMode={pauseIsSelectingCompleted && showPausePanel}
+                           pauseCompletedEventIds={pauseCompletedEventIds}
+                           onPauseToggleCompleted={(eventId: string) => {
+                               setPauseCompletedEventIds(prev => {
+                                   const next = new Set(prev);
+                                   if (next.has(eventId)) next.delete(eventId);
+                                   else next.add(eventId);
+                                   return next;
+                               });
+                           }}
                         />;
             case 'TraineeSchedule':
                 return <TraineeScheduleView
@@ -13159,14 +13176,78 @@ updates.forEach(update => {
                     
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
-                       onPauseFlightOps={activeView === 'Program Schedule' ? () => setShowPauseFlightOps(true) : undefined}
+                       onPauseFlightOps={activeView === 'Program Schedule' ? () => {
+                           // Open the new sidebar panel; ensure we're on Program Schedule
+                           if (activeView !== 'Program Schedule') handleNavigation('Program Schedule');
+                           setShowPausePanel(true);
+                       } : undefined}
                        authUser={authUser}
                        onLogout={handleLogout}
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
                 />}
-                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                {renderActiveView()}
+                <div className="flex-1 overflow-hidden flex flex-row min-h-0">
+                    <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                        {renderActiveView()}
+                    </div>
+                    {showPausePanel && (
+                        <PauseFlightOpsPanel
+                            isOpen={showPausePanel}
+                            onClose={() => {
+                                setShowPausePanel(false);
+                                setPauseIsSelectingCompleted(false);
+                                setPauseCompletedEventIds(new Set());
+                                setPausePanelPhase('configure');
+                                setPauseStagedEvents([]);
+                                // Restore published schedule if we were previewing staged events
+                            }}
+                            date={date}
+                            eventsForDate={(() => {
+                                const seenIds = new Set<string>();
+                                const seenSlots = new Set<string>();
+                                return (publishedSchedules[date] || []).filter((e: ScheduleEvent) => {
+                                    if (seenIds.has(e.id)) return false;
+                                    if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
+                                    if (e.resourceId && (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY'))) return false;
+                                    const slotKey = `${e.flightNumber}__${e.startTime}__${e.type}`;
+                                    if (seenSlots.has(slotKey)) return false;
+                                    seenIds.add(e.id);
+                                    seenSlots.add(slotKey);
+                                    return true;
+                                });
+                            })()}
+                            flyingStartTime={flyingStartTime}
+                            flyingEndTime={flyingEndTime}
+                            ftdStartTime={ftdStartTime}
+                            ftdEndTime={ftdEndTime}
+                            onBuildPause={handlePauseBuild}
+                            onPublish={handlePausePublish}
+                            authUser={authUser}
+                            onSelectModeChange={(active) => setPauseIsSelectingCompleted(active)}
+                            completedEventIds={pauseCompletedEventIds}
+                            onCompletedEventIdsChange={setPauseCompletedEventIds}
+                            onStagedEventsReady={(events) => {
+                                if (events !== null) {
+                                    // Live preview: temporarily update publishedSchedules with staged events
+                                    // so the schedule view shows the post-pause result
+                                    const seenIds = new Set<string>();
+                                    const deduped = events.filter(e => {
+                                        if (seenIds.has(e.id)) return false;
+                                        seenIds.add(e.id);
+                                        return true;
+                                    });
+                                    setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
+                                        ...prev,
+                                        [date]: deduped,
+                                    }));
+                                }
+                            }}
+                            phase={pausePanelPhase}
+                            onPhaseChange={setPausePanelPhase}
+                            stagedEvents={pauseStagedEvents}
+                            onStagedEventsChange={setPauseStagedEvents}
+                        />
+                    )}
                 </div>
             </div>
             <RightSidebar
