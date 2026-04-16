@@ -7880,17 +7880,47 @@ const App: React.FC = () => {
                     // Now add back OPS_PAUSE cancelled events — moved to STBY lines so
                     // they're visible with their red X on the standby row (not their
                     // original PC-21 slot, which would be re-used by the rebuild).
-                    const builtIds = new Set(generatedWithDate.map(e => e.id));
+                    //
+                    // Priority-aware recycling:
+                    // The NEO Build algorithm already sorted all trainees by priority
+                    // (days since last event, days since last flight, lag vs median) and
+                    // scheduled as many as possible from pauseEnd onward. Trainees whose
+                    // cancelled events were higher-priority were therefore already
+                    // re-scheduled into new active slots in generatedWithDate (with new
+                    // event IDs). We must NOT put those trainees on STBY — only trainees
+                    // that the algorithm couldn't fit (lower priority / no slot available)
+                    // should appear on STBY as cancelled.
+                    //
+                    // Detection: check each cancelled event's trainee name (student/pilot)
+                    // against the post-pause generated events (excluding time-fixed
+                    // pre-pause locked events). If a new event was generated for that
+                    // trainee they were successfully recycled — skip the STBY placement.
+                    const postPauseGenerated = generatedWithDate.filter(e => !e.isTimeFixed);
+                    const rescheduledTraineeNames = new Set<string>();
+                    postPauseGenerated.forEach(e => {
+                        if (e.student) rescheduledTraineeNames.add(e.student);
+                        if (e.pilot)   rescheduledTraineeNames.add(e.pilot);
+                        if (e.attendees) e.attendees.forEach(a => rescheduledTraineeNames.add(a));
+                    });
+
                     const opsPauseCancelledEvents = eventsAfterCancel
-                        .filter(e =>
-                            e.isCancelled &&
-                            cancelledIds.has(e.id) &&
-                            !builtIds.has(e.id) &&
+                        .filter(e => {
+                            if (!e.isCancelled) return false;
+                            if (!cancelledIds.has(e.id)) return false;
                             // Never move completed events to STBY — they stay at their
                             // original slot with green ring (shouldn't be cancelled, but
                             // guard here too in case of ID mismatch)
-                            !completedEventIds.has(e.id)
-                        );
+                            if (completedEventIds.has(e.id)) return false;
+                            // If the trainee was successfully re-scheduled in the post-pause
+                            // build, they have been "recycled" to an active slot — do not
+                            // also show them on STBY as cancelled.
+                            const traineeName = e.student || e.pilot || '';
+                            if (traineeName && rescheduledTraineeNames.has(traineeName)) {
+                                console.log(`[PauseBuild] Recycled ${traineeName} — rescheduled in post-pause build, skipping STBY`);
+                                return false;
+                            }
+                            return true;
+                        });
 
                     // Assign each cancelled event to an available STBY line.
                     // Track which STBY slots are already occupied (time-based collision).
@@ -13386,6 +13416,10 @@ updates.forEach(update => {
                             onPhaseChange={setPausePanelPhase}
                             stagedEvents={pauseStagedEvents}
                             onStagedEventsChange={setPauseStagedEvents}
+                            onOverlayTimesChange={(start, end) => {
+                                setPauseOverlayStart(start);
+                                setPauseOverlayEnd(end);
+                            }}
                         />
                     )}
                 </div>

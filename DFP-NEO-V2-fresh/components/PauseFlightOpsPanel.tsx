@@ -46,6 +46,8 @@ interface PauseFlightOpsPanelProps {
     onPhaseChange: (phase: PausePhase) => void;
     stagedEvents: ScheduleEvent[];
     onStagedEventsChange: (events: ScheduleEvent[]) => void;
+    // Called in real-time as pause start/end inputs change — drives live overlay on NEO Build schedule
+    onOverlayTimesChange?: (start: number | null, end: number | null) => void;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -86,6 +88,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     onPhaseChange,
     stagedEvents,
     onStagedEventsChange,
+    onOverlayTimesChange,
 }) => {
     // ── Config state ──────────────────────────────────────────────────────────
     const [pauseStart, setPauseStart] = useState(decToHHMM(flyingStartTime + 2));
@@ -99,6 +102,15 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     // ── Derived ───────────────────────────────────────────────────────────────
     const pauseStartDec = useMemo(() => isValidHHMM(pauseStart) ? hhmmToDec(pauseStart) : null, [pauseStart]);
     const pauseEndDec   = useMemo(() => isValidHHMM(pauseEnd)   ? hhmmToDec(pauseEnd)   : null, [pauseEnd]);
+
+    // Notify parent of live overlay times whenever pause start/end inputs change.
+    // This fires immediately on mount (initial default times) so the overlay is
+    // visible as soon as the panel opens — before the build is run.
+    useEffect(() => {
+        if (onOverlayTimesChange) {
+            onOverlayTimesChange(pauseStartDec, pauseEndDec);
+        }
+    }, [pauseStartDec, pauseEndDec]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const validationError = useMemo(() => {
         if (!pauseStartDec || !pauseEndDec) return 'Enter valid times (HH:MM).';
