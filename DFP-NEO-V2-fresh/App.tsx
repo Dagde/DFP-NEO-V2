@@ -5610,6 +5610,9 @@ const App: React.FC = () => {
     const [pauseCompletedEventIds, setPauseCompletedEventIds] = useState<Set<string>>(new Set());
     const [pauseIsSelectingCompleted, setPauseIsSelectingCompleted] = useState(false);
     const [pauseStagedEvents, setPauseStagedEvents] = useState<ScheduleEvent[]>([]);
+    // Snapshot of the original active DFP events when the Pause panel was opened —
+    // used by "Revert to Original Daily Schedule" to discard all pause changes.
+    const [pauseOriginalEvents, setPauseOriginalEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
@@ -13272,6 +13275,8 @@ updates.forEach(update => {
                                (e: ScheduleEvent) => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; }
                            );
                            setNextDayBuildEvents(activeDfpEventsForPause);
+                           // Snapshot the originals so "Revert to Original" can restore them
+                           setPauseOriginalEvents(activeDfpEventsForPause);
                            // Reset pause state
                            setPauseCompletedEventIds(new Set());
                            setPauseIsSelectingCompleted(false);
@@ -13339,7 +13344,17 @@ updates.forEach(update => {
                                         })
                                         .map(e => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; });
                                     setNextDayBuildEvents(deduped);
+                                } else {
+                                    // null = revert signal: restore original active DFP events
+                                    setNextDayBuildEvents(pauseOriginalEvents);
                                 }
+                            }}
+                            onRevert={() => {
+                                // Restore the NEO Build schedule to the original active DFP snapshot
+                                setNextDayBuildEvents(pauseOriginalEvents);
+                                // Also clear completed event highlights
+                                setPauseCompletedEventIds(new Set());
+                                setPauseIsSelectingCompleted(false);
                             }}
                             phase={pausePanelPhase}
                             onPhaseChange={setPausePanelPhase}

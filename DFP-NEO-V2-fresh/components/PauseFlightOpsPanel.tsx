@@ -40,6 +40,8 @@ interface PauseFlightOpsPanelProps {
     onCompletedEventIdsChange: (ids: Set<string>) => void;
     // Called when build completes with staged events (for live schedule preview)
     onStagedEventsReady: (events: ScheduleEvent[] | null) => void;
+    // Called to revert the NEO Build schedule back to the original active DFP
+    onRevert: () => void;
     phase: PausePhase;
     onPhaseChange: (phase: PausePhase) => void;
     stagedEvents: ScheduleEvent[];
@@ -79,6 +81,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     completedEventIds,
     onCompletedEventIdsChange,
     onStagedEventsReady,
+    onRevert,
     phase,
     onPhaseChange,
     stagedEvents,
@@ -235,6 +238,20 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
         onPhaseChange('configure');
         onStagedEventsChange([]);
         onStagedEventsReady(null);
+        // Restore the original active DFP on the NEO Build schedule
+        onRevert();
+    };
+
+    const handleRevertToOriginal = () => {
+        // Reset all panel state back to initial configure
+        onPhaseChange('configure');
+        onStagedEventsChange([]);
+        onStagedEventsReady(null);
+        onCompletedEventIdsChange(new Set());
+        setIsSelectingCompleted(false);
+        setBuildProgress('');
+        // Restore the original active DFP on the NEO Build schedule
+        onRevert();
     };
 
     if (!isOpen) return null;
@@ -578,7 +595,30 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                         >
                             ← Back to Configure
                         </button>
+                        <button
+                            onClick={handleRevertToOriginal}
+                            className="w-full py-1.5 rounded text-xs font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 transition-colors border border-rose-800/50 hover:border-rose-600 flex items-center justify-center gap-1.5"
+                            title="Discard all changes and restore the original Active DFP schedule"
+                        >
+                            <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                            </svg>
+                            Revert to Original Daily Schedule
+                        </button>
                     </>
+                )}
+
+                {phase === 'configure' && completedEventIds.size > 0 && (
+                    <button
+                        onClick={handleRevertToOriginal}
+                        className="w-full py-1.5 rounded text-xs font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 transition-colors border border-rose-800/50 hover:border-rose-600 flex items-center justify-center gap-1.5"
+                        title="Clear all selections and restore the original Active DFP schedule"
+                    >
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                        </svg>
+                        Revert to Original Daily Schedule
+                    </button>
                 )}
 
                 <button
