@@ -2861,6 +2861,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
 
+            // HOURLY DISPATCH LIMIT: Count flights in the last hour (including pre-pause locked events)
+            // generatedEvents includes both activeDfpEvents and highestPriorityEvents (locked pre-pause),
+            // so this check works correctly during regular builds and during Pause Flight Ops NEO builds
             const nonStbyFlights = generatedEvents.filter(e => 
                 !e.resourceId.startsWith('STBY') && 
                 !e.resourceId.startsWith('BNF-STBY')

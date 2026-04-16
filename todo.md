@@ -1,23 +1,18 @@
-# DFP-NEO-V2 Fix Session
+# Pause Flight Ops Enhancements
 
-## Completed
-- [x] Fix btn-aluminium-brushed CSS (dark grey → light silver)
-- [x] Fix hex colour handling in all components (FlightTile, CourseDataWindow, Sidebar, etc.)
-- [x] Rebuild bundle and push (commit 8e756c74)
-- [x] Fix applyCoursePriority returning [] when coursePriorities=[] (commit 20a277bb)
-- [x] Fix TDZ crash: syllabusDetails useState before useEffects (commit 55bdd1ef)
-- [x] Fix syllabus code mismatch (item.id vs item.code in completedEventIds check)
-- [x] Fix blank Master LMP: init syllabusDetails with INITIAL_SYLLABUS_DETAILS,
-      remove from settings save/load, add catch fallback (commit ee2e3981)
+## Task 1: Overlay visible from panel open (not just after build)
+- [x] Add `onOverlayTimesChange` prop to PauseFlightOpsPanel interface
+- [x] Add useEffect in PauseFlightOpsPanel to call onOverlayTimesChange when pauseStartDec/pauseEndDec change
+- [x] Wire up onOverlayTimesChange in App.tsx PauseFlightOpsPanel rendering
 
-## Active - NEO Build STBY Issue
-- [ ] View neo2.jpg screenshot
-- [ ] Investigate why scheduleEvent() returns null for all trainees
-  - Check syllabusDetails population (now fixed - always INITIAL_SYLLABUS_DETAILS)
-  - Check instructorsData filtering / timing
-  - Check isInstructorEligibleByUnit()
-  - Check eventLimits
-  - Check time boundary / availability matching
-  - Check computeNextEventsForTrainee returns correct events
-- [ ] Implement fix for NEO Build STBY issue
-- [ ] Rebuild bundle and push fix
+## Task 2: Priority-aware event recycling on pause build
+- [x] Review current handlePauseBuild — understand current STBY placement logic
+- [x] Build rescheduledTraineeNames set from post-pause generated events
+- [x] Filter: skip STBY for trainees already rescheduled by NEO Build algorithm
+- [x] Only trainees that couldn't be scheduled remain on STBY cancelled
+
+## Task 3: Build and push
+- [x] Run TypeScript check — no new errors
+- [x] npm run build succeeded (BUILD_DONE:0)
+- [x] git commit 7ba84ae0
+- [x] git push — SUCCESS: pushed to feature/comprehensive-build-algorithm
