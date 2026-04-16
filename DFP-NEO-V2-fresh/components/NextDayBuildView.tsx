@@ -572,7 +572,10 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
 
                 const isSelected = selectedEventIds.has(event.id);
                 const isChanged = false; // No baseline for NDB
-                const isPauseCompleted = isPauseSelectMode && (pauseCompletedEventIds?.has(event.id) ?? false);
+                // isPauseCompleted stays true as long as the event is in pauseCompletedEventIds,
+                // regardless of whether selection mode is currently active.
+                // Highlighting is cleared when the panel is closed or publish happens.
+                const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
 
                 return (
                     <FlightTile

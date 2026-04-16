@@ -850,7 +850,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
                 const isSelected = selectedEventIds.has(event.id);
                 const isChanged = checkIsChanged(event, baselineEvents);
-                const isPauseCompleted = isPauseSelectMode && pauseCompletedEventIds?.has(event.id);
+                // Stay highlighted as long as event is in pauseCompletedEventIds (not just during selection mode)
+                const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
 
                 return (
                     <FlightTile

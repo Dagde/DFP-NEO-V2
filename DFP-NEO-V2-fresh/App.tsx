@@ -7850,7 +7850,9 @@ const App: React.FC = () => {
 
                     console.log('[PauseBuild] generateDfpInternal returned', generated.length, 'events');
 
-                    // Add date field and filter out STBY resource lines
+                    // Add date field and filter out algo-generated STBY lines
+                    // (the NEO Build algorithm places unfilled slots on STBY lines; we
+                    //  keep those but the cancelled OPS_PAUSE events get their own STBY placement below)
                     const generatedWithDate: ScheduleEvent[] = generated
                         .filter((e: any) => {
                             const resId = ((e as any).resourceId || '').toLowerCase();
@@ -7859,18 +7861,49 @@ const App: React.FC = () => {
                         .map((e: any) => ({ ...e, date: pauseDate } as ScheduleEvent));
 
                     // The build output already includes all locked pre-pause events.
-                    // Now add back any originally-cancelled (OPS_PAUSE) events
-                    // that may not appear in the build output (they were excluded from scheduling).
+                    // Now add back OPS_PAUSE cancelled events — moved to STBY lines so
+                    // they're visible with their red X on the standby row (not their
+                    // original PC-21 slot, which would be re-used by the rebuild).
                     const builtIds = new Set(generatedWithDate.map(e => e.id));
-                    const opsPauseCancelledEvents = eventsAfterCancel.filter(
-                        e => e.isCancelled && cancelledIds.has(e.id) && !builtIds.has(e.id)
-                    );
+                    const opsPauseCancelledEvents = eventsAfterCancel
+                        .filter(e => e.isCancelled && cancelledIds.has(e.id) && !builtIds.has(e.id));
 
-                    const final = [...generatedWithDate, ...opsPauseCancelledEvents];
+                    // Assign each cancelled event to an available STBY line.
+                    // Track which STBY slots are already occupied (time-based collision).
+                    let nextStbyLine = 1;
+                    const stbyOccupied: { resourceId: string; start: number; end: number }[] = [];
+
+                    const opsPauseCancelledOnStby: ScheduleEvent[] = opsPauseCancelledEvents.map(e => {
+                        const evStart = e.startTime;
+                        const evEnd   = e.startTime + e.duration;
+
+                        // Find a STBY line with no time overlap
+                        let stbyLine = 1;
+                        while (true) {
+                            const stbyId = `STBY ${stbyLine}`;
+                            const hasOverlap = stbyOccupied.some(
+                                o => o.resourceId === stbyId && o.start < evEnd && o.end > evStart
+                            );
+                            if (!hasOverlap) break;
+                            stbyLine++;
+                        }
+
+                        stbyOccupied.push({ resourceId: `STBY ${stbyLine}`, start: evStart, end: evEnd });
+                        if (stbyLine > nextStbyLine) nextStbyLine = stbyLine;
+
+                        return {
+                            ...e,
+                            date: pauseDate,
+                            resourceId: `STBY ${stbyLine}`,
+                            // Keep isCancelled: true so red X still renders
+                        };
+                    });
+
+                    const final = [...generatedWithDate, ...opsPauseCancelledOnStby];
 
                     console.log('[PauseBuild] Final staged events:', final.length,
                         '(built:', generatedWithDate.length,
-                        'cancelled added back:', opsPauseCancelledEvents.length, ')');
+                        'OPS_PAUSE cancelled on STBY:', opsPauseCancelledOnStby.length, ')');
 
                     resolve(final);
                 } catch (err) {
