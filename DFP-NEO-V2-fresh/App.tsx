@@ -7768,8 +7768,13 @@ const App: React.FC = () => {
             if (completedEventIds.has(e.id)) return false;            // completed, keep in place
             const typeKey = e.type === 'ground' ? 'ground' : e.type;
             if (!(affectedTypes as string[]).includes(typeKey)) return false; // not affected type
-            // Clear ALL affected-type events for the entire day (pause window + post-pause)
-            return true;
+            // Flight events: clear ALL for the entire day so they can be rescheduled from pauseEnd
+            if (e.type === 'flight') return true;
+            // FTD / CPT / Ground: ONLY cancel events that overlap the pause window.
+            // Events after the pause remain unchanged — they are NOT rescheduled.
+            const eEnd = e.startTime + e.duration;
+            const overlapsPause = e.startTime < pauseEnd && eEnd > pauseStart;
+            return overlapsPause;
         };
 
         // ── Step 2: Mark all clearable events as cancelled (OPS_PAUSE) ───────────────
@@ -7833,13 +7838,18 @@ const App: React.FC = () => {
             return 'ground';
         };
 
-        // Collect affected trainee entries from cancelled events
+        // Collect affected FLIGHT trainee entries from cancelled events for rescheduling.
+        // FTD/CPT/Ground cancelled events are NOT rescheduled — they are only placed on STBY (FTD)
+        // or silently dropped (CPT/Ground). So we only populate affectedEntries for flight type.
         // Deduplicate by trainee name — each trainee gets scheduled once
         const seenTraineeNames = new Set<string>();
         const affectedEntries: AffectedTraineeEntry[] = [];
 
         for (const cancelledEvent of eventsAfterCancel) {
             if (!cancelledIds.has(cancelledEvent.id)) continue;
+
+            // Only flight events are rescheduled in the slot-fill loop
+            if (cancelledEvent.type !== 'flight') continue;
 
             const traineeName = cancelledEvent.student || cancelledEvent.pilot || '';
             if (!traineeName || seenTraineeNames.has(traineeName)) continue;
@@ -7854,8 +7864,7 @@ const App: React.FC = () => {
             );
             if (!nextEvent) continue;
 
-            // Determine event type: use the cancelled event's original type as primary guide,
-            // cross-checked against the next syllabus item type
+            // Determine event type from syllabus item (should be flight for these entries)
             const eventType = syllabusTypeToEventType(nextEvent.type || '', cancelledEvent.type);
 
             // Calculate priority score
@@ -7872,7 +7881,7 @@ const App: React.FC = () => {
 
         // Sort by priority score DESCENDING (highest priority first)
         affectedEntries.sort((a, b) => b.originalPriorityScore - a.originalPriorityScore);
-        console.log('[PauseBuild] Affected trainees to reschedule:', affectedEntries.length);
+        console.log('[PauseBuild] Affected FLIGHT trainees to reschedule:', affectedEntries.length);
 
         // ── Step 5: Slot-fill algorithm from pauseEnd at 5-min intervals ─────────────
         // We maintain a running list of scheduled events (starts from lockedEvents)
@@ -8126,121 +8135,10 @@ const App: React.FC = () => {
                     console.log(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
                     break;
 
-                } else if (eventType === 'ftd') {
-                    // Check FTD window boundaries
-                    if (slot < pFtdStart || slotEnd > pFtdEnd) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Find available FTD sim
-                    const resourceId = findFtdResource(slot, duration);
-                    if (!resourceId) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Find instructor
-                    const instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
-                    if (!instructorName) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    const newEvent: ScheduleEvent = {
-                        id: uuidv4(),
-                        date: pauseDate,
-                        type: 'ftd',
-                        instructor: instructorName,
-                        student: trainee.fullName,
-                        pilot: instructorName,
-                        flightNumber: syllabusItem.id,
-                        duration,
-                        startTime: slot,
-                        resourceId,
-                        color: courseColors[trainee.course] || 'bg-gray-500',
-                        flightType: 'Dual',
-                        locationType: 'Local',
-                        origin: school,
-                        destination: school,
-                        preStart: syllabusItem.preFlightTime,
-                        postEnd: syllabusItem.postFlightTime,
-                    };
-                    scheduledEvents.push(newEvent);
-                    successfullyScheduled.add(trainee.fullName);
-                    scheduled = true;
-                    console.log(`[PauseBuild] Scheduled FTD ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
-                    break;
-
-                } else if (eventType === 'cpt') {
-                    // CPT events
-                    const resourceId = findCptResource(slot, duration);
-                    if (!resourceId) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    const instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
-                    if (!instructorName) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    const newEvent: ScheduleEvent = {
-                        id: uuidv4(),
-                        date: pauseDate,
-                        type: 'cpt',
-                        instructor: instructorName,
-                        student: trainee.fullName,
-                        pilot: instructorName,
-                        flightNumber: syllabusItem.id,
-                        duration,
-                        startTime: slot,
-                        resourceId,
-                        color: courseColors[trainee.course] || 'bg-gray-500',
-                        flightType: 'Dual',
-                        locationType: 'Local',
-                        origin: school,
-                        destination: school,
-                    };
-                    scheduledEvents.push(newEvent);
-                    successfullyScheduled.add(trainee.fullName);
-                    scheduled = true;
-                    console.log(`[PauseBuild] Scheduled CPT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
-                    break;
-
-                } else if (eventType === 'ground') {
-                    // Ground events — use any instructor
-                    const instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
-                    if (!instructorName) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Ground events use a simple shared room resource (no capacity limit enforced here)
-                    const newEvent: ScheduleEvent = {
-                        id: uuidv4(),
-                        date: pauseDate,
-                        type: 'ground',
-                        instructor: instructorName,
-                        student: trainee.fullName,
-                        pilot: instructorName,
-                        flightNumber: syllabusItem.id,
-                        duration,
-                        startTime: slot,
-                        resourceId: 'Ground 1',
-                        color: courseColors[trainee.course] || 'bg-gray-500',
-                        flightType: 'Dual',
-                        locationType: 'Local',
-                        origin: school,
-                        destination: school,
-                    };
-                    scheduledEvents.push(newEvent);
-                    successfullyScheduled.add(trainee.fullName);
-                    scheduled = true;
-                    console.log(`[PauseBuild] Scheduled GROUND ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)}`);
-                    break;
                 }
+                // Note: FTD/CPT/Ground types are never in affectedEntries, so this loop
+                // only processes flight events. Non-flight cancelled events are handled
+                // in Step 6 below (FTD → STBY, CPT/Ground → silently dropped).
 
                 slot += slotStep;
             }
@@ -8253,7 +8151,11 @@ const App: React.FC = () => {
         console.log('[PauseBuild] Successfully scheduled:', successfullyScheduled.size, 'of', affectedEntries.length, 'trainees');
 
         // ── Step 6: Place unscheduled flight/FTD trainees on STBY with red X ─────────
-        // CPT and Ground trainees that couldn't be scheduled are simply dropped.
+        // - Flight events that could not be rescheduled go to STBY with red X at original time
+        // - FTD events cancelled by the pause go to STBY with red X at their original time
+        //   (FTD events are NOT rescheduled - only cancelled and shown on STBY)
+        // - CPT and Ground events cancelled by the pause are silently dropped (no STBY)
+        //
         // Build a list of already-occupied STBY slots from the locked/scheduled events
         // (e.g. completed events that were already on a STBY row before the pause)
         const stbyOccupied: { resourceId: string; start: number; end: number }[] = scheduledEvents
@@ -8282,13 +8184,17 @@ const App: React.FC = () => {
             if (!cancelledIds.has(ev.id)) continue;
             if (completedEventIds.has(ev.id)) continue;
 
-            // Only flight and FTD go to STBY — CPT and Ground are silently dropped
-            if (ev.type !== 'flight' && ev.type !== 'ftd') continue;
+            // CPT and Ground are silently dropped — no STBY placement
+            if (ev.type === 'cpt' || ev.type === 'ground') continue;
 
-            const traineeName = ev.student || ev.pilot || '';
-            // If the trainee was successfully rescheduled, don't also put them on STBY
-            if (traineeName && successfullyScheduled.has(traineeName)) continue;
+            // For flight events: only place on STBY if the trainee was NOT successfully rescheduled
+            if (ev.type === 'flight') {
+                const traineeName = ev.student || ev.pilot || '';
+                if (traineeName && successfullyScheduled.has(traineeName)) continue;
+            }
 
+            // FTD events cancelled by the pause always go to STBY at their original time slot.
+            // Flight events that couldn't be rescheduled also go to STBY at their original time slot.
             const stbyResourceId = getNextStbySlot(ev.startTime, ev.startTime + ev.duration);
             stbyEvents.push({
                 ...ev,
@@ -8299,7 +8205,8 @@ const App: React.FC = () => {
             });
         }
 
-        console.log('[PauseBuild] STBY (cancelled) events:', stbyEvents.length);
+        console.log('[PauseBuild] STBY (cancelled) events:', stbyEvents.length,
+            '(flight unscheduled + FTD cancelled in pause window)');
 
         // ── Step 7: Combine and return ────────────────────────────────────────────────
         // scheduledEvents already includes lockedEvents + newly scheduled events.
