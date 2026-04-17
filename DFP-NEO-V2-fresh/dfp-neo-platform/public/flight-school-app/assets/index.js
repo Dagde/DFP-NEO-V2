@@ -26378,7 +26378,7 @@ const NextDayBuildView = ({
         });
       }
     } else {
-      if (!isMultiSelectMode) return;
+      if (!isMultiSelectMode && !isPauseSelectMode) return;
       if (!scheduleGridRef.current) return;
       const gridRect = scheduleGridRef.current.getBoundingClientRect();
       const x = e.clientX - gridRect.left;
@@ -26504,13 +26504,20 @@ const NextDayBuildView = ({
     setRealtimeResourceConflictId(null);
     setDraggedCptConflict(null);
     setValidateOverlayTime(null);
-    if (selectionStartPoint.current && isMultiSelectMode) {
+    if (selectionStartPoint.current && (isMultiSelectMode || isPauseSelectMode)) {
       selectionStartPoint.current = null;
       setSelectionRect(null);
-      if (!didDragRef.current && !e.shiftKey) {
-        const target = e.target;
-        if (!target.closest('[data-is-flight-tile="true"]')) {
-          setSelectedEventIds(/* @__PURE__ */ new Set());
+      if (isPauseSelectMode && didDragRef.current && onPauseToggleCompleted) {
+        selectedEventIds.forEach((id) => {
+          onPauseToggleCompleted(id);
+        });
+        setSelectedEventIds(/* @__PURE__ */ new Set());
+      } else if (isMultiSelectMode) {
+        if (!didDragRef.current && !e.shiftKey) {
+          const target = e.target;
+          if (!target.closest('[data-is-flight-tile="true"]')) {
+            setSelectedEventIds(/* @__PURE__ */ new Set());
+          }
         }
       }
     }
@@ -26529,11 +26536,11 @@ const NextDayBuildView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 440,
+          lineNumber: 450,
           columnNumber: 21
         }, void 0) }, i, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 439,
+          lineNumber: 449,
           columnNumber: 17
         }, void 0)
       );
@@ -26545,11 +26552,11 @@ const NextDayBuildView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 452,
+          lineNumber: 462,
           columnNumber: 21
         }, void 0) }, "fl-label", false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 451,
+          lineNumber: 461,
           columnNumber: 17
         }, void 0)
       );
@@ -26559,11 +26566,11 @@ const NextDayBuildView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 461,
+          lineNumber: 471,
           columnNumber: 21
         }, void 0) }, "ll-label", false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 460,
+          lineNumber: 470,
           columnNumber: 17
         }, void 0)
       );
@@ -26595,7 +26602,7 @@ const NextDayBuildView = ({
               true,
               {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                lineNumber: 480,
+                lineNumber: 490,
                 columnNumber: 21
               },
               void 0
@@ -26605,7 +26612,7 @@ const NextDayBuildView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 475,
+            lineNumber: 485,
             columnNumber: 17
           },
           void 0
@@ -26633,7 +26640,7 @@ const NextDayBuildView = ({
                 true,
                 {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                  lineNumber: 496,
+                  lineNumber: 506,
                   columnNumber: 25
                 },
                 void 0
@@ -26643,7 +26650,7 @@ const NextDayBuildView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-              lineNumber: 491,
+              lineNumber: 501,
               columnNumber: 21
             },
             void 0
@@ -26659,11 +26666,11 @@ const NextDayBuildView = ({
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$2) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-full bg-gray-700/50" }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 515,
+          lineNumber: 525,
           columnNumber: 21
         }, void 0) }, `v-${i}`, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 514,
+          lineNumber: 524,
           columnNumber: 17
         }, void 0)
       );
@@ -26671,11 +26678,11 @@ const NextDayBuildView = ({
         lines.push(
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$2 + 0.5) * PIXELS_PER_HOUR$2 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-full bg-gray-700/25" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 521,
+            lineNumber: 531,
             columnNumber: 25
           }, void 0) }, `v-${i}-30`, false, {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 520,
+            lineNumber: 530,
             columnNumber: 21
           }, void 0)
         );
@@ -26685,7 +26692,7 @@ const NextDayBuildView = ({
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$2, height: "1px" } }, `h-${i}`, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 528,
+          lineNumber: 538,
           columnNumber: 17
         }, void 0)
       );
@@ -26709,7 +26716,7 @@ const NextDayBuildView = ({
             false,
             {
               fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-              lineNumber: 541,
+              lineNumber: 551,
               columnNumber: 21
             },
             void 0
@@ -26734,7 +26741,7 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 560,
+          lineNumber: 570,
           columnNumber: 21
         },
         void 0
@@ -26749,14 +26756,14 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 566,
+          lineNumber: 576,
           columnNumber: 22
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-      lineNumber: 558,
+      lineNumber: 568,
       columnNumber: 13
     }, void 0);
   };
@@ -26781,7 +26788,7 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 587,
+          lineNumber: 597,
           columnNumber: 17
         },
         void 0
@@ -26801,7 +26808,7 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 596,
+          lineNumber: 606,
           columnNumber: 17
         },
         void 0
@@ -26821,14 +26828,14 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 606,
+          lineNumber: 616,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-      lineNumber: 585,
+      lineNumber: 595,
       columnNumber: 13
     }, void 0);
   };
@@ -26859,7 +26866,7 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 647,
+          lineNumber: 657,
           columnNumber: 17
         },
         void 0
@@ -26874,7 +26881,7 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 656,
+          lineNumber: 666,
           columnNumber: 17
         },
         void 0
@@ -26889,7 +26896,7 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 662,
+          lineNumber: 672,
           columnNumber: 17
         },
         void 0
@@ -26906,12 +26913,12 @@ const NextDayBuildView = ({
             "Flights starting in this hour: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: flightCount }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-              lineNumber: 676,
+              lineNumber: 686,
               columnNumber: 56
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 675,
+            lineNumber: 685,
             columnNumber: 21
           }, void 0)
         },
@@ -26919,14 +26926,14 @@ const NextDayBuildView = ({
         false,
         {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 668,
+          lineNumber: 678,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-      lineNumber: 645,
+      lineNumber: 655,
       columnNumber: 13
     }, void 0);
   };
@@ -26947,7 +26954,7 @@ const NextDayBuildView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 690,
+            lineNumber: 700,
             columnNumber: 17
           },
           void 0
@@ -26968,7 +26975,7 @@ const NextDayBuildView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 701,
+            lineNumber: 711,
             columnNumber: 17
           },
           void 0
@@ -26977,7 +26984,7 @@ const NextDayBuildView = ({
     }
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: shades }, void 0, false, {
       fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-      lineNumber: 708,
+      lineNumber: 718,
       columnNumber: 16
     }, void 0);
   };
@@ -27051,7 +27058,7 @@ const NextDayBuildView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 745,
+            lineNumber: 755,
             columnNumber: 21
           },
           void 0
@@ -27107,14 +27114,14 @@ const NextDayBuildView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                lineNumber: 838,
+                lineNumber: 848,
                 columnNumber: 29
               },
               void 0
             ),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formatDate2(date) }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-              lineNumber: 845,
+              lineNumber: 855,
               columnNumber: 29
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -27129,33 +27136,33 @@ const NextDayBuildView = ({
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                lineNumber: 846,
+                lineNumber: 856,
                 columnNumber: 29
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 837,
+            lineNumber: 847,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 854,
+            lineNumber: 864,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 836,
+          lineNumber: 846,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 835,
+          lineNumber: 845,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 859,
+          lineNumber: 869,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -27174,13 +27181,13 @@ const NextDayBuildView = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 865,
+            lineNumber: 875,
             columnNumber: 21
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-          lineNumber: 864,
+          lineNumber: 874,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -27213,7 +27220,7 @@ const NextDayBuildView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                  lineNumber: 897,
+                  lineNumber: 907,
                   columnNumber: 25
                 },
                 void 0
@@ -27246,7 +27253,7 @@ const NextDayBuildView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                    lineNumber: 908,
+                    lineNumber: 918,
                     columnNumber: 29
                   },
                   void 0
@@ -27265,7 +27272,7 @@ const NextDayBuildView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                    lineNumber: 925,
+                    lineNumber: 935,
                     columnNumber: 30
                   },
                   void 0
@@ -27284,14 +27291,14 @@ const NextDayBuildView = ({
                   false,
                   {
                     fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                    lineNumber: 933,
+                    lineNumber: 943,
                     columnNumber: 30
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                lineNumber: 907,
+                lineNumber: 917,
                 columnNumber: 25
               }, void 0),
               selectionRect && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -27309,7 +27316,7 @@ const NextDayBuildView = ({
                 false,
                 {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-                  lineNumber: 946,
+                  lineNumber: 956,
                   columnNumber: 25
                 },
                 void 0
@@ -27320,7 +27327,7 @@ const NextDayBuildView = ({
           true,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-            lineNumber: 878,
+            lineNumber: 888,
             columnNumber: 17
           },
           void 0
@@ -27331,13 +27338,13 @@ const NextDayBuildView = ({
     true,
     {
       fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-      lineNumber: 826,
+      lineNumber: 836,
       columnNumber: 13
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/NextDayBuildView.tsx",
-    lineNumber: 825,
+    lineNumber: 835,
     columnNumber: 9
   }, void 0);
 };

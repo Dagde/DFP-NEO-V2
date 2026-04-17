@@ -246,7 +246,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 });
             }
         } else {
-            if (!isMultiSelectMode) return;
+            // Allow rubber-band drag in both multiSelect mode AND pause select mode
+            if (!isMultiSelectMode && !isPauseSelectMode) return;
             if (!scheduleGridRef.current) return;
             
             const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -309,6 +310,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     newSelectedIds.add(ev.id);
                 }
             });
+            // In both multiSelect and pauseSelect modes, highlight intersected tiles during drag
             setSelectedEventIds(newSelectedIds);
             return;
         }
@@ -409,14 +411,22 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         // Clear validate overlay when mouse leaves
         setValidateOverlayTime(null);
 
-        if (selectionStartPoint.current && isMultiSelectMode) {
+        if (selectionStartPoint.current && (isMultiSelectMode || isPauseSelectMode)) {
             selectionStartPoint.current = null;
             setSelectionRect(null);
 
-            if (!didDragRef.current && !e.shiftKey) {
-                const target = e.target as HTMLElement;
-                if (!target.closest('[data-is-flight-tile="true"]')) {
-                    setSelectedEventIds(new Set());
+            if (isPauseSelectMode && didDragRef.current && onPauseToggleCompleted) {
+                // Drag completed in pause select mode — toggle all highlighted events
+                selectedEventIds.forEach(id => {
+                    onPauseToggleCompleted(id);
+                });
+                setSelectedEventIds(new Set());
+            } else if (isMultiSelectMode) {
+                if (!didDragRef.current && !e.shiftKey) {
+                    const target = e.target as HTMLElement;
+                    if (!target.closest('[data-is-flight-tile="true"]')) {
+                        setSelectedEventIds(new Set());
+                    }
                 }
             }
         }
