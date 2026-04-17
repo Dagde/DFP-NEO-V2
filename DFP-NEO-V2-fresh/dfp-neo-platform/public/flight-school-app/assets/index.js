@@ -96164,7 +96164,7 @@ const PauseFlightOpsPanel = ({
                 {
                   onClick: () => setIsSelectingCompleted(!isSelectingCompleted),
                   className: isSelectingCompleted ? btnActive : btnGray,
-                  children: isSelectingCompleted ? "&#10003; Selecting..." : "Select on Schedule"
+                  children: isSelectingCompleted ? "Complete" : "Select on Schedule"
                 },
                 void 0,
                 false,
@@ -96381,7 +96381,7 @@ const PauseFlightOpsPanel = ({
                 {
                   onClick: handleRevertToOriginal,
                   className: "w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all",
-                  style: { color: "#22c55e" },
+                  style: { color: "#000000" },
                   title: "Cancel all changes and revert to the original Active DFP schedule",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: [
                     "Cancel -",
@@ -96437,19 +96437,32 @@ const PauseFlightOpsPanel = ({
             lineNumber: 590,
             columnNumber: 21
           }, void 0),
-          phase === "review" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: [
+          phase === "review" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               "button",
               {
                 onClick: handlePublish,
-                className: "w-full py-2 rounded font-bold text-sm tracking-wide bg-green-700 hover:bg-green-600 text-white border border-green-500 transition-all",
-                children: "✓ PUBLISH - Commit to Active DFP"
+                className: "w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all",
+                style: { color: "#22c55e" },
+                children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: [
+                  "PUBLISH",
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
+                    lineNumber: 607,
+                    columnNumber: 80
+                  }, void 0),
+                  "Commit to Active DFP"
+                ] }, void 0, true, {
+                  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
+                  lineNumber: 607,
+                  columnNumber: 29
+                }, void 0)
               },
               void 0,
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 601,
+                lineNumber: 602,
                 columnNumber: 25
               },
               void 0
@@ -96458,14 +96471,27 @@ const PauseFlightOpsPanel = ({
               "button",
               {
                 onClick: handleBackToConfigure,
-                className: btnGray + " w-full",
-                children: "← Back to Configure"
+                className: "w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all",
+                style: { color: "#22c55e" },
+                children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: [
+                  "Back to",
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
+                    fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
+                    lineNumber: 615,
+                    columnNumber: 80
+                  }, void 0),
+                  "Configure"
+                ] }, void 0, true, {
+                  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
+                  lineNumber: 615,
+                  columnNumber: 29
+                }, void 0)
               },
               void 0,
               false,
               {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 607,
+                lineNumber: 610,
                 columnNumber: 25
               },
               void 0
@@ -96474,26 +96500,28 @@ const PauseFlightOpsPanel = ({
               "button",
               {
                 onClick: handleRevertToOriginal,
-                className: "w-full py-1.5 rounded text-xs font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 transition-colors border border-rose-800/50 hover:border-rose-600 flex items-center justify-center gap-1.5",
+                className: "w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all",
+                style: { color: "#ef4444" },
                 title: "Discard all changes and restore the original Active DFP schedule",
-                children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-3 h-3 flex-shrink-0", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2.5, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" }, void 0, false, {
+                children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: [
+                  "Revert to Original",
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                     fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                    lineNumber: 619,
-                    columnNumber: 33
-                  }, void 0) }, void 0, false, {
-                    fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                    lineNumber: 618,
-                    columnNumber: 29
+                    lineNumber: 624,
+                    columnNumber: 91
                   }, void 0),
-                  "Revert to Original Daily Schedule"
-                ]
+                  "Daily Schedule"
+                ] }, void 0, true, {
+                  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
+                  lineNumber: 624,
+                  columnNumber: 29
+                }, void 0)
               },
               void 0,
-              true,
+              false,
               {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 613,
+                lineNumber: 618,
                 columnNumber: 25
               },
               void 0
@@ -96506,98 +96534,98 @@ const PauseFlightOpsPanel = ({
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: sectionHead, children: "Summary" }, void 0, false, {
               fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-              lineNumber: 630,
+              lineNumber: 633,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "rounded border border-gray-700/60 bg-gray-800/30 divide-y divide-gray-700/40", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-3 py-2", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-400 uppercase tracking-wide", children: "Pause window" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 635,
+                  lineNumber: 638,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[10px] text-gray-200 font-semibold", children: pauseStartDec && pauseEndDec && !validationError ? `${decToHHMM(pauseStartDec)} - ${decToHHMM(pauseEndDec)}` : "-" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 636,
+                  lineNumber: 639,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 634,
+                lineNumber: 637,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-3 py-2", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-400 uppercase tracking-wide", children: phase === "review" ? "Cancelled (OPS PAUSE)" : "Impacted events" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 645,
+                  lineNumber: 648,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-[10px] font-bold ${phase === "review" || totalImpacted > 0 ? "text-amber-300" : "text-gray-500"}`, children: phase === "review" ? reviewCancelledCount : totalImpacted }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 648,
+                  lineNumber: 651,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 644,
+                lineNumber: 647,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-3 py-2", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-400 uppercase tracking-wide", children: "Completed (skip)" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 655,
+                  lineNumber: 658,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-[10px] font-bold ${completedEventIds.size > 0 ? "text-green-300" : "text-gray-500"}`, children: completedEventIds.size }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 656,
+                  lineNumber: 659,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 654,
+                lineNumber: 657,
                 columnNumber: 25
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-3 py-2", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-400 uppercase tracking-wide", children: "Rebuild window" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 663,
+                  lineNumber: 666,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[10px] text-sky-300 font-semibold", children: pauseEndDec && !validationError ? `${decToHHMM(pauseEndDec)} - ${decToHHMM(flyingEndTime)}` : "-" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 664,
+                  lineNumber: 667,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 662,
+                lineNumber: 665,
                 columnNumber: 25
               }, void 0),
               phase === "review" && stagedEvents.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-3 py-2", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[9px] text-gray-400 uppercase tracking-wide", children: "Staged events" }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 674,
+                  lineNumber: 677,
                   columnNumber: 33
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-[10px] text-green-300 font-bold", children: stagedEvents.length }, void 0, false, {
                   fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                  lineNumber: 675,
+                  lineNumber: 678,
                   columnNumber: 33
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-                lineNumber: 673,
+                lineNumber: 676,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-              lineNumber: 631,
+              lineNumber: 634,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-            lineNumber: 629,
+            lineNumber: 632,
             columnNumber: 17
           }, void 0)
         ] }, void 0, true, {
@@ -96616,13 +96644,13 @@ const PauseFlightOpsPanel = ({
           false,
           {
             fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-            lineNumber: 685,
+            lineNumber: 688,
             columnNumber: 17
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PauseFlightOpsPanel.tsx",
-          lineNumber: 684,
+          lineNumber: 687,
           columnNumber: 13
         }, void 0)
       ]

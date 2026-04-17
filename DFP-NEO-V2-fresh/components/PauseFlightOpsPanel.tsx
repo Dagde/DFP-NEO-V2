@@ -466,7 +466,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                                 onClick={() => setIsSelectingCompleted(!isSelectingCompleted)}
                                 className={isSelectingCompleted ? btnActive : btnGray}
                             >
-                                {isSelectingCompleted ? '&#10003; Selecting...' : 'Select on Schedule'}
+                                {isSelectingCompleted ? 'Complete' : 'Select on Schedule'}
                             </button>
                             {completedEventIds.size > 0 && (
                                 <button
@@ -568,11 +568,11 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                                 </button>
                             )}
 
-                            {/* Cancel – Revert — styled like DFP button in left menu */}
+                            {/* Cancel – Revert — styled like DFP button in left menu, black text */}
                             <button
                                 onClick={handleRevertToOriginal}
                                 className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
-                                style={{ color: '#22c55e' }}
+                                style={{ color: '#000000' }}
                                 title="Cancel all changes and revert to the original Active DFP schedule"
                             >
                                 <span className="text-center leading-tight">Cancel -<br />Revert</span>
@@ -597,28 +597,31 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
 
                 {/* Review phase actions */}
                 {phase === 'review' && (
-                    <div className="space-y-2">
+                    <div className="flex flex-col gap-2">
+                        {/* PUBLISH - same size/theme as right menu Publish button, green text */}
                         <button
                             onClick={handlePublish}
-                            className="w-full py-2 rounded font-bold text-sm tracking-wide bg-green-700 hover:bg-green-600 text-white border border-green-500 transition-all"
+                            className="w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#22c55e' }}
                         >
-                            &#10003; PUBLISH - Commit to Active DFP
+                            <span className="text-center leading-tight">PUBLISH<br />Commit to Active DFP</span>
                         </button>
+                        {/* Back to Configure - same size/theme as DFP button in left menu, green text */}
                         <button
                             onClick={handleBackToConfigure}
-                            className={btnGray + ' w-full'}
+                            className="w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#22c55e' }}
                         >
-                            &#8592; Back to Configure
+                            <span className="text-center leading-tight">Back to<br />Configure</span>
                         </button>
+                        {/* Revert - same size/theme as DFP button in left menu, red text */}
                         <button
                             onClick={handleRevertToOriginal}
-                            className="w-full py-1.5 rounded text-xs font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 transition-colors border border-rose-800/50 hover:border-rose-600 flex items-center justify-center gap-1.5"
+                            className="w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#ef4444' }}
                             title="Discard all changes and restore the original Active DFP schedule"
                         >
-                            <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                            </svg>
-                            Revert to Original Daily Schedule
+                            <span className="text-center leading-tight">Revert to Original<br />Daily Schedule</span>
                         </button>
                     </div>
                 )}
