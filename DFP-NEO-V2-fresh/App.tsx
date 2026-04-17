@@ -7955,7 +7955,6 @@ const App: React.FC = () => {
         ): string | null => {
             // Get instructor pool - prefer primary instructor, then secondary, then any
             const activeInstructors = instructorsData.filter((ip: Instructor) => {
-                if (!ip.isActive) return false;
                 if (isPersonStaticallyUnavailable(ip, windowStart, windowEnd, pauseDate, 'flight')) return false;
                 if (personIsBusy(ip.name, windowStart, windowEnd)) return false;
 
@@ -7980,11 +7979,22 @@ const App: React.FC = () => {
 
             if (activeInstructors.length === 0) return null;
 
-            // Prefer primary instructor (instructorPriority)
-            const primaryName = instructorPriority?.get(trainee.fullName);
-            if (primaryName) {
-                const primary = activeInstructors.find((ip: Instructor) => ip.name === primaryName);
-                if (primary) return primary.name;
+            // Prefer primary instructor from trainee record
+            const primaryNames = trainee.primaryInstructor
+                ? (Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : [trainee.primaryInstructor])
+                : [];
+            for (const pName of primaryNames) {
+                const found = activeInstructors.find((ip: Instructor) => ip.name === pName);
+                if (found) return found.name;
+            }
+
+            // Then try secondary instructor
+            const secondaryNames = trainee.secondaryInstructor
+                ? (Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : [trainee.secondaryInstructor])
+                : [];
+            for (const sName of secondaryNames) {
+                const found = activeInstructors.find((ip: Instructor) => ip.name === sName);
+                if (found) return found.name;
             }
 
             // Fall back to any available instructor
