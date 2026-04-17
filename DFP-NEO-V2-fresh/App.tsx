@@ -7768,9 +7768,10 @@ const App: React.FC = () => {
             if (completedEventIds.has(e.id)) return false;            // completed, keep in place
             const typeKey = e.type === 'ground' ? 'ground' : e.type;
             if (!(affectedTypes as string[]).includes(typeKey)) return false; // not affected type
-            // Flight events: clear ALL for the entire day so they can be rescheduled from pauseEnd
-            if (e.type === 'flight') return true;
-            // FTD / CPT / Ground: ONLY cancel events that overlap the pause window.
+            // Flight and FTD events: clear ALL for the entire day so they can be rescheduled.
+            // Flights reschedule from pauseEnd; FTDs cascade on their resource lines.
+            if (e.type === 'flight' || e.type === 'ftd') return true;
+            // CPT / Ground: ONLY cancel events that overlap the pause window.
             // Events after the pause remain unchanged — they are NOT rescheduled.
             const eEnd = e.startTime + e.duration;
             const overlapsPause = e.startTime < pauseEnd && eEnd > pauseStart;
@@ -7838,50 +7839,89 @@ const App: React.FC = () => {
             return 'ground';
         };
 
-        // Collect affected FLIGHT trainee entries from cancelled events for rescheduling.
-        // FTD/CPT/Ground cancelled events are NOT rescheduled — they are only placed on STBY (FTD)
-        // or silently dropped (CPT/Ground). So we only populate affectedEntries for flight type.
-        // Deduplicate by trainee name — each trainee gets scheduled once
+        // Collect affected FLIGHT and FTD trainee entries from cancelled events for rescheduling.
+        // CPT/Ground cancelled events are silently dropped.
+        // Deduplicate by trainee name — each trainee gets scheduled once per type
         const seenTraineeNames = new Set<string>();
         const affectedEntries: AffectedTraineeEntry[] = [];
 
         for (const cancelledEvent of eventsAfterCancel) {
             if (!cancelledIds.has(cancelledEvent.id)) continue;
 
-            // Only flight events are rescheduled in the slot-fill loop
-            if (cancelledEvent.type !== 'flight') continue;
+            // Only flight and FTD events are rescheduled in the slot-fill loop
+            if (cancelledEvent.type !== 'flight' && cancelledEvent.type !== 'ftd') continue;
 
             const traineeName = cancelledEvent.student || cancelledEvent.pilot || '';
-            if (!traineeName || seenTraineeNames.has(traineeName)) continue;
-            seenTraineeNames.add(traineeName);
+            if (!traineeName) continue;
+
+            // For FTD, allow same trainee multiple times (they may have multiple FTD events)
+            // For flight, deduplicate per trainee
+            const dedupeKey = cancelledEvent.type === 'ftd'
+                ? `ftd:${cancelledEvent.id}`   // each FTD event is its own entry
+                : traineeName;                  // flights: one entry per trainee
+            if (seenTraineeNames.has(dedupeKey)) continue;
+            seenTraineeNames.add(dedupeKey);
 
             const trainee = allTraineesData.find((t: Trainee) => t.fullName === traineeName);
             if (!trainee) continue;
 
-            // Find this trainee's next syllabus event (what they should fly next)
-            const { next: nextEvent } = computeNextEventsForTrainee(
-                trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, pauseDate
-            );
-            if (!nextEvent) continue;
+            if (cancelledEvent.type === 'ftd') {
+                // For FTD: keep original cancelled event's syllabus item info intact
+                // We'll use it directly to recreate the event on the FTD resource line
+                const ftdSyllabusItem: SyllabusItemDetail = {
+                    id: cancelledEvent.flightNumber || cancelledEvent.id,
+                    code: cancelledEvent.flightNumber || '',
+                    type: 'FTD',
+                    duration: cancelledEvent.duration,
+                    sortieType: 'Dual',
+                    preFlightTime: cancelledEvent.preStart,
+                    postFlightTime: cancelledEvent.postEnd,
+                    isRemedial: false,
+                } as SyllabusItemDetail;
 
-            // Determine event type from syllabus item (should be flight for these entries)
-            const eventType = syllabusTypeToEventType(nextEvent.type || '', cancelledEvent.type);
+                // Priority score for FTD: use original start time as tiebreaker (earlier = higher priority)
+                const priorityScore = 10000 - Math.round(cancelledEvent.startTime * 60);
 
-            // Calculate priority score
-            const courseMedian = localCourseMedians.get(trainee.course) || 0;
-            const traineeProgress = (scores.get(trainee.fullName) || [])
-                .filter((s: Score) => !s.event.includes('-REM-') && !s.event.includes('-RF')).length;
-            const isRemedial = nextEvent.isRemedial || false;
-            const priorityScore = calculateTraineePriorityScore(
-                trainee, pauseDate, courseMedian, traineeProgress, isRemedial
-            );
+                affectedEntries.push({
+                    trainee,
+                    syllabusItem: ftdSyllabusItem,
+                    eventType: 'ftd',
+                    originalPriorityScore: priorityScore,
+                });
+            } else {
+                // FLIGHT: find next syllabus event
+                const { next: nextEvent } = computeNextEventsForTrainee(
+                    trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, pauseDate
+                );
+                if (!nextEvent) continue;
 
-            affectedEntries.push({ trainee, syllabusItem: nextEvent, eventType, originalPriorityScore: priorityScore });
+                const eventType = syllabusTypeToEventType(nextEvent.type || '', cancelledEvent.type);
+
+                const courseMedian = localCourseMedians.get(trainee.course) || 0;
+                const traineeProgress = (scores.get(trainee.fullName) || [])
+                    .filter((s: Score) => !s.event.includes('-REM-') && !s.event.includes('-RF')).length;
+                const isRemedial = nextEvent.isRemedial || false;
+                const priorityScore = calculateTraineePriorityScore(
+                    trainee, pauseDate, courseMedian, traineeProgress, isRemedial
+                );
+
+                affectedEntries.push({ trainee, syllabusItem: nextEvent, eventType, originalPriorityScore: priorityScore });
+            }
         }
 
-        // Sort by priority score DESCENDING (highest priority first)
-        affectedEntries.sort((a, b) => b.originalPriorityScore - a.originalPriorityScore);
-        console.log('[PauseBuild] Affected FLIGHT trainees to reschedule:', affectedEntries.length);
+        // Sort: flights by priority score DESC; FTDs by original start time ASC (earlier first)
+        affectedEntries.sort((a, b) => {
+            if (a.eventType === 'ftd' && b.eventType === 'ftd') {
+                return b.originalPriorityScore - a.originalPriorityScore; // higher = earlier start time
+            }
+            if (a.eventType !== 'ftd' && b.eventType !== 'ftd') {
+                return b.originalPriorityScore - a.originalPriorityScore;
+            }
+            return 0; // mixed: process flights and FTDs independently
+        });
+        console.log('[PauseBuild] Affected trainees to reschedule:', affectedEntries.length,
+            '(flights:', affectedEntries.filter(e => e.eventType === 'flight').length,
+            'FTDs:', affectedEntries.filter(e => e.eventType === 'ftd').length, ')');
 
         // ── Step 5: Slot-fill algorithm from pauseEnd at 5-min intervals ─────────────
         // We maintain a running list of scheduled events (starts from lockedEvents)
@@ -8040,7 +8080,118 @@ const App: React.FC = () => {
         const slotStart = roundUpTo5Min(pauseEnd);
         console.log('[PauseBuild] Scheduling window:', slotStart, 'to', dayEnd);
 
-        for (const entry of affectedEntries) {
+        // ── Step 5a: Reschedule FTD events ──────────────────────────────────────────
+        // FTD events are rescheduled as a cascade on their resource lines.
+        // - Events that were during the pause: moved to first available slot at or after pauseEnd
+        // - All FTDs cascade forward on their resource line respecting ftdTurnaround
+        // - Any FTD that cannot complete before dayEnd is dropped (not scheduled, not STBY)
+        //
+        // Strategy: for each FTD resource line, collect all cancelled FTD events that were
+        // originally on that line, sort by original start time, then schedule them one by one
+        // starting from the earliest available slot after pauseEnd on that line.
+
+        const ftdEntries = affectedEntries.filter(e => e.eventType === 'ftd');
+
+        // Group FTD cancelled events by their original resource line
+        // We need the original cancelled events (not just affectedEntries) to get the resourceId
+        const cancelledFtdEvents = eventsAfterCancel.filter(e =>
+            cancelledIds.has(e.id) && e.type === 'ftd' && !completedEventIds.has(e.id)
+        );
+
+        // Build a map: resourceId → sorted list of (originalEvent, affectedEntry)
+        const ftdByResource = new Map<string, Array<{ orig: ScheduleEvent; entry: AffectedTraineeEntry }>>();
+        for (const orig of cancelledFtdEvents) {
+            const resourceId = orig.resourceId || 'FTD 1';
+            if (!ftdByResource.has(resourceId)) ftdByResource.set(resourceId, []);
+            // Find the matching affectedEntry for this cancelled event
+            const entry = ftdEntries.find(e =>
+                (e.trainee.fullName === (orig.student || orig.pilot)) &&
+                e.syllabusItem.id === (orig.flightNumber || orig.id)
+            );
+            if (entry) {
+                ftdByResource.get(resourceId)!.push({ orig, entry });
+            }
+        }
+
+        // Process each FTD resource line
+        for (const [ftdResourceId, ftdList] of ftdByResource.entries()) {
+            // Sort by original start time ascending
+            ftdList.sort((a, b) => a.orig.startTime - b.orig.startTime);
+
+            for (const { orig, entry } of ftdList) {
+                const { trainee, syllabusItem } = entry;
+                const duration = syllabusItem.duration;
+
+                // Find earliest available slot on this FTD resource line at or after pauseEnd
+                // Round up to 5-min boundary
+                let slot = slotStart;
+                const slotStep = 5 / 60;
+                let scheduled = false;
+
+                while (slot + duration <= dayEnd) {
+                    const slotEnd = slot + duration;
+
+                    // Must end by dayEnd (flying window end)
+                    if (slotEnd > dayEnd) break;
+
+                    // Check this specific FTD resource line is free (with turnaround)
+                    if (isResourceOccupied(ftdResourceId, slot, duration, ftdTurnaround)) {
+                        slot += slotStep;
+                        continue;
+                    }
+
+                    // Check trainee is not busy
+                    if (personIsBusy(trainee.fullName, slot, slotEnd)) {
+                        slot += slotStep;
+                        continue;
+                    }
+
+                    // Check trainee static unavailability
+                    if (isPersonStaticallyUnavailable(trainee, slot, slotEnd, pauseDate, 'ftd')) {
+                        slot += slotStep;
+                        continue;
+                    }
+
+                    // Find instructor
+                    const instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
+                    if (!instructorName) {
+                        slot += slotStep;
+                        continue;
+                    }
+
+                    // All checks passed — create rescheduled FTD event
+                    const newEvent: ScheduleEvent = {
+                        ...orig,
+                        id: uuidv4(),
+                        date: pauseDate,
+                        type: 'ftd',
+                        instructor: instructorName,
+                        student: trainee.fullName,
+                        pilot: instructorName,
+                        duration,
+                        startTime: slot,
+                        resourceId: ftdResourceId,
+                        isCancelled: false,
+                        preStart: syllabusItem.preFlightTime,
+                        postEnd: syllabusItem.postFlightTime,
+                    };
+                    scheduledEvents.push(newEvent);
+                    successfullyScheduled.add(`ftd:${trainee.fullName}`);
+                    scheduled = true;
+                    console.log(`[PauseBuild] Rescheduled FTD ${trainee.fullName} at ${slot.toFixed(2)} on ${ftdResourceId}`);
+                    break;
+                }
+
+                if (!scheduled) {
+                    console.log(`[PauseBuild] FTD ${trainee.fullName} could not be rescheduled before dayEnd — dropped`);
+                }
+            }
+        }
+
+        // ── Step 5b: Reschedule FLIGHT events ───────────────────────────────────────
+        const flightEntries = affectedEntries.filter(e => e.eventType === 'flight');
+
+        for (const entry of flightEntries) {
             const { trainee, syllabusItem, eventType } = entry;
             const duration = syllabusItem.duration;
 
@@ -8065,95 +8216,87 @@ const App: React.FC = () => {
                     continue;
                 }
 
-                if (eventType === 'flight') {
-                    // Check flying window boundaries
-                    if (slot < dayStart || slotEnd > dayEnd) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Check hourly dispatch limit (max 8 per rolling hour)
-                    if (flightsInLastHour(slot) >= 8) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Check 5-min takeoff separation
-                    if (hasTakeoffSeparationConflict(slot)) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Find available aircraft
-                    const resourceId = findAircraftResource(slot, duration);
-                    if (!resourceId) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Find available area
-                    const area = findAreaForFlight(slot, duration);
-                    if (!area) {
-                        slot += slotStep;
-                        continue;
-                    }
-
-                    // Find best instructor (Solo flights don't need one)
-                    let instructorName: string | null = null;
-                    if (syllabusItem.sortieType !== 'Solo') {
-                        instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
-                        if (!instructorName) {
-                            slot += slotStep;
-                            continue;
-                        }
-                    }
-
-                    // All checks passed — create the event
-                    const newEvent: ScheduleEvent = {
-                        id: uuidv4(),
-                        date: pauseDate,
-                        type: 'flight',
-                        instructor: syllabusItem.sortieType === 'Solo' ? '' : (instructorName || ''),
-                        student: trainee.fullName,
-                        pilot: syllabusItem.sortieType === 'Solo' ? trainee.fullName : (instructorName || ''),
-                        flightNumber: syllabusItem.id,
-                        duration,
-                        startTime: slot,
-                        resourceId,
-                        color: courseColors[trainee.course] || 'bg-gray-500',
-                        flightType: (syllabusItem.sortieType as 'Dual' | 'Solo') || 'Dual',
-                        locationType: 'Local',
-                        origin: school,
-                        destination: school,
-                        area,
-                        preStart: syllabusItem.preFlightTime,
-                        postEnd: syllabusItem.postFlightTime,
-                    };
-                    scheduledEvents.push(newEvent);
-                    successfullyScheduled.add(trainee.fullName);
-                    scheduled = true;
-                    console.log(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
-                    break;
-
+                // Check flying window boundaries
+                if (slot < dayStart || slotEnd > dayEnd) {
+                    slot += slotStep;
+                    continue;
                 }
-                // Note: FTD/CPT/Ground types are never in affectedEntries, so this loop
-                // only processes flight events. Non-flight cancelled events are handled
-                // in Step 6 below (FTD → STBY, CPT/Ground → silently dropped).
 
-                slot += slotStep;
+                // Check hourly dispatch limit (max 8 per rolling hour)
+                if (flightsInLastHour(slot) >= 8) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Check 5-min takeoff separation
+                if (hasTakeoffSeparationConflict(slot)) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Find available aircraft
+                const resourceId = findAircraftResource(slot, duration);
+                if (!resourceId) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Find available area
+                const area = findAreaForFlight(slot, duration);
+                if (!area) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Find best instructor (Solo flights don't need one)
+                let instructorName: string | null = null;
+                if (syllabusItem.sortieType !== 'Solo') {
+                    instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
+                    if (!instructorName) {
+                        slot += slotStep;
+                        continue;
+                    }
+                }
+
+                // All checks passed — create the event
+                const newEvent: ScheduleEvent = {
+                    id: uuidv4(),
+                    date: pauseDate,
+                    type: 'flight',
+                    instructor: syllabusItem.sortieType === 'Solo' ? '' : (instructorName || ''),
+                    student: trainee.fullName,
+                    pilot: syllabusItem.sortieType === 'Solo' ? trainee.fullName : (instructorName || ''),
+                    flightNumber: syllabusItem.id,
+                    duration,
+                    startTime: slot,
+                    resourceId,
+                    color: courseColors[trainee.course] || 'bg-gray-500',
+                    flightType: (syllabusItem.sortieType as 'Dual' | 'Solo') || 'Dual',
+                    locationType: 'Local',
+                    origin: school,
+                    destination: school,
+                    area,
+                    preStart: syllabusItem.preFlightTime,
+                    postEnd: syllabusItem.postFlightTime,
+                };
+                scheduledEvents.push(newEvent);
+                successfullyScheduled.add(trainee.fullName);
+                scheduled = true;
+                console.log(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
+                break;
             }
 
             if (!scheduled) {
-                console.log(`[PauseBuild] Could not schedule ${trainee.fullName} (${syllabusItem.code}, type: ${eventType})`);
+                console.log(`[PauseBuild] Could not schedule FLIGHT ${trainee.fullName} (${syllabusItem.code})`);
             }
         }
 
-        console.log('[PauseBuild] Successfully scheduled:', successfullyScheduled.size, 'of', affectedEntries.length, 'trainees');
+        console.log('[PauseBuild] Successfully scheduled:', successfullyScheduled.size, 'entries');
 
         // ── Step 6: Place unscheduled flight/FTD trainees on STBY with red X ─────────
         // - Flight events that could not be rescheduled go to STBY with red X at original time
-        // - FTD events cancelled by the pause go to STBY with red X at their original time
-        //   (FTD events are NOT rescheduled - only cancelled and shown on STBY)
+        // - FTD events that could not be rescheduled (no slot before dayEnd) go to STBY with red X
+        // - FTD events that WERE successfully rescheduled do NOT go to STBY
         // - CPT and Ground events cancelled by the pause are silently dropped (no STBY)
         //
         // Build a list of already-occupied STBY slots from the locked/scheduled events
@@ -8187,14 +8330,21 @@ const App: React.FC = () => {
             // CPT and Ground are silently dropped — no STBY placement
             if (ev.type === 'cpt' || ev.type === 'ground') continue;
 
-            // For flight events: only place on STBY if the trainee was NOT successfully rescheduled
+            const traineeName = ev.student || ev.pilot || '';
+
             if (ev.type === 'flight') {
-                const traineeName = ev.student || ev.pilot || '';
+                // Flight: only go to STBY if the trainee was NOT successfully rescheduled
                 if (traineeName && successfullyScheduled.has(traineeName)) continue;
             }
 
-            // FTD events cancelled by the pause always go to STBY at their original time slot.
-            // Flight events that couldn't be rescheduled also go to STBY at their original time slot.
+            if (ev.type === 'ftd') {
+                // FTD: only go to STBY if it could NOT be rescheduled
+                // successfullyScheduled uses key 'ftd:<traineeName>' for FTD events
+                const ftdKey = `ftd:${traineeName}`;
+                if (successfullyScheduled.has(ftdKey)) continue;
+            }
+
+            // Place on STBY at original time slot with red X
             const stbyResourceId = getNextStbySlot(ev.startTime, ev.startTime + ev.duration);
             stbyEvents.push({
                 ...ev,
@@ -8206,7 +8356,7 @@ const App: React.FC = () => {
         }
 
         console.log('[PauseBuild] STBY (cancelled) events:', stbyEvents.length,
-            '(flight unscheduled + FTD cancelled in pause window)');
+            '(unscheduled flights + unschedulable FTDs)');
 
         // ── Step 7: Combine and return ────────────────────────────────────────────────
         // scheduledEvents already includes lockedEvents + newly scheduled events.

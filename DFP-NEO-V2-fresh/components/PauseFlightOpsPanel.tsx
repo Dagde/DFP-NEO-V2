@@ -364,40 +364,43 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                 <div>
                     <p className={sectionHead}>Pause Period</p>
 
-                    {/* Start — single combined input with datalist */}
-                    <div className="mb-2">
-                        <label className="block text-[9px] text-gray-400 mb-1">Start</label>
-                        <input
-                            list="pause-start-options"
-                            type="text"
-                            value={pauseStart}
-                            onChange={e => setPauseStart(e.target.value)}
-                            placeholder="HH:MM"
-                            maxLength={5}
-                            className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
-                            disabled={phase !== 'configure'}
-                        />
-                        <datalist id="pause-start-options">
-                            {startOptions.map(t => <option key={t} value={t} />)}
-                        </datalist>
-                    </div>
+                    {/* Start & End — side by side */}
+                    <div className="flex gap-2 mb-2">
+                        {/* Start */}
+                        <div className="flex-1">
+                            <label className="block text-[9px] text-gray-400 mb-1">Start</label>
+                            <input
+                                list="pause-start-options"
+                                type="text"
+                                value={pauseStart}
+                                onChange={e => setPauseStart(e.target.value)}
+                                placeholder="HH:MM"
+                                maxLength={5}
+                                className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                                disabled={phase !== 'configure'}
+                            />
+                            <datalist id="pause-start-options">
+                                {startOptions.map(t => <option key={t} value={t} />)}
+                            </datalist>
+                        </div>
 
-                    {/* End — single combined input with datalist */}
-                    <div className="mb-2">
-                        <label className="block text-[9px] text-gray-400 mb-1">End</label>
-                        <input
-                            list="pause-end-options"
-                            type="text"
-                            value={pauseEnd}
-                            onChange={e => setPauseEnd(e.target.value)}
-                            placeholder="HH:MM"
-                            maxLength={5}
-                            className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
-                            disabled={phase !== 'configure'}
-                        />
-                        <datalist id="pause-end-options">
-                            {endOptions.map(t => <option key={t} value={t} />)}
-                        </datalist>
+                        {/* End */}
+                        <div className="flex-1">
+                            <label className="block text-[9px] text-gray-400 mb-1">End</label>
+                            <input
+                                list="pause-end-options"
+                                type="text"
+                                value={pauseEnd}
+                                onChange={e => setPauseEnd(e.target.value)}
+                                placeholder="HH:MM"
+                                maxLength={5}
+                                className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                                disabled={phase !== 'configure'}
+                            />
+                            <datalist id="pause-end-options">
+                                {endOptions.map(t => <option key={t} value={t} />)}
+                            </datalist>
+                        </div>
                     </div>
 
                     {validationError && (
