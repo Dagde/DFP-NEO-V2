@@ -36485,284 +36485,153 @@ const BuildDfpLoadingFlyout = () => {
     columnNumber: 9
   }, void 0);
 };
-const PropellerLoadingOverlay = ({
-  message = "Engine warming up — please wait…"
-}) => {
-  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-    "div",
-    {
-      className: "fixed inset-0 z-[9999] flex items-center justify-center",
-      style: { backgroundColor: "rgba(0,0,0,0.72)" },
-      children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-          "div",
-          {
-            className: "flex flex-col items-center justify-center gap-6 rounded-xl border border-gray-700 shadow-2xl",
-            style: {
-              background: "linear-gradient(145deg, #1a1f2e 0%, #111827 60%, #0d1117 100%)",
-              width: "300px",
-              height: "300px",
-              minWidth: "260px",
-              minHeight: "260px"
-            },
-            children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative flex items-center justify-center", style: { width: 140, height: 140 }, children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "div",
-                  {
-                    className: "absolute rounded-full z-10",
-                    style: {
-                      width: 22,
-                      height: 22,
-                      background: "radial-gradient(circle at 35% 35%, #6b7280, #374151)",
-                      border: "2px solid #4b5563",
-                      boxShadow: "0 0 8px rgba(0,0,0,0.8)"
-                    }
-                  },
-                  void 0,
-                  false,
-                  {
-                    fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                    lineNumber: 33,
-                    columnNumber: 21
-                  },
-                  void 0
-                ),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "svg",
-                  {
-                    viewBox: "0 0 140 140",
-                    width: "140",
-                    height: "140",
-                    style: {
-                      animation: "propeller-spin 0.7s linear infinite",
-                      transformOrigin: "70px 70px"
-                    },
-                    children: [
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("defs", { children: [
-                        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("radialGradient", { id: "blade-grad", cx: "50%", cy: "30%", r: "70%", children: [
-                          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("stop", { offset: "0%", stopColor: "#9ca3af" }, void 0, false, {
-                            fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                            lineNumber: 56,
-                            columnNumber: 33
-                          }, void 0),
-                          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("stop", { offset: "100%", stopColor: "#374151" }, void 0, false, {
-                            fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                            lineNumber: 57,
-                            columnNumber: 33
-                          }, void 0)
-                        ] }, void 0, true, {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 55,
-                          columnNumber: 29
-                        }, void 0),
-                        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("filter", { id: "blade-blur", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("feGaussianBlur", { in: "SourceGraphic", stdDeviation: "0.4" }, void 0, false, {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 60,
-                          columnNumber: 33
-                        }, void 0) }, void 0, false, {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 59,
-                          columnNumber: 29
-                        }, void 0)
-                      ] }, void 0, true, {
-                        fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                        lineNumber: 54,
-                        columnNumber: 25
-                      }, void 0),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                        "ellipse",
-                        {
-                          cx: "70",
-                          cy: "32",
-                          rx: "9",
-                          ry: "38",
-                          fill: "url(#blade-grad)",
-                          opacity: "0.92",
-                          filter: "url(#blade-blur)"
-                        },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 65,
-                          columnNumber: 25
-                        },
-                        void 0
-                      ),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                        "ellipse",
-                        {
-                          cx: "70",
-                          cy: "32",
-                          rx: "9",
-                          ry: "38",
-                          fill: "url(#blade-grad)",
-                          opacity: "0.92",
-                          filter: "url(#blade-blur)",
-                          transform: "rotate(120 70 70)"
-                        },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 73,
-                          columnNumber: 25
-                        },
-                        void 0
-                      ),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                        "ellipse",
-                        {
-                          cx: "70",
-                          cy: "32",
-                          rx: "9",
-                          ry: "38",
-                          fill: "url(#blade-grad)",
-                          opacity: "0.92",
-                          filter: "url(#blade-blur)",
-                          transform: "rotate(240 70 70)"
-                        },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 82,
-                          columnNumber: 25
-                        },
-                        void 0
-                      ),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                        "circle",
-                        {
-                          cx: "70",
-                          cy: "70",
-                          r: "10",
-                          fill: "radial-gradient(circle, #6b7280, #1f2937)",
-                          style: { fill: "#4b5563" }
-                        },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 92,
-                          columnNumber: 25
-                        },
-                        void 0
-                      ),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                        "circle",
-                        {
-                          cx: "70",
-                          cy: "70",
-                          r: "5",
-                          style: { fill: "#9ca3af" }
-                        },
-                        void 0,
-                        false,
-                        {
-                          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                          lineNumber: 96,
-                          columnNumber: 25
-                        },
-                        void 0
-                      )
-                    ]
-                  },
-                  void 0,
-                  true,
-                  {
-                    fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                    lineNumber: 45,
-                    columnNumber: 21
-                  },
-                  void 0
-                )
-              ] }, void 0, true, {
+const PropellerLoadingOverlay = () => {
+  return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/60 z-[90] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl border border-sky-500 p-8 flex flex-col items-center gap-6", style: { width: 320, minHeight: 300 }, children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative flex items-center justify-center", style: { width: 160, height: 160 }, children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        "svg",
+        {
+          xmlns: "http://www.w3.org/2000/svg",
+          width: "160",
+          height: "160",
+          viewBox: "0 0 160 160",
+          style: { animation: "propSpin 0.65s linear infinite", display: "block" },
+          children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ellipse", { cx: "80", cy: "34", rx: "12", ry: "46", fill: "#60a5fa", opacity: "0.85" }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+              lineNumber: 23,
+              columnNumber: 25
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              "ellipse",
+              {
+                cx: "80",
+                cy: "34",
+                rx: "12",
+                ry: "46",
+                fill: "#60a5fa",
+                opacity: "0.85",
+                transform: "rotate(120 80 80)"
+              },
+              void 0,
+              false,
+              {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                lineNumber: 31,
-                columnNumber: 17
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center gap-1.5 px-6", children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-semibold text-sky-300 text-center leading-snug", children: message }, void 0, false, {
-                  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                  lineNumber: 104,
-                  columnNumber: 21
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-500", style: { animation: "none" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AnimatedDots, {}, void 0, false, {
-                  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                  lineNumber: 109,
-                  columnNumber: 25
-                }, void 0) }, void 0, false, {
-                  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                  lineNumber: 108,
-                  columnNumber: 21
-                }, void 0)
-              ] }, void 0, true, {
+                lineNumber: 25,
+                columnNumber: 25
+              },
+              void 0
+            ),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              "ellipse",
+              {
+                cx: "80",
+                cy: "34",
+                rx: "12",
+                ry: "46",
+                fill: "#60a5fa",
+                opacity: "0.85",
+                transform: "rotate(240 80 80)"
+              },
+              void 0,
+              false,
+              {
                 fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-                lineNumber: 103,
-                columnNumber: 17
-              }, void 0)
-            ]
-          },
-          void 0,
-          true,
-          {
-            fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-            lineNumber: 20,
-            columnNumber: 13
-          },
-          void 0
-        ),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("style", { children: `
-                @keyframes propeller-spin {
-                    from { transform: rotate(0deg); }
-                    to   { transform: rotate(360deg); }
-                }
-                @keyframes dot-blink {
-                    0%, 80%, 100% { opacity: 0; }
-                    40%           { opacity: 1; }
-                }
-            ` }, void 0, false, {
+                lineNumber: 28,
+                columnNumber: 25
+              },
+              void 0
+            ),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { cx: "80", cy: "80", r: "14", fill: "#1e3a5f", stroke: "#60a5fa", strokeWidth: "2.5" }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+              lineNumber: 31,
+              columnNumber: 25
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { cx: "80", cy: "80", r: "6", fill: "#93c5fd" }, void 0, false, {
+              fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+              lineNumber: 32,
+              columnNumber: 25
+            }, void 0)
+          ]
+        },
+        void 0,
+        true,
+        {
           fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-          lineNumber: 115,
-          columnNumber: 13
-        }, void 0)
-      ]
-    },
-    void 0,
-    true,
-    {
+          lineNumber: 15,
+          columnNumber: 21
+        },
+        void 0
+      ),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("style", { children: `
+                        @keyframes propSpin {
+                            from { transform: rotate(0deg); }
+                            to   { transform: rotate(360deg); }
+                        }
+                        @keyframes dotFade {
+                            0%, 80%, 100% { opacity: 0.2; }
+                            40%           { opacity: 1; }
+                        }
+                    ` }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+        lineNumber: 36,
+        columnNumber: 21
+      }, void 0)
+    ] }, void 0, true, {
       fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-      lineNumber: 15,
-      columnNumber: 9
-    },
-    void 0
-  );
-};
-const AnimatedDots = () => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [0, 1, 2].map((i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-  "span",
-  {
-    style: {
-      display: "inline-block",
-      animation: `dot-blink 1.4s ease-in-out ${i * 0.32}s infinite`,
-      marginLeft: 1
-    },
-    children: "●"
-  },
-  i,
-  false,
-  {
+      lineNumber: 14,
+      columnNumber: 17
+    }, void 0),
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center gap-2 text-center", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xl font-semibold text-white", children: "Please wait" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+        lineNumber: 50,
+        columnNumber: 21
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-sky-300 font-medium", children: "Engine warming up…" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+        lineNumber: 51,
+        columnNumber: 21
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-400", children: "Rebuilding schedule after ops pause" }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+        lineNumber: 52,
+        columnNumber: 21
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-1.5 mt-1", children: [0, 1, 2].map((i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+        "span",
+        {
+          className: "w-2 h-2 rounded-full bg-sky-400 inline-block",
+          style: { animation: `dotFade 1.4s ease-in-out ${i * 0.28}s infinite` }
+        },
+        i,
+        false,
+        {
+          fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+          lineNumber: 57,
+          columnNumber: 29
+        },
+        void 0
+      )) }, void 0, false, {
+        fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+        lineNumber: 55,
+        columnNumber: 21
+      }, void 0)
+    ] }, void 0, true, {
+      fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+      lineNumber: 49,
+      columnNumber: 17
+    }, void 0)
+  ] }, void 0, true, {
     fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-    lineNumber: 133,
+    lineNumber: 11,
     columnNumber: 13
-  },
-  void 0
-)) }, void 0, false, {
-  fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
-  lineNumber: 131,
-  columnNumber: 5
-}, void 0);
+  }, void 0) }, void 0, false, {
+    fileName: "/workspace/DFP-NEO-V2/DFP-NEO-V2-fresh/components/PropellerLoadingOverlay.tsx",
+    lineNumber: 10,
+    columnNumber: 9
+  }, void 0);
+};
 const BuildDateWarningFlyout = ({ onConfirm, onCancel, date }) => {
   const [year, month, day] = date.split("-").map(Number);
   const dateObj = new Date(Date.UTC(year, month - 1, day));
