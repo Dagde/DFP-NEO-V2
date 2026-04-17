@@ -7757,24 +7757,23 @@ const App: React.FC = () => {
         setPauseOverlayStart(pauseStart);
         setPauseOverlayEnd(pauseEnd);
 
-        // ── Step 1: Determine which events are impacted by the pause ──────────────────
-        const isImpacted = (e: ScheduleEvent): boolean => {
-            if (e.isCancelled) return false;
-            if (completedEventIds.has(e.id)) return false;
+        // ── Step 1: Determine which events must be cleared for rebuild ──────────────────
+        // ALL non-completed events of the affected types are cleared from the ENTIRE day
+        // (both during the pause window AND after it) — they will be rescheduled from pauseEnd.
+        // Only completed events and non-affected event types are kept locked in place.
+        const isToBeCleared = (e: ScheduleEvent): boolean => {
+            if (e.isCancelled) return false;                          // already cancelled
+            if (completedEventIds.has(e.id)) return false;            // completed, keep in place
             const typeKey = e.type === 'ground' ? 'ground' : e.type;
-            if (!(affectedTypes as string[]).includes(typeKey)) return false;
-            const end = e.startTime + e.duration;
-            if (pauseRule === 'no_start_during') {
-                return e.startTime >= pauseStart && e.startTime < pauseEnd;
-            } else {
-                return e.startTime < pauseEnd && end > pauseStart;
-            }
+            if (!(affectedTypes as string[]).includes(typeKey)) return false; // not affected type
+            // Clear ALL affected-type events for the entire day (pause window + post-pause)
+            return true;
         };
 
-        // ── Step 2: Mark impacted events as cancelled (OPS_PAUSE) ────────────────────
+        // ── Step 2: Mark all clearable events as cancelled (OPS_PAUSE) ───────────────
         const cancelledIds = new Set<string>();
         const eventsAfterCancel: ScheduleEvent[] = fullRawEvents.map(e => {
-            if (isImpacted(e)) {
+            if (isToBeCleared(e)) {
                 cancelledIds.add(e.id);
                 return {
                     ...e,
@@ -7786,12 +7785,12 @@ const App: React.FC = () => {
             }
             return e;
         });
-        console.log('[PauseBuild] Cancelled:', cancelledIds.size, 'events');
+        console.log('[PauseBuild] Cleared for rebuild:', cancelledIds.size, 'events');
 
-        // ── Step 3: Build the locked (non-cancelled) events that stay in place ────────
-        // These are events that are NOT affected (completed flights, non-affected types, etc.)
+        // ── Step 3: Locked events = completed events + non-affected-type events ───────
+        // These stay exactly where they are; everything else will be rebuilt from pauseEnd.
         const lockedEvents: ScheduleEvent[] = eventsAfterCancel.filter(e => !e.isCancelled);
-        console.log('[PauseBuild] Locked (non-cancelled) events:', lockedEvents.length);
+        console.log('[PauseBuild] Locked (completed + non-affected type) events:', lockedEvents.length);
 
         // ── Step 4: Gather the affected trainees and their next syllabus events ───────
         // For each cancelled event, extract the trainee and their syllabus item
@@ -7817,7 +7816,23 @@ const App: React.FC = () => {
         const localCourseMedians = new Map<string, number>();
         coursePriorities.forEach((c: string) => localCourseMedians.set(c, getMedianProgressLocal(c)));
 
+        // Helper: map SyllabusItemDetail.type (capitalised) to ScheduleEvent.type (lowercase)
+        const syllabusTypeToEventType = (syllabusType: string, fallbackType: string): 'flight' | 'ftd' | 'cpt' | 'ground' => {
+            const s = syllabusType?.toLowerCase() || '';
+            if (s === 'flight') return 'flight';
+            if (s === 'ftd') return 'ftd';
+            if (s === 'cpt') return 'cpt';
+            if (s.includes('ground')) return 'ground';
+            // Fallback to the original cancelled event's type
+            const f = fallbackType?.toLowerCase() || '';
+            if (f === 'flight') return 'flight';
+            if (f === 'ftd') return 'ftd';
+            if (f === 'cpt') return 'cpt';
+            return 'ground';
+        };
+
         // Collect affected trainee entries from cancelled events
+        // Deduplicate by trainee name — each trainee gets scheduled once
         const seenTraineeNames = new Set<string>();
         const affectedEntries: AffectedTraineeEntry[] = [];
 
@@ -7837,7 +7852,9 @@ const App: React.FC = () => {
             );
             if (!nextEvent) continue;
 
-            const eventType = (nextEvent.type?.toLowerCase() || cancelledEvent.type) as 'flight' | 'ftd' | 'cpt' | 'ground';
+            // Determine event type: use the cancelled event's original type as primary guide,
+            // cross-checked against the next syllabus item type
+            const eventType = syllabusTypeToEventType(nextEvent.type || '', cancelledEvent.type);
 
             // Calculate priority score
             const courseMedian = localCourseMedians.get(trainee.course) || 0;
