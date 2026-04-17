@@ -13954,6 +13954,7 @@ updates.forEach(update => {
                     onSavePT051Assessment={onSavePT051Assessment}
                     cancellationCodes={cancellationCodes}
                     onCancelEvent={handleCancelEvent}
+                    isPauseViewMode={showPausePanel && ['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView)}
                 />
             )}
             
