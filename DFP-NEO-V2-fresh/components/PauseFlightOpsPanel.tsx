@@ -364,58 +364,40 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                 <div>
                     <p className={sectionHead}>Pause Period</p>
 
-                    {/* Start */}
+                    {/* Start — single combined input with datalist */}
                     <div className="mb-2">
                         <label className="block text-[9px] text-gray-400 mb-1">Start</label>
-                        <div className="flex items-center gap-1.5">
-                            <input
-                                type="text"
-                                value={pauseStart}
-                                onChange={e => setPauseStart(e.target.value)}
-                                placeholder="HH:MM"
-                                maxLength={5}
-                                className="bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1 w-[68px] focus:outline-none focus:border-sky-500 disabled:opacity-50"
-                                disabled={phase !== 'configure'}
-                            />
-                            <select
-                                value={startOptions.includes(pauseStart) ? pauseStart : ''}
-                                onChange={e => setPauseStart(e.target.value)}
-                                disabled={phase !== 'configure'}
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded text-gray-300 text-xs px-1 py-1 focus:outline-none focus:border-sky-500 disabled:opacity-50"
-                            >
-                                <option value="">-- select --</option>
-                                {startOptions.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <input
+                            list="pause-start-options"
+                            type="text"
+                            value={pauseStart}
+                            onChange={e => setPauseStart(e.target.value)}
+                            placeholder="HH:MM"
+                            maxLength={5}
+                            className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                            disabled={phase !== 'configure'}
+                        />
+                        <datalist id="pause-start-options">
+                            {startOptions.map(t => <option key={t} value={t} />)}
+                        </datalist>
                     </div>
 
-                    {/* End */}
+                    {/* End — single combined input with datalist */}
                     <div className="mb-2">
                         <label className="block text-[9px] text-gray-400 mb-1">End</label>
-                        <div className="flex items-center gap-1.5">
-                            <input
-                                type="text"
-                                value={pauseEnd}
-                                onChange={e => setPauseEnd(e.target.value)}
-                                placeholder="HH:MM"
-                                maxLength={5}
-                                className="bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1 w-[68px] focus:outline-none focus:border-sky-500 disabled:opacity-50"
-                                disabled={phase !== 'configure'}
-                            />
-                            <select
-                                value={endOptions.includes(pauseEnd) ? pauseEnd : ''}
-                                onChange={e => setPauseEnd(e.target.value)}
-                                disabled={phase !== 'configure'}
-                                className="flex-1 bg-gray-900 border border-gray-600 rounded text-gray-300 text-xs px-1 py-1 focus:outline-none focus:border-sky-500 disabled:opacity-50"
-                            >
-                                <option value="">-- select --</option>
-                                {endOptions.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <input
+                            list="pause-end-options"
+                            type="text"
+                            value={pauseEnd}
+                            onChange={e => setPauseEnd(e.target.value)}
+                            placeholder="HH:MM"
+                            maxLength={5}
+                            className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                            disabled={phase !== 'configure'}
+                        />
+                        <datalist id="pause-end-options">
+                            {endOptions.map(t => <option key={t} value={t} />)}
+                        </datalist>
                     </div>
 
                     {validationError && (
@@ -597,31 +579,33 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
 
                 {/* Review phase actions */}
                 {phase === 'review' && (
-                    <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3 flex-wrap">
                         {/* PUBLISH - same size/theme as right menu Publish button, green text */}
                         <button
                             onClick={handlePublish}
-                            className="w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
                             style={{ color: '#22c55e' }}
+                            title="Publish changes to Active DFP"
                         >
-                            <span className="text-center leading-tight">PUBLISH<br />Commit to Active DFP</span>
+                            <span className="text-center leading-tight">Publish</span>
                         </button>
-                        {/* Back to Configure - same size/theme as DFP button in left menu, green text */}
+                        {/* Back to Configure - same size/theme, black text */}
                         <button
                             onClick={handleBackToConfigure}
-                            className="w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
-                            style={{ color: '#22c55e' }}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#000000' }}
+                            title="Return to configure phase"
                         >
-                            <span className="text-center leading-tight">Back to<br />Configure</span>
+                            <span className="text-center leading-tight">Back</span>
                         </button>
-                        {/* Revert - same size/theme as DFP button in left menu, red text */}
+                        {/* Revert - same size/theme, black text */}
                         <button
                             onClick={handleRevertToOriginal}
-                            className="w-full h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
-                            style={{ color: '#ef4444' }}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#000000' }}
                             title="Discard all changes and restore the original Active DFP schedule"
                         >
-                            <span className="text-center leading-tight">Revert to Original<br />Daily Schedule</span>
+                            <span className="text-center leading-tight">Revert to<br />Original</span>
                         </button>
                     </div>
                 )}

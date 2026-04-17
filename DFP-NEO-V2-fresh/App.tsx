@@ -6929,6 +6929,8 @@ const App: React.FC = () => {
         }
         setPreviousView(activeView);
         setActiveView(view);
+        // Close Pause Flight Ops panel when navigating away
+        setShowPausePanel(false);
     };
 
     const handleNavigation = (view: string) => {
