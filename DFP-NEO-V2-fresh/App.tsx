@@ -7911,54 +7911,48 @@ const App: React.FC = () => {
             });
         };
 
-        // Helper: find an available aircraft resourceId for flights
-        const findAircraftResource = (startTime: number, duration: number): string | null => {
+        // Helper: check if a resourceId is occupied at a given time window (with turnaround in hours)
+        const isResourceOccupied = (resourceId: string, startTime: number, duration: number, turnaround: number): boolean => {
             const endTime = startTime + duration;
+            return scheduledEvents.some(e => {
+                if (e.isCancelled) return false;
+                if (e.resourceId !== resourceId) return false;
+                const eEnd = e.startTime + e.duration;
+                // New event must not start before existing event ends + turnaround
+                return (startTime < eEnd + turnaround) && (endTime > e.startTime);
+            });
+        };
+
+        // Helper: find an available aircraft resourceId for flights
+        // Cycles through PC-21 1..availableAircraftCount, respecting turnaround time (in hours)
+        const findAircraftResource = (startTime: number, duration: number): string | null => {
             for (let ac = 1; ac <= availableAircraftCount; ac++) {
                 const resourceId = `PC-21 ${ac}`;
-                const occupied = scheduledEvents.some(e => {
-                    if (e.isCancelled) return false;
-                    if (e.resourceId !== resourceId) return false;
-                    const eEnd = e.startTime + e.duration;
-                    // Include turnaround
-                    const turnaround = flightTurnaround / 60;
-                    return (e.startTime < endTime) && (eEnd + turnaround > startTime);
-                });
-                if (!occupied) return resourceId;
+                if (!isResourceOccupied(resourceId, startTime, duration, flightTurnaround)) {
+                    return resourceId;
+                }
             }
             return null;
         };
 
         // Helper: find an available FTD resourceId
         const findFtdResource = (startTime: number, duration: number): string | null => {
-            const endTime = startTime + duration;
             for (let ftd = 1; ftd <= availableFtdCount; ftd++) {
                 const resourceId = `FTD ${ftd}`;
-                const occupied = scheduledEvents.some(e => {
-                    if (e.isCancelled) return false;
-                    if (e.resourceId !== resourceId) return false;
-                    const eEnd = e.startTime + e.duration;
-                    const turnaround = ftdTurnaround / 60;
-                    return (e.startTime < endTime) && (eEnd + turnaround > startTime);
-                });
-                if (!occupied) return resourceId;
+                if (!isResourceOccupied(resourceId, startTime, duration, ftdTurnaround)) {
+                    return resourceId;
+                }
             }
             return null;
         };
 
         // Helper: find an available CPT resourceId
         const findCptResource = (startTime: number, duration: number): string | null => {
-            const endTime = startTime + duration;
             for (let cpt = 1; cpt <= availableCptCount; cpt++) {
                 const resourceId = `CPT ${cpt}`;
-                const occupied = scheduledEvents.some(e => {
-                    if (e.isCancelled) return false;
-                    if (e.resourceId !== resourceId) return false;
-                    const eEnd = e.startTime + e.duration;
-                    const turnaround = cptTurnaround / 60;
-                    return (e.startTime < endTime) && (eEnd + turnaround > startTime);
-                });
-                if (!occupied) return resourceId;
+                if (!isResourceOccupied(resourceId, startTime, duration, cptTurnaround)) {
+                    return resourceId;
+                }
             }
             return null;
         };
