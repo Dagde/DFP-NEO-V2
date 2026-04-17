@@ -625,11 +625,13 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const windowStart = validateOverlayTime - 0.5;
         const windowEnd = validateOverlayTime + 0.5;
         
-        // Count flights starting in this window
+        // Count flights starting in this window (exclude STBY/BNF-STBY lines)
         const flightCount = events.filter(event => {
             // Only count flight events (not FTD, CPT, Ground, Duty Sup, etc.)
             if (event.type !== 'flight') return false;
-            
+            // Exclude cancelled/STBY line events
+            if (event.resourceId?.startsWith('STBY') || event.resourceId?.startsWith('BNF-STBY')) return false;
+            if (event.isCancelled) return false;
             // Check if start time falls within the window
             return event.startTime >= windowStart && event.startTime < windowEnd;
         }).length;

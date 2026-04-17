@@ -8252,12 +8252,17 @@ const App: React.FC = () => {
 
         // ── Step 6: Place unscheduled flight/FTD trainees on STBY with red X ─────────
         // CPT and Ground trainees that couldn't be scheduled are simply dropped.
-        const stbyOccupied: { resourceId: string; start: number; end: number }[] = [];
+        // Build a list of already-occupied STBY slots from the locked/scheduled events
+        // (e.g. completed events that were already on a STBY row before the pause)
+        const stbyOccupied: { resourceId: string; start: number; end: number }[] = scheduledEvents
+            .filter(e => e.resourceId?.startsWith('STBY') && !e.isCancelled)
+            .map(e => ({ resourceId: e.resourceId, start: e.startTime, end: e.startTime + e.duration }));
 
         const getNextStbySlot = (evStart: number, evEnd: number): string => {
             let stbyLine = 1;
             while (true) {
                 const stbyId = `STBY ${stbyLine}`;
+                // Check against ALL occupied slots (existing + already-placed new STBY events)
                 const hasOverlap = stbyOccupied.some(
                     o => o.resourceId === stbyId && o.start < evEnd && o.end > evStart
                 );
