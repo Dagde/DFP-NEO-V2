@@ -78,6 +78,7 @@ import NextDayBuildView from './components/NextDayBuildView';
 import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
 import BuildIntelligenceView from './components/BuildIntelligenceView';
 import BuildDfpLoadingFlyout from './components/BuildDfpLoadingFlyout';
+import PropellerLoadingOverlay from './components/PropellerLoadingOverlay';
 import BuildDateWarningFlyout from './components/BuildDateWarningFlyout';
 import UnavailabilityConflictFlyout from './components/UnavailabilityConflictFlyout';
 import Magnifier from './components/Magnifier';
@@ -6929,8 +6930,10 @@ const App: React.FC = () => {
         }
         setPreviousView(activeView);
         setActiveView(view);
-        // Close Pause Flight Ops panel when navigating away
+        // Close Pause Flight Ops panel when navigating away and reset all pause state
         setShowPausePanel(false);
+        setPauseCompletedEventIds(new Set());
+        setPausePanelPhase('configure');
     };
 
     const handleNavigation = (view: string) => {
@@ -14106,6 +14109,7 @@ updates.forEach(update => {
             {showInfoNotification && <InfoNotification message={showInfoNotification} onClose={() => setShowInfoNotification(null)} />}
             {showNightFlyingInfo && <NightFlyingInfoFlyout traineeCount={nightFlyingTraineeCount} />}
             {isBuildingDfp && <BuildDfpLoadingFlyout progress={dfpBuildProgress} />}
+            {pausePanelPhase === 'building' && <PropellerLoadingOverlay message="Engine warming up — please wait…" />}
             {showDateWarning && <BuildDateWarningFlyout onConfirm={handleConfirmDateAndBuild} onCancel={() => setShowDateWarning(false)} date={buildDfpDate} />}
             {unavailabilityNotifications.length > 0 && <UnavailabilityConflictFlyout notifications={unavailabilityNotifications} onDismiss={() => setUnavailabilityNotifications([])} />}
             {showPublishConfirm && <PublishConfirmationFlyout date={buildDfpDate} onConfirm={handleConfirmPublish} onCancel={() => setShowPublishConfirm(false)} />}

@@ -329,14 +329,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
             </div>
 
             {/* ── Phase banners ── */}
-            {phase === 'building' && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-sky-900/20 border-b border-sky-700/40 flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 animate-spin text-sky-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <path d="M12 2a10 10 0 1 0 10 10" />
-                    </svg>
-                    <span className="text-xs text-sky-300 font-semibold">{buildProgress}</span>
-                </div>
-            )}
+            {/* Building phase: full-screen PropellerLoadingOverlay is shown at App level */}
             {phase === 'review' && (
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-900/20 border-b border-green-700/40 flex-shrink-0">
                     <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
@@ -570,15 +563,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                     </>
                 )}
 
-                {/* Building spinner */}
-                {phase === 'building' && (
-                    <div className="flex items-center gap-2 text-sky-400 text-xs py-2">
-                        <svg className="w-4 h-4 animate-spin flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                            <path d="M12 2a10 10 0 1 0 10 10" />
-                        </svg>
-                        {buildProgress}
-                    </div>
-                )}
+                {/* Building phase: overlay shown at App level (PropellerLoadingOverlay) */}
 
                 {/* Review phase actions */}
                 {phase === 'review' && (
