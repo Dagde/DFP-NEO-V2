@@ -1447,14 +1447,42 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 });
 
 // POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
-// Body: { syllabusData: Record<lmpType, SyllabusItemDetail[]> }
+// Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
+// syllabusData is OPTIONAL - server loads syllabus directly from DB for accurate backfill.
+// Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { syllabusData } = req.body;
+    const { syllabusData: clientSyllabusData, pt051Completions } = req.body;
+
+    // --- ALWAYS load syllabus from DB so the server has authoritative data ---
+    // The client may send mockData syllabus (missing FIC GND1/2/3) which would
+    // break the prerequisite backfill. By loading from DB here, we ensure the
+    // full syllabus (including any ground school prerequisites) is available.
+    let dbSyllabusData = {};
+    try {
+      const allItems = await db.syllabusItem.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+      });
+      if (allItems.length > 0) {
+        const ficItems = allItems.filter(item => Array.isArray(item.courses) && item.courses.includes('FIC'));
+        const bpcIpcItems = allItems.filter(item => !Array.isArray(item.courses) || !item.courses.includes('FIC'));
+        dbSyllabusData = {
+          'FIC': ficItems,
+          'BPC+IPC': bpcIpcItems,
+        };
+        console.log(`[LMP Sync] Loaded syllabus from DB: ${ficItems.length} FIC items, ${bpcIpcItems.length} BPC+IPC items`);
+      }
+    } catch (syllabusErr) {
+      console.warn('[LMP Sync] Could not load syllabus from DB, falling back to client syllabusData:', syllabusErr.message);
+    }
+
+    // Use DB syllabus if available; fall back to client-provided syllabusData
+    const syllabusData = (Object.keys(dbSyllabusData).length > 0) ? dbSyllabusData : (clientSyllabusData || {});
 
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
-      return res.status(400).json({ error: 'Missing syllabusData in request body' });
+      return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
     }
 
     // Fetch all active trainees with their scores and existing LMP
@@ -1506,21 +1534,82 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         const normalizedEvent = (s.event || '').replace('*', '');
         scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
       });
+
+      // Merge PT-051 completions from DailySnapshot (passed by frontend)
+      const pt051Map = pt051Completions || {};
+      const pt051Events = pt051Map[trainee.fullName] || [];
+      if (pt051Events.length > 0) {
+        console.log(`[LMP Sync] ${trainee.fullName}: merging ${pt051Events.length} PT-051 completions: ${pt051Events.join(', ')}`);
+        pt051Events.forEach(eventId => {
+          const normalized = (eventId || '').replace('*', '');
+          if (normalized && !scoreMap[normalized]) {
+            scoreMap[normalized] = new Date().toISOString();
+            db.score.findFirst({ where: { traineeId: trainee.id, event: normalized } })
+              .then(existing => {
+                if (!existing) {
+                  return db.score.create({
+                    data: {
+                      traineeId: trainee.id,
+                      event: normalized,
+                      score: 3,
+                      date: new Date(),
+                      instructor: 'DCO',
+                      notes: 'Auto-created from PT-051 assessment during LMP sync',
+                    },
+                  });
+                }
+              })
+              .catch(err => console.warn(`[LMP Sync] Could not persist score for ${trainee.fullName} ${normalized}:`, err.message));
+          }
+        });
+      }
+
       let completedEventIds = Object.keys(scoreMap);
 
-      // Apply BIF FTD dependency rules:
-      // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
-      if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
-        completedEventIds.push('BIF FTD1');
-        scoreMap['BIF FTD1'] = scoreMap['BIF FTD2']; // use BIF FTD2's date
-        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD1 complete (BIF FTD2 done)`);
+      // --- ENDURING PREREQUISITE BACKFILL ---
+      // If any event N is complete, all syllabus items that appear BEFORE it in the
+      // master syllabus (by sortOrder) must also be complete.
+      // This prevents regressions when new ground-school or prerequisite events are
+      // added to the DB syllabus AFTER trainees have already completed later events.
+      // Example: FIC GND1/2/3 added to DB syllabus after FIC1-FIC5 already completed.
+      {
+        const sorted = [...masterSyllabus].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+        // Find the highest-sortOrder completed item index (high-water mark)
+        let highWatermark = -1;
+        let highWatermarkDate = null;
+        for (let i = 0; i < sorted.length; i++) {
+          const item = sorted[i];
+          const itemKey = (item.id || item.code || '').replace('*', '');
+          const itemCode = (item.code || '').replace('*', '');
+          if (scoreMap[itemKey] || scoreMap[itemCode]) {
+            highWatermark = i;
+            highWatermarkDate = scoreMap[itemKey] || scoreMap[itemCode];
+          }
+        }
+
+        // Backfill every item before the high-water mark
+        if (highWatermark > 0) {
+          const backfilled = [];
+          for (let i = 0; i < highWatermark; i++) {
+            const item = sorted[i];
+            const itemKey = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            const canonicalKey = itemCode || itemKey;
+            if (canonicalKey && !scoreMap[itemKey] && !scoreMap[itemCode]) {
+              scoreMap[canonicalKey] = highWatermarkDate;
+              backfilled.push(canonicalKey);
+            }
+          }
+          if (backfilled.length > 0) {
+            console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} prerequisite(s): ${backfilled.join(', ')}`);
+          }
+        }
+
+        // Rebuild completedEventIds from the augmented scoreMap
+        completedEventIds = Object.keys(scoreMap);
       }
-      // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
-      if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
-        completedEventIds.push('BIF FTD3');
-        scoreMap['BIF FTD3'] = scoreMap['BIF1']; // use BIF1's date
-        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD3 complete (BIF1 done)`);
-      }
+      // --- END PREREQUISITE BACKFILL ---
 
       // Build the full LMP events array with completion status
       const lmpEvents = masterSyllabus.map(item => ({
@@ -1744,7 +1833,7 @@ app.get('/api/scores', async (req, res) => {
   }
 });
 
-// POST /api/scores - create a single score record
+// POST /api/scores - create/upsert a single score record
 app.post('/api/scores', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -1758,19 +1847,88 @@ app.post('/api/scores', async (req, res) => {
     }
     if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
     if (!event) return res.status(400).json({ error: 'event is required' });
-    if (score === undefined || score === null) return res.status(400).json({ error: 'score is required' });
 
-    const scoreRecord = await db.score.create({
-      data: {
-        traineeId: resolvedTraineeId,
-        event,
-        score: parseInt(score),
-        date: date ? new Date(date) : new Date(),
-        instructor: instructor || 'DCO',
-        notes: notes || '',
-        details: details || null,
-      },
-    });
+    // Upsert: update if exists, create if not
+    const existing = await db.score.findFirst({ where: { traineeId: resolvedTraineeId, event } });
+    let scoreRecord;
+    if (existing) {
+      scoreRecord = await db.score.update({
+        where: { id: existing.id },
+        data: {
+          score: score !== undefined ? parseInt(score) : existing.score,
+          date: date ? new Date(date) : existing.date,
+          instructor: instructor || existing.instructor,
+          notes: notes || existing.notes,
+          details: details !== undefined ? details : existing.details,
+        },
+      });
+    } else {
+      scoreRecord = await db.score.create({
+        data: {
+          traineeId: resolvedTraineeId,
+          event,
+          score: score !== undefined ? parseInt(score) : 3,
+          date: date ? new Date(date) : new Date(),
+          instructor: instructor || 'DCO',
+          notes: notes || '',
+          details: details || null,
+        },
+      });
+    }
+
+    // Also update IndividualLMP completedEventIds to include this event + backfill prerequisites
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId: resolvedTraineeId } });
+      if (lmp) {
+        const existing_ids = lmp.completedEventIds || [];
+        const updatedSet = new Set(existing_ids);
+        updatedSet.add(event);
+
+        // --- PREREQUISITE BACKFILL (real-time) ---
+        const lmpEvents = Array.isArray(lmp.events) ? lmp.events : [];
+        if (lmpEvents.length > 0) {
+          let highWatermark = -1;
+          const allCompleted = new Set(updatedSet);
+          for (let i = 0; i < lmpEvents.length; i++) {
+            const item = lmpEvents[i];
+            const itemId = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            if (allCompleted.has(itemId) || allCompleted.has(itemCode)) {
+              highWatermark = i;
+            }
+          }
+          if (highWatermark > 0) {
+            const backfilled = [];
+            for (let i = 0; i < highWatermark; i++) {
+              const item = lmpEvents[i];
+              const itemCode = (item.code || '').replace('*', '');
+              const itemId = (item.id || item.code || '').replace('*', '');
+              const canonicalKey = itemCode || itemId;
+              if (canonicalKey && !allCompleted.has(itemCode) && !allCompleted.has(itemId)) {
+                updatedSet.add(canonicalKey);
+                backfilled.push(canonicalKey);
+              }
+            }
+            if (backfilled.length > 0) {
+              console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled prerequisites: ${backfilled.join(', ')}`);
+            }
+          }
+        }
+        // --- END BACKFILL ---
+
+        const updated_ids = [...updatedSet];
+        if (updated_ids.length !== existing_ids.length || !existing_ids.includes(event)) {
+          await db.individualLMP.update({
+            where: { id: lmp.id },
+            data: { completedEventIds: updated_ids, updatedAt: new Date() },
+          });
+          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event} (total: ${updated_ids.length})`);
+        }
+      }
+    } catch (lmpErr) {
+      console.warn(`[POST /api/scores] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
     res.json({ success: true, score: scoreRecord });
   } catch (error) {
     console.error('❌ POST /api/scores error:', error);
