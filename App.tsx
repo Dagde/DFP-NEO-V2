@@ -2857,7 +2857,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
         }
-        
+
+        // Ground/FTD/CPT end-of-window boundary check:
+        // Ground school and CPT events must finish by the end of the flying window.
+        // FTD events must finish by the end of the FTD window.
+        // This mirrors the same end-of-window rule applied to flight events above.
+        if (type === 'ground' || type === 'cpt') {
+            if (startTime + syllabusItem.duration > flyingEndTime) {
+                return null; // TIME_BOUNDARY_VIOLATION – event would run past flying window end
+            }
+        } else if (type === 'ftd') {
+            if (startTime + syllabusItem.duration > ftdEndTime) {
+                return null; // TIME_BOUNDARY_VIOLATION – FTD event would run past FTD window end
+            }
+        }
+
            // Debug: Log syllabusItem for BGF11 and BGF18
            if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
                console.log('🔍 SOLO FLIGHT DEBUG:', syllabusItem.id);
@@ -4528,10 +4542,28 @@ const App: React.FC = () => {
                             ? '/api'
                             : 'https://dfp-neo-v2-production.up.railway.app/api';
 
+                        // Build pt051Completions map: traineeFullName → [completedFlightNumbers]
+                        // This covers PT-051 assessments saved in DailySnapshot that may not yet
+                        // have Score DB records (e.g. Carter, Chris FIC3/4/5).
+                        const pt051Completions: Record<string, string[]> = {};
+                        pt051Assessments.forEach((assessment: any, _key: string) => {
+                            if (assessment.isCompleted && assessment.flightNumber && assessment.traineeFullName) {
+                                const name = assessment.traineeFullName;
+                                if (!pt051Completions[name]) pt051Completions[name] = [];
+                                if (!pt051Completions[name].includes(assessment.flightNumber)) {
+                                    pt051Completions[name].push(assessment.flightNumber);
+                                }
+                            }
+                        });
+                        const pt051CompletionCount = Object.values(pt051Completions).reduce((sum, arr) => sum + arr.length, 0);
+                        if (pt051CompletionCount > 0) {
+                            console.log(`[LMP Sync] Including ${pt051CompletionCount} PT-051 completions from snapshots for ${Object.keys(pt051Completions).length} trainees`);
+                        }
+
                         const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ syllabusData }),
+                            body: JSON.stringify({ syllabusData, pt051Completions }),
                         });
 
                         if (syncRes.ok) {
@@ -12673,6 +12705,57 @@ updates.forEach(update => {
                                 ].filter(Boolean).join(', ');
                                 
                                 logAudit('Performance History', 'Edit', `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+
+                                // PT-051 COMPLETION -> SCORE DB SYNC
+                                // When a PT-051 is saved (not auto-save), persist a Score record to the DB
+                                // so that IndividualLMP.completedEventIds is kept in sync and Course Progress
+                                // / NEO Build scheduling reflect the correct trainee progress.
+                                const eventId = assessment.flightNumber;
+                                if (eventId) {
+                                    const traineeObj = traineesData.find((t: any) => t.fullName === assessment.traineeFullName);
+                                    const overallScore = typeof assessment.overallGrade === 'number' ? assessment.overallGrade : 3;
+                                    fetch('/api/scores', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            traineeId: traineeObj?.id,
+                                            traineeFullName: assessment.traineeFullName,
+                                            event: eventId,
+                                            score: overallScore,
+                                            date: assessment.date || new Date().toISOString().split('T')[0],
+                                            instructor: assessment.instructorName || assessment.dcoResult || 'DCO',
+                                            notes: assessment.overallComments || '',
+                                        }),
+                                    })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                                            // Update in-memory scores state so Course Progress and NEO Build
+                                            // scheduling immediately reflect the completed event.
+                                            setScores(prev => {
+                                                const existing = prev.get(assessment.traineeFullName) || [];
+                                                const alreadyHas = existing.some(s => s.event === eventId);
+                                                if (alreadyHas) return prev;
+                                                const newScore: Score = {
+                                                    event: eventId,
+                                                    score: overallScore as 0 | 1 | 2 | 3 | 4 | 5,
+                                                    date: assessment.date || '',
+                                                    instructor: assessment.instructorName || 'DCO',
+                                                    notes: '',
+                                                    details: [],
+                                                };
+                                                const updated = new Map(prev);
+                                                updated.set(assessment.traineeFullName, [...existing, newScore]);
+                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
+                                                return updated;
+                                            });
+                                        } else {
+                                            console.warn(`[PT051->Score] Failed to persist score:`, data);
+                                        }
+                                    })
+                                    .catch(err => console.warn(`[PT051->Score] Error persisting score:`, err));
+                                }
                             }
                         }}
                         instructors={instructorsData}

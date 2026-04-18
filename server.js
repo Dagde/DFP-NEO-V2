@@ -1204,15 +1204,19 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 });
 
 // POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
-// Body: { syllabusData: Record<lmpType, SyllabusItemDetail[]> }
+// Body: { syllabusData: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
+// pt051Completions: optional map of traineeFullName → array of completed flightNumbers from DailySnapshot pt051Assessments
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { syllabusData } = req.body;
+    const { syllabusData, pt051Completions } = req.body;
 
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
       return res.status(400).json({ error: 'Missing syllabusData in request body' });
     }
+
+    // pt051Completions: { "Carter, Chris": ["FIC3","FIC4","FIC5"], ... }
+    const pt051Map = pt051Completions || {};
 
     // Fetch all active trainees with their scores and existing LMP
     const trainees = await db.trainee.findMany({
@@ -1226,7 +1230,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       },
     });
 
-    console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
+    console.log(`[LMP Sync] Processing ${trainees.length} trainees... (pt051Completions for ${Object.keys(pt051Map).length} trainees)`);
 
     const results = [];
 
@@ -1263,6 +1267,38 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         const normalizedEvent = (s.event || '').replace('*', '');
         scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
       });
+
+      // Merge PT-051 completions from DailySnapshot (passed by frontend)
+      // These are completions recorded in DailySnapshot.pt051Assessments that may not yet
+      // have Score DB records. Merging here ensures Course Progress shows correct progress.
+      const pt051Events = pt051Map[trainee.fullName] || [];
+      if (pt051Events.length > 0) {
+        console.log(`[LMP Sync] ${trainee.fullName}: merging ${pt051Events.length} PT-051 completions from snapshots: ${pt051Events.join(', ')}`);
+        pt051Events.forEach(eventId => {
+          const normalized = (eventId || '').replace('*', '');
+          if (normalized && !scoreMap[normalized]) {
+            scoreMap[normalized] = new Date().toISOString();
+            // Also persist a Score record to the DB so future syncs don't need pt051Completions
+            db.score.findFirst({ where: { traineeId: trainee.id, event: normalized } })
+              .then(existing => {
+                if (!existing) {
+                  return db.score.create({
+                    data: {
+                      traineeId: trainee.id,
+                      event: normalized,
+                      score: 3,
+                      date: new Date(),
+                      instructor: 'DCO',
+                      notes: 'Auto-created from PT-051 assessment during LMP sync',
+                    },
+                  });
+                }
+              })
+              .catch(err => console.warn(`[LMP Sync] Could not persist score for ${trainee.fullName} ${normalized}:`, err.message));
+          }
+        });
+      }
+
       let completedEventIds = Object.keys(scoreMap);
 
       // Apply BIF FTD dependency rules:
@@ -3961,6 +3997,91 @@ app.post('/api/scores/bulk', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/scores/bulk error:', error);
     res.status(500).json({ error: 'Failed to bulk insert scores', details: error.message });
+  }
+});
+
+// POST /api/scores - create or update a single score record (called when PT-051 is saved)
+app.post('/api/scores', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = req.body;
+
+    let resolvedTraineeId = traineeId;
+    if (!resolvedTraineeId && traineeFullName) {
+      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
+      if (!trainee) return res.status(404).json({ error: `Trainee not found: ${traineeFullName}` });
+      resolvedTraineeId = trainee.id;
+    }
+    if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
+    if (!event) return res.status(400).json({ error: 'event is required' });
+
+    // Upsert: update if exists, create if not
+    const existing = await db.score.findFirst({ where: { traineeId: resolvedTraineeId, event } });
+    let scoreRecord;
+    if (existing) {
+      scoreRecord = await db.score.update({
+        where: { id: existing.id },
+        data: {
+          score: score !== undefined ? parseInt(score) : existing.score,
+          date: date ? new Date(date) : existing.date,
+          instructor: instructor || existing.instructor,
+          notes: notes || existing.notes,
+          details: details !== undefined ? details : existing.details,
+        },
+      });
+    } else {
+      scoreRecord = await db.score.create({
+        data: {
+          traineeId: resolvedTraineeId,
+          event,
+          score: score !== undefined ? parseInt(score) : 3,
+          date: date ? new Date(date) : new Date(),
+          instructor: instructor || 'DCO',
+          notes: notes || '',
+          details: details || null,
+        },
+      });
+    }
+
+    // Also update IndividualLMP completedEventIds to include this event
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId: resolvedTraineeId } });
+      if (lmp) {
+        const existing_ids = lmp.completedEventIds || [];
+        if (!existing_ids.includes(event)) {
+          await db.individualLMP.update({
+            where: { id: lmp.id },
+            data: { completedEventIds: [...existing_ids, event], updatedAt: new Date() },
+          });
+          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event}`);
+        }
+      }
+    } catch (lmpErr) {
+      console.warn(`[POST /api/scores] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
+    res.json({ success: true, score: scoreRecord });
+  } catch (error) {
+    console.error('❌ POST /api/scores error:', error);
+    res.status(500).json({ error: 'Failed to create score', details: error.message });
+  }
+});
+
+// DELETE /api/scores/trainee/:traineeId - delete scores for a trainee (optionally filtered by event prefix)
+app.delete('/api/scores/trainee/:traineeId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { eventPrefix } = req.query;
+    const where = { traineeId };
+    if (eventPrefix) {
+      where.event = { startsWith: eventPrefix };
+    }
+    const result = await db.score.deleteMany({ where });
+    res.json({ success: true, deleted: result.count });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
   }
 });
 
