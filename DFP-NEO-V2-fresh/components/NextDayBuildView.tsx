@@ -267,7 +267,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const yInGrid = e.clientY - gridRect.top;
 
         // Update validate overlay position when validation mode OR hourly event rate mode is ON
-        if (showValidation || showDepartureDensityOverlay) {
+        if (showDepartureDensityOverlay) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
         }
@@ -629,7 +629,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     // Render hourly event rate overlay (also used for validation)
     const renderValidateOverlay = () => {
         // Overlay should show when either validation mode OR hourly event rate mode is active
-        if (validateOverlayTime === null || (!showValidation && !showDepartureDensityOverlay)) return null;
+        if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
         
         // Calculate 1-hour window (30 minutes before and after mouse time)
         const windowStart = validateOverlayTime - 0.5;

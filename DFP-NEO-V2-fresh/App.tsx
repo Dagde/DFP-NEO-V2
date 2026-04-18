@@ -1681,7 +1681,7 @@ function generateDfpInternal(
                 } else {
                     nextEventLists.bnf.push(trainee);
                 }
-            } else if (next.type === 'Flight' && next.sortieType === 'Solo') {
+            } else if (next.type === 'Flight' && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id))) {
                 nextEventLists.solo.push(trainee);
             } else if (next.type === 'Flight') {
                 nextEventLists.flight.push(trainee);
@@ -2726,7 +2726,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         
         // CRITICAL FIX: Skip instructor assignment for solo flights
-        const isSoloFlight = syllabusItem.sortieType === 'Solo';
+        // Check both sortieType field AND known solo event codes (BGF11, BGF18) as fallback
+        // in case sortieType was not set in the DB for these events
+        const isSoloFlight = syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id);
         
         let instructor: Instructor | null = null;
         // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
@@ -2802,7 +2804,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 pilot: trainee.fullName,
                 flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
                 color: courseColors[trainee.course] || 'bg-gray-500',
-                flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
+                flightType: isSoloFlight ? 'Solo' : (syllabusItem.sortieType || 'Dual'), locationType: 'Local', origin: school, destination: school,
                 area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
             };
             return stbyResult;
@@ -2896,6 +2898,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const isNightCheck = isNightPass && e.flightNumber.startsWith('BNF');
                 const minSeparation = isNightCheck ? 5 : 5; // Currently 5 for both, can be adjusted.
                 
+                // Solo flights only need separation from other solo flights, not from dual flights
+                // (solos have no instructor so no briefing/debrief clash with dual crews)
+                if (isSoloFlight && e.flightType !== 'Solo') return false;
+                
                 return diffMinutes < minSeparation;
             });
             if(takeoffConflict) {
@@ -2917,10 +2923,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
            }
         const result = {
-            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+            id: uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
-            flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
+            flightType: isSoloFlight ? 'Solo' : (syllabusItem.sortieType || 'Dual'), locationType: 'Local', origin: school, destination: school, 
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
         };
         // Log successful flight events (first 2 only)
@@ -3145,7 +3151,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
-    // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
+    // 3. Schedule Solo Flight Events FIRST (before dual flights) in consecutive groups of max 4.
+    // Solos are scheduled first so they get early aircraft slots. They use the normal
+    // scheduleList with 5-min stagger. Grouped in batches of max 4 so solos cluster
+    // consecutively (Group 1 = first 4, Group 2 = next 4 at a later time slot, etc.)
+    setProgress({ message: 'Scheduling Solo Flights...', percentage: 48 });
+    if (nextEventLists.solo.length > 0) {
+        const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
+        const MAX_SOLO_GROUP = 4;
+        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group`);
+        for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
+            const group = soloTrainees.slice(i, i + MAX_SOLO_GROUP);
+            const groupIndex = Math.floor(i / MAX_SOLO_GROUP) + 1;
+            console.log(`🎯 [SOLO SCHEDULING] Scheduling group ${groupIndex}: ${group.map(t => t.fullName).join(', ')}`);
+            scheduleList(group, 'flight', false, flyingStartTime, flyingEndTime, 'STBY', false);
+        }
+    }
+
+    // 3b. Schedule Day Dual Flight Events: a) Highest Priority, b) Next Events
     setProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
     // Highest Priority Flight Events are already added at the start
     
@@ -3163,26 +3186,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         false
     );
     _fbPrintSummary();
-
-    // 3b. Schedule Solo Flight Events in consecutive groups of max 4
-    // Solos use the normal scheduleList (5-min stagger), but are grouped so that
-    // all solos in a group are scheduled consecutively. Group 1 = first 4 solos,
-    // Group 2 = next 4 solos (scheduled after group 1 completes), etc.
-    setProgress({ message: 'Scheduling Solo Flights...', percentage: 52 });
-    if (nextEventLists.solo.length > 0) {
-        const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
-        const MAX_SOLO_GROUP = 4;
-        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group`);
-        // Schedule solos in batches of max 4 using the normal scheduleList.
-        // Each group is scheduled independently so they cluster together with 5-min stagger,
-        // and the next group starts after the previous group's aircraft slots are used.
-        for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
-            const group = soloTrainees.slice(i, i + MAX_SOLO_GROUP);
-            const groupIndex = Math.floor(i / MAX_SOLO_GROUP) + 1;
-            console.log(`🎯 [SOLO SCHEDULING] Scheduling group ${groupIndex}: ${group.map(t => t.fullName).join(', ')}`);
-            scheduleList(group, 'flight', false, flyingStartTime, flyingEndTime, 'STBY', false);
-        }
-    }
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
     // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
@@ -3623,6 +3626,65 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     
     
     
+    // SOLO STBY FALLBACK - Handle solo trainees that scheduleList failed to place
+    // (similar to traineesNeedingStby for dual flights, but solos don't need an instructor)
+    const soloTraineesNeedingStby = nextEventLists.solo.filter(trainee => {
+        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        if (!next) return false;
+        // Check if this solo trainee has ANY flight event (aircraft or STBY)
+        return !generatedEvents.some(e =>
+            e.student === trainee.fullName &&
+            e.flightNumber === next.id &&
+            e.type === 'flight'
+        );
+    });
+
+    console.log(`🎯 [SOLO STBY FALLBACK] ${soloTraineesNeedingStby.length} solo trainees need STBY placement`);
+
+    if (soloTraineesNeedingStby.length > 0) {
+        const timeIncrement = 5 / 60;
+        for (const trainee of soloTraineesNeedingStby) {
+            const { next } = traineeNextEventMap.get(trainee.fullName)!;
+            if (!next) continue;
+
+            let placed = false;
+            for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+                if (hasFlightStartTime(time, generatedEvents)) continue;
+                const flightEndTime = time + next.duration;
+                if (flightEndTime > flyingEndTime) continue;
+                if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
+
+                const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
+
+                generatedEvents.push({
+                    id: uuidv4(),
+                    type: 'flight',
+                    instructor: '',
+                    student: trainee.fullName,
+                    pilot: trainee.fullName,
+                    flightNumber: next.id,
+                    duration: next.duration,
+                    startTime: time,
+                    resourceId: `STBY ${stbyLine}`,
+                    color: courseColors[trainee.course] || 'bg-gray-500',
+                    flightType: 'Solo',
+                    locationType: 'Local',
+                    origin: school,
+                    destination: school,
+                    preStart: next.preFlightTime,
+                    postEnd: next.postFlightTime
+                });
+
+                placed = true;
+                console.log(`✅ [SOLO STBY FALLBACK] Placed ${trainee.fullName} (${next.id}) on STBY ${stbyLine} at ${_fmtT(time)}`);
+                break;
+            }
+            if (!placed) {
+                console.warn(`⚠️ [SOLO STBY FALLBACK] Could not place ${trainee.fullName} (${next.id}) on any STBY line`);
+            }
+        }
+    }
+
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
     // Fill STBY lines sequentially with proper spacing
     setProgress({ message: 'Scheduling STBY FTD events...', percentage: 90 });
@@ -4914,14 +4976,18 @@ const App: React.FC = () => {
                     const eventCount = Object.values(schedules).flat().length;
                     console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates (legacy/seed)`);
                     setPublishedSchedules(prev => {
-                        // Merge historical/seed data — real snapshot data takes priority
-                        const merged = { ...schedules };
-                        Object.entries(prev).forEach(([date, events]) => {
-                            if (events.some(e => !(e as any).isHistoricalSeed)) {
-                                // Keep existing non-seed events for this date (snapshot data wins)
-                                const existing = merged[date] || [];
-                                const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
-                                merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
+                        // Merge historical/seed data — real snapshot data (non-seed) ALWAYS takes priority.
+                        // Start from prev (which already has any loaded snapshots) to avoid overwriting them.
+                        const merged = { ...prev };
+                        Object.entries(schedules).forEach(([date, seedEvents]) => {
+                            const existingNonSeed = (merged[date] || []).filter(e => !(e as any).isHistoricalSeed);
+                            if (existingNonSeed.length > 0) {
+                                // Real snapshot data already present — preserve it, keep seed events as background only
+                                const existingSeedEvents = (merged[date] || []).filter(e => (e as any).isHistoricalSeed);
+                                merged[date] = [...existingSeedEvents, ...existingNonSeed];
+                            } else {
+                                // No real snapshot for this date — use seed data as fallback
+                                merged[date] = seedEvents;
                             }
                         });
                         return merged;
