@@ -124,7 +124,7 @@ import PauseFlightOpsPanel, { PausePhase } from './components/PauseFlightOpsPane
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
+// MockData removed - all data loaded from database
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
 import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
@@ -4421,7 +4421,7 @@ const App: React.FC = () => {
         }
     }, [authUser, currentUser, currentUserName]);
     // Syllabus state declared here before useEffects that reference it to avoid TDZ errors
-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
+    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
     const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
     const [syllabusError, setSyllabusError] = useState<string | null>(null);
 
@@ -4434,17 +4434,18 @@ const App: React.FC = () => {
                 const result = await loadSyllabusFromDB();
                 if (result.syllabus.length > 0) {
                     // Check if DB syllabus uses wrong codes (e.g. BGF_GND_001 instead of BGF1)
-                    // Wrong codes don't match PT-051 score records, so fall back to mockData syllabus
+                    // Wrong codes don't match PT-051 score records — prompt admin to re-seed
                     const firstItem = result.syllabus[0];
                     const hasWrongCodes = (firstItem?.code?.includes('_GND_') ||
                                           firstItem?.code?.includes('_FLT_') ||
                                           firstItem?.code?.includes('_SIM_')) ?? false;
                     if (hasWrongCodes) {
-                        console.warn(`⚠️ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Falling back to built-in syllabus (${INITIAL_SYLLABUS_DETAILS.length} items). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix permanently.`);
-                        clearSyllabusCache(); // Clear bad cache so next load re-fetches from DB
-                        setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                        console.error(`❌ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix.`);
+                        clearSyllabusCache();
+                        setSyllabusDetails([]);
+                        setSyllabusError('Syllabus data in database uses incompatible codes. Please contact your administrator to re-seed the database.');
                     } else {
-                        // Validate items have courses field; fall back to INITIAL if missing
+                        // Validate items have courses field
                         const hasValidCourses = result.syllabus.every(item => item.courses && item.courses.length > 0);
                         if (hasValidCourses) {
                             setSyllabusDetails(result.syllabus);
@@ -4455,21 +4456,21 @@ const App: React.FC = () => {
                                 console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
                             }
                         } else {
-                            console.warn(`⚠️ [Syllabus] DB syllabus items missing courses field. Falling back to built-in syllabus.`);
-                            setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                            console.error(`❌ [Syllabus] DB syllabus items missing courses field. Re-seed DB to fix.`);
+                            setSyllabusDetails([]);
+                            setSyllabusError('Syllabus data is missing course assignments. Please contact your administrator to re-seed the database.');
                         }
                     }
                 } else {
-                    console.warn('⚠️ [Syllabus] No DB syllabus available - falling back to built-in syllabus');
-                    setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
-                    setSyllabusError(result.error || null);
+                    console.error('❌ [Syllabus] No syllabus data returned from database.');
+                    setSyllabusDetails([]);
+                    setSyllabusError(result.error || 'No syllabus data found in database. Please contact your administrator to seed the syllabus.');
                 }
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
                 console.error('❌ [Syllabus] Failed to load syllabus:', msg);
-                // Always fall back to INITIAL_SYLLABUS_DETAILS on error
-                setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
-                setSyllabusError(msg);
+                setSyllabusDetails([]);
+                setSyllabusError(`Failed to load syllabus: ${msg}. Please check your database connection.`);
             } finally {
                 setSyllabusLoading(false);
             }
@@ -5755,7 +5756,7 @@ const App: React.FC = () => {
                     setCurrencyRequirements(merged.requirements);
                 }
                 // NOTE: syllabusDetails intentionally NOT loaded from settings DB.
-                // syllabusDetails is always set from INITIAL_SYLLABUS_DETAILS (mockData) or a live DB
+                // syllabusDetails is always loaded from the live DB (via syllabusService)
                 // syllabus fetch. Old saved settings may have items missing the `courses` field,
                 // which would break SyllabusView filtering (shows "No events found").
                 // The loadSyllabus useEffect above handles all syllabus loading with proper fallback.
@@ -5829,7 +5830,7 @@ const App: React.FC = () => {
             masterCurrencies,
             currencyRequirements,
             // NOTE: syllabusDetails intentionally excluded from settings save.
-            // Syllabus is always loaded from INITIAL_SYLLABUS_DETAILS or DB syllabus API,
+            // Syllabus is always loaded from the DB syllabus API,
             // never from the general settings blob. This prevents stale data overwriting
             // the built-in syllabus with items that may lack the 'courses' field.
             organisationSettings,
