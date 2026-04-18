@@ -3164,126 +3164,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
     _fbPrintSummary();
 
-    // 3b. Schedule Solo Flight Events in groups (max 4 per group, second group if >4)
+    // 3b. Schedule Solo Flight Events in consecutive groups of max 4
+    // Solos use the normal scheduleList (5-min stagger), but are grouped so that
+    // all solos in a group are scheduled consecutively. Group 1 = first 4 solos,
+    // Group 2 = next 4 solos (scheduled after group 1 completes), etc.
     setProgress({ message: 'Scheduling Solo Flights...', percentage: 52 });
     if (nextEventLists.solo.length > 0) {
         const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
         const MAX_SOLO_GROUP = 4;
-        // Split into groups of up to 4
-        const soloGroups: Trainee[][] = [];
+        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group`);
+        // Schedule solos in batches of max 4 using the normal scheduleList.
+        // Each group is scheduled independently so they cluster together with 5-min stagger,
+        // and the next group starts after the previous group's aircraft slots are used.
         for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
-            soloGroups.push(soloTrainees.slice(i, i + MAX_SOLO_GROUP));
+            const group = soloTrainees.slice(i, i + MAX_SOLO_GROUP);
+            const groupIndex = Math.floor(i / MAX_SOLO_GROUP) + 1;
+            console.log(`🎯 [SOLO SCHEDULING] Scheduling group ${groupIndex}: ${group.map(t => t.fullName).join(', ')}`);
+            scheduleList(group, 'flight', false, flyingStartTime, flyingEndTime, 'STBY', false);
         }
-        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees → ${soloGroups.length} group(s)`);
-
-        soloGroups.forEach((group, groupIndex) => {
-            const timeIncrement = 5 / 60; // 5-minute search increments
-            let groupStartTime: number | null = null;
-
-            // Find earliest time where ALL trainees in group can fly simultaneously and enough aircraft are free
-            outerSearch: for (let time = flyingStartTime; time <= flyingEndTime - (traineeNextEventMap.get(group[0].fullName)?.next?.duration || 1); time += timeIncrement) {
-                // Check all trainees available at this time
-                for (const trainee of group) {
-                    const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
-                    if (!next) continue;
-                    const bwStart = time - (next.preFlightTime || 0);
-                    const bwEnd = time + next.duration + (next.postFlightTime || 0);
-                    if (isPersonStaticallyUnavailable(trainee, bwStart, bwEnd, buildDate, 'flight')) continue outerSearch;
-                    const traineeCounts = eventCounts.get(trainee.fullName)!;
-                    if (traineeCounts.flightFtd >= eventLimits.trainee.maxFlightFtd) continue outerSearch;
-                    if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= eventLimits.trainee.maxTotal) continue outerSearch;
-                }
-                // Count free aircraft at this time
-                let freeSlots = 0;
-                const dur = traineeNextEventMap.get(group[0].fullName)?.next?.duration || 1;
-                for (let acNum = 1; acNum <= availableAircraftCount; acNum++) {
-                    const acId = `PC-21 ${acNum}`;
-                    const occupied = generatedEvents.some(e => {
-                        if (e.resourceId !== acId) return false;
-                        const turnaround = e.type === 'flight' ? flightTurnaround : 0;
-                        return time < (e.startTime + e.duration + turnaround) && (time + dur) > e.startTime;
-                    });
-                    if (!occupied) { freeSlots++; }
-                    if (freeSlots >= group.length) break;
-                }
-                if (freeSlots >= group.length) {
-                    groupStartTime = time;
-                    break;
-                }
-            }
-
-            if (groupStartTime === null) {
-                console.log(`🎯 [SOLO SCHEDULING] Group ${groupIndex + 1}: no slot found, placing on STBY`);
-                group.forEach((trainee, idx) => {
-                    const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
-                    if (!next) return;
-                    const traineeCounts = eventCounts.get(trainee.fullName)!;
-                    if (traineeCounts.isStby) return;
-                    const stbyResourceId = `STBY ${generatedEvents.filter(e => e.resourceId.startsWith('STBY')).length + 1}`;
-                    generatedEvents.push({
-                        id: uuidv4(), type: 'flight', instructor: '', student: trainee.fullName, pilot: trainee.fullName,
-                        flightNumber: next.id, duration: next.duration, startTime: flyingStartTime,
-                        resourceId: stbyResourceId, color: courseColors[trainee.course] || 'bg-gray-500',
-                        flightType: 'Solo', locationType: 'Local', origin: school, destination: school,
-                        preStart: next.preFlightTime, postEnd: next.postFlightTime,
-                        authNotes: `Solo Gp${groupIndex + 1} P${idx + 1}`
-                    });
-                    traineeCounts.isStby = true;
-                });
-                return;
-            }
-
-            console.log(`🎯 [SOLO SCHEDULING] Group ${groupIndex + 1}: ${group.length} solos at ${groupStartTime.toFixed(2)}`);
-
-            let nextAcSearch = 1;
-            group.forEach((trainee, idx) => {
-                const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
-                if (!next) return;
-
-                // Find a free aircraft slot at groupStartTime
-                let resourceId: string | null = null;
-                for (let acNum = nextAcSearch; acNum <= availableAircraftCount; acNum++) {
-                    const acId = `PC-21 ${acNum}`;
-                    const occupied = generatedEvents.some(e => {
-                        if (e.resourceId !== acId) return false;
-                        const turnaround = e.type === 'flight' ? flightTurnaround : 0;
-                        return groupStartTime! < (e.startTime + e.duration + turnaround) && (groupStartTime! + next.duration) > e.startTime;
-                    });
-                    if (!occupied) { resourceId = acId; nextAcSearch = acNum + 1; break; }
-                }
-
-                const traineeCounts = eventCounts.get(trainee.fullName)!;
-                if (!resourceId) {
-                    console.log(`🎯 [SOLO SCHEDULING] No aircraft for ${trainee.fullName} → STBY`);
-                    if (!traineeCounts.isStby) {
-                        const stbyResourceId = `STBY ${generatedEvents.filter(e => e.resourceId.startsWith('STBY')).length + 1}`;
-                        generatedEvents.push({
-                            id: uuidv4(), type: 'flight', instructor: '', student: trainee.fullName, pilot: trainee.fullName,
-                            flightNumber: next.id, duration: next.duration, startTime: groupStartTime!,
-                            resourceId: stbyResourceId, color: courseColors[trainee.course] || 'bg-gray-500',
-                            flightType: 'Solo', locationType: 'Local', origin: school, destination: school,
-                            preStart: next.preFlightTime, postEnd: next.postFlightTime,
-                            authNotes: `Solo Gp${groupIndex + 1} P${idx + 1}`
-                        });
-                        traineeCounts.isStby = true;
-                    }
-                    return;
-                }
-
-                const area = findAvailableArea(groupStartTime!, next.duration, generatedEvents);
-                generatedEvents.push({
-                    id: uuidv4(), type: 'flight', instructor: '', student: trainee.fullName, pilot: trainee.fullName,
-                    flightNumber: next.id, duration: next.duration, startTime: groupStartTime!,
-                    resourceId, color: courseColors[trainee.course] || 'bg-gray-500',
-                    flightType: 'Solo', locationType: 'Local', origin: school, destination: school,
-                    area: area || undefined,
-                    preStart: next.preFlightTime, postEnd: next.postFlightTime,
-                    authNotes: `Solo Gp${groupIndex + 1}`
-                });
-                traineeCounts.flightFtd++;
-                console.log(`🎯 [SOLO SCHEDULING] Placed ${trainee.fullName} on ${resourceId} at ${groupStartTime!.toFixed(2)}`);
-            });
-        });
     }
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
