@@ -3159,12 +3159,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (nextEventLists.solo.length > 0) {
         const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
         const MAX_SOLO_GROUP = 4;
-        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group`);
+        // Solo flights are restricted to a 09:00–15:00 window (no earlier than 9am, no later than 3pm start)
+        const SOLO_WINDOW_START = Math.max(flyingStartTime, 9);   // 09:00
+        const SOLO_WINDOW_END   = Math.min(flyingEndTime,   15);  // 15:00 (latest start time)
+        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group, window ${SOLO_WINDOW_START}:00–${SOLO_WINDOW_END}:00`);
         for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
             const group = soloTrainees.slice(i, i + MAX_SOLO_GROUP);
             const groupIndex = Math.floor(i / MAX_SOLO_GROUP) + 1;
             console.log(`🎯 [SOLO SCHEDULING] Scheduling group ${groupIndex}: ${group.map(t => t.fullName).join(', ')}`);
-            scheduleList(group, 'flight', false, flyingStartTime, flyingEndTime, 'STBY', false);
+            scheduleList(group, 'flight', false, SOLO_WINDOW_START, SOLO_WINDOW_END, 'STBY', false);
         }
     }
 
@@ -3643,12 +3646,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     if (soloTraineesNeedingStby.length > 0) {
         const timeIncrement = 5 / 60;
+        // Same 09:00–15:00 window constraint as the primary solo scheduling pass
+        const SOLO_STBY_WINDOW_START = Math.max(flyingStartTime, 9);   // 09:00
+        const SOLO_STBY_WINDOW_END   = Math.min(flyingEndTime,   15);  // 15:00 (latest start time)
         for (const trainee of soloTraineesNeedingStby) {
             const { next } = traineeNextEventMap.get(trainee.fullName)!;
             if (!next) continue;
 
             let placed = false;
-            for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+            for (let time = SOLO_STBY_WINDOW_START; time < SOLO_STBY_WINDOW_END; time += timeIncrement) {
                 if (hasFlightStartTime(time, generatedEvents)) continue;
                 const flightEndTime = time + next.duration;
                 if (flightEndTime > flyingEndTime) continue;
