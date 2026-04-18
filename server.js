@@ -1301,19 +1301,56 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
 
       let completedEventIds = Object.keys(scoreMap);
 
-      // Apply BIF FTD dependency rules:
-      // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
-      if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
-        completedEventIds.push('BIF FTD1');
-        scoreMap['BIF FTD1'] = scoreMap['BIF FTD2']; // use BIF FTD2's date
-        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD1 complete (BIF FTD2 done)`);
+      // --- ENDURING PREREQUISITE BACKFILL ---
+      // If any event N is complete, all syllabus items that appear BEFORE it in the
+      // master syllabus (by sortOrder / array position) must also be complete.
+      // This prevents regressions when new ground-school or prerequisite events are
+      // added to the DB syllabus AFTER trainees have already completed later events.
+      //
+      // Algorithm: Walk the sorted syllabus once. Find the highest-index completed
+      // item. Every item before that index is also marked complete (using the nearest
+      // later item's completion date as a proxy date).
+      //
+      // We match each syllabus item using BOTH id and code because the DB syllabus
+      // may use CUID ids while Score records store event codes.
+      {
+        const sorted = [...masterSyllabus].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+        // Find the highest-sortOrder completed item index
+        let highWatermark = -1;
+        let highWatermarkDate = null;
+        for (let i = 0; i < sorted.length; i++) {
+          const item = sorted[i];
+          const itemKey = (item.id || item.code || '').replace('*', '');
+          const itemCode = (item.code || '').replace('*', '');
+          if (scoreMap[itemKey] || scoreMap[itemCode]) {
+            highWatermark = i;
+            highWatermarkDate = scoreMap[itemKey] || scoreMap[itemCode];
+          }
+        }
+
+        // Backfill every item before the high-water mark
+        if (highWatermark > 0) {
+          const backfilled = [];
+          for (let i = 0; i < highWatermark; i++) {
+            const item = sorted[i];
+            const itemKey = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            const canonicalKey = itemCode || itemKey;
+            if (canonicalKey && !scoreMap[itemKey] && !scoreMap[itemCode]) {
+              scoreMap[canonicalKey] = highWatermarkDate;
+              backfilled.push(canonicalKey);
+            }
+          }
+          if (backfilled.length > 0) {
+            console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} prerequisite(s): ${backfilled.join(', ')}`);
+          }
+        }
+
+        // Rebuild completedEventIds from the augmented scoreMap
+        completedEventIds = Object.keys(scoreMap);
       }
-      // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
-      if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
-        completedEventIds.push('BIF FTD3');
-        scoreMap['BIF FTD3'] = scoreMap['BIF1']; // use BIF1's date
-        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD3 complete (BIF1 done)`);
-      }
+      // --- END PREREQUISITE BACKFILL ---
 
       // Build the full LMP events array with completion status
       const lmpEvents = masterSyllabus.map(item => ({
@@ -1490,6 +1527,36 @@ app.get('/api/aircraft', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/aircraft error:', error);
     res.status(500).json({ error: 'Failed to fetch aircraft', details: error.message });
+  }
+});
+
+// GET /api/syllabus - Return all active syllabus items from DB
+// Mirrors the Next.js platform's /api/syllabus so the React app gets consistent
+// syllabus data regardless of which server is handling the request.
+// This ensures syllabusDetails (and thus traineeLMPs) always includes items like
+// FIC GND1/2/3 when they are present in the DB, so the LMP backfill logic works.
+app.get('/api/syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course, phase, type, includeInactive } = req.query;
+
+    const where = {};
+    if (includeInactive !== 'true') where.isActive = true;
+    if (phase) where.phase = phase;
+    if (type) where.type = type;
+    if (course) where.courses = { has: course };
+
+    const syllabusItems = await db.syllabusItem.findMany({
+      where,
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    console.log(`📚 GET /api/syllabus - returning ${syllabusItems.length} items`);
+    // Return as both 'syllabus' and 'syllabusItems' for compatibility with syllabusService.ts
+    res.json({ syllabus: syllabusItems, syllabusItems });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus error:', error);
+    res.status(500).json({ error: 'Failed to fetch syllabus', details: error.message });
   }
 });
 
@@ -4043,17 +4110,58 @@ app.post('/api/scores', async (req, res) => {
       });
     }
 
-    // Also update IndividualLMP completedEventIds to include this event
+    // Also update IndividualLMP completedEventIds to include this event + backfill prerequisites
     try {
       const lmp = await db.individualLMP.findFirst({ where: { traineeId: resolvedTraineeId } });
       if (lmp) {
         const existing_ids = lmp.completedEventIds || [];
-        if (!existing_ids.includes(event)) {
+        const updatedSet = new Set(existing_ids);
+        updatedSet.add(event);
+
+        // --- PREREQUISITE BACKFILL (real-time) ---
+        // Use the LMP's events array (ordered syllabus) to find all items that appear
+        // before the newly added event and mark them complete too.
+        // This mirrors the LMP sync logic so scheduling stays consistent in real-time.
+        const lmpEvents = Array.isArray(lmp.events) ? lmp.events : [];
+        if (lmpEvents.length > 0) {
+          // Find the index of the highest completed event in the LMP
+          let highWatermark = -1;
+          const allCompleted = new Set(updatedSet);
+          for (let i = 0; i < lmpEvents.length; i++) {
+            const item = lmpEvents[i];
+            const itemId = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            if (allCompleted.has(itemId) || allCompleted.has(itemCode)) {
+              highWatermark = i;
+            }
+          }
+          // Backfill everything before the high-water mark
+          if (highWatermark > 0) {
+            const backfilled = [];
+            for (let i = 0; i < highWatermark; i++) {
+              const item = lmpEvents[i];
+              const itemCode = (item.code || '').replace('*', '');
+              const itemId = (item.id || item.code || '').replace('*', '');
+              const canonicalKey = itemCode || itemId;
+              if (canonicalKey && !allCompleted.has(itemCode) && !allCompleted.has(itemId)) {
+                updatedSet.add(canonicalKey);
+                backfilled.push(canonicalKey);
+              }
+            }
+            if (backfilled.length > 0) {
+              console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled prerequisites: ${backfilled.join(', ')}`);
+            }
+          }
+        }
+        // --- END BACKFILL ---
+
+        const updated_ids = [...updatedSet];
+        if (updated_ids.length !== existing_ids.length || !existing_ids.includes(event)) {
           await db.individualLMP.update({
             where: { id: lmp.id },
-            data: { completedEventIds: [...existing_ids, event], updatedAt: new Date() },
+            data: { completedEventIds: updated_ids, updatedAt: new Date() },
           });
-          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event}`);
+          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event} (total: ${updated_ids.length})`);
         }
       }
     } catch (lmpErr) {
