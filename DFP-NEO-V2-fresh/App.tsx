@@ -5030,22 +5030,6 @@ const App: React.FC = () => {
         loadHistoricalData();
     }, []);
 
-    // On mount: eagerly load snapshots for today AND tomorrow so that after a hard refresh
-    // the published schedule is always visible — regardless of which date the user lands on.
-    // (loadHistoricalData loads the last-5 by date, but the user's 'date' state might start
-    //  on today while the published schedule was saved for tomorrow's buildDfpDate)
-    useEffect(() => {
-        const today = getLocalDateString();
-        const tomorrowObj = new Date();
-        tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-        const tomorrow = getLocalDateString(tomorrowObj);
-        // Small delay to allow loadHistoricalData to run first (avoids redundant fetch)
-        const t = setTimeout(() => {
-            loadSnapshotForDate(today);
-            loadSnapshotForDate(tomorrow);
-        }, 1500);
-        return () => clearTimeout(t);
-    }, [loadSnapshotForDate]);
 
     // Load snapshot dates for calendar dropdown
     useEffect(() => {
@@ -5104,6 +5088,23 @@ const App: React.FC = () => {
             console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
         }
     }, []);
+
+    // On mount: eagerly load snapshots for today AND tomorrow so that after a hard refresh
+    // the published schedule is always visible — regardless of which date the user lands on.
+    // (loadHistoricalData loads the last-5 by date, but the user's 'date' state might start
+    //  on today while the published schedule was saved for tomorrow's buildDfpDate)
+    useEffect(() => {
+        const today = getLocalDateString();
+        const tomorrowObj = new Date();
+        tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+        const tomorrow = getLocalDateString(tomorrowObj);
+        // Small delay to allow loadHistoricalData to run first (avoids redundant fetch)
+        const t = setTimeout(() => {
+            loadSnapshotForDate(today);
+            loadSnapshotForDate(tomorrow);
+        }, 1500);
+        return () => clearTimeout(t);
+    }, [loadSnapshotForDate]);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
