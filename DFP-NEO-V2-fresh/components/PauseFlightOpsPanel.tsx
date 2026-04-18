@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScheduleEvent } from '../types';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────────
 
 type PauseRule = 'conclude_by_start' | 'no_start_during';
 type ActionChoice = 'cancel_only' | 'reprogram';
@@ -46,9 +46,11 @@ interface PauseFlightOpsPanelProps {
     onPhaseChange: (phase: PausePhase) => void;
     stagedEvents: ScheduleEvent[];
     onStagedEventsChange: (events: ScheduleEvent[]) => void;
+    // Called in real-time as pause start/end inputs change — drives live overlay on NEO Build schedule
+    onOverlayTimesChange?: (start: number | null, end: number | null) => void;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────────
 
 const decToHHMM = (dec: number): string => {
     const h = Math.floor(dec);
@@ -63,7 +65,20 @@ const hhmmToDec = (hhmm: string): number => {
 
 const isValidHHMM = (s: string) => /^\d{2}:\d{2}$/.test(s);
 
-// ─── Component ───────────────────────────────────────────────────────────────
+/** Generate 5-minute interval times across a range, returning HH:MM strings */
+const generate5MinOptions = (startDec: number, endDec: number): string[] => {
+    const options: string[] = [];
+    const startMinutes = Math.ceil(startDec * 60 / 5) * 5;
+    const endMinutes = Math.floor(endDec * 60 / 5) * 5;
+    for (let m = startMinutes; m <= endMinutes; m += 5) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        options.push(`${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+    }
+    return options;
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────────
 
 const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     isOpen,
@@ -86,8 +101,9 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     onPhaseChange,
     stagedEvents,
     onStagedEventsChange,
+    onOverlayTimesChange,
 }) => {
-    // ── Config state ──────────────────────────────────────────────────────────
+    // ── Config state ────────────────────────────────────────────────────────────
     const [pauseStart, setPauseStart] = useState(decToHHMM(flyingStartTime + 2));
     const [pauseEnd, setPauseEnd] = useState(decToHHMM(flyingStartTime + 3));
     const [pauseRule, setPauseRule] = useState<PauseRule>('no_start_during');
@@ -96,15 +112,26 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     const [isSelectingCompleted, setIsSelectingCompleted] = useState(false);
     const [buildProgress, setBuildProgress] = useState('');
 
-    // ── Derived ───────────────────────────────────────────────────────────────
+    // ── Derived ──────────────────────────────────────────────────────────────────
     const pauseStartDec = useMemo(() => isValidHHMM(pauseStart) ? hhmmToDec(pauseStart) : null, [pauseStart]);
     const pauseEndDec   = useMemo(() => isValidHHMM(pauseEnd)   ? hhmmToDec(pauseEnd)   : null, [pauseEnd]);
+
+    // Generate dropdown options for start/end
+    const startOptions = useMemo(() => generate5MinOptions(flyingStartTime, flyingEndTime - (5 / 60)), [flyingStartTime, flyingEndTime]);
+    const endOptions   = useMemo(() => generate5MinOptions(flyingStartTime + (5 / 60), flyingEndTime), [flyingStartTime, flyingEndTime]);
+
+    // Notify parent of live overlay times whenever pause start/end inputs change.
+    useEffect(() => {
+        if (onOverlayTimesChange) {
+            onOverlayTimesChange(pauseStartDec, pauseEndDec);
+        }
+    }, [pauseStartDec, pauseEndDec]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const validationError = useMemo(() => {
         if (!pauseStartDec || !pauseEndDec) return 'Enter valid times (HH:MM).';
         if (pauseEndDec <= pauseStartDec) return 'Pause end must be after pause start.';
-        if (pauseStartDec < flyingStartTime) return `Start must be ≥ ${decToHHMM(flyingStartTime)}.`;
-        if (pauseEndDec > flyingEndTime) return `End must be ≤ ${decToHHMM(flyingEndTime)}.`;
+        if (pauseStartDec < flyingStartTime) return `Start must be >= ${decToHHMM(flyingStartTime)}.`;
+        if (pauseEndDec > flyingEndTime) return `End must be <= ${decToHHMM(flyingEndTime)}.`;
         return null;
     }, [pauseStartDec, pauseEndDec, flyingStartTime, flyingEndTime]);
 
@@ -147,7 +174,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
         [stagedEvents]
     );
 
-    // ── Reset when opened ─────────────────────────────────────────────────────
+    // ── Reset when opened ────────────────────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
             setPauseStart(decToHHMM(flyingStartTime + 2));
@@ -169,7 +196,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
         onSelectModeChange(isSelectingCompleted && phase === 'configure');
     }, [isSelectingCompleted, phase]); // eslint-disable-line
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Action handlers ──────────────────────────────────────────────────────────
     const handleToggleType = (t: EventTypeKey) => {
         setAffectedTypes(prev => {
             const next = new Set(prev);
@@ -201,8 +228,8 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
             setBuildProgress('Running post-pause NEO Build...');
             const result = await onBuildPause(config);
             onStagedEventsChange(result);
-            onStagedEventsReady(result);   // Live preview on schedule
-            setBuildProgress('Build complete – review and publish.');
+            onStagedEventsReady(result);
+            setBuildProgress('Build complete - review and publish.');
             onPhaseChange('review');
         } catch (err) {
             setBuildProgress('Build failed. Please try again.');
@@ -238,19 +265,16 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
         onPhaseChange('configure');
         onStagedEventsChange([]);
         onStagedEventsReady(null);
-        // Restore the original active DFP on the NEO Build schedule
         onRevert();
     };
 
     const handleRevertToOriginal = () => {
-        // Reset all panel state back to initial configure
         onPhaseChange('configure');
         onStagedEventsChange([]);
         onStagedEventsReady(null);
         onCompletedEventIdsChange(new Set());
         setIsSelectingCompleted(false);
         setBuildProgress('');
-        // Restore the original active DFP on the NEO Build schedule
         onRevert();
     };
 
@@ -264,11 +288,11 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     ];
 
     const sectionHead = 'text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2';
-    const inputCls = 'bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1 w-24 focus:outline-none focus:border-sky-500';
     const btnBase = 'px-3 py-1.5 text-xs font-semibold rounded transition-colors';
     const btnGray = `${btnBase} bg-gray-700 text-gray-200 hover:bg-gray-600 border border-gray-600`;
     const btnActive = `${btnBase} bg-sky-700 text-white border border-sky-500`;
     const buildEnabled = !validationError && actionChoice === 'reprogram' && !cannotReprogram;
+    const totalImpacted = impactedEvents.length;
 
     return (
         <div
@@ -304,123 +328,90 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                 </button>
             </div>
 
-            {/* ── Phase banner ── */}
-            {phase === 'building' && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-sky-900/20 border-b border-sky-700/40 flex-shrink-0">
-                    <svg className="w-3.5 h-3.5 animate-spin text-sky-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <path d="M12 2a10 10 0 1 0 10 10" />
-                    </svg>
-                    <span className="text-xs text-sky-300 font-semibold">{buildProgress}</span>
-                </div>
-            )}
+            {/* ── Phase banners ── */}
+            {/* Building phase: full-screen PropellerLoadingOverlay is shown at App level */}
             {phase === 'review' && (
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-900/20 border-b border-green-700/40 flex-shrink-0">
                     <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
                     <span className="text-xs text-green-300 font-semibold">
                         {actionChoice === 'reprogram'
-                            ? `Rebuild complete — review on schedule, then publish.`
-                            : `Cancellations staged — review on schedule, then publish.`}
+                            ? 'Rebuild complete - review on schedule, then publish.'
+                            : 'Cancellations staged - review on schedule, then publish.'}
                     </span>
                 </div>
             )}
             {isSelectingCompleted && phase === 'configure' && (
                 <div className="flex items-center gap-2 px-4 py-2 bg-green-900/20 border-b border-green-700/40 flex-shrink-0">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
-                    <span className="text-[10px] text-green-300 font-semibold flex-1">Click schedule tiles to mark completed</span>
+                    <span className="text-[10px] text-green-300 font-semibold flex-1">Click or drag schedule tiles to mark completed</span>
                     <button onClick={() => setIsSelectingCompleted(false)} className="text-[9px] text-green-300 px-1.5 py-0.5 rounded border border-green-700 hover:bg-green-800 flex-shrink-0">Done</button>
                 </div>
             )}
 
             {/* ── Scrollable body ── */}
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
 
-                {/* Impact summary chips */}
-                {pauseStartDec && pauseEndDec && !validationError && (
-                    <div className="flex flex-wrap gap-1.5">
-                        <div className="flex items-center gap-1 bg-gray-800/60 rounded px-2 py-1 border border-gray-700">
-                            <svg className="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span className="text-[10px] text-gray-300"><span className="text-white font-semibold">{decToHHMM(pauseStartDec)}–{decToHHMM(pauseEndDec)}</span></span>
+                {/* ────────────────────────────────────── */}
+                {/* 1 – PAUSE PERIOD                      */}
+                {/* ────────────────────────────────────── */}
+                <div>
+                    <p className={sectionHead}>Pause Period</p>
+
+                    {/* Start & End — side by side */}
+                    <div className="flex gap-2 mb-2">
+                        {/* Start */}
+                        <div className="flex-1">
+                            <label className="block text-[9px] text-gray-400 mb-1">Start</label>
+                            <input
+                                list="pause-start-options"
+                                type="text"
+                                value={pauseStart}
+                                onChange={e => setPauseStart(e.target.value)}
+                                placeholder="HH:MM"
+                                maxLength={5}
+                                className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                                disabled={phase !== 'configure'}
+                            />
+                            <datalist id="pause-start-options">
+                                {startOptions.map(t => <option key={t} value={t} />)}
+                            </datalist>
                         </div>
-                        {TYPES.map(({ key, label }) =>
-                            affectedTypes.has(key) ? (
-                                <div key={key} className={`flex items-center gap-1 rounded px-2 py-1 border ${impactedByType[key] > 0 ? 'bg-amber-900/20 border-amber-700/50' : 'bg-gray-800/40 border-gray-700'}`}>
-                                    <span className="text-[9px] text-gray-400">{label}:</span>
-                                    <span className={`text-xs font-bold ${impactedByType[key] > 0 ? 'text-amber-300' : 'text-gray-400'}`}>{impactedByType[key]}</span>
-                                </div>
-                            ) : null
-                        )}
-                        {completedEventIds.size > 0 && (
-                            <div className="flex items-center gap-1 rounded px-2 py-1 border bg-green-900/20 border-green-700/50">
-                                <span className="text-[9px] text-gray-400">Done:</span>
-                                <span className="text-xs font-bold text-green-300">{completedEventIds.size}</span>
-                            </div>
-                        )}
-                        {actionChoice === 'reprogram' && pauseEndDec && (
-                            <div className="flex items-center gap-1 rounded px-2 py-1 border bg-sky-900/20 border-sky-700/50">
-                                <span className="text-[9px] text-gray-400">Rebuild:</span>
-                                <span className="text-[10px] text-sky-300 font-semibold">{decToHHMM(pauseEndDec)}–{decToHHMM(flyingEndTime)}</span>
-                            </div>
-                        )}
-                    </div>
-                )}
 
-                {/* Review stats */}
-                {phase === 'review' && stagedEvents.length > 0 && (
-                    <div className="p-3 rounded border border-green-700/30 bg-green-900/10">
-                        <p className="text-[11px] text-green-400 font-semibold">
-                            ✓ {stagedEvents.length} events staged
-                        </p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                            {reviewActiveCount} active · {reviewCancelledCount} cancelled (OPS PAUSE)
-                        </p>
-                        <p className="text-[10px] text-gray-500 mt-1">
-                            Changes are shown on the schedule. Press Publish to commit.
-                        </p>
+                        {/* End */}
+                        <div className="flex-1">
+                            <label className="block text-[9px] text-gray-400 mb-1">End</label>
+                            <input
+                                list="pause-end-options"
+                                type="text"
+                                value={pauseEnd}
+                                onChange={e => setPauseEnd(e.target.value)}
+                                placeholder="HH:MM"
+                                maxLength={5}
+                                className="w-full bg-gray-900 border border-gray-600 rounded text-gray-100 text-sm px-2 py-1.5 focus:outline-none focus:border-sky-500 disabled:opacity-50"
+                                disabled={phase !== 'configure'}
+                            />
+                            <datalist id="pause-end-options">
+                                {endOptions.map(t => <option key={t} value={t} />)}
+                            </datalist>
+                        </div>
                     </div>
-                )}
 
-                {/* ── Pause Period ── */}
+                    {validationError && (
+                        <p className="mt-1 text-[10px] text-red-400 flex items-center gap-1">
+                            <span>&#9888;</span> {validationError}
+                        </p>
+                    )}
+                    <p className="mt-0.5 text-[9px] text-gray-500">
+                        Flying window: {decToHHMM(flyingStartTime)} - {decToHHMM(flyingEndTime)}
+                    </p>
+                </div>
+
+                {/* ────────────────────────────────────── */}
+                {/* 2 – AFFECTED TYPE                     */}
+                {/* ────────────────────────────────────── */}
                 {phase !== 'review' && (
                     <div>
-                        <p className={sectionHead}>Pause Period</p>
-                        <div className="flex items-center gap-2">
-                            <div>
-                                <label className="block text-[9px] text-gray-400 mb-0.5">Start</label>
-                                <input
-                                    type="time"
-                                    value={pauseStart}
-                                    onChange={e => setPauseStart(e.target.value)}
-                                    className={inputCls}
-                                    disabled={phase !== 'configure'}
-                                />
-                            </div>
-                            <div className="text-gray-500 mt-3">→</div>
-                            <div>
-                                <label className="block text-[9px] text-gray-400 mb-0.5">End</label>
-                                <input
-                                    type="time"
-                                    value={pauseEnd}
-                                    onChange={e => setPauseEnd(e.target.value)}
-                                    className={inputCls}
-                                    disabled={phase !== 'configure'}
-                                />
-                            </div>
-                        </div>
-                        {validationError && (
-                            <p className="mt-1 text-[10px] text-red-400 flex items-center gap-1">
-                                <span>⚠</span> {validationError}
-                            </p>
-                        )}
-                        <p className="mt-1 text-[9px] text-gray-500">Window: {decToHHMM(flyingStartTime)}–{decToHHMM(flyingEndTime)}</p>
-                    </div>
-                )}
-
-                {/* ── Affected Types ── */}
-                {phase !== 'review' && (
-                    <div>
-                        <p className={sectionHead}>Affected Types</p>
+                        <p className={sectionHead}>Affected Type</p>
                         <div className="flex flex-wrap gap-1.5">
                             {TYPES.map(({ key, label }) => (
                                 <button
@@ -439,55 +430,21 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                     </div>
                 )}
 
-                {/* ── Pause Rule ── */}
-                {phase !== 'review' && (
-                    <div>
-                        <p className={sectionHead}>Pause Rule</p>
-                        <div className="space-y-1.5">
-                            {([
-                                {
-                                    key: 'no_start_during' as PauseRule,
-                                    title: 'No start during pause',
-                                    desc: 'Events whose start falls within the pause window are impacted.'
-                                },
-                                {
-                                    key: 'conclude_by_start' as PauseRule,
-                                    title: 'All events conclude by pause start',
-                                    desc: 'Any event overlapping pause start is also impacted.'
-                                }
-                            ] as const).map(opt => (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => phase === 'configure' && setPauseRule(opt.key)}
-                                    disabled={phase !== 'configure'}
-                                    className={`w-full text-left p-2.5 rounded border transition-colors ${phase !== 'configure' ? 'opacity-50 cursor-not-allowed ' : ''}${pauseRule === opt.key ? 'bg-sky-900/40 border-sky-500/60 text-white' : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:border-gray-500'}`}
-                                >
-                                    <div className="flex items-start gap-2">
-                                        <div className={`mt-0.5 w-3 h-3 rounded-full border-2 flex-shrink-0 ${pauseRule === opt.key ? 'border-sky-400 bg-sky-400' : 'border-gray-500'}`} />
-                                        <div>
-                                            <p className={`text-[10px] font-semibold ${pauseRule === opt.key ? 'text-sky-300' : 'text-gray-300'}`}>{opt.title}</p>
-                                            <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{opt.desc}</p>
-                                        </div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* ── Completed Events ── */}
+                {/* ────────────────────────────────────── */}
+                {/* 3 – COMPLETED EVENTS                  */}
+                {/* ────────────────────────────────────── */}
                 {phase === 'configure' && (
                     <div>
                         <p className={sectionHead}>Completed Events</p>
                         <p className="text-[9px] text-gray-400 mb-2 leading-snug">
-                            Mark events already completed — the rebuild will skip those trainees. Click tiles on the NEO Build schedule to toggle.
+                            Mark events already completed - the rebuild will skip those events
                         </p>
                         <div className="flex gap-2 flex-wrap">
                             <button
                                 onClick={() => setIsSelectingCompleted(!isSelectingCompleted)}
                                 className={isSelectingCompleted ? btnActive : btnGray}
                             >
-                                {isSelectingCompleted ? '✓ Selecting...' : 'Select on Schedule'}
+                                {isSelectingCompleted ? 'Complete' : 'Select on Schedule'}
                             </button>
                             {completedEventIds.size > 0 && (
                                 <button
@@ -499,128 +456,207 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
                             )}
                         </div>
                         {completedEventIds.size > 0 && (
-                            <p className="mt-1 text-[9px] text-green-400">{completedEventIds.size} event{completedEventIds.size !== 1 ? 's' : ''} marked completed</p>
+                            <p className="mt-1 text-[9px] text-green-400">
+                                {completedEventIds.size} event{completedEventIds.size !== 1 ? 's' : ''} marked completed
+                            </p>
                         )}
                     </div>
                 )}
 
-                {/* ── Action After Pause ── */}
+                {/* ────────────────────────────────────── */}
+                {/* 4 – PAUSE RULE                        */}
+                {/* ────────────────────────────────────── */}
                 {phase !== 'review' && (
                     <div>
-                        <p className={sectionHead}>Action After Pause</p>
+                        <p className={sectionHead}>Pause Rule</p>
                         <div className="space-y-1.5">
                             {([
                                 {
-                                    key: 'reprogram' as ActionChoice,
-                                    title: 'Re-program remainder of day',
-                                    desc: 'Cancel impacted events then run NEO Build from pause end.'
+                                    key: 'no_start_during' as PauseRule,
+                                    title: 'No start during pause',
                                 },
                                 {
-                                    key: 'cancel_only' as ActionChoice,
-                                    title: 'Cancel impacted events only',
-                                    desc: 'Cancel impacted events, leave schedule unchanged.'
-                                }
-                            ] as const).map(opt => {
-                                const disabled = (opt.key === 'reprogram' && !!cannotReprogram) || phase !== 'configure';
-                                return (
-                                    <button
-                                        key={opt.key}
-                                        onClick={() => !disabled && setActionChoice(opt.key)}
-                                        disabled={disabled}
-                                        className={`w-full text-left p-2.5 rounded border transition-colors ${disabled ? 'opacity-40 cursor-not-allowed bg-gray-800/40 border-gray-700' : actionChoice === opt.key ? 'bg-sky-900/40 border-sky-500/60 text-white' : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:border-gray-500'}`}
-                                    >
-                                        <div className="flex items-start gap-2">
-                                            <div className={`mt-0.5 w-3 h-3 rounded-full border-2 flex-shrink-0 ${actionChoice === opt.key && !disabled ? 'border-sky-400 bg-sky-400' : 'border-gray-500'}`} />
-                                            <div>
-                                                <p className={`text-[10px] font-semibold ${actionChoice === opt.key && !disabled ? 'text-sky-300' : 'text-gray-300'}`}>{opt.title}</p>
-                                                <p className="text-[9px] text-gray-500 mt-0.5 leading-snug">{opt.desc}</p>
-                                            </div>
-                                        </div>
-                                    </button>
-                                );
-                            })}
+                                    key: 'conclude_by_start' as PauseRule,
+                                    title: 'All events conclude by pause start',
+                                },
+                            ] as const).map(opt => (
+                                <button
+                                    key={opt.key}
+                                    onClick={() => phase === 'configure' && setPauseRule(opt.key)}
+                                    disabled={phase !== 'configure'}
+                                    className={`w-full text-left p-2.5 rounded border transition-colors ${phase !== 'configure' ? 'opacity-50 cursor-not-allowed ' : ''}${pauseRule === opt.key ? 'bg-sky-900/40 border-sky-500/60 text-white' : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:border-gray-500'}`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${pauseRule === opt.key ? 'border-sky-400 bg-sky-400' : 'border-gray-500'}`} />
+                                        <p className={`text-[10px] font-semibold ${pauseRule === opt.key ? 'text-sky-300' : 'text-gray-300'}`}>
+                                            {opt.title}
+                                        </p>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
-                        {cannotReprogram && actionChoice === 'reprogram' && (
-                            <p className="mt-1 text-[9px] text-amber-400">{cannotReprogram}</p>
-                        )}
                     </div>
                 )}
-            </div>
 
-            {/* ── Footer Buttons ── */}
-            <div className="px-4 py-3 border-t border-gray-700/60 space-y-2 flex-shrink-0" style={{ background: '#1a2030' }}>
+                {/* ────────────────────────────────────── */}
+                {/* 5+6 – NEO BUILD + REVERT BUTTONS      */}
+                {/* ────────────────────────────────────── */}
                 {phase === 'configure' && (
                     <>
-                        {actionChoice === 'reprogram' ? (
+                        {/* Action choice toggle */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-[9px] text-gray-500 flex-shrink-0">Action:</span>
                             <button
-                                onClick={handleBuild}
-                                disabled={!buildEnabled}
-                                className={`w-full py-2 rounded font-bold text-sm tracking-wide transition-all ${buildEnabled ? 'btn-aluminium-brushed hover:opacity-90' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
-                                style={buildEnabled ? { color: '#fb923c' } : {}}
+                                onClick={() => setActionChoice('reprogram')}
+                                className={`text-[9px] px-2 py-0.5 rounded border transition-colors ${actionChoice === 'reprogram' ? 'bg-sky-900/40 border-sky-500/60 text-sky-300' : 'bg-gray-800 border-gray-700 text-gray-500 hover:text-gray-300'}`}
                             >
-                                ⚡ NEO BUILD (Post-Pause)
+                                Re-program
                             </button>
-                        ) : (
                             <button
-                                onClick={handleCancelOnly}
-                                disabled={!!validationError || affectedTypes.size === 0}
-                                className={`w-full py-2 rounded font-bold text-sm tracking-wide transition-all ${!validationError && affectedTypes.size > 0 ? 'bg-amber-700 hover:bg-amber-600 text-white border border-amber-500' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                                onClick={() => setActionChoice('cancel_only')}
+                                className={`text-[9px] px-2 py-0.5 rounded border transition-colors ${actionChoice === 'cancel_only' ? 'bg-sky-900/40 border-sky-500/60 text-sky-300' : 'bg-gray-800 border-gray-700 text-gray-500 hover:text-gray-300'}`}
                             >
-                                Cancel Impacted Events
+                                Cancel Only
                             </button>
+                        </div>
+
+                        {/* Main action buttons row */}
+                        <div className="flex items-center gap-3">
+                            {/* NEO Build — styled like Right Menu NEO Build button */}
+                            {actionChoice === 'reprogram' && (
+                                <button
+                                    onClick={buildEnabled ? handleBuild : undefined}
+                                    disabled={!buildEnabled}
+                                    className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all ${!buildEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                    style={buildEnabled ? { color: '#fb923c' } : { color: '#9a6030' }}
+                                    title={buildEnabled ? 'Run NEO Build for Ops Pause' : (validationError || cannotReprogram || '')}
+                                >
+                                    <span className="text-center leading-tight">NEO Build<br />(Ops Pause)</span>
+                                </button>
+                            )}
+
+                            {/* Cancel Events Only — shown when cancel_only is selected */}
+                            {actionChoice === 'cancel_only' && (
+                                <button
+                                    onClick={handleCancelOnly}
+                                    disabled={!!validationError || affectedTypes.size === 0}
+                                    className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold rounded-md transition-all border ${!validationError && affectedTypes.size > 0 ? 'bg-amber-700 hover:bg-amber-600 text-white border-amber-500' : 'bg-gray-700 text-gray-500 cursor-not-allowed border-gray-600'}`}
+                                >
+                                    <span className="text-center leading-tight">Cancel<br />Events Only</span>
+                                </button>
+                            )}
+
+                            {/* Cancel – Revert — styled like DFP button in left menu, black text */}
+                            <button
+                                onClick={handleRevertToOriginal}
+                                className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                                style={{ color: '#000000' }}
+                                title="Cancel all changes and revert to the original Active DFP schedule"
+                            >
+                                <span className="text-center leading-tight">Cancel -<br />Revert</span>
+                            </button>
+                        </div>
+
+                        {cannotReprogram && actionChoice === 'reprogram' && (
+                            <p className="text-[9px] text-amber-400">{cannotReprogram}</p>
                         )}
                     </>
                 )}
 
-                {phase === 'building' && (
-                    <div className="flex items-center gap-2 text-sky-400 text-xs py-2">
-                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                            <path d="M12 2a10 10 0 1 0 10 10" />
-                        </svg>
-                        {buildProgress}
+                {/* Building phase: overlay shown at App level (PropellerLoadingOverlay) */}
+
+                {/* Review phase actions */}
+                {phase === 'review' && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                        {/* PUBLISH - same size/theme as right menu Publish button, green text */}
+                        <button
+                            onClick={handlePublish}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#22c55e' }}
+                            title="Publish changes to Active DFP"
+                        >
+                            <span className="text-center leading-tight">Publish</span>
+                        </button>
+                        {/* Back to Configure - same size/theme, black text */}
+                        <button
+                            onClick={handleBackToConfigure}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#000000' }}
+                            title="Return to configure phase"
+                        >
+                            <span className="text-center leading-tight">Back</span>
+                        </button>
+                        {/* Revert - same size/theme, black text */}
+                        <button
+                            onClick={handleRevertToOriginal}
+                            className="w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md transition-all"
+                            style={{ color: '#000000' }}
+                            title="Discard all changes and restore the original Active DFP schedule"
+                        >
+                            <span className="text-center leading-tight">Revert to<br />Original</span>
+                        </button>
                     </div>
                 )}
 
-                {phase === 'review' && (
-                    <>
-                        <button
-                            onClick={handlePublish}
-                            className="w-full py-2 rounded font-bold text-sm tracking-wide bg-green-700 hover:bg-green-600 text-white border border-green-500 transition-all"
-                        >
-                            ✓ PUBLISH — Commit to Active DFP
-                        </button>
-                        <button
-                            onClick={handleBackToConfigure}
-                            className={btnGray + ' w-full'}
-                        >
-                            ← Back to Configure
-                        </button>
-                        <button
-                            onClick={handleRevertToOriginal}
-                            className="w-full py-1.5 rounded text-xs font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 transition-colors border border-rose-800/50 hover:border-rose-600 flex items-center justify-center gap-1.5"
-                            title="Discard all changes and restore the original Active DFP schedule"
-                        >
-                            <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                            </svg>
-                            Revert to Original Daily Schedule
-                        </button>
-                    </>
-                )}
+                {/* ────────────────────────────────────── */}
+                {/* 7 – SUMMARY                          */}
+                {/* ────────────────────────────────────── */}
+                <div>
+                    <p className={sectionHead}>Summary</p>
+                    <div className="rounded border border-gray-700/60 bg-gray-800/30 divide-y divide-gray-700/40">
 
-                {phase === 'configure' && completedEventIds.size > 0 && (
-                    <button
-                        onClick={handleRevertToOriginal}
-                        className="w-full py-1.5 rounded text-xs font-semibold text-rose-300 hover:text-rose-100 hover:bg-rose-900/30 transition-colors border border-rose-800/50 hover:border-rose-600 flex items-center justify-center gap-1.5"
-                        title="Clear all selections and restore the original Active DFP schedule"
-                    >
-                        <svg className="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                        </svg>
-                        Revert to Original Daily Schedule
-                    </button>
-                )}
+                        {/* Pause window */}
+                        <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wide">Pause window</span>
+                            <span className="text-[10px] text-gray-200 font-semibold">
+                                {pauseStartDec && pauseEndDec && !validationError
+                                    ? `${decToHHMM(pauseStartDec)} - ${decToHHMM(pauseEndDec)}`
+                                    : '-'}
+                            </span>
+                        </div>
 
+                        {/* Cancelled / Impacted */}
+                        <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wide">
+                                {phase === 'review' ? 'Cancelled (OPS PAUSE)' : 'Impacted events'}
+                            </span>
+                            <span className={`text-[10px] font-bold ${phase === 'review' || totalImpacted > 0 ? 'text-amber-300' : 'text-gray-500'}`}>
+                                {phase === 'review' ? reviewCancelledCount : totalImpacted}
+                            </span>
+                        </div>
+
+                        {/* Completed */}
+                        <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wide">Completed (skip)</span>
+                            <span className={`text-[10px] font-bold ${completedEventIds.size > 0 ? 'text-green-300' : 'text-gray-500'}`}>
+                                {completedEventIds.size}
+                            </span>
+                        </div>
+
+                        {/* Rebuild window */}
+                        <div className="flex items-center justify-between px-3 py-2">
+                            <span className="text-[9px] text-gray-400 uppercase tracking-wide">Rebuild window</span>
+                            <span className="text-[10px] text-sky-300 font-semibold">
+                                {pauseEndDec && !validationError
+                                    ? `${decToHHMM(pauseEndDec)} - ${decToHHMM(flyingEndTime)}`
+                                    : '-'}
+                            </span>
+                        </div>
+
+                        {/* Staged events (review only) */}
+                        {phase === 'review' && stagedEvents.length > 0 && (
+                            <div className="flex items-center justify-between px-3 py-2">
+                                <span className="text-[9px] text-gray-400 uppercase tracking-wide">Staged events</span>
+                                <span className="text-[10px] text-green-300 font-bold">{stagedEvents.length}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+            </div>
+
+            {/* ── Footer: Close button ── */}
+            <div className="px-4 py-3 border-t border-gray-700/60 flex-shrink-0" style={{ background: '#1a2030' }}>
                 <button
                     onClick={onClose}
                     className="w-full py-1.5 rounded text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-700/50 transition-colors border border-transparent hover:border-gray-600"

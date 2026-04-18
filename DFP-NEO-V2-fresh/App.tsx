@@ -78,6 +78,7 @@ import NextDayBuildView from './components/NextDayBuildView';
 import { PrioritiesViewWithMenu } from './components/PrioritiesViewWithMenu';
 import BuildIntelligenceView from './components/BuildIntelligenceView';
 import BuildDfpLoadingFlyout from './components/BuildDfpLoadingFlyout';
+import PropellerLoadingOverlay from './components/PropellerLoadingOverlay';
 import BuildDateWarningFlyout from './components/BuildDateWarningFlyout';
 import UnavailabilityConflictFlyout from './components/UnavailabilityConflictFlyout';
 import Magnifier from './components/Magnifier';
@@ -123,7 +124,7 @@ import PauseFlightOpsPanel, { PausePhase } from './components/PauseFlightOpsPane
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
+// MockData removed - all data loaded from database
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
 import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
@@ -2113,6 +2114,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const bucketsWithValues = Object.entries(_fbBuckets).filter(([,v]) => v > 0);
         if (bucketsWithValues.length === 0) console.log('   (ZERO rejections - flight list is likely empty)');
         else bucketsWithValues.forEach(([k,v]) => console.log('   ' + k + ': ' + v));
+        
+        // Explicitly highlight hourly dispatch limit for visibility
+        if (_fbBuckets.HOURLY_DISPATCH_LIMIT > 0) {
+            console.log(`\n⏱️  [HOURLY RATE] ${_fbBuckets.HOURLY_DISPATCH_LIMIT} flights blocked by 8/hour dispatch limit`);
+        }
         console.log('D. TIME SLOTS AFTER 0805:');
         postFirstTwo.forEach(t => {
             const key = Math.round(t * 12) / 12;
@@ -2861,6 +2867,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
 
+            // HOURLY DISPATCH LIMIT: Count flights in the last hour (including pre-pause locked events)
+            // generatedEvents includes both activeDfpEvents and highestPriorityEvents (locked pre-pause),
+            // so this check works correctly during regular builds and during Pause Flight Ops NEO builds
             const nonStbyFlights = generatedEvents.filter(e => 
                 !e.resourceId.startsWith('STBY') && 
                 !e.resourceId.startsWith('BNF-STBY')
@@ -2868,8 +2877,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             
             const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
             if (takeoffsInLastHour >= 8) {
+                console.log(`[HOURLY RATE] BLOCKING ${trainee.fullName} at ${_fmtT(startTime)} - ${takeoffsInLastHour} flights in last hour (limit: 8)`);
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
+            }
+            // Log when hourly rate check passes for visibility during NEO builds
+            if (takeoffsInLastHour >= 6) {
+                console.log(`[HOURLY RATE] ${trainee.fullName} at ${_fmtT(startTime)} - ${takeoffsInLastHour} flights in last hour (limit: 8)`);
             }
             
             const takeoffConflict = nonStbyFlights.some(e => {
@@ -4407,7 +4421,7 @@ const App: React.FC = () => {
         }
     }, [authUser, currentUser, currentUserName]);
     // Syllabus state declared here before useEffects that reference it to avoid TDZ errors
-    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>(INITIAL_SYLLABUS_DETAILS);
+    const [syllabusDetails, setSyllabusDetails] = useState<SyllabusItemDetail[]>([]);
     const [syllabusLoading, setSyllabusLoading] = useState<boolean>(false);
     const [syllabusError, setSyllabusError] = useState<string | null>(null);
 
@@ -4420,17 +4434,18 @@ const App: React.FC = () => {
                 const result = await loadSyllabusFromDB();
                 if (result.syllabus.length > 0) {
                     // Check if DB syllabus uses wrong codes (e.g. BGF_GND_001 instead of BGF1)
-                    // Wrong codes don't match PT-051 score records, so fall back to mockData syllabus
+                    // Wrong codes don't match PT-051 score records — prompt admin to re-seed
                     const firstItem = result.syllabus[0];
                     const hasWrongCodes = (firstItem?.code?.includes('_GND_') ||
                                           firstItem?.code?.includes('_FLT_') ||
                                           firstItem?.code?.includes('_SIM_')) ?? false;
                     if (hasWrongCodes) {
-                        console.warn(`⚠️ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Falling back to built-in syllabus (${INITIAL_SYLLABUS_DETAILS.length} items). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix permanently.`);
-                        clearSyllabusCache(); // Clear bad cache so next load re-fetches from DB
-                        setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                        console.error(`❌ [Syllabus] DB syllabus uses incompatible codes (e.g. ${firstItem?.code}). Re-seed DB at /api/admin/seed-syllabus?secret=dfp-seed-2026&force=true to fix.`);
+                        clearSyllabusCache();
+                        setSyllabusDetails([]);
+                        setSyllabusError('Syllabus data in database uses incompatible codes. Please contact your administrator to re-seed the database.');
                     } else {
-                        // Validate items have courses field; fall back to INITIAL if missing
+                        // Validate items have courses field
                         const hasValidCourses = result.syllabus.every(item => item.courses && item.courses.length > 0);
                         if (hasValidCourses) {
                             setSyllabusDetails(result.syllabus);
@@ -4441,21 +4456,21 @@ const App: React.FC = () => {
                                 console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
                             }
                         } else {
-                            console.warn(`⚠️ [Syllabus] DB syllabus items missing courses field. Falling back to built-in syllabus.`);
-                            setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                            console.error(`❌ [Syllabus] DB syllabus items missing courses field. Re-seed DB to fix.`);
+                            setSyllabusDetails([]);
+                            setSyllabusError('Syllabus data is missing course assignments. Please contact your administrator to re-seed the database.');
                         }
                     }
                 } else {
-                    console.warn('⚠️ [Syllabus] No DB syllabus available - falling back to built-in syllabus');
-                    setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
-                    setSyllabusError(result.error || null);
+                    console.error('❌ [Syllabus] No syllabus data returned from database.');
+                    setSyllabusDetails([]);
+                    setSyllabusError(result.error || 'No syllabus data found in database. Please contact your administrator to seed the syllabus.');
                 }
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Unknown error';
                 console.error('❌ [Syllabus] Failed to load syllabus:', msg);
-                // Always fall back to INITIAL_SYLLABUS_DETAILS on error
-                setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
-                setSyllabusError(msg);
+                setSyllabusDetails([]);
+                setSyllabusError(`Failed to load syllabus: ${msg}. Please check your database connection.`);
             } finally {
                 setSyllabusLoading(false);
             }
@@ -5741,7 +5756,7 @@ const App: React.FC = () => {
                     setCurrencyRequirements(merged.requirements);
                 }
                 // NOTE: syllabusDetails intentionally NOT loaded from settings DB.
-                // syllabusDetails is always set from INITIAL_SYLLABUS_DETAILS (mockData) or a live DB
+                // syllabusDetails is always loaded from the live DB (via syllabusService)
                 // syllabus fetch. Old saved settings may have items missing the `courses` field,
                 // which would break SyllabusView filtering (shows "No events found").
                 // The loadSyllabus useEffect above handles all syllabus loading with proper fallback.
@@ -5815,7 +5830,7 @@ const App: React.FC = () => {
             masterCurrencies,
             currencyRequirements,
             // NOTE: syllabusDetails intentionally excluded from settings save.
-            // Syllabus is always loaded from INITIAL_SYLLABUS_DETAILS or DB syllabus API,
+            // Syllabus is always loaded from the DB syllabus API,
             // never from the general settings blob. This prevents stale data overwriting
             // the built-in syllabus with items that may lack the 'courses' field.
             organisationSettings,
@@ -6916,6 +6931,10 @@ const App: React.FC = () => {
         }
         setPreviousView(activeView);
         setActiveView(view);
+        // Close Pause Flight Ops panel when navigating away and reset all pause state
+        setShowPausePanel(false);
+        setPauseCompletedEventIds(new Set());
+        setPausePanelPhase('configure');
     };
 
     const handleNavigation = (view: string) => {
@@ -7719,7 +7738,7 @@ const App: React.FC = () => {
         });
     };
 
-    // ── Pause Flight Ops: handlePauseBuild ────────────────────────────────────
+    // ── Pause Flight Ops: handlePauseBuild ────────────────────────────────────────────────
     const handlePauseBuild = async (config: PauseBuildConfig): Promise<ScheduleEvent[]> => {
         const {
             date: pauseDate,
@@ -7734,33 +7753,39 @@ const App: React.FC = () => {
             ftdEndTime: pFtdEnd,
         } = config;
 
-        // IMPORTANT: Always use the FULL raw publishedSchedules[date] — not the filtered
-        // display subset passed as existingEvents. The full schedule includes all events
-        // (ground school per-student, deployment, etc.) that must be preserved on publish.
+        // IMPORTANT: Always use the FULL raw publishedSchedules[date].
         const fullRawEvents: ScheduleEvent[] = publishedSchedules[pauseDate] || [];
         console.log('[PauseBuild] Starting pause build for', pauseDate,
             'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd,
             'fullRawEvents:', fullRawEvents.length);
 
-        // 1. Determine which events are impacted by the pause
-        const isImpacted = (e: ScheduleEvent): boolean => {
-            if (e.isCancelled) return false;
-            if (completedEventIds.has(e.id)) return false;
+        // Record the pause window overlay for the NEO Build schedule view
+        setPauseOverlayStart(pauseStart);
+        setPauseOverlayEnd(pauseEnd);
+
+        // ── Step 1: Determine which events must be cleared for rebuild ──────────────────
+        // ALL non-completed events of the affected types are cleared from the ENTIRE day
+        // (both during the pause window AND after it) — they will be rescheduled from pauseEnd.
+        // Only completed events and non-affected event types are kept locked in place.
+        const isToBeCleared = (e: ScheduleEvent): boolean => {
+            if (e.isCancelled) return false;                          // already cancelled
+            if (completedEventIds.has(e.id)) return false;            // completed, keep in place
             const typeKey = e.type === 'ground' ? 'ground' : e.type;
-            if (!(affectedTypes as string[]).includes(typeKey)) return false;
-            const end = e.startTime + e.duration;
-            if (pauseRule === 'no_start_during') {
-                return e.startTime >= pauseStart && e.startTime < pauseEnd;
-            } else {
-                // conclude_by_start: any event overlapping pause start is impacted
-                return e.startTime < pauseEnd && end > pauseStart;
-            }
+            if (!(affectedTypes as string[]).includes(typeKey)) return false; // not affected type
+            // Flight and FTD events: clear ALL for the entire day so they can be rescheduled.
+            // Flights reschedule from pauseEnd; FTDs cascade on their resource lines.
+            if (e.type === 'flight' || e.type === 'ftd') return true;
+            // CPT / Ground: ONLY cancel events that overlap the pause window.
+            // Events after the pause remain unchanged — they are NOT rescheduled.
+            const eEnd = e.startTime + e.duration;
+            const overlapsPause = e.startTime < pauseEnd && eEnd > pauseStart;
+            return overlapsPause;
         };
 
-        // 2. Build the set of cancelled events using the FULL raw schedule
+        // ── Step 2: Mark all clearable events as cancelled (OPS_PAUSE) ───────────────
         const cancelledIds = new Set<string>();
         const eventsAfterCancel: ScheduleEvent[] = fullRawEvents.map(e => {
-            if (isImpacted(e)) {
+            if (isToBeCleared(e)) {
                 cancelledIds.add(e.id);
                 return {
                     ...e,
@@ -7772,172 +7797,592 @@ const App: React.FC = () => {
             }
             return e;
         });
+        console.log('[PauseBuild] Cleared for rebuild:', cancelledIds.size, 'events');
 
-        console.log('[PauseBuild] Impacted/cancelled:', cancelledIds.size,
-            'out of', fullRawEvents.length, 'total events');
+        // ── Step 3: Locked events = completed events + non-affected-type events ───────
+        // These stay exactly where they are; everything else will be rebuilt from pauseEnd.
+        const lockedEvents: ScheduleEvent[] = eventsAfterCancel.filter(e => !e.isCancelled);
+        console.log('[PauseBuild] Locked (completed + non-affected type) events:', lockedEvents.length);
 
-        // 3. For the NEO Build, lock ALL non-cancelled events as time-fixed
-        //    so the algorithm preserves the entire pre-pause schedule.
-        //    Only pass unique events (deduplicated by ID) to the build algorithm.
-        const seenLocked = new Set<string>();
-        const lockedEvents: ScheduleEvent[] = eventsAfterCancel
-            .filter(e => !e.isCancelled && !seenLocked.has(e.id) && (() => { seenLocked.add(e.id); return true; })())
-            .map(e => ({ ...e, isTimeFixed: true }));
+        // ── Step 4: Gather the affected trainees and their next syllabus events ───────
+        // For each cancelled event, extract the trainee and their syllabus item
+        interface AffectedTraineeEntry {
+            trainee: Trainee;
+            syllabusItem: SyllabusItemDetail;
+            eventType: 'flight' | 'ftd' | 'cpt' | 'ground';
+            originalPriorityScore: number;
+        }
 
-        console.log('[PauseBuild] Locked pre-pause events:', lockedEvents.length);
+        // Build course medians for priority scoring
+        const getMedianProgressLocal = (courseName: string): number => {
+            const courseTrainees = allTraineesData.filter((t: Trainee) => t.course === courseName && !t.isPaused);
+            if (courseTrainees.length === 0) return 0;
+            const progresses = courseTrainees.map((t: Trainee) =>
+                (scores.get(t.fullName) || []).filter((s: Score) => !s.event.includes('-REM-') && !s.event.includes('-RF')).length
+            );
+            progresses.sort((a: number, b: number) => a - b);
+            const mid = Math.floor(progresses.length / 2);
+            return progresses.length % 2 !== 0 ? progresses[mid] : (progresses[mid - 1] + progresses[mid]) / 2;
+        };
 
-        const activeTraineesForPause = allTraineesData.filter((t: any) =>
-            !t.isPaused &&
-            !isPersonStaticallyUnavailable(t, pauseEnd, ceaseNightFlying, pauseDate, 'flight')
+        const localCourseMedians = new Map<string, number>();
+        coursePriorities.forEach((c: string) => localCourseMedians.set(c, getMedianProgressLocal(c)));
+
+        // Helper: map SyllabusItemDetail.type (capitalised) to ScheduleEvent.type (lowercase)
+        const syllabusTypeToEventType = (syllabusType: string, fallbackType: string): 'flight' | 'ftd' | 'cpt' | 'ground' => {
+            const s = syllabusType?.toLowerCase() || '';
+            if (s === 'flight') return 'flight';
+            if (s === 'ftd') return 'ftd';
+            if (s === 'cpt') return 'cpt';
+            if (s.includes('ground')) return 'ground';
+            // Fallback to the original cancelled event's type
+            const f = fallbackType?.toLowerCase() || '';
+            if (f === 'flight') return 'flight';
+            if (f === 'ftd') return 'ftd';
+            if (f === 'cpt') return 'cpt';
+            return 'ground';
+        };
+
+        // Collect affected FLIGHT and FTD trainee entries from cancelled events for rescheduling.
+        // CPT/Ground cancelled events are silently dropped.
+        // Deduplicate by trainee name — each trainee gets scheduled once per type
+        const seenTraineeNames = new Set<string>();
+        const affectedEntries: AffectedTraineeEntry[] = [];
+
+        for (const cancelledEvent of eventsAfterCancel) {
+            if (!cancelledIds.has(cancelledEvent.id)) continue;
+
+            // Only flight and FTD events are rescheduled in the slot-fill loop
+            if (cancelledEvent.type !== 'flight' && cancelledEvent.type !== 'ftd') continue;
+
+            const traineeName = cancelledEvent.student || cancelledEvent.pilot || '';
+            if (!traineeName) continue;
+
+            // For FTD, allow same trainee multiple times (they may have multiple FTD events)
+            // For flight, deduplicate per trainee
+            const dedupeKey = cancelledEvent.type === 'ftd'
+                ? `ftd:${cancelledEvent.id}`   // each FTD event is its own entry
+                : traineeName;                  // flights: one entry per trainee
+            if (seenTraineeNames.has(dedupeKey)) continue;
+            seenTraineeNames.add(dedupeKey);
+
+            const trainee = allTraineesData.find((t: Trainee) => t.fullName === traineeName);
+            if (!trainee) continue;
+
+            if (cancelledEvent.type === 'ftd') {
+                // For FTD: keep original cancelled event's syllabus item info intact
+                // We'll use it directly to recreate the event on the FTD resource line
+                const ftdSyllabusItem: SyllabusItemDetail = {
+                    id: cancelledEvent.flightNumber || cancelledEvent.id,
+                    code: cancelledEvent.flightNumber || '',
+                    type: 'FTD',
+                    duration: cancelledEvent.duration,
+                    sortieType: 'Dual',
+                    preFlightTime: cancelledEvent.preStart,
+                    postFlightTime: cancelledEvent.postEnd,
+                    isRemedial: false,
+                } as SyllabusItemDetail;
+
+                // Priority score for FTD: use original start time as tiebreaker (earlier = higher priority)
+                const priorityScore = 10000 - Math.round(cancelledEvent.startTime * 60);
+
+                affectedEntries.push({
+                    trainee,
+                    syllabusItem: ftdSyllabusItem,
+                    eventType: 'ftd',
+                    originalPriorityScore: priorityScore,
+                });
+            } else {
+                // FLIGHT: find next syllabus event
+                const { next: nextEvent } = computeNextEventsForTrainee(
+                    trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, pauseDate
+                );
+                if (!nextEvent) continue;
+
+                const eventType = syllabusTypeToEventType(nextEvent.type || '', cancelledEvent.type);
+
+                const courseMedian = localCourseMedians.get(trainee.course) || 0;
+                const traineeProgress = (scores.get(trainee.fullName) || [])
+                    .filter((s: Score) => !s.event.includes('-REM-') && !s.event.includes('-RF')).length;
+                const isRemedial = nextEvent.isRemedial || false;
+                const priorityScore = calculateTraineePriorityScore(
+                    trainee, pauseDate, courseMedian, traineeProgress, isRemedial
+                );
+
+                affectedEntries.push({ trainee, syllabusItem: nextEvent, eventType, originalPriorityScore: priorityScore });
+            }
+        }
+
+        // Sort: flights by priority score DESC; FTDs by original start time ASC (earlier first)
+        affectedEntries.sort((a, b) => {
+            if (a.eventType === 'ftd' && b.eventType === 'ftd') {
+                return b.originalPriorityScore - a.originalPriorityScore; // higher = earlier start time
+            }
+            if (a.eventType !== 'ftd' && b.eventType !== 'ftd') {
+                return b.originalPriorityScore - a.originalPriorityScore;
+            }
+            return 0; // mixed: process flights and FTDs independently
+        });
+        console.log('[PauseBuild] Affected trainees to reschedule:', affectedEntries.length,
+            '(flights:', affectedEntries.filter(e => e.eventType === 'flight').length,
+            'FTDs:', affectedEntries.filter(e => e.eventType === 'ftd').length, ')');
+
+        // ── Step 5: Slot-fill algorithm from pauseEnd at 5-min intervals ─────────────
+        // We maintain a running list of scheduled events (starts from lockedEvents)
+        const scheduledEvents: ScheduleEvent[] = [...lockedEvents];
+        const successfullyScheduled = new Set<string>(); // trainee fullNames
+
+        // Helper: count flight starts in a rolling 1-hour window ending at 'time' (i.e. from time-1 to time)
+        const flightsInLastHour = (time: number): number => {
+            return scheduledEvents.filter(e =>
+                e.type === 'flight' &&
+                !e.isCancelled &&
+                !e.resourceId.startsWith('STBY') &&
+                e.startTime > time - 1 &&
+                e.startTime <= time
+            ).length;
+        };
+
+        // Helper: check if a given time slot has a takeoff within 5 mins (separation violation)
+        const hasTakeoffSeparationConflict = (time: number): boolean => {
+            return scheduledEvents.some(e => {
+                if (e.type !== 'flight' || e.isCancelled) return false;
+                if (e.resourceId.startsWith('STBY')) return false;
+                const diffMinutes = Math.abs(e.startTime - time) * 60;
+                return diffMinutes < 5;
+            });
+        };
+
+        // Helper: check if a person is busy at the given window
+        const personIsBusy = (personName: string, windowStart: number, windowEnd: number): boolean => {
+            return scheduledEvents.some(e => {
+                if (e.isCancelled) return false;
+                if (e.resourceId.startsWith('STBY')) return false;
+                const isInvolved = e.student === personName || e.pilot === personName ||
+                    e.instructor === personName || (e.attendees || []).includes(personName);
+                if (!isInvolved) return false;
+                const eEnd = e.startTime + e.duration;
+                return e.startTime < windowEnd && eEnd > windowStart;
+            });
+        };
+
+        // Helper: check if a resourceId is occupied at a given time window (with turnaround in hours)
+        const isResourceOccupied = (resourceId: string, startTime: number, duration: number, turnaround: number): boolean => {
+            const endTime = startTime + duration;
+            return scheduledEvents.some(e => {
+                if (e.isCancelled) return false;
+                if (e.resourceId !== resourceId) return false;
+                const eEnd = e.startTime + e.duration;
+                // New event must not start before existing event ends + turnaround
+                return (startTime < eEnd + turnaround) && (endTime > e.startTime);
+            });
+        };
+
+        // Helper: find an available aircraft resourceId for flights
+        // Cycles through PC-21 1..availableAircraftCount, respecting turnaround time (in hours)
+        const findAircraftResource = (startTime: number, duration: number): string | null => {
+            for (let ac = 1; ac <= availableAircraftCount; ac++) {
+                const resourceId = `PC-21 ${ac}`;
+                if (!isResourceOccupied(resourceId, startTime, duration, flightTurnaround)) {
+                    return resourceId;
+                }
+            }
+            return null;
+        };
+
+        // Helper: find an available FTD resourceId
+        const findFtdResource = (startTime: number, duration: number): string | null => {
+            for (let ftd = 1; ftd <= availableFtdCount; ftd++) {
+                const resourceId = `FTD ${ftd}`;
+                if (!isResourceOccupied(resourceId, startTime, duration, ftdTurnaround)) {
+                    return resourceId;
+                }
+            }
+            return null;
+        };
+
+        // Helper: find an available CPT resourceId
+        const findCptResource = (startTime: number, duration: number): string | null => {
+            for (let cpt = 1; cpt <= availableCptCount; cpt++) {
+                const resourceId = `CPT ${cpt}`;
+                if (!isResourceOccupied(resourceId, startTime, duration, cptTurnaround)) {
+                    return resourceId;
+                }
+            }
+            return null;
+        };
+
+        // Helper: find the best available instructor for a trainee/syllabus item
+        const findBestInstructor = (
+            trainee: Trainee,
+            syllabusItem: SyllabusItemDetail,
+            windowStart: number,
+            windowEnd: number
+        ): string | null => {
+            // Get instructor pool - prefer primary instructor, then secondary, then any
+            const activeInstructors = instructorsData.filter((ip: Instructor) => {
+                if (isPersonStaticallyUnavailable(ip, windowStart, windowEnd, pauseDate, 'flight')) return false;
+                if (personIsBusy(ip.name, windowStart, windowEnd)) return false;
+
+                // Check event limits
+                const ipEventCount = scheduledEvents.filter(e =>
+                    !e.isCancelled &&
+                    (e.instructor === ip.name || e.pilot === ip.name) &&
+                    !e.resourceId.startsWith('STBY')
+                );
+                const ipFlightFtdCount = ipEventCount.filter(e => e.type === 'flight' || e.type === 'ftd').length;
+                const ipTotalCount = ipEventCount.length;
+
+                if (ip.isExecutive) {
+                    if (ipFlightFtdCount >= eventLimits.exec.maxFlightFtd) return false;
+                    if (ipTotalCount >= eventLimits.exec.maxTotal) return false;
+                } else {
+                    if (ipFlightFtdCount >= eventLimits.instructor.maxFlightFtd) return false;
+                    if (ipTotalCount >= eventLimits.instructor.maxTotal) return false;
+                }
+                return true;
+            });
+
+            if (activeInstructors.length === 0) return null;
+
+            // Prefer primary instructor from trainee record
+            const primaryNames = trainee.primaryInstructor
+                ? (Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : [trainee.primaryInstructor])
+                : [];
+            for (const pName of primaryNames) {
+                const found = activeInstructors.find((ip: Instructor) => ip.name === pName);
+                if (found) return found.name;
+            }
+
+            // Then try secondary instructor
+            const secondaryNames = trainee.secondaryInstructor
+                ? (Array.isArray(trainee.secondaryInstructor) ? trainee.secondaryInstructor : [trainee.secondaryInstructor])
+                : [];
+            for (const sName of secondaryNames) {
+                const found = activeInstructors.find((ip: Instructor) => ip.name === sName);
+                if (found) return found.name;
+            }
+
+            // Fall back to any available instructor
+            return activeInstructors[0].name;
+        };
+
+        // Helper: find available area for a flight
+        const findAreaForFlight = (startTime: number, duration: number): string | undefined => {
+            return findAvailableArea(startTime, duration, scheduledEvents);
+        };
+
+        // Round up to next 5-minute boundary
+        const roundUpTo5Min = (time: number): number => {
+            const totalMinutes = Math.round(time * 60);
+            const remainder = totalMinutes % 5;
+            if (remainder === 0) return totalMinutes / 60;
+            return (totalMinutes + (5 - remainder)) / 60;
+        };
+
+        // Start scheduling from the first 5-min boundary at or after pauseEnd
+        const slotStart = roundUpTo5Min(pauseEnd);
+        console.log('[PauseBuild] Scheduling window:', slotStart, 'to', dayEnd);
+
+        // ── Step 5a: Reschedule FTD events ──────────────────────────────────────────
+        // FTD events are rescheduled as a cascade on their resource lines.
+        // - Events that were during the pause: moved to first available slot at or after pauseEnd
+        // - All FTDs cascade forward on their resource line respecting ftdTurnaround
+        // - Any FTD that cannot complete before dayEnd is dropped (not scheduled, not STBY)
+        //
+        // Strategy: for each FTD resource line, collect all cancelled FTD events that were
+        // originally on that line, sort by original start time, then schedule them one by one
+        // starting from the earliest available slot after pauseEnd on that line.
+
+        const ftdEntries = affectedEntries.filter(e => e.eventType === 'ftd');
+
+        // Group FTD cancelled events by their original resource line
+        // We need the original cancelled events (not just affectedEntries) to get the resourceId
+        const cancelledFtdEvents = eventsAfterCancel.filter(e =>
+            cancelledIds.has(e.id) && e.type === 'ftd' && !completedEventIds.has(e.id)
         );
 
-        const pauseBuildConfig = {
-            instructors: instructorsData,
-            trainees: activeTraineesForPause,
-            syllabus: syllabusDetails,
-            scores,
-            coursePriorities,
-            coursePercentages,
-            availableAircraftCount,
-            ftdCount: availableFtdCount,
-            cptCount: availableCptCount,
-            courseColors,
-            school,
-            dayStart: pauseEnd,      // Build only fills from pause end onward
-            dayEnd,
-            ftdStart: pFtdStart,
-            ftdEnd: pFtdEnd,
-            allowNightFlying,
-            commenceNightFlying,
-            ceaseNightFlying,
-            buildDate: pauseDate,
-            highestPriorityEvents: lockedEvents,
-            instructorPriority,
-            traineeLMPs,
-            flightTurnaround,
-            ftdTurnaround,
-            cptTurnaround,
-            preferredDutyPeriod,
-            maxCrewDutyPeriod,
-            eventLimits,
-            sctFtds,
-            sctFlights,
-            remedialRequests,
-            sctEvents,
-            getEventDayNightClassification,
-            staffSharingEnabled: organisationSettings.staffSharingEnabled,
-            staffSharingUnits: organisationSettings.staffSharingUnits,
-            completedEventIds,  // Pass through so generateDfpInternal skips completed trainees
-        };
+        // Build a map: resourceId → sorted list of (originalEvent, affectedEntry)
+        const ftdByResource = new Map<string, Array<{ orig: ScheduleEvent; entry: AffectedTraineeEntry }>>();
+        for (const orig of cancelledFtdEvents) {
+            const resourceId = orig.resourceId || 'FTD 1';
+            if (!ftdByResource.has(resourceId)) ftdByResource.set(resourceId, []);
+            // Find the matching affectedEntry for this cancelled event
+            const entry = ftdEntries.find(e =>
+                (e.trainee.fullName === (orig.student || orig.pilot)) &&
+                e.syllabusItem.id === (orig.flightNumber || orig.id)
+            );
+            if (entry) {
+                ftdByResource.get(resourceId)!.push({ orig, entry });
+            }
+        }
 
-        // Build a modified publishedSchedules where the pause date is EMPTY.
-        // This is critical: generateDfpInternal initialises generatedEvents from
-        // publishedSchedules[buildDate]. If we pass the raw schedule, the algorithm sees
-        // ALL original events (including ones cancelled during the pause) and marks those
-        // trainees as "already scheduled", preventing re-scheduling after the pause.
-        // Instead we set pauseDate to empty so activeDfpEvents = [] and let
-        // highestPriorityEvents (= lockedEvents = non-cancelled pre-pause events) be the
-        // sole source of already-scheduled events fed into generatedEvents.
-        // For OTHER dates we keep the real publishedSchedules so ELCE/scoring still works.
-        const pausePublishedSchedules = {
-            ...publishedSchedules,
-            [pauseDate]: [],   // cleared — pre-pause events come via highestPriorityEvents
-        };
+        // Process each FTD resource line
+        for (const [ftdResourceId, ftdList] of ftdByResource.entries()) {
+            // Sort by original start time ascending
+            ftdList.sort((a, b) => a.orig.startTime - b.orig.startTime);
 
-        // Record the pause window for the NEO Build schedule overlay
-        setPauseOverlayStart(pauseStart);
-        setPauseOverlayEnd(pauseEnd);
+            for (const { orig, entry } of ftdList) {
+                const { trainee, syllabusItem } = entry;
+                const duration = syllabusItem.duration;
 
-        return new Promise<ScheduleEvent[]>((resolve) => {
-            setTimeout(() => {
-                try {
-                    const generated = generateDfpInternal(
-                        pauseBuildConfig,
-                        (progress: { message: string; percentage: number }) => {
-                            console.log('[PauseBuild]', progress.message);
-                        },
-                        pausePublishedSchedules   // Use modified schedules with cancellations applied
-                    );
+                // Find earliest available slot on this FTD resource line at or after pauseEnd
+                // Round up to 5-min boundary
+                let slot = slotStart;
+                const slotStep = 5 / 60;
+                let scheduled = false;
 
-                    console.log('[PauseBuild] generateDfpInternal returned', generated.length, 'events');
+                while (slot + duration <= dayEnd) {
+                    const slotEnd = slot + duration;
 
-                    // Add date field and filter out algo-generated STBY lines
-                    // Filter out algo-generated STBY lines (we place cancelled events
-                    // on STBY explicitly below) AND remove any event whose ID is in
-                    // cancelledIds — those must only appear on STBY with their red X,
-                    // not also at their original PC-21 slot (which causes ghost tiles).
-                    const generatedWithDate: ScheduleEvent[] = generated
-                        .filter((e: any) => {
-                            const resId = ((e as any).resourceId || '').toLowerCase();
-                            if (resId.includes('stby') || resId.includes('standby')) return false;
-                            // Remove ghost: if this event was cancelled it must not stay on PC-21
-                            if (cancelledIds.has((e as any).id)) return false;
-                            return true;
-                        })
-                        .map((e: any) => ({ ...e, date: pauseDate } as ScheduleEvent));
+                    // Must end by dayEnd (flying window end)
+                    if (slotEnd > dayEnd) break;
 
-                    // The build output already includes all locked pre-pause events.
-                    // Now add back OPS_PAUSE cancelled events — moved to STBY lines so
-                    // they're visible with their red X on the standby row (not their
-                    // original PC-21 slot, which would be re-used by the rebuild).
-                    const builtIds = new Set(generatedWithDate.map(e => e.id));
-                    const opsPauseCancelledEvents = eventsAfterCancel
-                        .filter(e =>
-                            e.isCancelled &&
-                            cancelledIds.has(e.id) &&
-                            !builtIds.has(e.id) &&
-                            // Never move completed events to STBY — they stay at their
-                            // original slot with green ring (shouldn't be cancelled, but
-                            // guard here too in case of ID mismatch)
-                            !completedEventIds.has(e.id)
-                        );
+                    // Check this specific FTD resource line is free (with turnaround)
+                    if (isResourceOccupied(ftdResourceId, slot, duration, ftdTurnaround)) {
+                        slot += slotStep;
+                        continue;
+                    }
 
-                    // Assign each cancelled event to an available STBY line.
-                    // Track which STBY slots are already occupied (time-based collision).
-                    let nextStbyLine = 1;
-                    const stbyOccupied: { resourceId: string; start: number; end: number }[] = [];
+                    // Check trainee is not busy
+                    if (personIsBusy(trainee.fullName, slot, slotEnd)) {
+                        slot += slotStep;
+                        continue;
+                    }
 
-                    const opsPauseCancelledOnStby: ScheduleEvent[] = opsPauseCancelledEvents.map(e => {
-                        const evStart = e.startTime;
-                        const evEnd   = e.startTime + e.duration;
+                    // Check trainee static unavailability
+                    if (isPersonStaticallyUnavailable(trainee, slot, slotEnd, pauseDate, 'ftd')) {
+                        slot += slotStep;
+                        continue;
+                    }
 
-                        // Find a STBY line with no time overlap
-                        let stbyLine = 1;
-                        while (true) {
-                            const stbyId = `STBY ${stbyLine}`;
-                            const hasOverlap = stbyOccupied.some(
-                                o => o.resourceId === stbyId && o.start < evEnd && o.end > evStart
-                            );
-                            if (!hasOverlap) break;
-                            stbyLine++;
-                        }
+                    // Find instructor
+                    const instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
+                    if (!instructorName) {
+                        slot += slotStep;
+                        continue;
+                    }
 
-                        stbyOccupied.push({ resourceId: `STBY ${stbyLine}`, start: evStart, end: evEnd });
-                        if (stbyLine > nextStbyLine) nextStbyLine = stbyLine;
-
-                        return {
-                            ...e,
-                            date: pauseDate,
-                            resourceId: `STBY ${stbyLine}`,
-                            // Keep isCancelled: true so red X still renders
-                        };
-                    });
-
-                    const final = [...generatedWithDate, ...opsPauseCancelledOnStby];
-
-                    console.log('[PauseBuild] Final staged events:', final.length,
-                        '(built:', generatedWithDate.length,
-                        'OPS_PAUSE cancelled on STBY:', opsPauseCancelledOnStby.length, ')');
-
-                    resolve(final);
-                } catch (err) {
-                    console.error('[PauseBuild] generateDfpInternal error:', err);
-                    // Fallback: just return the cancelled version with no rebuild
-                    resolve(eventsAfterCancel);
+                    // All checks passed — create rescheduled FTD event
+                    const newEvent: ScheduleEvent = {
+                        ...orig,
+                        id: uuidv4(),
+                        date: pauseDate,
+                        type: 'ftd',
+                        instructor: instructorName,
+                        student: trainee.fullName,
+                        pilot: instructorName,
+                        duration,
+                        startTime: slot,
+                        resourceId: ftdResourceId,
+                        isCancelled: false,
+                        preStart: syllabusItem.preFlightTime,
+                        postEnd: syllabusItem.postFlightTime,
+                    };
+                    scheduledEvents.push(newEvent);
+                    successfullyScheduled.add(`ftd:${trainee.fullName}`);
+                    scheduled = true;
+                    console.log(`[PauseBuild] Rescheduled FTD ${trainee.fullName} at ${slot.toFixed(2)} on ${ftdResourceId}`);
+                    break;
                 }
-            }, 100);
-        });
+
+                if (!scheduled) {
+                    console.log(`[PauseBuild] FTD ${trainee.fullName} could not be rescheduled before dayEnd — dropped`);
+                }
+            }
+        }
+
+        // ── Step 5b: Reschedule FLIGHT events ───────────────────────────────────────
+        const flightEntries = affectedEntries.filter(e => e.eventType === 'flight');
+
+        for (const entry of flightEntries) {
+            const { trainee, syllabusItem, eventType } = entry;
+            const duration = syllabusItem.duration;
+
+            let scheduled = false;
+
+            // Try each 5-minute slot from slotStart to dayEnd
+            const slotStep = 5 / 60; // 5 minutes in hours
+            let slot = slotStart;
+
+            while (slot + duration <= dayEnd) {
+                const slotEnd = slot + duration;
+
+                // Check trainee availability
+                if (isPersonStaticallyUnavailable(trainee, slot, slotEnd, pauseDate, eventType)) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Check trainee not already busy
+                if (personIsBusy(trainee.fullName, slot, slotEnd)) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Check flying window boundaries
+                if (slot < dayStart || slotEnd > dayEnd) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Check hourly dispatch limit (max 8 per rolling hour)
+                if (flightsInLastHour(slot) >= 8) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Check 5-min takeoff separation
+                if (hasTakeoffSeparationConflict(slot)) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Find available aircraft
+                const resourceId = findAircraftResource(slot, duration);
+                if (!resourceId) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Find available area
+                const area = findAreaForFlight(slot, duration);
+                if (!area) {
+                    slot += slotStep;
+                    continue;
+                }
+
+                // Find best instructor (Solo flights don't need one)
+                let instructorName: string | null = null;
+                if (syllabusItem.sortieType !== 'Solo') {
+                    instructorName = findBestInstructor(trainee, syllabusItem, slot, slotEnd);
+                    if (!instructorName) {
+                        slot += slotStep;
+                        continue;
+                    }
+                }
+
+                // All checks passed — create the event
+                const newEvent: ScheduleEvent = {
+                    id: uuidv4(),
+                    date: pauseDate,
+                    type: 'flight',
+                    instructor: syllabusItem.sortieType === 'Solo' ? '' : (instructorName || ''),
+                    student: trainee.fullName,
+                    pilot: syllabusItem.sortieType === 'Solo' ? trainee.fullName : (instructorName || ''),
+                    flightNumber: syllabusItem.id,
+                    duration,
+                    startTime: slot,
+                    resourceId,
+                    color: courseColors[trainee.course] || 'bg-gray-500',
+                    flightType: (syllabusItem.sortieType as 'Dual' | 'Solo') || 'Dual',
+                    locationType: 'Local',
+                    origin: school,
+                    destination: school,
+                    area,
+                    preStart: syllabusItem.preFlightTime,
+                    postEnd: syllabusItem.postFlightTime,
+                };
+                scheduledEvents.push(newEvent);
+                successfullyScheduled.add(trainee.fullName);
+                scheduled = true;
+                console.log(`[PauseBuild] Scheduled FLIGHT ${trainee.fullName} (${syllabusItem.code}) at ${slot.toFixed(2)} on ${resourceId}`);
+                break;
+            }
+
+            if (!scheduled) {
+                console.log(`[PauseBuild] Could not schedule FLIGHT ${trainee.fullName} (${syllabusItem.code})`);
+            }
+        }
+
+        console.log('[PauseBuild] Successfully scheduled:', successfullyScheduled.size, 'entries');
+
+        // ── Step 6: Place unscheduled flight/FTD trainees on STBY with red X ─────────
+        // - Flight events that could not be rescheduled go to STBY with red X at original time
+        // - FTD events that could not be rescheduled (no slot before dayEnd) go to STBY with red X
+        // - FTD events that WERE successfully rescheduled do NOT go to STBY
+        // - CPT and Ground events cancelled by the pause are silently dropped (no STBY)
+        //
+        // Build a list of already-occupied STBY slots from the locked/scheduled events
+        // (e.g. completed events that were already on a STBY row before the pause)
+        const stbyOccupied: { resourceId: string; start: number; end: number }[] = scheduledEvents
+            .filter(e => e.resourceId?.startsWith('STBY') && !e.isCancelled)
+            .map(e => ({ resourceId: e.resourceId, start: e.startTime, end: e.startTime + e.duration }));
+
+        const getNextStbySlot = (evStart: number, evEnd: number): string => {
+            let stbyLine = 1;
+            while (true) {
+                const stbyId = `STBY ${stbyLine}`;
+                // Check against ALL occupied slots (existing + already-placed new STBY events)
+                const hasOverlap = stbyOccupied.some(
+                    o => o.resourceId === stbyId && o.start < evEnd && o.end > evStart
+                );
+                if (!hasOverlap) break;
+                stbyLine++;
+            }
+            stbyOccupied.push({ resourceId: `STBY ${stbyLine}`, start: evStart, end: evEnd });
+            return `STBY ${stbyLine}`;
+        };
+
+        const stbyEvents: ScheduleEvent[] = [];
+
+        for (const ev of eventsAfterCancel) {
+            // Only process cancelled events from this pause
+            if (!cancelledIds.has(ev.id)) continue;
+            if (completedEventIds.has(ev.id)) continue;
+
+            // CPT and Ground are silently dropped — no STBY placement
+            if (ev.type === 'cpt' || ev.type === 'ground') continue;
+
+            const traineeName = ev.student || ev.pilot || '';
+
+            if (ev.type === 'flight') {
+                // Flight: only go to STBY if the trainee was NOT successfully rescheduled
+                if (traineeName && successfullyScheduled.has(traineeName)) continue;
+            }
+
+            if (ev.type === 'ftd') {
+                // FTD: only go to STBY if it could NOT be rescheduled
+                // successfullyScheduled uses key 'ftd:<traineeName>' for FTD events
+                const ftdKey = `ftd:${traineeName}`;
+                if (successfullyScheduled.has(ftdKey)) continue;
+            }
+
+            // Place on STBY at original time slot with red X
+            const stbyResourceId = getNextStbySlot(ev.startTime, ev.startTime + ev.duration);
+            stbyEvents.push({
+                ...ev,
+                date: pauseDate,
+                resourceId: stbyResourceId,
+                isCancelled: true,
+                cancellationCode: 'OPS_PAUSE' as any,
+            });
+        }
+
+        console.log('[PauseBuild] STBY (cancelled) events:', stbyEvents.length,
+            '(unscheduled flights + unschedulable FTDs)');
+
+        // ── Step 7: Combine and return ────────────────────────────────────────────────
+        // scheduledEvents already includes lockedEvents + newly scheduled events.
+        // Filter out any locked events that are not in the "scheduled" array by accident,
+        // and add the STBY cancelled events.
+        // Deduplicate by ID to be safe.
+        const seenIds = new Set<string>();
+        const finalEvents: ScheduleEvent[] = [];
+        for (const e of [...scheduledEvents, ...stbyEvents]) {
+            if (seenIds.has(e.id)) continue;
+            seenIds.add(e.id);
+            finalEvents.push({ ...e, date: pauseDate });
+        }
+
+        console.log('[PauseBuild] Final staged events:', finalEvents.length,
+            '(locked:', lockedEvents.length,
+            'newly scheduled:', successfullyScheduled.size,
+            'STBY cancelled:', stbyEvents.length, ')');
+
+        return finalEvents;
     };
+
 
     // ── Pause Flight Ops: handlePausePublish ──────────────────────────────────────────────
     const handlePausePublish = (stagedEvents: ScheduleEvent[]) => {
@@ -12105,6 +12550,7 @@ updates.forEach(update => {
                             zoomLevel={zoomLevel}
                             showValidation={showValidation}
                             showPrePost={showPrePost}
+                            showDepartureDensityOverlay={showDepartureDensityOverlay}
                             syllabusDetails={syllabusDetails}
                             personnelData={personnelData}
                             seatConfigs={seatConfigs}
@@ -13386,6 +13832,10 @@ updates.forEach(update => {
                             onPhaseChange={setPausePanelPhase}
                             stagedEvents={pauseStagedEvents}
                             onStagedEventsChange={setPauseStagedEvents}
+                            onOverlayTimesChange={(start, end) => {
+                                setPauseOverlayStart(start);
+                                setPauseOverlayEnd(end);
+                            }}
                         />
                     )}
                 </div>
@@ -13567,6 +14017,7 @@ updates.forEach(update => {
                     onSavePT051Assessment={onSavePT051Assessment}
                     cancellationCodes={cancellationCodes}
                     onCancelEvent={handleCancelEvent}
+                    isPauseViewMode={showPausePanel && ['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView)}
                 />
             )}
             
@@ -13659,6 +14110,7 @@ updates.forEach(update => {
             {showInfoNotification && <InfoNotification message={showInfoNotification} onClose={() => setShowInfoNotification(null)} />}
             {showNightFlyingInfo && <NightFlyingInfoFlyout traineeCount={nightFlyingTraineeCount} />}
             {isBuildingDfp && <BuildDfpLoadingFlyout progress={dfpBuildProgress} />}
+            {pausePanelPhase === 'building' && <PropellerLoadingOverlay message="Engine warming up — please wait…" />}
             {showDateWarning && <BuildDateWarningFlyout onConfirm={handleConfirmDateAndBuild} onCancel={() => setShowDateWarning(false)} date={buildDfpDate} />}
             {unavailabilityNotifications.length > 0 && <UnavailabilityConflictFlyout notifications={unavailabilityNotifications} onDismiss={() => setUnavailabilityNotifications([])} />}
             {showPublishConfirm && <PublishConfirmationFlyout date={buildDfpDate} onConfirm={handleConfirmPublish} onCancel={() => setShowPublishConfirm(false)} />}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { migratePersonnelToDatabase } from '../lib/api';
-import { ESL_DATA } from '../mockData';
 
 interface DataSourceSettings {
   staff: boolean;      // Staff MockData ON/OFF
@@ -70,25 +69,11 @@ const DataSourcesSettings: React.FC<DataSourcesSettingsProps> = ({ onShowSuccess
   };
 
   const handleMigrateStaff = async () => {
-    setMigrationState('running');
+    // Migration tool is deprecated - staff data is already in the database.
+    // MockData has been removed from the application.
+    setMigrationState('error');
     setMigrationResult(null);
-    try {
-      const mockInstructors = ESL_DATA.instructors;
-      console.log(`🚀 Migrating ${mockInstructors.length} mock staff to database...`);
-      const result = await migratePersonnelToDatabase(mockInstructors);
-      if (result.success) {
-        setMigrationState('done');
-        setMigrationResult({ inserted: result.inserted, skipped: result.skipped, errors: result.errors });
-        onShowSuccess(`Migration complete: ${result.inserted} staff inserted, ${result.skipped} already existed.`);
-      } else {
-        setMigrationState('error');
-        setMigrationResult(null);
-        console.error('Migration failed:', result.error);
-      }
-    } catch (err) {
-      console.error('Migration error:', err);
-      setMigrationState('error');
-    }
+    console.warn('Migration tool is deprecated - staff data is already in the database.');
   };
 
   const Toggle: React.FC<{ enabled: boolean; onToggle: () => void }> = ({ enabled, onToggle }) => (

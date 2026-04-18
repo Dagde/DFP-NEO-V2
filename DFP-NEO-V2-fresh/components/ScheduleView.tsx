@@ -386,8 +386,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
         
-        // Update validate overlay position when validate mode is ON
-        if (showValidation) {
+        // Update validate overlay position when validation mode OR hourly event rate mode is ON
+        if (showValidation || showDepartureDensityOverlay) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
         }
@@ -762,20 +762,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         );
     };
 
-    // Render validate mode overlay
+    // Render validate mode overlay (also used for hourly event rate display)
     const renderValidateOverlay = () => {
         
-        if (!showValidation || validateOverlayTime === null || !showDepartureDensityOverlay) return null;
+        // Overlay should show when either validation mode OR hourly event rate mode is active
+        if (validateOverlayTime === null || (!showValidation && !showDepartureDensityOverlay)) return null;
         
         // Calculate 1-hour window (30 minutes before and after mouse time)
         const windowStart = validateOverlayTime - 0.5;
         const windowEnd = validateOverlayTime + 0.5;
         
-        // Count flights starting in this window
+        // Count flights starting in this window (exclude STBY/BNF-STBY lines)
         const flightCount = events.filter(event => {
             // Only count flight events (not FTD, CPT, Ground, Duty Sup, etc.)
             if (event.type !== 'flight') return false;
-            
+            // Exclude cancelled/STBY line events
+            if (event.resourceId?.startsWith('STBY') || event.resourceId?.startsWith('BNF-STBY')) return false;
+            if (event.isCancelled) return false;
             // Check if start time falls within the window
             return event.startTime >= windowStart && event.startTime < windowEnd;
         }).length;

@@ -104,8 +104,10 @@ export async function loadSyllabusFromDB(): Promise<SyllabusLoadResult> {
   // 1. Try fresh cache first
   const cached = getCachedSyllabus();
   if (cached && !cached.expired) {
-    console.log(`📚 [Syllabus] Using fresh cache (${cached.data.length} items)`);
-    return { syllabus: cached.data, source: 'cache' };
+    // Ensure id === code (in case cache has old UUID ids)
+    const remapped = cached.data.map((item: any) => ({ ...item, id: item.code }));
+    console.log(`📚 [Syllabus] Using fresh cache (${remapped.length} items)`);
+    return { syllabus: remapped, source: 'cache' };
   }
 
   // 2. Try fetching from database
@@ -121,7 +123,8 @@ export async function loadSyllabusFromDB(): Promise<SyllabusLoadResult> {
     }
 
     const data = await response.json();
-    const rawItems: SyllabusItemDetail[] = data.syllabus || data.syllabusItems || [];
+    const rawItemsRaw = data.syllabus || data.syllabusItems || [];
+    const rawItems: SyllabusItemDetail[] = rawItemsRaw.map((item: any) => ({ ...item, id: item.code }));
 
     if (rawItems.length === 0) {
       throw new Error('No syllabus items returned from database');
@@ -141,9 +144,10 @@ export async function loadSyllabusFromDB(): Promise<SyllabusLoadResult> {
 
     // 3. Fall back to expired cache if available
     if (cached && cached.expired) {
-      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${cached.data.length} items)`);
+      const remapped = cached.data.map((item: any) => ({ ...item, id: item.code }));
+      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${remapped.length} items)`);
       return {
-        syllabus: cached.data,
+        syllabus: remapped,
         source: 'expired-cache',
         error: `Database unavailable - showing cached syllabus. Error: ${errMsg}`,
       };
