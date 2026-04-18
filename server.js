@@ -1204,15 +1204,44 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 });
 
 // POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
-// Body: { syllabusData: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
+// Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
+// syllabusData is OPTIONAL - server now loads syllabus directly from DB for accurate backfill.
+// Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
 // pt051Completions: optional map of traineeFullName → array of completed flightNumbers from DailySnapshot pt051Assessments
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { syllabusData, pt051Completions } = req.body;
+    const { syllabusData: clientSyllabusData, pt051Completions } = req.body;
+
+    // --- ALWAYS load syllabus from DB so the server has authoritative data ---
+    // The client may send mockData syllabus (missing FIC GND1/2/3) which would
+    // break the prerequisite backfill. By loading from DB here, we ensure the
+    // full syllabus (including any ground school prerequisites) is available.
+    let dbSyllabusData = {};
+    try {
+      const allItems = await db.syllabusItem.findMany({
+        where: { isActive: true },
+        orderBy: { sortOrder: 'asc' },
+      });
+      if (allItems.length > 0) {
+        // Split by lmpType / courses
+        const ficItems = allItems.filter(item => Array.isArray(item.courses) && item.courses.includes('FIC'));
+        const bpcIpcItems = allItems.filter(item => !Array.isArray(item.courses) || !item.courses.includes('FIC'));
+        dbSyllabusData = {
+          'FIC': ficItems,
+          'BPC+IPC': bpcIpcItems,
+        };
+        console.log(`[LMP Sync] Loaded syllabus from DB: ${ficItems.length} FIC items, ${bpcIpcItems.length} BPC+IPC items`);
+      }
+    } catch (syllabusErr) {
+      console.warn('[LMP Sync] Could not load syllabus from DB, falling back to client-provided syllabusData:', syllabusErr.message);
+    }
+
+    // Use DB syllabus if available; fall back to client-provided syllabusData
+    const syllabusData = (Object.keys(dbSyllabusData).length > 0) ? dbSyllabusData : (clientSyllabusData || {});
 
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
-      return res.status(400).json({ error: 'Missing syllabusData in request body' });
+      return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
     }
 
     // pt051Completions: { "Carter, Chris": ["FIC3","FIC4","FIC5"], ... }
