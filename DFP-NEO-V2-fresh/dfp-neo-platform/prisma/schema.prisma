@@ -325,67 +325,6 @@ model AircraftAvailabilityHistory {
   @@index([createdAt])
 }
 
-// Training curriculum structure (editable by authorised users)
-model SyllabusItem {
-  id                  String   @id @default(cuid())
-  code                String   @unique
-  eventDescription    String
-  phase               String
-  module              String
-  type                String
-  sortieType          String?
-  dayNight            String   @default("Day")
-  courses             String[] @default([])
-  methodOfDelivery    String[] @default([])
-  methodOfAssessment  String[] @default([])
-  resourcesPhysical   String[] @default([])
-  resourcesHuman      String[] @default([])
-  eventDetailsCommon  String[] @default([])
-  eventDetailsSortie  String[] @default([])
-  flightOrSimHours    Float    @default(0)
-  totalEventHours     Float    @default(0)
-  duration            Float    @default(0)
-  preFlightTime       Float    @default(0)
-  postFlightTime      Float    @default(0)
-  prerequisites       String[] @default([])
-  prerequisitesGround String[] @default([])
-  prerequisitesFlying String[] @default([])
-  location            String?
-  sortOrder           Int      @default(0)
-  lmpType             String?
-  twrDiReqd           String?
-  cctOnly             String?
-  isRemedial          Boolean  @default(false)
-  isActive            Boolean  @default(true)
-  version             Int      @default(1)
-  notes               String?
-  createdBy           String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-
-  @@index([code])
-  @@index([phase])
-  @@index([type])
-  @@index([isActive])
-  @@index([sortOrder])
-}
-
-// Audit trail for all curriculum changes
-model SyllabusHistory {
-  id             String   @id @default(cuid())
-  syllabusItemId String
-  changeType     String
-  changeData     Json
-  previousData   Json?
-  changedBy      String?
-  changeReason   String?
-  createdAt      DateTime @default(now())
-
-  @@index([syllabusItemId])
-  @@index([createdAt])
-  @@index([changeType])
-}
-
 // Organisation-level app settings - persists all settings page data
 model AppSettings {
   id        String   @id @default(cuid())

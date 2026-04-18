@@ -369,8 +369,6 @@ interface EventDetailModalProps {
     onSavePT051Assessment?: (assessment: any) => void;
     cancellationCodes?: CancellationCode[];
     onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
-    /** When true (Pause Flight Ops NEO Build view), all buttons except Close are non-interactive */
-    isPauseViewMode?: boolean;
 }
 
 interface CrewMember {
@@ -408,7 +406,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, isPauseViewMode = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -1861,7 +1859,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 </label>
                             )}
                             <div className="relative">
-                                {(isFrozen || isPauseViewMode) && (
+                                {isFrozen && (
                                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                                 )}
                                 <button onClick={() => setShowDeleteChoice(true)} className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md" style={{backgroundColor: "#FF6666", color: "white"}} aria-label="Delete Event">
@@ -1873,11 +1871,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
 
                     <div className="flex-1 flex flex-row overflow-hidden">
                         {/* Left Button Panel */}
-                        <div className="w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center relative">
-                            {/* Pause view mode: block all buttons except Close via overlay on whole left panel */}
-                            {isPauseViewMode && (
-                                <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
-                            )}
+                        <div className="w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
                             <div className="flex-grow" /> {/* Spacer */}
                             {!isEditing && (
                                 <>
@@ -2259,11 +2253,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         </div>
                         
                         {/* Right Button Panel */}
-                        <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center relative">
-                            {/* Pause view mode: block all right-panel buttons except Close */}
-                            {isPauseViewMode && (
-                                <div className="absolute inset-x-0 top-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all', bottom: '63px'}} />
-                            )}
+                        <div className="w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center">
                             {!isEditing && (
                                 <>
                                     <div className="w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50 mb-[1px]">
