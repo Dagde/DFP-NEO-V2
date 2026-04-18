@@ -1744,6 +1744,40 @@ app.get('/api/scores', async (req, res) => {
   }
 });
 
+// POST /api/scores - create a single score record
+app.post('/api/scores', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = req.body;
+
+    let resolvedTraineeId = traineeId;
+    if (!resolvedTraineeId && traineeFullName) {
+      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
+      if (!trainee) return res.status(404).json({ error: `Trainee not found: ${traineeFullName}` });
+      resolvedTraineeId = trainee.id;
+    }
+    if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
+    if (!event) return res.status(400).json({ error: 'event is required' });
+    if (score === undefined || score === null) return res.status(400).json({ error: 'score is required' });
+
+    const scoreRecord = await db.score.create({
+      data: {
+        traineeId: resolvedTraineeId,
+        event,
+        score: parseInt(score),
+        date: date ? new Date(date) : new Date(),
+        instructor: instructor || 'DCO',
+        notes: notes || '',
+        details: details || null,
+      },
+    });
+    res.json({ success: true, score: scoreRecord });
+  } catch (error) {
+    console.error('❌ POST /api/scores error:', error);
+    res.status(500).json({ error: 'Failed to create score', details: error.message });
+  }
+});
+
 // GET /api/schedule
 app.get('/api/schedule', async (req, res) => {
   try {
@@ -4522,6 +4556,26 @@ app.post('/api/scores/bulk', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/scores/bulk error:', error);
     res.status(500).json({ error: 'Failed to bulk insert scores', details: error.message });
+  }
+});
+
+// DELETE /api/scores/trainee/:traineeId - delete scores for a trainee (optionally filtered by event prefix)
+app.delete('/api/scores/trainee/:traineeId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { eventPrefix } = req.query;
+
+    const where = { traineeId };
+    if (eventPrefix) {
+      where.event = { startsWith: eventPrefix };
+    }
+
+    const result = await db.score.deleteMany({ where });
+    res.json({ success: true, deleted: result.count });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
   }
 });
 
