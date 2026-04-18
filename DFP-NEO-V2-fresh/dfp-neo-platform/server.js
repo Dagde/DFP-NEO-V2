@@ -1273,9 +1273,9 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
       
       await db.$executeRawUnsafe(
         `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+         VALUES ($1, $2::timestamp, $3, $4, $5, $6, $7, $8, NOW())`,
         eventId,
-        eventTimestamp,
+        eventTimestamp.toISOString(),
         date,
         parseInt(availableCount),
         configuredFleetSize,
@@ -1302,9 +1302,9 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     
     await db.$executeRawUnsafe(
       `INSERT INTO "AircraftAvailabilityEvent" ("id", "timestamp", "date", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
+       VALUES ($1, $2::timestamp, $3, $4, $5, $6, $7, $8, NOW())`,
       eventId,
-      eventTimestamp,
+      eventTimestamp.toISOString(),
       date,
       parseInt(availableCount),
       configuredFleetSize,
