@@ -1461,13 +1461,18 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     // full syllabus (including any ground school prerequisites) is available.
     let dbSyllabusData = {};
     try {
-      const allItems = await db.syllabusItem.findMany({
-        where: { isActive: true },
-        orderBy: { sortOrder: 'asc' },
-      });
-      if (allItems.length > 0) {
-        const ficItems = allItems.filter(item => Array.isArray(item.courses) && item.courses.includes('FIC'));
-        const bpcIpcItems = allItems.filter(item => !Array.isArray(item.courses) || !item.courses.includes('FIC'));
+      const allItems = await db.$queryRawUnsafe(
+        `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
+      );
+      if (allItems && allItems.length > 0) {
+        // courses is stored as JSON array in DB; parse if needed
+        const parsed = allItems.map(item => ({
+          ...item,
+          courses: Array.isArray(item.courses) ? item.courses :
+            (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
+        }));
+        const ficItems = parsed.filter(item => item.courses.includes('FIC'));
+        const bpcIpcItems = parsed.filter(item => !item.courses.includes('FIC'));
         dbSyllabusData = {
           'FIC': ficItems,
           'BPC+IPC': bpcIpcItems,
