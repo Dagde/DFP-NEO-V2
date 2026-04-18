@@ -9,6 +9,7 @@ const require = createRequire(import.meta.url);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SERVER_VERSION = '2026-04-18-v2'; // force redeploy
 
 // Parse JSON bodies
 app.use(express.json());
