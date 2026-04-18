@@ -462,6 +462,106 @@ app.get('/api/scores', async (req, res) => {
   }
 });
 
+// POST /api/scores - create a single score record
+app.post('/api/scores', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = req.body;
+
+    let resolvedTraineeId = traineeId;
+    if (!resolvedTraineeId && traineeFullName) {
+      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
+      if (!trainee) return res.status(404).json({ error: `Trainee not found: ${traineeFullName}` });
+      resolvedTraineeId = trainee.id;
+    }
+    if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
+    if (!event) return res.status(400).json({ error: 'event is required' });
+    if (score === undefined || score === null) return res.status(400).json({ error: 'score is required' });
+
+    const scoreRecord = await db.score.create({
+      data: {
+        traineeId: resolvedTraineeId,
+        event,
+        score: parseInt(score),
+        date: date ? new Date(date) : new Date(),
+        instructor: instructor || 'DCO',
+        notes: notes || '',
+        details: details || null,
+      },
+    });
+    res.json({ success: true, score: scoreRecord });
+  } catch (error) {
+    console.error('❌ POST /api/scores error:', error);
+    res.status(500).json({ error: 'Failed to create score', details: error.message });
+  }
+});
+
+// POST /api/scores/bulk - create multiple score records at once
+app.post('/api/scores/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { scores } = req.body;
+    if (!scores || !Array.isArray(scores)) return res.status(400).json({ error: 'scores array required' });
+
+    const results = { created: 0, errors: [] };
+
+    for (const s of scores) {
+      try {
+        let resolvedTraineeId = s.traineeId;
+        if (!resolvedTraineeId && s.traineeFullName) {
+          const trainee = await db.trainee.findFirst({ where: { fullName: s.traineeFullName } });
+          if (!trainee) {
+            results.errors.push(`Trainee not found: ${s.traineeFullName}`);
+            continue;
+          }
+          resolvedTraineeId = trainee.id;
+        }
+        if (!resolvedTraineeId) { results.errors.push('Missing traineeId/traineeFullName'); continue; }
+
+        await db.score.create({
+          data: {
+            traineeId: resolvedTraineeId,
+            event: s.event,
+            score: parseInt(s.score),
+            date: s.date ? new Date(s.date) : new Date(),
+            instructor: s.instructor || 'DCO',
+            notes: s.notes || '',
+            details: s.details || null,
+          },
+        });
+        results.created++;
+      } catch (err) {
+        results.errors.push(`${s.traineeFullName}/${s.event}: ${err.message}`);
+      }
+    }
+
+    res.json({ success: true, ...results });
+  } catch (error) {
+    console.error('❌ POST /api/scores/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk create scores', details: error.message });
+  }
+});
+
+// DELETE /api/scores/trainee/:traineeId - delete all FIC scores for a trainee
+app.delete('/api/scores/trainee/:traineeId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { eventPrefix } = req.query;
+
+    const where = { traineeId };
+    if (eventPrefix) {
+      where.event = { startsWith: eventPrefix };
+    }
+
+    const result = await db.score.deleteMany({ where });
+    res.json({ success: true, deleted: result.count });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
+  }
+});
+
 // GET /api/schedule
 app.get('/api/schedule', async (req, res) => {
   try {
