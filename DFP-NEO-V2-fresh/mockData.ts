@@ -60,10 +60,10 @@ const createSyllabusItem = (
     } else if (code.includes('CPT')) {
         methodOfDelivery = ['CPT', 'Brief'];
         flightOrSimHours = 1.0;
-        totalEventHours = 1.5;
+        totalEventHours = 1.0;
         type = 'Ground School';
-        preFlightTime = 15 / 60; // 15 minutes
-        postFlightTime = 15 / 60; // 15 minutes
+        preFlightTime = 0;
+        postFlightTime = 0;
         location = 'CPT Rooms';
     } else if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('Lec')) {
         methodOfDelivery = ['Classroom', 'Brief'];

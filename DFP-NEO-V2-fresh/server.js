@@ -64,6 +64,8 @@ async function getPrisma() {
     await ensureAppSettingsTable(prisma);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(prisma);
+    // Migrate CPT event durations to 1.0 hour
+    await migrateCptDurations(prisma);
   }
   return prisma;
 }
@@ -133,6 +135,60 @@ async function ensureSyllabusTablesExist(db) {
     console.log('✅ SyllabusItem and SyllabusHistory tables ready');
   } catch (err) {
     console.error('❌ Failed to ensure Syllabus tables:', err.message);
+  }
+}
+
+// Migration: Fix CPT event durations to 1.0 hour (totalEventHours, duration, preFlightTime, postFlightTime)
+async function migrateCptDurations(db) {
+  try {
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "totalEventHours" = 1.0,
+        "flightOrSimHours" = 1.0,
+        "duration" = 1.0,
+        "preFlightTime" = 0,
+        "postFlightTime" = 0,
+        "updatedAt" = NOW()
+      WHERE "code" LIKE '%CPT%'
+        AND ("totalEventHours" != 1.0 OR "duration" != 1.0 OR "preFlightTime" != 0 OR "postFlightTime" != 0)
+    `);
+    console.log(`✅ migrateCptDurations (SyllabusItem): updated ${result} CPT items to 1.0 hr duration`);
+  } catch (err) {
+    console.error('❌ migrateCptDurations (SyllabusItem) failed (non-fatal):', err.message);
+  }
+
+  // Also fix duration in IndividualLMP events JSONB
+  try {
+    // Load all IndividualLMP records
+    const lmps = await db.$queryRawUnsafe(`SELECT "id", "events" FROM "IndividualLMP"`);
+    let updatedCount = 0;
+    for (const lmp of lmps) {
+      let events = lmp.events;
+      if (!Array.isArray(events)) {
+        try { events = JSON.parse(events); } catch { continue; }
+      }
+      let changed = false;
+      const fixedEvents = events.map(evt => {
+        const code = (evt.flightNumber || evt.eventCode || '');
+        if (code.includes('CPT') && evt.duration !== 1.0) {
+          changed = true;
+          return { ...evt, duration: 1.0 };
+        }
+        return evt;
+      });
+      if (changed) {
+        await db.$executeRawUnsafe(
+          `UPDATE "IndividualLMP" SET "events" = $1::jsonb, "updatedAt" = NOW() WHERE "id" = $2`,
+          JSON.stringify(fixedEvents),
+          lmp.id
+        );
+        updatedCount++;
+      }
+    }
+    console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
+  } catch (err) {
+    console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
   }
 }
 
@@ -3353,7 +3409,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
 
     const getEventDuration = (code, lmpType) => {
       if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) return 2.0;
-      if (code.includes('CPT')) return 1.5;
+      if (code.includes('CPT')) return 1.0;
       // FTD events: 2.0hrs for BPC+IPC and FIC courses
       if (code.includes('FTD')) {
         if (lmpType === 'BPC+IPC' || lmpType === 'FIC') return 2.0;

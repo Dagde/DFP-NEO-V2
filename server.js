@@ -2727,7 +2727,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
 
     const getEventDuration = (code, lmpType) => {
       if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) return 2.0;
-      if (code.includes('CPT')) return 1.5;
+      if (code.includes('CPT')) return 1.0;
       // FTD events: 2.0hrs for BPC+IPC and FIC courses
       if (code.includes('FTD')) {
         if (lmpType === 'BPC+IPC' || lmpType === 'FIC') return 2.0;

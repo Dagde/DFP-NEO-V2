@@ -381,8 +381,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
         
-        // Update validate overlay position when validate mode is ON
-        if (showValidation) {
+        // Update validate overlay position when departure density overlay is ON
+        if (showDepartureDensityOverlay) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
         }
@@ -760,7 +760,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     // Render validate mode overlay
     const renderValidateOverlay = () => {
         
-        if (!showValidation || validateOverlayTime === null || !showDepartureDensityOverlay) return null;
+        if (!showDepartureDensityOverlay || validateOverlayTime === null) return null;
         
         // Calculate 1-hour window (30 minutes before and after mouse time)
         const windowStart = validateOverlayTime - 0.5;

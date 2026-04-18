@@ -974,7 +974,7 @@ function requireReact_development() {
       exports$1.useTransition = function() {
         return resolveDispatcher().useTransition();
       };
-      exports$1.version = "19.2.4";
+      exports$1.version = "19.2.3";
       "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
     })();
   })(react_development, react_development.exports);
@@ -1759,7 +1759,7 @@ function requireReactDom_development() {
     reactDom_development.useFormStatus = function() {
       return resolveDispatcher().useHostTransitionStatus();
     };
-    reactDom_development.version = "19.2.4";
+    reactDom_development.version = "19.2.3";
     "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
   })();
   return reactDom_development;
@@ -21511,9 +21511,9 @@ function requireReactDomClient_development() {
     };
     (function() {
       var isomorphicReactPackageVersion = React2.version;
-      if ("19.2.4" !== isomorphicReactPackageVersion)
+      if ("19.2.3" !== isomorphicReactPackageVersion)
         throw Error(
-          'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.4\nLearn more: https://react.dev/warnings/version-mismatch")
+          'Incompatible React versions: The "react" and "react-dom" packages must have the exact same version. Instead got:\n  - react:      ' + (isomorphicReactPackageVersion + "\n  - react-dom:  19.2.3\nLearn more: https://react.dev/warnings/version-mismatch")
         );
     })();
     "function" === typeof Map && null != Map.prototype && "function" === typeof Map.prototype.forEach && "function" === typeof Set && null != Set.prototype && "function" === typeof Set.prototype.clear && "function" === typeof Set.prototype.forEach || console.error(
@@ -21537,10 +21537,10 @@ function requireReactDomClient_development() {
     if (!(function() {
       var internals = {
         bundleType: 1,
-        version: "19.2.4",
+        version: "19.2.3",
         rendererPackageName: "react-dom",
         currentDispatcherRef: ReactSharedInternals,
-        reconcilerVersion: "19.2.4"
+        reconcilerVersion: "19.2.3"
       };
       internals.overrideHookState = overrideHookState;
       internals.overrideHookStateDeletePath = overrideHookStateDeletePath;
@@ -21631,7 +21631,7 @@ function requireReactDomClient_development() {
       listenToAllSupportedEvents(container);
       return new ReactDOMHydrationRoot(initialChildren);
     };
-    reactDomClient_development.version = "19.2.4";
+    reactDomClient_development.version = "19.2.3";
     "undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ && "function" === typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop && __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStop(Error());
   })();
   return reactDomClient_development;
