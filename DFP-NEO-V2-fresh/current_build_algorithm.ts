@@ -191,7 +191,10 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
         if (next) {
             console.log(`🎯   Processing trainee: ${trainee.fullName}, next event: ${next.code} (${next.type})`);
 
-            if (next.code.startsWith('BNF') && next.type === 'Flight') {
+            if (next.code === 'BNF3' && next.type === 'Flight') {
+                // BNF3 is never scheduled by the build algorithm - skip entirely
+                console.log(`🎯     BNF3 detected for ${trainee.fullName} - skipping (BNF3 never auto-scheduled)`);
+            } else if (next.code.startsWith('BNF') && next.type === 'Flight') {
                 console.log(`🎯     BNF event detected for ${trainee.fullName}`);
                 // Only add to BNF list if trainee doesn't have day events scheduled
                 const hasDayEvents = isPersonScheduledForDayEvents(trainee.fullName);
@@ -449,6 +452,8 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
             unplacedTrainees.forEach((trainee, index) => {
                 const traineeCounts = eventCounts.get(trainee.fullName)!;
                 if (traineeCounts.flightFtd > 0 || traineeCounts.isStby) return;
+                // Never put night-flying trainees on daytime STBY
+                if (!isNightPass && bnfTraineeNames.has(trainee.fullName)) return;
 
                 const { next, plusOne } = traineeNextEventMap.get(trainee.fullName)!;
                 const syllabusItem = isPlusOne ? plusOne : next;
