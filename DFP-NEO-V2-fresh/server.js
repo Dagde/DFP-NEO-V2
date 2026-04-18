@@ -4742,6 +4742,47 @@ app.delete('/api/scores/trainee/:traineeId', async (req, res) => {
   }
 });
 
+// DELETE /api/scores/trainee/:traineeId/events - delete specific event scores for a trainee
+// Body: { events: string[] } - array of event codes to delete
+// Also removes those events from IndividualLMP.completedEventIds
+app.delete('/api/scores/trainee/:traineeId/events', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { events } = req.body;
+
+    if (!events || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ error: 'events array is required in request body' });
+    }
+
+    // Delete score records for the specified events
+    const result = await db.score.deleteMany({
+      where: { traineeId, event: { in: events } },
+    });
+
+    // Also remove from IndividualLMP.completedEventIds
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId } });
+      if (lmp) {
+        const updated = (lmp.completedEventIds || []).filter(id => !events.includes(id));
+        await db.individualLMP.update({
+          where: { id: lmp.id },
+          data: { completedEventIds: updated, updatedAt: new Date() },
+        });
+        console.log(`[DELETE /api/scores/events] Updated IndividualLMP for ${traineeId}: removed ${events.length} events`);
+      }
+    } catch (lmpErr) {
+      console.warn(`[DELETE /api/scores/events] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
+    console.log(`✅ DELETE /api/scores/trainee/${traineeId}/events - deleted ${result.count} score records`);
+    res.json({ success: true, deleted: result.count, events });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee/events error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
+  }
+});
+
 // ============================================================
 // TRAINING INTELLIGENCE ENGINE (TIE) API ROUTES
 // ============================================================
