@@ -5468,7 +5468,7 @@ const RightSidebar = ({
       lineNumber: 62,
       columnNumber: 7
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("nav", { className: "flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("nav", { className: "flex-1 overflow-y-auto pt-[1px] pb-4 px-2 space-y-[1px] flex flex-col items-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "button",
         {
@@ -95099,8 +95099,9 @@ function populatePrerequisites(items) {
 async function loadSyllabusFromDB() {
   const cached = getCachedSyllabus();
   if (cached && !cached.expired) {
-    console.log(`📚 [Syllabus] Using fresh cache (${cached.data.length} items)`);
-    return { syllabus: cached.data, source: "cache" };
+    const remapped = cached.data.map((item) => ({ ...item, id: item.code }));
+    console.log(`📚 [Syllabus] Using fresh cache (${remapped.length} items)`);
+    return { syllabus: remapped, source: "cache" };
   }
   try {
     console.log("📚 [Syllabus] Fetching from database...");
@@ -95112,7 +95113,8 @@ async function loadSyllabusFromDB() {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const data = await response.json();
-    const rawItems = data.syllabus || data.syllabusItems || [];
+    const rawItemsRaw = data.syllabus || data.syllabusItems || [];
+    const rawItems = rawItemsRaw.map((item) => ({ ...item, id: item.code }));
     if (rawItems.length === 0) {
       throw new Error("No syllabus items returned from database");
     }
@@ -95124,9 +95126,10 @@ async function loadSyllabusFromDB() {
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     console.error(`❌ [Syllabus] Database fetch failed: ${errMsg}`);
     if (cached && cached.expired) {
-      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${cached.data.length} items)`);
+      const remapped = cached.data.map((item) => ({ ...item, id: item.code }));
+      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${remapped.length} items)`);
       return {
-        syllabus: cached.data,
+        syllabus: remapped,
         source: "expired-cache",
         error: `Database unavailable - showing cached syllabus. Error: ${errMsg}`
       };
