@@ -2729,6 +2729,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Check both sortieType field AND known solo event codes (BGF11, BGF18) as fallback
         // in case sortieType was not set in the DB for these events
         const isSoloFlight = syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id);
+
+        // Solo time window: start time must be between 09:00 and 15:00 (inclusive)
+        // The flight itself may finish after 15:00 — only the START is constrained
+        if (isSoloFlight && (startTime < 9 || startTime > 15)) {
+            return null;
+        }
         
         let instructor: Instructor | null = null;
         // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
@@ -3159,15 +3165,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     if (nextEventLists.solo.length > 0) {
         const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
         const MAX_SOLO_GROUP = 4;
-        // Solo flights are restricted to a 09:00–15:00 window (no earlier than 9am, no later than 3pm start)
-        const SOLO_WINDOW_START = Math.max(flyingStartTime, 9);   // 09:00
-        const SOLO_WINDOW_END   = Math.min(flyingEndTime,   15);  // 15:00 (latest start time)
-        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group, window ${SOLO_WINDOW_START}:00–${SOLO_WINDOW_END}:00`);
+        // Solo time window (09:00–15:00 start) is enforced inside scheduleEvent.
+        // Pass the full flying window here so scheduleList searches all available slots;
+        // scheduleEvent itself rejects any start time < 09:00 or > 15:00 for solo flights.
+        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group, window 09:00–15:00 (enforced in scheduleEvent)`);
         for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
             const group = soloTrainees.slice(i, i + MAX_SOLO_GROUP);
             const groupIndex = Math.floor(i / MAX_SOLO_GROUP) + 1;
             console.log(`🎯 [SOLO SCHEDULING] Scheduling group ${groupIndex}: ${group.map(t => t.fullName).join(', ')}`);
-            scheduleList(group, 'flight', false, SOLO_WINDOW_START, SOLO_WINDOW_END, 'STBY', false);
+            scheduleList(group, 'flight', false, flyingStartTime, flyingEndTime, 'STBY', false);
         }
     }
 
@@ -3646,15 +3652,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     if (soloTraineesNeedingStby.length > 0) {
         const timeIncrement = 5 / 60;
-        // Same 09:00–15:00 window constraint as the primary solo scheduling pass
-        const SOLO_STBY_WINDOW_START = Math.max(flyingStartTime, 9);   // 09:00
-        const SOLO_STBY_WINDOW_END   = Math.min(flyingEndTime,   15);  // 15:00 (latest start time)
         for (const trainee of soloTraineesNeedingStby) {
             const { next } = traineeNextEventMap.get(trainee.fullName)!;
             if (!next) continue;
 
             let placed = false;
-            for (let time = SOLO_STBY_WINDOW_START; time < SOLO_STBY_WINDOW_END; time += timeIncrement) {
+            // Solo time window 09:00-15:00 start is enforced by the check below
+            for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+                // Enforce solo window: start must be between 09:00 and 15:00
+                if (time < 9 || time > 15) continue;
                 if (hasFlightStartTime(time, generatedEvents)) continue;
                 const flightEndTime = time + next.duration;
                 if (flightEndTime > flyingEndTime) continue;
@@ -5024,6 +5030,23 @@ const App: React.FC = () => {
         loadHistoricalData();
     }, []);
 
+    // On mount: eagerly load snapshots for today AND tomorrow so that after a hard refresh
+    // the published schedule is always visible — regardless of which date the user lands on.
+    // (loadHistoricalData loads the last-5 by date, but the user's 'date' state might start
+    //  on today while the published schedule was saved for tomorrow's buildDfpDate)
+    useEffect(() => {
+        const today = getLocalDateString();
+        const tomorrowObj = new Date();
+        tomorrowObj.setDate(tomorrowObj.getDate() + 1);
+        const tomorrow = getLocalDateString(tomorrowObj);
+        // Small delay to allow loadHistoricalData to run first (avoids redundant fetch)
+        const t = setTimeout(() => {
+            loadSnapshotForDate(today);
+            loadSnapshotForDate(tomorrow);
+        }, 1500);
+        return () => clearTimeout(t);
+    }, [loadSnapshotForDate]);
+
     // Load snapshot dates for calendar dropdown
     useEffect(() => {
         const loadSnapshotDates = async () => {
@@ -5045,6 +5068,8 @@ const App: React.FC = () => {
     }, []);
 
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
+    // NOTE: also called at startup (below) for today + tomorrow so published schedules
+    // are always visible after a hard refresh regardless of which date the user was on.
     const loadSnapshotForDate = React.useCallback(async (targetDate: string) => {
         if (loadedSnapshotDates.current.has(targetDate)) return; // already loaded
         loadedSnapshotDates.current.add(targetDate); // mark as attempted
@@ -10038,21 +10063,31 @@ const App: React.FC = () => {
             };
 
             const apiBase = getApiBaseUrl();
+            console.log(`[Snapshot] Saving snapshot for ${buildDfpDate}, ${newEventsForDate.length} events to ${apiBase}/daily-snapshot/save`);
             fetch(`${apiBase}/daily-snapshot/save`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(snapshotPayload),
             })
-            .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
-                } else {
-                    console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
+            .then(async res => {
+                const text = await res.text();
+                console.log(`[Snapshot] Save response HTTP ${res.status}`);
+                try {
+                    const result = JSON.parse(text);
+                    if (result.success) {
+                        console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                        // Mark date as loaded so loadSnapshotForDate does not skip it on next navigation
+                        loadedSnapshotDates.current.add(buildDfpDate);
+                    } else {
+                        console.error(`❌ [Snapshot] Save FAILED for ${buildDfpDate}:`, result.error, result.details);
+                    }
+                } catch (parseErr) {
+                    console.error(`❌ [Snapshot] Save response parse error:`, parseErr, 'raw:', text.substring(0, 300));
                 }
             })
             .catch(err => {
-                console.warn(`\u26A0\uFE0F [Snapshot] Could not save daily snapshot for ${buildDfpDate}:`, err);
+                console.error(`❌ [Snapshot] Network error saving snapshot for ${buildDfpDate}:`, err);
             });
         } else if (hasSeedData) {
             console.log(`\u26A0\uFE0F [Snapshot] Skipped saving seed data for ${buildDfpDate}`);
