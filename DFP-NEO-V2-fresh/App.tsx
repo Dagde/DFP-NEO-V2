@@ -4192,7 +4192,20 @@ const App: React.FC = () => {
 
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
-    const [date, setDate] = useState<string>(() => getLocalDateString());
+    const [date, setDate] = useState<string>(() => {
+        // Restore last viewed date from localStorage so published schedule persists after hard refresh
+        // Only restore if within 7 days of today to avoid stale dates
+        try {
+            const saved = localStorage.getItem('dfp_last_viewed_date');
+            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+                const savedMs = new Date(saved + 'T00:00:00Z').getTime();
+                const todayMs = new Date().getTime();
+                const diffDays = Math.abs(todayMs - savedMs) / (1000 * 60 * 60 * 24);
+                if (diffDays <= 7) return saved;
+            }
+        } catch (_) {}
+        return new Date().toISOString().split('T')[0];
+    });
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
@@ -4258,6 +4271,11 @@ const App: React.FC = () => {
     const allTraineesDataRef    = useRef<Trainee[]>([]);
     useEffect(() => { allInstructorsDataRef.current = allInstructorsData; }, [allInstructorsData]);
     useEffect(() => { allTraineesDataRef.current    = allTraineesData;    }, [allTraineesData]);
+
+    // Persist the last viewed date to localStorage so the schedule survives a hard refresh
+    useEffect(() => {
+        try { localStorage.setItem('dfp_last_viewed_date', date); } catch (_) {}
+    }, [date]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
@@ -5092,8 +5110,12 @@ const App: React.FC = () => {
                 const dates: string[] = (data.dates || []).map((d: any) => d.date);
                 console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
                 setSnapshotDates(dates);
-                // Mark the last 5 (already loaded on startup) as loaded
-                dates.slice(0, 5).forEach(d => loadedSnapshotDates.current.add(d));
+                // NOTE: Do NOT pre-mark dates as loaded here. loadHistoricalData loads the last 5
+                // snapshots into publishedSchedules, but it runs concurrently. If we mark them loaded
+                // now, the startup useEffect's loadSnapshotForDate(tomorrow) would see them as
+                // "already loaded" and skip — even if the data isn't in state yet (race condition).
+                // Dates get added to loadedSnapshotDates only when actually loaded by loadSnapshotForDate
+                // or when confirmed saved after publish.
             } catch (err) {
                 console.warn('[Snapshot] Could not load snapshot dates:', err);
             }
@@ -5106,28 +5128,38 @@ const App: React.FC = () => {
     // are always visible after a hard refresh regardless of which date the user was on.
     const loadSnapshotForDate = React.useCallback(async (targetDate: string) => {
         if (loadedSnapshotDates.current.has(targetDate)) {
-            console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) — already attempted, skipping`);
+            console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) — already loaded, skipping`);
             return;
         }
-        loadedSnapshotDates.current.add(targetDate); // mark as attempted
+        // Mark as in-flight immediately to prevent duplicate concurrent fetches
+        loadedSnapshotDates.current.add(targetDate);
         try {
             const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
             console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → fetching ${apiBase}/daily-snapshot/${targetDate}`);
             const res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
             console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → HTTP ${res.status}`);
             if (!res.ok) {
-                console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → no snapshot (${res.status}), nothing to load`);
-                return; // 404 = no snapshot for that date, that's fine
+                // 404 = no snapshot for that date — remove from set so future attempts are allowed
+                // (e.g. after the user publishes for this date)
+                loadedSnapshotDates.current.delete(targetDate);
+                console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → no snapshot (${res.status}), cleared from attempted set`);
+                return;
             }
             const data = await res.json();
             const snap = data.snapshot;
-            if (!snap) return;
+            if (!snap) {
+                loadedSnapshotDates.current.delete(targetDate);
+                return;
+            }
             const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
             if (events.length > 0) {
                 setPublishedSchedules(prev => {
                     // Only load if no existing non-seed events for this date
                     const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
-                    if (existingNonSeed.length > 0) return prev;
+                    if (existingNonSeed.length > 0) {
+                        console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) — non-seed events already in state, skipping overwrite`);
+                        return prev;
+                    }
                     return { ...prev, [targetDate]: events };
                 });
                 console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
@@ -5143,25 +5175,24 @@ const App: React.FC = () => {
                 });
             }
         } catch (err) {
+            // On network error, remove from set so it can be retried
+            loadedSnapshotDates.current.delete(targetDate);
             console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
         }
     }, []);
 
     // On mount: eagerly load snapshots for today AND tomorrow so that after a hard refresh
-    // the published schedule is always visible — regardless of which date the user lands on.
-    // (loadHistoricalData loads the last-5 by date, but the user's 'date' state might start
-    //  on today while the published schedule was saved for tomorrow's buildDfpDate)
+    // the published schedule is always visible regardless of which date the user lands on.
     useEffect(() => {
         const today = getLocalDateString();
         const tomorrowObj = new Date();
         tomorrowObj.setDate(tomorrowObj.getDate() + 1);
         const tomorrow = getLocalDateString(tomorrowObj);
-        // Small delay to allow loadHistoricalData to run first (avoids redundant fetch)
-        const t = setTimeout(() => {
-            loadSnapshotForDate(today);
-            loadSnapshotForDate(tomorrow);
-        }, 1500);
-        return () => clearTimeout(t);
+        // Load immediately - no delay needed. loadSnapshotForDate now clears failed dates from
+        // the attempted-set so future calls can retry. The setPublishedSchedules check inside
+        // will avoid overwriting data already loaded by loadHistoricalData.
+        loadSnapshotForDate(today);
+        loadSnapshotForDate(tomorrow);
     }, [loadSnapshotForDate]);
 
        // Show commit alert on app mount - DISABLED
@@ -5296,11 +5327,25 @@ const App: React.FC = () => {
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
     const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
+        // Try to restore buildDfpDate from localStorage; must be tomorrow or later (never past)
+        try {
+            const saved = localStorage.getItem('dfp_build_date');
+            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+                const today = new Date().toISOString().split('T')[0];
+                if (saved > today) return saved; // only restore if it's still a future date
+            }
+        } catch (_) {}
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        return getLocalDateString(tomorrow);
+        return tomorrow.toISOString().split('T')[0];
     });
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
+
+    // Persist buildDfpDate to localStorage so the build date survives a hard refresh
+    useEffect(() => {
+        try { localStorage.setItem('dfp_build_date', buildDfpDate); } catch (_) {}
+    }, [buildDfpDate]);
+
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
     const [availableFtdCount, setAvailableFtdCount] = useState(school === 'ESL' ? 5 : 4);
     const [availableCptCount, setAvailableCptCount] = useState(4);
@@ -6231,11 +6276,16 @@ const App: React.FC = () => {
         localStorage.setItem('timezoneOffset', timezoneOffset.toString());
     }, [timezoneOffset]);
 
-    // Update current date when timezone changes
+    // Update current date when timezone changes (but NOT on initial mount, to preserve localStorage date)
+    const isInitialTimezoneMount = React.useRef(true);
     useEffect(() => {
+        if (isInitialTimezoneMount.current) {
+            isInitialTimezoneMount.current = false;
+            return; // Skip on first run — date was already restored from localStorage
+        }
         const currentDateStr = getLocalDateString();
         if (date !== currentDateStr) {
-            console.log('\ud83d\udcc5 Updating current date from', date, 'to', currentDateStr, 'due to timezone change');
+            console.log('[Date] Updating current date from', date, 'to', currentDateStr, 'due to timezone change');
             setDate(currentDateStr);
         }
     }, [timezoneOffset]); // Re-run when timezone changes
@@ -6243,16 +6293,17 @@ const App: React.FC = () => {
     // FTD available count is now managed by user input in PrioritiesView
     // Default initialization is handled in useState declaration
 
-    // Auto-update buildDfpDate to tomorrow's date on mount and daily
+    // Auto-update buildDfpDate: ensure it never stays in the past
     useEffect(() => {
         const updateBuildDate = () => {
+            const todayStr = getLocalDateString();
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowStr = getLocalDateString(tomorrow);
-            
-            // Only update if the date has actually changed
-            if (buildDfpDate !== tomorrowStr) {
-                console.log('📅 Updating build DFP date from', buildDfpDate, 'to', tomorrowStr);
+            // Only advance to tomorrow if buildDfpDate is today or in the past
+            // If it's already a future date (e.g. day after tomorrow), preserve it
+            if (buildDfpDate <= todayStr) {
+                console.log('[BuildDate] buildDfpDate', buildDfpDate, 'is today or past, advancing to tomorrow:', tomorrowStr);
                 setBuildDfpDate(tomorrowStr);
             }
         };
