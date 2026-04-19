@@ -726,8 +726,11 @@ const FlightTile: React.FC<TileProps> = ({
       dropdownId="pic-dropdown-portal" />
   );
 
-  const coPilotContent = () => (
-    flightType === 'Dual' ? (
+  const coPilotContent = () => {
+    if (eventCategory === 'twr_di') {
+      return <span style={{ fontSize: 22, color: WHITE_DIM, lineHeight: 1.25 }}>TWR DI</span>;
+    }
+    return flightType === 'Dual' ? (
       <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
         placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
         dropdownId="copilot-dropdown-portal" />
@@ -735,8 +738,8 @@ const FlightTile: React.FC<TileProps> = ({
       <span onClick={() => onFlightTypeChange('Dual')}
         style={{ display: 'inline-block', fontSize: 18, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)', padding: '3px 10px', borderRadius: 4, lineHeight: 1.25, cursor: 'pointer' }}
         title="Click to switch to Dual">SOLO</span>
-    )
-  );
+    );
+  };
 
   const durationContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
@@ -750,14 +753,18 @@ const FlightTile: React.FC<TileProps> = ({
     </div>
   );
 
-  const eventContent = () => (
-    <div style={{ position: 'relative' }}>
-      <Oval px={10} py={5} minW={58}>
-        <EventDropdown value={flightNumber} onChange={onFlightNumberChange} courseOptions={courseOptions} getEventsForCourse={getEventsForCourse}
-          nextLMPEvent={nextLMPEvent} fontSize={18} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
-      </Oval>
-    </div>
-  );
+  const eventContent = () => {
+    const displayEvent = eventCategory === 'twr_di' ? 'TWR DI' : flightNumber;
+    return (
+      <div style={{ position: 'relative' }}>
+        <Oval px={10} py={5} minW={58}>
+          <span style={{ fontSize: 18, color: displayEvent ? WHITE_FULL : WHITE_GHOST, lineHeight: 1 }}>
+            {displayEvent || 'EVENT'}
+          </span>
+        </Oval>
+      </div>
+    );
+  };
 
   const areaContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
@@ -1415,7 +1422,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     >
       <div
         className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col"
-        style={{ width: '90vw', maxWidth: 720, maxHeight: '92vh' }}
+        style={{ width: '90vw', maxWidth: 720, maxHeight: '95vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -1428,7 +1435,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5" style={{ minHeight: 0 }}>
 
           {/* Event Category */}
           {!isDeploy && (
