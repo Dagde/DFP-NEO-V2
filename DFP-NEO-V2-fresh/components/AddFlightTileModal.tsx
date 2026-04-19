@@ -754,13 +754,29 @@ const FlightTile: React.FC<TileProps> = ({
   );
 
   const eventContent = () => {
-    const displayEvent = eventCategory === 'twr_di' ? 'TWR DI' : flightNumber;
+    if (eventCategory === 'twr_di') {
+      return (
+        <div style={{ position: 'relative' }}>
+          <Oval px={10} py={5} minW={58}>
+            <span style={{ fontSize: 18, color: WHITE_FULL, lineHeight: 1 }}>
+              TWR DI
+            </span>
+          </Oval>
+        </div>
+      );
+    }
     return (
       <div style={{ position: 'relative' }}>
         <Oval px={10} py={5} minW={58}>
-          <span style={{ fontSize: 18, color: displayEvent ? WHITE_FULL : WHITE_GHOST, lineHeight: 1 }}>
-            {displayEvent || 'EVENT'}
-          </span>
+          <EventDropdown
+            value={flightNumber}
+            onChange={onFlightNumberChange}
+            courseOptions={courseOptions}
+            getEventsForCourse={getEventsForCourse}
+            nextLMPEvent={nextLMPEvent}
+            fontSize={18}
+            color={flightNumber ? WHITE_FULL : WHITE_GHOST}
+          />
         </Oval>
       </div>
     );
@@ -1341,7 +1357,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)
         errs.push('Deployment start/end date and time are required.');
     } else {
-      if (!flightNumber) errs.push('Syllabus event is required.');
+      if (!flightNumber && eventCategory !== 'twr_di') errs.push('Syllabus event is required.');
       if (flightType === 'Dual' && !picName) errs.push('Instructor / PIC is required for Dual flights.');
       if (flightType === 'Dual' && !studentName) errs.push('Co-Pilot / Student is required for Dual flights.');
       if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
@@ -1358,7 +1374,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         type: 'flight',
         eventCategory,
         flightType,
-        flightNumber,
+        flightNumber: eventCategory === 'twr_di' ? 'TWR DI' : flightNumber,
         instructor: flightType === 'Dual' ? picName : '',
         student: flightType === 'Dual' ? studentName : '',
         pilot: picName,
@@ -1417,7 +1433,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+      className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-4"
       onClick={onClose}
     >
       <div
