@@ -3141,11 +3141,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Highest Priority Flight Events are already added at the start
     
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
-    const _flightListForScheduling = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
-    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. List size: ${_flightListForScheduling.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
-    (window as any).__fbFlightListSize = _flightListForScheduling.length;
+
+    // SOLO SEQUENCING FIX:
+    // Solo flights (BGF11/BGF18 or sortieType='Solo') must be scheduled AFTER all dual flights.
+    // This ensures that when the resource assignment loop runs for solos, all dual aircraft
+    // lines are already populated — so linesWithEarlierFlight gives the correct count and
+    // solos are placed on the right sequential PC-21 row, not the lowest free one.
+    const _isSoloTrainee = (trainee: Trainee): boolean => {
+        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
+    };
+    const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+    const _dualFlightList = _allFlightList.filter(t => !_isSoloTrainee(t));
+    const _soloFlightList = _allFlightList.filter(t => _isSoloTrainee(t));
+
+    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    (window as any).__fbFlightListSize = _allFlightList.length;
+
+    // Step 3a: Schedule DUAL flights first
     scheduleList(
-        _flightListForScheduling,
+        _dualFlightList,
         'flight', 
         false, 
         flyingStartTime, 
@@ -3153,6 +3168,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         null, 
         false
     );
+
+    // Step 3b: Schedule SOLO flights after all duals are placed
+    // At this point generatedEvents has all dual flights, so linesWithEarlierFlight
+    // correctly counts how many PC-21 rows are occupied before the solo's start time
+    scheduleList(
+        _soloFlightList,
+        'flight', 
+        false, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+
     _fbPrintSummary();
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
