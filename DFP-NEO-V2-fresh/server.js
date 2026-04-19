@@ -2943,10 +2943,10 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     if (!date || availableCount === undefined || !totalFleet) {
       return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
     }
-    const ts = timestamp ? new Date(timestamp) : new Date();
+    const ts = timestamp ? new Date(timestamp).toISOString() : new Date().toISOString();
     await db.$executeRawUnsafe(
       `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
-       VALUES ($1::text, $2::text, $3::int, $4::int, $5::text)`,
+       VALUES ($1::text, $2::text::timestamp, $3::int, $4::int, $5::text)`,
       date, ts, availableCount, totalFleet, notes || null
     );
     const inserted = await db.$queryRawUnsafe(

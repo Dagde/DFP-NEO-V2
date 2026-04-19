@@ -2823,9 +2823,28 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
-        // Debug logging removed to reduce console noise
+        // SOLO RESOURCE PLACEMENT FIX:
+        // Solo flights must be placed on the PC-21 row that matches their chronological
+        // position in the day, not the lowest-numbered free aircraft.
+        // Algorithm: count how many distinct PC-21 lines have at least one flight event
+        // with a start time EARLIER than the solo's start time. Start the search from
+        // (that count + 1) so the solo slots into the next available chronological position.
+        let resourceSearchStart = 1;
+        if (isSoloFlight && type === 'flight') {
+            const linesWithEarlierFlight = new Set(
+                generatedEvents
+                    .filter(e =>
+                        e.type === 'flight' &&
+                        e.resourceId.startsWith('PC-21 ') &&
+                        !e.resourceId.startsWith('PC-21 STBY') &&
+                        e.startTime < startTime - 0.001
+                    )
+                    .map(e => e.resourceId)
+            ).size;
+            resourceSearchStart = linesWithEarlierFlight + 1;
+        }
         
-        for (let i = 1; i <= resourceCount; i++) {
+        for (let i = resourceSearchStart; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
@@ -2889,14 +2908,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 !e.resourceId.startsWith('BNF-STBY')
             );
             
-            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
-            if (takeoffsInLastHour >= 8) {
+            // Solo flights are exempt from the hourly dispatch limit —
+            // they are on a dedicated aircraft row and don't contribute to runway congestion.
+            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && !e.flightType?.includes('Solo') && e.startTime > startTime - 1 && e.startTime <= startTime).length;
+            if (!isSoloFlight && takeoffsInLastHour >= 8) {
                 console.log(`[HOURLY RATE] BLOCKING ${trainee.fullName} at ${_fmtT(startTime)} - ${takeoffsInLastHour} flights in last hour (limit: 8)`);
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
             }
             // Log when hourly rate check passes for visibility during NEO builds
-            if (takeoffsInLastHour >= 6) {
+            if (!isSoloFlight && takeoffsInLastHour >= 6) {
                 console.log(`[HOURLY RATE] ${trainee.fullName} at ${_fmtT(startTime)} - ${takeoffsInLastHour} flights in last hour (limit: 8)`);
             }
             
