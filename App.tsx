@@ -2871,14 +2871,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 !e.resourceId.startsWith('BNF-STBY')
             );
             
-            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
-            if (takeoffsInLastHour >= 8) {
+            // Solo flights are exempt from the hourly dispatch limit check —
+            // they are on a dedicated aircraft row and don't contribute to runway congestion.
+            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && !e.flightType?.includes('Solo') && e.startTime > startTime - 1 && e.startTime <= startTime).length;
+            if (!isSoloFlight && takeoffsInLastHour >= 8) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
             }
             
-            const takeoffConflict = nonStbyFlights.some(e => {
+            // Solo flights are exempt from the takeoff separation check.
+            // They are scheduled after all duals and placed on a dedicated aircraft row.
+            // Applying the 5-min gap rule against dual flights would block every available slot.
+            const takeoffConflict = !isSoloFlight && nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
+                // Solo flights already on the board don't count against separation either
+                if (e.flightType === 'Solo') return false;
                 const diffHours = Math.abs(e.startTime - startTime);
                 const diffMinutes = Math.round(diffHours * 60);
                 
