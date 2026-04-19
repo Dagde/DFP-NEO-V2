@@ -163,7 +163,7 @@ interface PersonDropdownProps {
 const PersonDropdown: React.FC<PersonDropdownProps> = ({
   value, displayValue, onChange, allUnits, getLayer2, getNames,
   placeholder, fontSize, color, bold = false, allowSolo, onSoloSelect,
-  dropdownZIndex = 9000,
+  dropdownZIndex = 10000,
   dropdownId = 'person-dropdown-portal',
 }) => {
   const [open, setOpen] = useState(false);
@@ -386,7 +386,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
         position: 'fixed',
         top: dropdownPos.top,
         right: dropdownPos.right,
-        zIndex: 9000,
+        zIndex: 10000,
         display: 'flex',
         width: 400,
         maxHeight: 320,

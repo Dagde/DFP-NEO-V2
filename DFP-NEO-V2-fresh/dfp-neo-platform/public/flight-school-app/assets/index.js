@@ -21820,7 +21820,7 @@ const PersonDropdown = ({
   bold = false,
   allowSolo,
   onSoloSelect,
-  dropdownZIndex = 9e3,
+  dropdownZIndex = 1e4,
   dropdownId = "person-dropdown-portal"
 }) => {
   const [open, setOpen] = reactExports.useState(false);
@@ -22107,7 +22107,7 @@ const EventDropdown = ({
           position: "fixed",
           top: dropdownPos.top,
           right: dropdownPos.right,
-          zIndex: 9e3,
+          zIndex: 1e4,
           display: "flex",
           width: 400,
           maxHeight: 320,
