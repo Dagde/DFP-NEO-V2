@@ -2688,7 +2688,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         
         // CRITICAL FIX: Skip instructor assignment for solo flights
-        const isSoloFlight = syllabusItem.sortieType === 'Solo';
+        // BGF11 and BGF18 are solo flights even if sortieType is not explicitly 'Solo'
+        const isSoloFlight = syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id);
         
         let instructor: Instructor | null = null;
         // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
@@ -2773,9 +2774,32 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
-        // Debug logging removed to reduce console noise
+        // SOLO RESOURCE PLACEMENT FIX:
+        // Solo flights must be placed on the PC-21 row that matches their chronological
+        // position in the day, not the lowest-numbered free aircraft.
+        // Example: if 8 dual flights at 08:xx are on PC-21 3-10, a solo at 09:00 should
+        // start searching from PC-21 9 (not PC-21 1 which is free but too early in the sequence).
+        //
+        // Algorithm: count how many distinct PC-21 lines have at least one flight event
+        // with a start time EARLIER than the solo's start time. Start the search from
+        // (that count + 1) so the solo slots into the next available chronological position.
+        let resourceSearchStart = 1;
+        if (isSoloFlight && type === 'flight') {
+            // Count distinct PC-21 lines that have an event starting before this solo's start time
+            const linesWithEarlierFlight = new Set(
+                generatedEvents
+                    .filter(e =>
+                        e.type === 'flight' &&
+                        e.resourceId.startsWith('PC-21 ') &&
+                        !e.resourceId.startsWith('PC-21 STBY') &&
+                        e.startTime < startTime - 0.001 // strictly earlier (> ~0.06 min tolerance)
+                    )
+                    .map(e => e.resourceId)
+            ).size;
+            resourceSearchStart = linesWithEarlierFlight + 1;
+        }
         
-        for (let i = 1; i <= resourceCount; i++) {
+        for (let i = resourceSearchStart; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
@@ -2825,6 +2849,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
             
+            // SOLO TIME WINDOW: Solo flights (including BGF11/BGF18) must start between 09:00 and 15:00
+            // This is enforced here (after resource assignment) so the search loop skips out-of-window slots
+            if (isSoloFlight) {
+                const SOLO_WINDOW_START = 9;   // 09:00
+                const SOLO_WINDOW_END   = 15;  // 15:00 (latest start; flight may run past 15:00)
+                if (startTime < SOLO_WINDOW_START || startTime > SOLO_WINDOW_END) {
+                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'SOLO_TIME_WINDOW_VIOLATION');
+                    return null;
+                }
+            }
+            
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
@@ -2872,20 +2907,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             }
         }
 
-           // Debug: Log syllabusItem for BGF11 and BGF18
-           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
-               console.log('🔍 SOLO FLIGHT DEBUG:', syllabusItem.id);
-               console.log('  - sortieType:', syllabusItem.sortieType);
-               console.log('  - type:', syllabusItem.type);
-               console.log('  - code:', syllabusItem.code);
-               console.log('  - Full syllabusItem:', JSON.stringify(syllabusItem, null, 2));
-           }
-           // Debug solo flight logic
-           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
-               console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
-           }
         const result = {
-            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+            id: uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
