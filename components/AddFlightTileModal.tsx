@@ -1433,26 +1433,55 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center"
-      style={{ paddingTop: 24, paddingBottom: 24, overflowY: 'auto' }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.70)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: 24,
+        paddingBottom: 24,
+        overflowY: 'auto',
+      }}
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col"
-        style={{ width: '90vw', maxWidth: 720, maxHeight: 'calc(100vh - 48px)', minWidth: 0 }}
+        style={{
+          width: '90vw',
+          maxWidth: 720,
+          maxHeight: 'calc(100vh - 48px)',
+          backgroundColor: '#111827',
+          borderRadius: 12,
+          border: '1px solid #374151',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header — always visible at top */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h2 className="text-xl font-bold text-white">Add Flight Tile</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Header — always visible at top, never clipped */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 24px',
+          borderBottom: '1px solid #374151',
+          flexShrink: 0,
+          backgroundColor: '#1f2937',
+        }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', margin: 0 }}>Add Flight Tile</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+        <div className="p-6 space-y-5" style={{ overflowY: 'auto', flex: 1 }}>
 
           {/* Event Category */}
           {!isDeploy && (
