@@ -2849,16 +2849,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
             
-            // SOLO TIME WINDOW: Solo flights (including BGF11/BGF18) must start between 09:00 and 15:00
-            // This is enforced here (after resource assignment) so the search loop skips out-of-window slots
-            if (isSoloFlight) {
-                const SOLO_WINDOW_START = 9;   // 09:00
-                const SOLO_WINDOW_END   = 15;  // 15:00 (latest start; flight may run past 15:00)
-                if (startTime < SOLO_WINDOW_START || startTime > SOLO_WINDOW_END) {
-                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'SOLO_TIME_WINDOW_VIOLATION');
-                    return null;
-                }
-            }
+            // NOTE: Solo flights are NOT restricted to a fixed 09:00-15:00 window here.
+            // They fly within the same session window as dual flights (flyingStartTime to flyingEndTime).
+            // This ensures solos can be scheduled in night sessions (e.g. 18:30 start) just like duals.
             
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
@@ -3179,13 +3172,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Step 3b: Schedule SOLO flights after all duals are placed
     // At this point generatedEvents has all dual flights, so linesWithEarlierFlight
     // correctly counts how many PC-21 rows are occupied before the solo's start time
+    // Using 'STBY' fallback so unplaced solos are put on STBY rather than dropped entirely
     scheduleList(
         _soloFlightList,
         'flight', 
         false, 
         flyingStartTime, 
         flyingEndTime, 
-        null, 
+        'STBY', 
         false
     );
 
@@ -3600,20 +3594,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 if (flightEndTime > flyingEndTime) continue;
                 if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
 
-                const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
+                const isSoloStby = next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id);
+                // Solo flights on STBY: no instructor (solo PIC), correct flightType
+                const stbyInstructor = isSoloStby ? '' : (findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents) || 'TBA');
                 const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
 
                 generatedEvents.push({
                     id: uuidv4(),
                     type: 'flight',
-                    instructor: instructor || 'TBA',
+                    instructor: stbyInstructor,
                     student: trainee.fullName,
+                    pilot: isSoloStby ? trainee.fullName : (stbyInstructor || 'TBA'),
                     flightNumber: next.id,
                     duration: next.duration,
                     startTime: time,
                     resourceId: `STBY ${stbyLine}`,
                     color: courseColors[trainee.course] || 'bg-gray-500',
-                    flightType: 'Dual',
+                    flightType: isSoloStby ? 'Solo' : 'Dual',
                     locationType: 'Local',
                     origin: school,
                     destination: school,
@@ -4078,7 +4075,20 @@ const App: React.FC = () => {
 
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
-    const [date, setDate] = useState<string>(() => getLocalDateString());
+    const [date, setDate] = useState<string>(() => {
+        // Restore last viewed date from localStorage (persists across hard refresh)
+        try {
+            const saved = localStorage.getItem('dfp_last_viewed_date');
+            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+                // Only restore if within 7 days of today (avoid stale dates)
+                const savedDate = new Date(saved + 'T00:00:00Z');
+                const today = new Date();
+                const diffDays = (savedDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+                if (diffDays >= -7 && diffDays <= 7) return saved;
+            }
+        } catch (e) { /* ignore */ }
+        return getLocalDateString();
+    });
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
@@ -5166,9 +5176,19 @@ const App: React.FC = () => {
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
     const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
+        // Restore build date from localStorage if it's in the future (persists across hard refresh)
+        try {
+            const saved = localStorage.getItem('dfp_build_date');
+            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0];
+                // Only restore if saved date is tomorrow or later (don't restore past dates)
+                if (saved > todayStr) return saved;
+            }
+        } catch (e) { /* ignore */ }
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        return getLocalDateString(tomorrow);
+        return tomorrow.toISOString().split('T')[0];
     });
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
@@ -6087,6 +6107,11 @@ const App: React.FC = () => {
         localStorage.setItem('timezoneOffset', timezoneOffset.toString());
     }, [timezoneOffset]);
 
+    // Save last viewed date to localStorage (restores after hard refresh)
+    useEffect(() => {
+        try { localStorage.setItem('dfp_last_viewed_date', date); } catch (e) { /* ignore */ }
+    }, [date]);
+
     // Update current date when timezone changes
     useEffect(() => {
         const currentDateStr = getLocalDateString();
@@ -6099,16 +6124,25 @@ const App: React.FC = () => {
     // FTD available count is now managed by user input in PrioritiesView
     // Default initialization is handled in useState declaration
 
+    // Save buildDfpDate to localStorage whenever it changes (restores after hard refresh)
+    useEffect(() => {
+        try { localStorage.setItem('dfp_build_date', buildDfpDate); } catch (e) { /* ignore */ }
+    }, [buildDfpDate]);
+
     // Auto-update buildDfpDate to tomorrow's date on mount and daily
+    // GUARD: Only advance to tomorrow if buildDfpDate is today or in the past.
+    // If the user has set a future build date (e.g. day after tomorrow), preserve it.
     useEffect(() => {
         const updateBuildDate = () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowStr = getLocalDateString(tomorrow);
+            const todayStr = getLocalDateString();
             
-            // Only update if the date has actually changed
-            if (buildDfpDate !== tomorrowStr) {
-                console.log('📅 Updating build DFP date from', buildDfpDate, 'to', tomorrowStr);
+            // Only reset to tomorrow if buildDfpDate is today or PAST today
+            // (i.e., don't override a future build date the user intentionally set)
+            if (buildDfpDate <= todayStr) {
+                console.log('Advancing build DFP date from', buildDfpDate, 'to', tomorrowStr, '(was past/today)');
                 setBuildDfpDate(tomorrowStr);
             }
         };
