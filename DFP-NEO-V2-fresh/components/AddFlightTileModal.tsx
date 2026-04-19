@@ -1433,12 +1433,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-4"
+      className="fixed inset-0 bg-black/70 z-50 overflow-y-auto"
+      style={{ paddingTop: 24, paddingBottom: 24 }}
       onClick={onClose}
     >
       <div
         className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col"
-        style={{ width: '90vw', maxWidth: 720, maxHeight: '95vh' }}
+        style={{ width: '90vw', maxWidth: 720, margin: '0 auto' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -1451,7 +1452,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5" style={{ minHeight: 0 }}>
+        <div className="p-6 space-y-5">
 
           {/* Event Category */}
           {!isDeploy && (

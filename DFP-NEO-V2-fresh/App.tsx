@@ -6598,10 +6598,17 @@ const App: React.FC = () => {
         for (const event of validEvents) {
             // Ground events (mass briefs) do not create personnel conflicts with flight/ftd/cpt events.
             // Trainees can attend a ground brief AND fly on the same day — these are not double-bookings.
-            const targetIsGround = targetEvent.type === 'ground';
-            const eventIsGround = event.type === 'ground';
+            // EXCEPTION: Duty Sup and TWR DI events are treated as flight events for conflict purposes.
+            const isDutySup = (e: { flightNumber?: string; resourceId?: string }) =>
+                e.flightNumber === 'Duty Sup' || e.flightNumber === 'Night Duty Sup' || e.resourceId === 'Duty Sup';
+            const isTwrDi = (e: { eventCategory?: string; resourceId?: string }) =>
+                (e as any).eventCategory === 'twr_di' || e.resourceId === 'TWR DI';
+            const targetEffectivelyFlight = targetEvent.type === 'flight' || targetEvent.type === 'ftd' || targetEvent.type === 'cpt' || isDutySup(targetEvent) || isTwrDi(targetEvent as any);
+            const eventEffectivelyFlight = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt' || isDutySup(event) || isTwrDi(event as any);
+            const targetIsGround = !targetEffectivelyFlight;
+            const eventIsGround = !eventEffectivelyFlight;
             if (targetIsGround !== eventIsGround) {
-                // One is ground, other is flight/ftd/cpt — skip personnel conflict for this pair
+                // One is pure ground (mass brief), other is flight/ftd/cpt/dutysup/twrdi — skip personnel conflict
                 continue;
             }
 

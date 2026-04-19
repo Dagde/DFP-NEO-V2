@@ -8224,15 +8224,15 @@ const ScheduleView = ({
   }, [zoomLevel]);
   const findConflict = reactExports.useCallback((eventsToCheck, existingEvents) => {
     for (const eventToCheck of eventsToCheck) {
+      if (eventToCheck.resourceId?.startsWith("STBY") || eventToCheck.type === "deployment") continue;
       const s1 = syllabusDetails.find((d) => d.id === eventToCheck.flightNumber);
-      if (!s1) continue;
-      const e1StartWithPre = eventToCheck.startTime - (s1.preFlightTime || 0);
-      const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1.postFlightTime || 0);
+      const e1StartWithPre = eventToCheck.startTime - (s1?.preFlightTime || 0);
+      const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1?.postFlightTime || 0);
       for (const existingEvent of existingEvents) {
+        if (existingEvent.resourceId?.startsWith("STBY") || existingEvent.type === "deployment") continue;
         const s2 = syllabusDetails.find((d) => d.id === existingEvent.flightNumber);
-        if (!s2) continue;
-        const e2StartWithPre = existingEvent.startTime - (s2.preFlightTime || 0);
-        const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2.postFlightTime || 0);
+        const e2StartWithPre = existingEvent.startTime - (s2?.preFlightTime || 0);
+        const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2?.postFlightTime || 0);
         if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
           const personnelToCheck = getPersonnel$6(eventToCheck);
           const existingPersonnel = getPersonnel$6(existingEvent);
@@ -8501,11 +8501,11 @@ const ScheduleView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 602,
+          lineNumber: 606,
           columnNumber: 21
         }, void 0) }, i, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 601,
+          lineNumber: 605,
           columnNumber: 17
         }, void 0)
       );
@@ -8517,11 +8517,11 @@ const ScheduleView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 614,
+          lineNumber: 618,
           columnNumber: 21
         }, void 0) }, "fl-label", false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 613,
+          lineNumber: 617,
           columnNumber: 17
         }, void 0)
       );
@@ -8531,11 +8531,11 @@ const ScheduleView = ({
       markers.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 623,
+          lineNumber: 627,
           columnNumber: 21
         }, void 0) }, "ll-label", false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 622,
+          lineNumber: 626,
           columnNumber: 17
         }, void 0)
       );
@@ -8548,11 +8548,11 @@ const ScheduleView = ({
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-full bg-gray-700/50" }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 636,
+          lineNumber: 640,
           columnNumber: 21
         }, void 0) }, `v-${i}`, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 635,
+          lineNumber: 639,
           columnNumber: 17
         }, void 0)
       );
@@ -8560,11 +8560,11 @@ const ScheduleView = ({
         lines.push(
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5 + 0.5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-full bg-gray-700/25" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 642,
+            lineNumber: 646,
             columnNumber: 25
           }, void 0) }, `v-${i}-30`, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 641,
+            lineNumber: 645,
             columnNumber: 21
           }, void 0)
         );
@@ -8574,7 +8574,7 @@ const ScheduleView = ({
       lines.push(
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$5, height: "1px" } }, `h-${i}`, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 649,
+          lineNumber: 653,
           columnNumber: 17
         }, void 0)
       );
@@ -8598,7 +8598,7 @@ const ScheduleView = ({
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 662,
+              lineNumber: 666,
               columnNumber: 21
             },
             void 0
@@ -8623,7 +8623,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 681,
+          lineNumber: 685,
           columnNumber: 21
         },
         void 0
@@ -8638,14 +8638,14 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 687,
+          lineNumber: 691,
           columnNumber: 22
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 679,
+      lineNumber: 683,
       columnNumber: 13
     }, void 0);
   };
@@ -8666,7 +8666,7 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 703,
+            lineNumber: 707,
             columnNumber: 17
           },
           void 0
@@ -8687,7 +8687,7 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 714,
+            lineNumber: 718,
             columnNumber: 17
           },
           void 0
@@ -8696,7 +8696,7 @@ const ScheduleView = ({
     }
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: shades }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 721,
+      lineNumber: 725,
       columnNumber: 16
     }, void 0);
   };
@@ -8721,7 +8721,7 @@ const ScheduleView = ({
         children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-0.5 h-full bg-white animate-pulse" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 752,
+            lineNumber: 756,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8738,7 +8738,7 @@ const ScheduleView = ({
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 753,
+              lineNumber: 757,
               columnNumber: 17
             },
             void 0
@@ -8749,7 +8749,7 @@ const ScheduleView = ({
       true,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-        lineNumber: 748,
+        lineNumber: 752,
         columnNumber: 13
       },
       void 0
@@ -8782,7 +8782,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 794,
+          lineNumber: 798,
           columnNumber: 17
         },
         void 0
@@ -8797,7 +8797,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 803,
+          lineNumber: 807,
           columnNumber: 17
         },
         void 0
@@ -8812,7 +8812,7 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 809,
+          lineNumber: 813,
           columnNumber: 17
         },
         void 0
@@ -8829,12 +8829,12 @@ const ScheduleView = ({
             "Flights starting in this hour: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: flightCount }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 823,
+              lineNumber: 827,
               columnNumber: 56
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 822,
+            lineNumber: 826,
             columnNumber: 21
           }, void 0)
         },
@@ -8842,14 +8842,14 @@ const ScheduleView = ({
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 815,
+          lineNumber: 819,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 792,
+      lineNumber: 796,
       columnNumber: 13
     }, void 0);
   };
@@ -8921,7 +8921,7 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 860,
+            lineNumber: 864,
             columnNumber: 21
           },
           void 0
@@ -8944,41 +8944,41 @@ const ScheduleView = ({
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 ${isNeoBuild ? "neo-build-date-indicator" : ""}`, style: { height: "100%", width: "100%" }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(-1), className: "text-gray-400 hover:text-white transition-colors p-0.5", children: "←" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 924,
+              lineNumber: 928,
               columnNumber: 29
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 927,
+              lineNumber: 931,
               columnNumber: 29
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onDateChange(1), className: "text-gray-400 hover:text-white transition-colors p-0.5", children: "→" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-              lineNumber: 928,
+              lineNumber: 932,
               columnNumber: 29
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 923,
+            lineNumber: 927,
             columnNumber: 25
           }, void 0),
           isNeoBuild && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "neo-build-label", children: "NEO Build" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 933,
+            lineNumber: 937,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 922,
+          lineNumber: 926,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 921,
+          lineNumber: 925,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 939,
+          lineNumber: 943,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -8997,13 +8997,13 @@ const ScheduleView = ({
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 945,
+            lineNumber: 949,
             columnNumber: 21
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-          lineNumber: 944,
+          lineNumber: 948,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -9040,7 +9040,7 @@ const ScheduleView = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                  lineNumber: 975,
+                  lineNumber: 979,
                   columnNumber: 25
                 },
                 void 0
@@ -9059,7 +9059,7 @@ const ScheduleView = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                  lineNumber: 993,
+                  lineNumber: 997,
                   columnNumber: 25
                 },
                 void 0
@@ -9092,7 +9092,7 @@ const ScheduleView = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                    lineNumber: 1004,
+                    lineNumber: 1008,
                     columnNumber: 29
                   },
                   void 0
@@ -9111,7 +9111,7 @@ const ScheduleView = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                    lineNumber: 1021,
+                    lineNumber: 1025,
                     columnNumber: 29
                   },
                   void 0
@@ -9130,14 +9130,14 @@ const ScheduleView = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                    lineNumber: 1029,
+                    lineNumber: 1033,
                     columnNumber: 30
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                lineNumber: 1003,
+                lineNumber: 1007,
                 columnNumber: 25
               }, void 0),
               selectionRect && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -9155,7 +9155,7 @@ const ScheduleView = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-                  lineNumber: 1042,
+                  lineNumber: 1046,
                   columnNumber: 25
                 },
                 void 0
@@ -9166,7 +9166,7 @@ const ScheduleView = ({
           true,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-            lineNumber: 958,
+            lineNumber: 962,
             columnNumber: 17
           },
           void 0
@@ -9177,13 +9177,13 @@ const ScheduleView = ({
     true,
     {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-      lineNumber: 911,
+      lineNumber: 915,
       columnNumber: 13
     },
     void 0
   ) }, void 0, false, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/ScheduleView.tsx",
-    lineNumber: 910,
+    lineNumber: 914,
     columnNumber: 9
   }, void 0);
 };
@@ -23502,44 +23502,45 @@ const AddFlightTileModal = ({
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     "div",
     {
-      className: "fixed inset-0 bg-black/70 z-50 flex items-start justify-center overflow-y-auto py-4",
+      className: "fixed inset-0 bg-black/70 z-50 overflow-y-auto",
+      style: { paddingTop: 24, paddingBottom: 24 },
       onClick: onClose,
       children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "div",
         {
           className: "bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col",
-          style: { width: "90vw", maxWidth: 720, maxHeight: "95vh" },
+          style: { width: "90vw", maxWidth: 720, margin: "0 auto" },
           onClick: (e) => e.stopPropagation(),
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: "Add Flight Tile" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1446,
+                lineNumber: 1447,
                 columnNumber: 11
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "text-gray-400 hover:text-white transition-colors", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-6 h-6", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1449,
+                lineNumber: 1450,
                 columnNumber: 15
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1448,
+                lineNumber: 1449,
                 columnNumber: 13
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1447,
+                lineNumber: 1448,
                 columnNumber: 11
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 1445,
+              lineNumber: 1446,
               columnNumber: 9
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-6 space-y-5", style: { minHeight: 0 }, children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-5", children: [
               !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Event Category" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1459,
+                  lineNumber: 1460,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-wrap gap-2", children: Object.entries(categoryLabels).map(([key, label]) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23554,24 +23555,24 @@ const AddFlightTileModal = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1462,
+                    lineNumber: 1463,
                     columnNumber: 19
                   },
                   void 0
                 )) }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1460,
+                  lineNumber: 1461,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1458,
+                lineNumber: 1459,
                 columnNumber: 13
               }, void 0),
               !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Flight Tile" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1481,
+                  lineNumber: 1482,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "0 2px" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23622,23 +23623,23 @@ const AddFlightTileModal = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1483,
+                    lineNumber: 1484,
                     columnNumber: 17
                   },
                   void 0
                 ) }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1482,
+                  lineNumber: 1483,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-500 mt-2", children: "Click any field on the tile to edit. Names open a cascading dropdown. Duration & Event are in the top-right. Click SOLO badge to switch to Dual." }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1526,
+                  lineNumber: 1527,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1480,
+                lineNumber: 1481,
                 columnNumber: 13
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-700 pt-4", children: [
@@ -23658,32 +23659,32 @@ const AddFlightTileModal = ({
                     false,
                     {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1535,
+                      lineNumber: 1536,
                       columnNumber: 15
                     },
                     void 0
                   ),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-white", children: "Add Deployment Tile" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1541,
+                    lineNumber: 1542,
                     columnNumber: 15
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1534,
+                  lineNumber: 1535,
                   columnNumber: 13
                 }, void 0),
                 isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700/50 rounded-lg p-3 mb-4 border border-gray-600", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-semibold text-white mb-3", children: "Deployment Details" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1546,
+                    lineNumber: 1547,
                     columnNumber: 17
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-3", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "Start Date" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1549,
+                        lineNumber: 1550,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23698,20 +23699,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1550,
+                          lineNumber: 1551,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1548,
+                      lineNumber: 1549,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "Start Time (24hr)" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1554,
+                        lineNumber: 1555,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23726,20 +23727,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1555,
+                          lineNumber: 1556,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1553,
+                      lineNumber: 1554,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "End Date" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1559,
+                        lineNumber: 1560,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23754,20 +23755,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1560,
+                          lineNumber: 1561,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1558,
+                      lineNumber: 1559,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "End Time (24hr)" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1564,
+                        lineNumber: 1565,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23782,20 +23783,20 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1565,
+                          lineNumber: 1566,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1563,
+                      lineNumber: 1564,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "col-span-2", children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs text-gray-400 mb-1", children: "Aircraft Count" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1569,
+                        lineNumber: 1570,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23812,31 +23813,31 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1570,
+                          lineNumber: 1571,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1568,
+                      lineNumber: 1569,
                       columnNumber: 19
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1547,
+                    lineNumber: 1548,
                     columnNumber: 17
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1545,
+                  lineNumber: 1546,
                   columnNumber: 15
                 }, void 0),
                 !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4 mb-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Flight Type" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1583,
+                      lineNumber: 1584,
                       columnNumber: 21
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-2", children: [
@@ -23852,7 +23853,7 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1585,
+                          lineNumber: 1586,
                           columnNumber: 23
                         },
                         void 0
@@ -23869,30 +23870,30 @@ const AddFlightTileModal = ({
                         false,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1592,
+                          lineNumber: 1593,
                           columnNumber: 23
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1584,
+                      lineNumber: 1585,
                       columnNumber: 21
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1582,
+                    lineNumber: 1583,
                     columnNumber: 19
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1581,
+                    lineNumber: 1582,
                     columnNumber: 17
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1604,
+                        lineNumber: 1605,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23904,12 +23905,12 @@ const AddFlightTileModal = ({
                           children: [
                             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Local", children: "Local" }, void 0, false, {
                               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                              lineNumber: 1610,
+                              lineNumber: 1611,
                               columnNumber: 23
                             }, void 0),
                             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Land Away", children: "Land Away" }, void 0, false, {
                               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                              lineNumber: 1611,
+                              lineNumber: 1612,
                               columnNumber: 23
                             }, void 0)
                           ]
@@ -23918,41 +23919,41 @@ const AddFlightTileModal = ({
                         true,
                         {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                          lineNumber: 1605,
+                          lineNumber: 1606,
                           columnNumber: 21
                         },
                         void 0
                       )
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1603,
+                      lineNumber: 1604,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1615,
+                        lineNumber: 1616,
                         columnNumber: 21
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1616,
+                        lineNumber: 1617,
                         columnNumber: 21
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1614,
+                      lineNumber: 1615,
                       columnNumber: 19
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1602,
+                    lineNumber: 1603,
                     columnNumber: 17
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                      lineNumber: 1622,
+                      lineNumber: 1623,
                       columnNumber: 19
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -23968,24 +23969,24 @@ const AddFlightTileModal = ({
                       false,
                       {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                        lineNumber: 1623,
+                        lineNumber: 1624,
                         columnNumber: 19
                       },
                       void 0
                     )
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                    lineNumber: 1621,
+                    lineNumber: 1622,
                     columnNumber: 17
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1580,
+                  lineNumber: 1581,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1533,
+                lineNumber: 1534,
                 columnNumber: 11
               }, void 0),
               errors.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-red-900/30 border border-red-700 rounded-lg p-3", children: errors.map((e, i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-red-300 text-sm", children: [
@@ -23993,16 +23994,16 @@ const AddFlightTileModal = ({
                 e
               ] }, i, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1638,
+                lineNumber: 1639,
                 columnNumber: 37
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                lineNumber: 1637,
+                lineNumber: 1638,
                 columnNumber: 13
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 1454,
+              lineNumber: 1455,
               columnNumber: 9
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-[1px] px-6 py-4 border-t border-gray-700 flex-shrink-0", children: [
@@ -24017,7 +24018,7 @@ const AddFlightTileModal = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1645,
+                  lineNumber: 1646,
                   columnNumber: 11
                 },
                 void 0
@@ -24033,14 +24034,14 @@ const AddFlightTileModal = ({
                 false,
                 {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-                  lineNumber: 1651,
+                  lineNumber: 1652,
                   columnNumber: 11
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-              lineNumber: 1644,
+              lineNumber: 1645,
               columnNumber: 9
             }, void 0)
           ]
@@ -24049,7 +24050,7 @@ const AddFlightTileModal = ({
         true,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
-          lineNumber: 1439,
+          lineNumber: 1440,
           columnNumber: 7
         },
         void 0
@@ -99303,8 +99304,12 @@ ${"=".repeat(60)}`);
       console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
     }
     for (const event of validEvents) {
-      const targetIsGround = targetEvent.type === "ground";
-      const eventIsGround = event.type === "ground";
+      const isDutySup = (e) => e.flightNumber === "Duty Sup" || e.flightNumber === "Night Duty Sup" || e.resourceId === "Duty Sup";
+      const isTwrDi = (e) => e.eventCategory === "twr_di" || e.resourceId === "TWR DI";
+      const targetEffectivelyFlight = targetEvent.type === "flight" || targetEvent.type === "ftd" || targetEvent.type === "cpt" || isDutySup(targetEvent) || isTwrDi(targetEvent);
+      const eventEffectivelyFlight = event.type === "flight" || event.type === "ftd" || event.type === "cpt" || isDutySup(event) || isTwrDi(event);
+      const targetIsGround = !targetEffectivelyFlight;
+      const eventIsGround = !eventEffectivelyFlight;
       if (targetIsGround !== eventIsGround) {
         continue;
       }
@@ -103020,7 +103025,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11259,
+            lineNumber: 11266,
             columnNumber: 24
           },
           void 0
@@ -103058,7 +103063,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11415,
+            lineNumber: 11422,
             columnNumber: 24
           },
           void 0
@@ -103118,7 +103123,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11484,
+              lineNumber: 11491,
               columnNumber: 28
             },
             void 0
@@ -103173,7 +103178,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11537,
+            lineNumber: 11544,
             columnNumber: 24
           },
           void 0
@@ -103218,7 +103223,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11555,
+            lineNumber: 11562,
             columnNumber: 24
           },
           void 0
@@ -103351,7 +103356,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11595,
+            lineNumber: 11602,
             columnNumber: 24
           },
           void 0
@@ -103470,7 +103475,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11729,
+            lineNumber: 11736,
             columnNumber: 24
           },
           void 0
@@ -103588,7 +103593,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11862,
+              lineNumber: 11869,
               columnNumber: 28
             },
             void 0
@@ -103608,7 +103613,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11990,
+              lineNumber: 11997,
               columnNumber: 28
             },
             void 0
@@ -103674,7 +103679,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11998,
+            lineNumber: 12005,
             columnNumber: 24
           },
           void 0
@@ -103867,7 +103872,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12054,
+            lineNumber: 12061,
             columnNumber: 24
           },
           void 0
@@ -103888,7 +103893,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12244,
+            lineNumber: 12251,
             columnNumber: 24
           },
           void 0
@@ -103920,7 +103925,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12254,
+            lineNumber: 12261,
             columnNumber: 24
           },
           void 0
@@ -103938,7 +103943,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12275,
+            lineNumber: 12282,
             columnNumber: 24
           },
           void 0
@@ -103970,7 +103975,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12282,
+            lineNumber: 12289,
             columnNumber: 25
           },
           void 0
@@ -104101,7 +104106,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12309,
+            lineNumber: 12316,
             columnNumber: 24
           },
           void 0
@@ -104125,7 +104130,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12450,
+            lineNumber: 12457,
             columnNumber: 24
           },
           void 0
@@ -104204,7 +104209,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12465,
+            lineNumber: 12472,
             columnNumber: 24
           },
           void 0
@@ -104287,7 +104292,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12540,
+            lineNumber: 12547,
             columnNumber: 24
           },
           void 0
@@ -104325,7 +104330,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12620,
+            lineNumber: 12627,
             columnNumber: 28
           },
           void 0
@@ -104346,7 +104351,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12647,
+            lineNumber: 12654,
             columnNumber: 24
           },
           void 0
@@ -104388,7 +104393,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               false,
               {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12687,
+                lineNumber: 12694,
                 columnNumber: 32
               },
               void 0
@@ -104397,7 +104402,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Error: Could not load trainee LMP." }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12698,
+          lineNumber: 12705,
           columnNumber: 24
         }, void 0);
       case "Currency":
@@ -104416,7 +104421,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12701,
+              lineNumber: 12708,
               columnNumber: 28
             },
             void 0
@@ -104492,7 +104497,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12712,
+            lineNumber: 12719,
             columnNumber: 24
           },
           void 0
@@ -104511,7 +104516,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12778,
+            lineNumber: 12785,
             columnNumber: 24
           },
           void 0
@@ -104641,7 +104646,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12806,
+              lineNumber: 12813,
               columnNumber: 28
             },
             void 0
@@ -104655,7 +104660,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12940,
+            lineNumber: 12947,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -104663,7 +104668,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12941,
+            lineNumber: 12948,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -104671,7 +104676,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             eventForPt051 ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12942,
+            lineNumber: 12949,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -104685,14 +104690,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12943,
+              lineNumber: 12950,
               columnNumber: 21
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12939,
+          lineNumber: 12946,
           columnNumber: 24
         }, void 0);
       case "PostFlight":
@@ -104821,7 +104826,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12952,
+              lineNumber: 12959,
               columnNumber: 28
             },
             void 0
@@ -104849,7 +104854,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13099,
+              lineNumber: 13106,
               columnNumber: 28
             },
             void 0
@@ -104859,13 +104864,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       case "AUTH":
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13116,
+          lineNumber: 13123,
           columnNumber: 24
         }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13118,
+          lineNumber: 13125,
           columnNumber: 24
         }, void 0);
     }
@@ -104907,7 +104912,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SystemFreezeBanner, {}, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13172,
+      lineNumber: 13179,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -104921,7 +104926,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13173,
+        lineNumber: 13180,
         columnNumber: 9
       },
       void 0
@@ -104965,7 +104970,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13179,
+          lineNumber: 13186,
           columnNumber: 13
         },
         void 0
@@ -105003,19 +105008,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13212,
+            lineNumber: 13219,
             columnNumber: 49
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13240,
+          lineNumber: 13247,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13211,
+        lineNumber: 13218,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -105036,14 +105041,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13244,
+          lineNumber: 13251,
           columnNumber: 13
         },
         void 0
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Magnifier, { isEnabled: isMagnifierEnabled }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13256,
+        lineNumber: 13263,
         columnNumber: 36
       }, void 0),
       selectedEvent && isAddingTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -105076,7 +105081,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13259,
+          lineNumber: 13266,
           columnNumber: 17
         },
         void 0
@@ -105206,7 +105211,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13285,
+          lineNumber: 13292,
           columnNumber: 17
         },
         void 0
@@ -105214,7 +105219,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       conflict && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13425,
+        lineNumber: 13432,
         columnNumber: 26
       }, void 0),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -105229,7 +105234,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13427,
+          lineNumber: 13434,
           columnNumber: 17
         },
         void 0
@@ -105237,11 +105242,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowNeoChoiceModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Resolution Options" }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13438,
+          lineNumber: 13445,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13437,
+          lineNumber: 13444,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 text-center", children: [
@@ -105249,13 +105254,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             "NEO has found multiple ways to resolve the conflict for ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: neoProblemTileForFlyout?.event.flightNumber }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13441,
+              lineNumber: 13448,
               columnNumber: 114
             }, void 0),
             ". Please choose an option:"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13441,
+            lineNumber: 13448,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-4 pt-4", children: [
@@ -105267,37 +105272,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Time Shift" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13447,
-                    columnNumber: 37
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
-                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13448,
-                    columnNumber: 37
-                  }, void 0)
-                ]
-              },
-              void 0,
-              true,
-              {
-                fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13443,
-                columnNumber: 33
-              },
-              void 0
-            ),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-              "button",
-              {
-                onClick: handleChooseCrewChange,
-                className: "px-6 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors font-semibold shadow-lg w-1/2",
-                children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
-                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
                     lineNumber: 13454,
                     columnNumber: 37
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
                     lineNumber: 13455,
                     columnNumber: 37
@@ -105312,34 +105290,61 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 columnNumber: 33
               },
               void 0
+            ),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+              "button",
+              {
+                onClick: handleChooseCrewChange,
+                className: "px-6 py-3 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors font-semibold shadow-lg w-1/2",
+                children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
+                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
+                    lineNumber: 13461,
+                    columnNumber: 37
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
+                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
+                    lineNumber: 13462,
+                    columnNumber: 37
+                  }, void 0)
+                ]
+              },
+              void 0,
+              true,
+              {
+                fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
+                lineNumber: 13457,
+                columnNumber: 33
+              },
+              void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13442,
+            lineNumber: 13449,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13440,
+          lineNumber: 13447,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13436,
+        lineNumber: 13443,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13435,
+        lineNumber: 13442,
         columnNumber: 17
       }, void 0),
       showTimeOnlyRemedyConfirm && timeOnlyRemedyForConfirmation && neoProblemTileForFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: handleCancelTimeOnlyRemedy, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Time Change" }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13466,
+          lineNumber: 13473,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13465,
+          lineNumber: 13472,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: [
@@ -105347,89 +105352,89 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Current Start Time:" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13471,
+                lineNumber: 13478,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-mono font-bold", children: formatDecimalHourToString(neoProblemTileForFlyout.event.startTime) }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13472,
+                lineNumber: 13479,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13470,
+              lineNumber: 13477,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13475,
+                lineNumber: 13482,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13476,
+                lineNumber: 13483,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13474,
+              lineNumber: 13481,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13469,
+            lineNumber: 13476,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center pt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-2 text-sm", children: "Proposed New Start Time" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13487,
+              lineNumber: 13494,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl font-bold text-green-400 font-mono tracking-wider", children: formatDecimalHourToString(timeOnlyRemedyForConfirmation.newStartTime) }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13488,
+              lineNumber: 13495,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13486,
+            lineNumber: 13493,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13468,
+          lineNumber: 13475,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelTimeOnlyRemedy, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13494,
+            lineNumber: 13501,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSwitchToCrewChange, className: "px-4 py-2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors text-sm font-semibold", children: "Change Crew Instead" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13495,
+            lineNumber: 13502,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleConfirmTimeOnlyRemedy, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Accept Time Change" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13496,
+            lineNumber: 13503,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13493,
+          lineNumber: 13500,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13464,
+        lineNumber: 13471,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13463,
+        lineNumber: 13470,
         columnNumber: 18
       }, void 0),
       showDutyWarning && dutyWarningRemedy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -105444,49 +105449,49 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13502,
+          lineNumber: 13509,
           columnNumber: 17
         },
         void 0
       ),
       showInfoNotification && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13511,
+        lineNumber: 13518,
         columnNumber: 38
       }, void 0),
       showNightFlyingInfo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13512,
+        lineNumber: 13519,
         columnNumber: 37
       }, void 0),
       isBuildingDfp && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13513,
+        lineNumber: 13520,
         columnNumber: 31
       }, void 0),
       showDateWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13514,
+        lineNumber: 13521,
         columnNumber: 33
       }, void 0),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13515,
+        lineNumber: 13522,
         columnNumber: 56
       }, void 0),
       showPublishConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13516,
+        lineNumber: 13523,
         columnNumber: 36
       }, void 0),
       isLocalityChangeVisible && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LocalityChangeFlyout, { locality: school }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13517,
+        lineNumber: 13524,
         columnNumber: 41
       }, void 0),
       successMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SuccessNotification, { message: successMessage, onClose: () => setSuccessMessage(null) }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13518,
+        lineNumber: 13525,
         columnNumber: 32
       }, void 0),
       showCurrencySetup && selectedPersonForCurrency && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -105507,7 +105512,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13520,
+          lineNumber: 13527,
           columnNumber: 17
         },
         void 0
@@ -105523,7 +105528,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13536,
+          lineNumber: 13543,
           columnNumber: 17
         },
         void 0
@@ -105543,7 +105548,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13543,
+          lineNumber: 13550,
           columnNumber: 17
         },
         void 0
@@ -105590,7 +105595,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13554,
+          lineNumber: 13561,
           columnNumber: 17
         },
         void 0
@@ -105609,7 +105614,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13592,
+          lineNumber: 13599,
           columnNumber: 17
         },
         void 0
@@ -105628,7 +105633,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13602,
+          lineNumber: 13609,
           columnNumber: 17
         },
         void 0
@@ -105684,7 +105689,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13612,
+          lineNumber: 13619,
           columnNumber: 17
         },
         void 0
@@ -105706,7 +105711,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13665,
+          lineNumber: 13672,
           columnNumber: 17
         },
         void 0
@@ -105729,7 +105734,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13680,
+          lineNumber: 13687,
           columnNumber: 17
         },
         void 0
@@ -105745,44 +105750,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13696,
+          lineNumber: 13703,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13178,
+      lineNumber: 13185,
       columnNumber: 9
     }, void 0),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoginModal, { onLoginSuccess: handleLoginSuccess }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13706,
+      lineNumber: 13713,
       columnNumber: 13
     }, void 0),
     authLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13713,
+        lineNumber: 13720,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." }, void 0, false, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13714,
+        lineNumber: 13721,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13712,
+      lineNumber: 13719,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13711,
+      lineNumber: 13718,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/App.tsx",
-    lineNumber: 13171,
+    lineNumber: 13178,
     columnNumber: 5
   }, void 0);
 };

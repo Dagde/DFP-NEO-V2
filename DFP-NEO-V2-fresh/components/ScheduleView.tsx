@@ -265,18 +265,22 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     const findConflict = useCallback((eventsToCheck: ScheduleEvent[], existingEvents: ScheduleEvent[]): { conflictingEvent: ScheduleEvent, personName: string } | null => {
         for (const eventToCheck of eventsToCheck) {
-            const s1 = syllabusDetails.find(d => d.id === eventToCheck.flightNumber);
-            if (!s1) continue;
+            // Skip STBY and deployment events
+            if (eventToCheck.resourceId?.startsWith('STBY') || eventToCheck.type === 'deployment') continue;
 
-            const e1StartWithPre = eventToCheck.startTime - (s1.preFlightTime || 0);
-            const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1.postFlightTime || 0);
+            const s1 = syllabusDetails.find(d => d.id === eventToCheck.flightNumber);
+            // Use syllabus pre/post times if available, otherwise treat as flight event (Duty Sup, TWR DI etc.)
+            const e1StartWithPre = eventToCheck.startTime - (s1?.preFlightTime || 0);
+            const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1?.postFlightTime || 0);
 
             for (const existingEvent of existingEvents) {
-                const s2 = syllabusDetails.find(d => d.id === existingEvent.flightNumber);
-                if (!s2) continue;
+                // Skip STBY and deployment events
+                if (existingEvent.resourceId?.startsWith('STBY') || existingEvent.type === 'deployment') continue;
 
-                const e2StartWithPre = existingEvent.startTime - (s2.preFlightTime || 0);
-                const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2.postFlightTime || 0);
+                const s2 = syllabusDetails.find(d => d.id === existingEvent.flightNumber);
+                // Use syllabus pre/post times if available, otherwise use raw start/end
+                const e2StartWithPre = existingEvent.startTime - (s2?.preFlightTime || 0);
+                const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2?.postFlightTime || 0);
                 
                 if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
                     const personnelToCheck = getPersonnel(eventToCheck);
