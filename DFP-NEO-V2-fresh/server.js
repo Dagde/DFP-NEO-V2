@@ -2371,6 +2371,40 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
   }
 });
 
+// GET /api/debug/solo-syllabus - Show solo syllabus items from DB (BGF11, BGF18 + sortieType='Solo')
+app.get('/api/debug/solo-syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, "eventDescription", "sortieType", "type", "isActive"
+      FROM "SyllabusItem"
+      WHERE "sortieType" = 'Solo'
+         OR code IN ('BGF11', 'BGF18')
+         OR "eventDescription" ILIKE '%solo%'
+      ORDER BY code
+    `);
+    res.json({ count: rows.length, items: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/snapshots - Show all saved DailySnapshot records (id, date, event count, savedAt)
+app.get('/api/debug/snapshots', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, date, "savedAt", "savedBy",
+             jsonb_array_length("scheduleEvents") AS "eventCount"
+      FROM "DailySnapshot"
+      ORDER BY date DESC
+    `);
+    res.json({ count: rows.length, snapshots: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
 // SYLLABUS API
 // ============================================================

@@ -2733,6 +2733,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Solo time window: start time must be between 09:00 and 15:00 (inclusive)
         // The flight itself may finish after 15:00 — only the START is constrained
         if (isSoloFlight && (startTime < 9 || startTime > 15)) {
+            // Only log the boundary rejections (first slot attempted) to avoid noise
+            if (startTime < 9 && Math.abs(startTime - flyingStartTime) < 0.1) {
+                console.log(`🎯 [SOLO WINDOW] ${trainee.fullName} ${syllabusItem.id}: flyingStart=${_fmtT(flyingStartTime)} < 09:00, will scan forward to 09:00`);
+            }
             return null;
         }
         
@@ -3162,20 +3166,42 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // scheduleList with 5-min stagger. Grouped in batches of max 4 so solos cluster
     // consecutively (Group 1 = first 4, Group 2 = next 4 at a later time slot, etc.)
     setProgress({ message: 'Scheduling Solo Flights...', percentage: 48 });
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`🎯 [SOLO DIAG] nextEventLists.solo.length = ${nextEventLists.solo.length}`);
+    console.log(`🎯 [SOLO DIAG] flyingStartTime=${flyingStartTime} flyingEndTime=${flyingEndTime}`);
     if (nextEventLists.solo.length > 0) {
+        nextEventLists.solo.forEach(t => {
+            const { next } = traineeNextEventMap.get(t.fullName)!;
+            console.log(`🎯 [SOLO DIAG] trainee=${t.fullName} next.id=${next?.id} next.sortieType=${next?.sortieType} next.type=${next?.type}`);
+        });
         const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
         const MAX_SOLO_GROUP = 4;
-        // Solo time window (09:00–15:00 start) is enforced inside scheduleEvent.
-        // Pass the full flying window here so scheduleList searches all available slots;
-        // scheduleEvent itself rejects any start time < 09:00 or > 15:00 for solo flights.
-        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees, max ${MAX_SOLO_GROUP} per group, window 09:00–15:00 (enforced in scheduleEvent)`);
+        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees after filter, window 09:00–15:00 enforced in scheduleEvent`);
         for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
             const group = soloTrainees.slice(i, i + MAX_SOLO_GROUP);
             const groupIndex = Math.floor(i / MAX_SOLO_GROUP) + 1;
             console.log(`🎯 [SOLO SCHEDULING] Scheduling group ${groupIndex}: ${group.map(t => t.fullName).join(', ')}`);
+            const beforeCount = generatedEvents.filter(e => e.type === 'flight').length;
             scheduleList(group, 'flight', false, flyingStartTime, flyingEndTime, 'STBY', false);
+            const afterCount = generatedEvents.filter(e => e.type === 'flight').length;
+            console.log(`🎯 [SOLO SCHEDULING] Group ${groupIndex}: placed ${afterCount - beforeCount} events (before=${beforeCount} after=${afterCount})`);
+        }
+        // After scheduling, check what was actually placed
+        const placedSolos = generatedEvents.filter(e => e.type === 'flight' && e.flightType === 'Solo');
+        console.log(`🎯 [SOLO DIAG] After scheduleList: ${placedSolos.length} solo events placed`);
+        placedSolos.forEach(e => console.log(`  ✅ Solo placed: ${e.student} ${e.flightNumber} at ${_fmtT(e.startTime)} on ${e.resourceId}`));
+    } else {
+        console.log(`🎯 [SOLO DIAG] *** NO SOLO TRAINEES - checking why ***`);
+        // Log all trainees' next events to see if any should have been routed to solo
+        for (const [name, { next }] of traineeNextEventMap) {
+            if (next?.type === 'Flight') {
+                console.log(`  trainee=${name} next.id=${next.id} sortieType=${next.sortieType} → routed to ${
+                    (next.sortieType === 'Solo' || ['BGF11','BGF18'].includes(next.id)) ? 'SOLO LIST' : 'flight list'
+                }`);
+            }
         }
     }
+    console.log(`${'='.repeat(60)}\n`);
 
     // 3b. Schedule Day Dual Flight Events: a) Highest Priority, b) Next Events
     setProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
@@ -4938,9 +4964,11 @@ const App: React.FC = () => {
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
                     const snapRes = await fetch(`${apiBase}/daily-snapshot`);
+                    console.log(`[Snapshot] GET /daily-snapshot → HTTP ${snapRes.status}`);
                     if (snapRes.ok) {
                         const snapData = await snapRes.json();
                         const snapshots: any[] = snapData.snapshots || [];
+                        console.log(`[Snapshot] Received ${snapshots.length} snapshots from server:`, snapshots.map(s => `${s.date}(${Array.isArray(s.scheduleEvents) ? s.scheduleEvents.length : '?'} events)`));
                         if (snapshots.length > 0) {
                             console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
                             setPublishedSchedules(prev => {
@@ -4950,6 +4978,7 @@ const App: React.FC = () => {
                                     const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
                                     // Only use snapshot events if there are no existing non-seed events for this date
                                     const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
+                                    console.log(`[Snapshot] date=${dateKey} events=${events.length} existingNonSeed=${existingNonSeed.length} → ${existingNonSeed.length === 0 && events.length > 0 ? 'LOADING' : 'SKIPPING'}`);
                                     if (existingNonSeed.length === 0 && events.length > 0) {
                                         merged[dateKey] = events;
                                     }
@@ -5055,12 +5084,20 @@ const App: React.FC = () => {
     // NOTE: also called at startup (below) for today + tomorrow so published schedules
     // are always visible after a hard refresh regardless of which date the user was on.
     const loadSnapshotForDate = React.useCallback(async (targetDate: string) => {
-        if (loadedSnapshotDates.current.has(targetDate)) return; // already loaded
+        if (loadedSnapshotDates.current.has(targetDate)) {
+            console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) — already attempted, skipping`);
+            return;
+        }
         loadedSnapshotDates.current.add(targetDate); // mark as attempted
         try {
             const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → fetching ${apiBase}/daily-snapshot/${targetDate}`);
             const res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
-            if (!res.ok) return; // 404 = no snapshot for that date, that's fine
+            console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → HTTP ${res.status}`);
+            if (!res.ok) {
+                console.log(`[Snapshot] loadSnapshotForDate(${targetDate}) → no snapshot (${res.status}), nothing to load`);
+                return; // 404 = no snapshot for that date, that's fine
+            }
             const data = await res.json();
             const snap = data.snapshot;
             if (!snap) return;
