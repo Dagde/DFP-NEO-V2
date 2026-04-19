@@ -2777,27 +2777,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // SOLO RESOURCE PLACEMENT FIX:
         // Solo flights must be placed on the PC-21 row that matches their chronological
         // position in the day, not the lowest-numbered free aircraft.
-        // Example: if 8 dual flights at 08:xx are on PC-21 3-10, a solo at 09:00 should
-        // start searching from PC-21 9 (not PC-21 1 which is free but too early in the sequence).
-        //
-        // Algorithm: count how many distinct PC-21 lines have at least one flight event
-        // with a start time EARLIER than the solo's start time. Start the search from
-        // (that count + 1) so the solo slots into the next available chronological position.
+        // Solo flights compete for resources using the same sequential search as dual flights.
+        // No special row offset — solos find the first free aircraft starting from row 1.
         let resourceSearchStart = 1;
-        if (isSoloFlight && type === 'flight') {
-            // Count distinct PC-21 lines that have an event starting before this solo's start time
-            const linesWithEarlierFlight = new Set(
-                generatedEvents
-                    .filter(e =>
-                        e.type === 'flight' &&
-                        e.resourceId.startsWith('PC-21 ') &&
-                        !e.resourceId.startsWith('PC-21 STBY') &&
-                        e.startTime < startTime - 0.001 // strictly earlier (> ~0.06 min tolerance)
-                    )
-                    .map(e => e.resourceId)
-            ).size;
-            resourceSearchStart = linesWithEarlierFlight + 1;
-        }
         
         for (let i = resourceSearchStart; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
@@ -2849,10 +2831,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
             
-            // NOTE: Solo flights are NOT restricted to a fixed 09:00-15:00 window here.
-            // They fly within the same session window as dual flights (flyingStartTime to flyingEndTime).
-            // This ensures solos can be scheduled in night sessions (e.g. 18:30 start) just like duals.
-            
+            // SOLO DEPARTURE WINDOW: Solo flights may only depart between 09:00 and 15:00.
+            // This is checked here, inside scheduleEvent, so the slot search loop in scheduleList
+            // will naturally skip all times outside this window (returning null → next slot tried).
+            const SOLO_WINDOW_START = 9;   // 09:00
+            const SOLO_WINDOW_END   = 15;  // 15:00 (latest departure)
+            if (isSoloFlight) {
+                if (startTime < SOLO_WINDOW_START - 0.001 || startTime > SOLO_WINDOW_END + 0.001) {
+                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
+                    return null;
+                }
+            }
+
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
@@ -2864,30 +2854,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 !e.resourceId.startsWith('BNF-STBY')
             );
             
-            // Solo flights are exempt from the hourly dispatch limit check —
-            // they are on a dedicated aircraft row and don't contribute to runway congestion.
-            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && !e.flightType?.includes('Solo') && e.startTime > startTime - 1 && e.startTime <= startTime).length;
-            if (!isSoloFlight && takeoffsInLastHour >= 8) {
+            // All flights (including solo) count toward the rolling 60-min dispatch cap of 8.
+            // Solo flights use the runway and must comply with the same capacity limit as duals.
+            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
+            if (takeoffsInLastHour >= 8) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
             }
             
-            // Solo flights are exempt from the takeoff separation check.
-            // They are scheduled after all duals and placed on a dedicated aircraft row.
-            // Applying the 5-min gap rule against dual flights would block every available slot.
-            const takeoffConflict = !isSoloFlight && nonStbyFlights.some(e => {
+            // All flights (including solo) must respect the 5-minute takeoff separation rule.
+            // Solo flights depart the same runway and must observe the same spacing as dual flights.
+            const takeoffConflict = nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
-                // Solo flights already on the board don't count against separation either
-                if (e.flightType === 'Solo') return false;
                 const diffHours = Math.abs(e.startTime - startTime);
                 const diffMinutes = Math.round(diffHours * 60);
-                
                 const isNightCheck = isNightPass && e.flightNumber.startsWith('BNF');
-                const minSeparation = isNightCheck ? 5 : 5; // Currently 5 for both, can be adjusted.
-                
+                const minSeparation = isNightCheck ? 5 : 5;
                 return diffMinutes < minSeparation;
             });
-            if(takeoffConflict) {
+            if (takeoffConflict) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TAKEOFF_SEPARATION_VIOLATION');
                 return null;
             }
@@ -3142,11 +3127,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
 
-    // SOLO SEQUENCING FIX:
-    // Solo flights (BGF11/BGF18 or sortieType='Solo') must be scheduled AFTER all dual flights.
-    // This ensures that when the resource assignment loop runs for solos, all dual aircraft
-    // lines are already populated — so linesWithEarlierFlight gives the correct count and
-    // solos are placed on the right sequential PC-21 row, not the lowest free one.
+    // SOLO SCHEDULING:
+    // Solo flights (BGF11/BGF18 or sortieType='Solo') are scheduled AFTER all dual flights.
+    // They use the same slot-search logic as duals (5-min increments, 8-per-hour cap,
+    // 5-min separation) but are additionally constrained to a 09:00-15:00 departure window
+    // and are grouped into batches of up to 4 to keep solos together in the schedule.
     const _isSoloTrainee = (trainee: Trainee): boolean => {
         const next = traineeNextEventMap.get(trainee.fullName)?.next;
         return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
@@ -3169,19 +3154,100 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         false
     );
 
-    // Step 3b: Schedule SOLO flights after all duals are placed
-    // At this point generatedEvents has all dual flights, so linesWithEarlierFlight
-    // correctly counts how many PC-21 rows are occupied before the solo's start time
-    // Using 'STBY' fallback so unplaced solos are put on STBY rather than dropped entirely
-    scheduleList(
-        _soloFlightList,
-        'flight', 
-        false, 
-        flyingStartTime, 
-        flyingEndTime, 
-        'STBY', 
-        false
-    );
+    // Step 3b: Schedule SOLO flights using grouped dispatch logic.
+    //
+    // Rules:
+    //  - Solo departures must be between 09:00 and 15:00 (enforced inside scheduleEvent)
+    //  - Solos use the SAME slot search as duals: 5-min increments, hourly cap, separation rules
+    //  - Solos are grouped into batches of up to MAX_SOLO_GROUP_SIZE (4)
+    //  - Each group is scheduled as a contiguous block starting from the next valid slot
+    //  - After a full group is placed, the next group starts searching from after the last placed event
+    //  - Unplaced solos fall back to STBY (same as duals)
+    if (_soloFlightList.length > 0) {
+        const MAX_SOLO_GROUP_SIZE = 4;
+        const SOLO_WINDOW_START = 9;    // 09:00 — matches check inside scheduleEvent
+        const SOLO_WINDOW_END   = 15;   // 15:00
+
+        // Split solo list into groups of up to MAX_SOLO_GROUP_SIZE
+        const soloGroups: Trainee[][] = [];
+        for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
+            soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+        }
+
+        console.log(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
+
+        // Track where to start searching for the next group.
+        // Begin at the solo window start (09:00), but never before flyingStartTime.
+        let groupSearchStart = Math.max(flyingStartTime, SOLO_WINDOW_START);
+
+        for (let gi = 0; gi < soloGroups.length; gi++) {
+            const group = soloGroups[gi];
+            console.log(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
+
+            // For each trainee in this group, try to place them starting from groupSearchStart.
+            // scheduleEvent enforces all normal rules (cap, separation, window, aircraft, area).
+            // We use the same 5-min increment as scheduleList does for flights.
+            const TIME_INCREMENT = 5 / 60;
+            let lastPlacedTime = groupSearchStart;
+
+            for (const trainee of group) {
+                const { next } = traineeNextEventMap.get(trainee.fullName)!;
+                const syllabusItem = next;
+                if (!syllabusItem) continue;
+
+                let placed = false;
+
+                // Two-pass search matching scheduleList priority logic
+                const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup)
+                    ? [true, false]
+                    : [false];
+
+                for (const primaryOnly of passModes) {
+                    if (placed) break;
+                    for (let time = groupSearchStart;
+                         time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 0.001;
+                         time += TIME_INCREMENT) {
+                        const result = scheduleEvent(trainee, syllabusItem, time, 'flight', false, false, primaryOnly);
+                        if (result && typeof result === 'object' && 'id' in result) {
+                            generatedEvents.push({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
+                            const tCounts = eventCounts.get(trainee.fullName)!;
+                            tCounts.flightFtd++;
+                            lastPlacedTime = Math.max(lastPlacedTime, time);
+                            placed = true;
+                            console.log(`[SOLO]   ✅ Placed ${trainee.fullName} at ${_fmtT(time)} on ${result.resourceId}`);
+                            break;
+                        }
+                    }
+                }
+
+                if (!placed) {
+                    // Fall back to STBY — same logic as scheduleList STBY pass
+                    console.log(`[SOLO]   ⚠️  ${trainee.fullName} unplaced → STBY`);
+                    // Unplaced solos will be caught by the STBY pass below
+                }
+            }
+
+            // After placing this group, advance groupSearchStart past the last placed event
+            // so the next group starts after the current group (with at least a 5-min gap).
+            // This prevents group 2 from overlapping group 1 in time.
+            groupSearchStart = lastPlacedTime + TIME_INCREMENT;
+        }
+
+        // STBY pass for any solos that couldn't be placed in the main window
+        // (uses the existing STBY fallback mechanism)
+        scheduleList(
+            _soloFlightList.filter(t => !generatedEvents.some(e => {
+                const personnel = getPersonnel(e);
+                return personnel.includes(t.fullName) && e.type === 'flight' && !e.resourceId.startsWith('STBY');
+            })),
+            'flight',
+            false,
+            flyingStartTime,
+            flyingEndTime,
+            'STBY',
+            false
+        );
+    }
 
     _fbPrintSummary();
 
