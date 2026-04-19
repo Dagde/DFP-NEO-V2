@@ -23502,14 +23502,14 @@ const AddFlightTileModal = ({
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     "div",
     {
-      className: "fixed inset-0 bg-black/70 z-50 overflow-y-auto",
-      style: { paddingTop: 24, paddingBottom: 24 },
+      className: "fixed inset-0 bg-black/70 z-50 flex items-start justify-center",
+      style: { paddingTop: 24, paddingBottom: 24, overflowY: "auto" },
       onClick: onClose,
       children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "div",
         {
           className: "bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col",
-          style: { width: "90vw", maxWidth: 720, margin: "0 auto" },
+          style: { width: "90vw", maxWidth: 720, maxHeight: "calc(100vh - 48px)", minWidth: 0 },
           onClick: (e) => e.stopPropagation(),
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0", children: [
@@ -23536,7 +23536,7 @@ const AddFlightTileModal = ({
               lineNumber: 1446,
               columnNumber: 9
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-5", children: [
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-5 overflow-y-auto flex-1", children: [
               !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Event Category" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddFlightTileModal.tsx",
