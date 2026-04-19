@@ -16,6 +16,7 @@
   "dependencies": {
     "@google/genai": "^1.28.0",
     "@heroicons/react": "^2.2.0",
+    "@popperjs/core": "^2.11.8",
     "@prisma/client": "^6.0.0",
     "@types/uuid": "^10.0.0",
     "bcryptjs": "^3.0.3",
