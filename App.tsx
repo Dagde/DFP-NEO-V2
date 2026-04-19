@@ -4898,19 +4898,21 @@ const App: React.FC = () => {
                 const data = await res.json();
 
                 if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
-                    const schedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
-                    const eventCount = Object.values(schedules).flat().length;
-                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates (legacy/seed)`);
+                    const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
+                    const eventCount = Object.values(seedSchedules).flat().length;
+                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
                     setPublishedSchedules(prev => {
-                        // Merge historical/seed data — real snapshot data takes priority
-                        const merged = { ...schedules };
-                        Object.entries(prev).forEach(([date, events]) => {
-                            if (events.some(e => !(e as any).isHistoricalSeed)) {
-                                // Keep existing non-seed events for this date (snapshot data wins)
-                                const existing = merged[date] || [];
-                                const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
-                                merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
+                        // FIX: Use prev as the base (not seed schedules) so real snapshots already
+                        // loaded in the PRIMARY pass above are never overwritten by seed data.
+                        // Seed data fills in dates that have NO real snapshot events yet.
+                        const merged = { ...prev };
+                        Object.entries(seedSchedules).forEach(([dateKey, seedEvents]) => {
+                            const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
+                            if (existingNonSeed.length === 0) {
+                                // No real snapshot for this date — use seed data
+                                merged[dateKey] = seedEvents;
                             }
+                            // If real snapshot data already exists for this date, do NOT overwrite it
                         });
                         return merged;
                     });
@@ -9283,6 +9285,8 @@ const App: React.FC = () => {
             .then(result => {
                 if (result.success) {
                     console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                    // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
+                    loadedSnapshotDates.current.add(buildDfpDate);
                 } else {
                     console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
                 }
