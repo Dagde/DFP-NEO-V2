@@ -10,12 +10,16 @@ const require = createRequire(import.meta.url);
 // Training Intelligence Engine
 const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine.cjs');
 
+// Cookie parser
+const cookieParser = require('cookie-parser');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(cookieParser());
 
 // CORS headers for all requests
 app.use((req, res, next) => {
@@ -2561,6 +2565,69 @@ app.delete('/api/syllabus/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ DELETE /api/syllabus/:id error:', error);
     res.status(500).json({ error: 'Failed to delete syllabus item', details: error.message });
+  }
+});
+
+// POST /api/auth/verify-password - Verify current user's password for destructive action confirmations
+app.post('/api/auth/verify-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ valid: false, error: 'Password required' });
+    }
+
+    // Get user from session cookie (using the same auth logic as other routes)
+    const sessionCookie = req.cookies?.session;
+    if (!sessionCookie) {
+      return res.status(401).json({ valid: false, error: 'Not authenticated - no session cookie' });
+    }
+
+    // Parse session to get userId (format: userId=<uuid>)
+    const sessionMatches = sessionCookie.match(/userId=([a-f0-9-]+)/i);
+    if (!sessionMatches) {
+      return res.status(401).json({ valid: false, error: 'Not authenticated - invalid session format' });
+    }
+
+    const userId = sessionMatches[1];
+
+    // Fetch user with password from database
+    const user = await db.$queryRawUnsafe(
+      `SELECT "id", "fullName", "password" FROM "User" WHERE "id" = $1 AND "isActive" = true`,
+      userId
+    );
+
+    if (!user || user.length === 0) {
+      return res.status(404).json({ valid: false, error: 'User not found' });
+    }
+
+    const userData = user[0];
+
+    // Check if user has a password set
+    if (!userData.password) {
+      console.warn(`⚠️ User ${userData.fullName} (${userId}) has no password set`);
+      return res.status(400).json({ 
+        valid: false, 
+        error: 'No password set for this user. Please contact administrator.',
+        reason: 'no_password'
+      });
+    }
+
+    // Use bcryptjs to verify password (loaded from dfp-neo-platform/node_modules)
+    const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
+    const valid = await bcrypt.compare(password, userData.password);
+
+    if (valid) {
+      console.log(`✅ Password verified for user ${userData.fullName} (${userId})`);
+    } else {
+      console.log(`❌ Password verification failed for user ${userData.fullName} (${userId})`);
+    }
+
+    res.json({ valid });
+  } catch (error) {
+    console.error('❌ POST /api/auth/verify-password error:', error);
+    res.status(500).json({ valid: false, error: error.message || 'Server error' });
   }
 });
 
