@@ -11,6 +11,7 @@ interface SyllabusViewProps {
   onBack: () => void;
   initialSelectedId?: string;
   onUpdateItem: (item: SyllabusItemDetail) => void;
+  onAddItem?: (item: SyllabusItemDetail) => void;
 }
 
 // Reusable components for view mode
@@ -349,7 +350,7 @@ const DetailView: React.FC<{
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
-const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem }) => {
+const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem, onAddItem }) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
   const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
@@ -450,6 +451,40 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       setEditedItem(null);
   };
 
+  const handleAddEvent = () => {
+      // Create a blank new item pre-filled for the currently selected course
+      const newItem: SyllabusItemDetail = {
+          id: `new-${Date.now()}`,
+          code: '',
+          phase: '',
+          module: '',
+          dayNight: 'Day',
+          eventDescription: '',
+          prerequisites: [],
+          prerequisitesGround: [],
+          prerequisitesFlying: [],
+          eventDetailsCommon: [],
+          eventDetailsSortie: [],
+          totalEventHours: 0,
+          flightOrSimHours: 0,
+          duration: 1,
+          preFlightTime: 0,
+          postFlightTime: 0,
+          type: 'Ground School',
+          methodOfDelivery: [],
+          methodOfAssessment: [],
+          resourcesPhysical: [],
+          resourcesHuman: [],
+          location: '',
+          courses: [selectedCourseType],
+          lmpType: 'Master LMP',
+      };
+      setSelectedItem(newItem);
+      setEditedItem(JSON.parse(JSON.stringify(newItem)));
+      setIsEditing(true);
+      if (onAddItem) onAddItem(newItem);
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
       {/* Header */}
@@ -478,14 +513,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
             <div className="w-px h-8 bg-gray-600 mx-2"></div>
 
             {isEditing ? (
-                <div className="flex space-x-3">
-                    <button onClick={handleSave} className="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold">Save</button>
-                    <button onClick={handleCancel} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-semibold">Cancel</button>
+                <div className="flex items-center gap-[1px]">
+                    <button onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-400">Save</button>
+                    <button onClick={handleCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
                 </div>
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="Master LMP" />
-                    <button onClick={handleEdit} disabled={!selectedItem || isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
+                    <button onClick={handleAddEvent} disabled={isFrozen} className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add Event</button>
+                    <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
         </div>

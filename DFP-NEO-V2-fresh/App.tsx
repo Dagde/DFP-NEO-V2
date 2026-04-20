@@ -10055,6 +10055,15 @@ updates.forEach(update => {
         setSyllabusDetails(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
     };
 
+    const handleAddSyllabusItem = (newItem: SyllabusItemDetail) => {
+        // Add the new blank item to the syllabus list so it appears in the left panel
+        setSyllabusDetails(prev => {
+            // Avoid duplicates if called multiple times
+            if (prev.some(i => i.id === newItem.id)) return prev;
+            return [...prev, newItem];
+        });
+    };
+
     const handleUpdateGradDate = (courseName: string, newGradDate: string) => {
         setCourses(prevCourses => 
             prevCourses.map(course => 
@@ -12696,7 +12705,8 @@ updates.forEach(update => {
                                setInitialSyllabusId(null); 
                            }}
                            initialSelectedId={initialSyllabusId || undefined}
-                           onUpdateItem={handleUpdateSyllabusItem} // Pass the handler
+                           onUpdateItem={handleUpdateSyllabusItem}
+                           onAddItem={handleAddSyllabusItem}
                        />;
             case 'TraineeLMP':
                 if (selectedTraineeForLMP) {
