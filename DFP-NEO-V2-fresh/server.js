@@ -2508,11 +2508,12 @@ app.post('/api/syllabus', async (req, res) => {
     );
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
     console.log(`✅ POST /api/syllabus - created: ${body.code}`);
-    res.json({ success: true, item: rows[0] });
+    res.json({ success: true, syllabusItem, item: rows[0] });
   } catch (error) {
     console.error('❌ POST /api/syllabus error:', error);
-    res.status(500).json({ error: 'Failed to create syllabus item', details: error.message });
+    res.status(500).json({ error: error.message || 'Failed to create syllabus item', details: error.message });
   }
 });
 
@@ -2535,11 +2536,12 @@ app.put('/api/syllabus/:id', async (req, res) => {
     );
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
     console.log(`✅ PUT /api/syllabus/${id}`);
-    res.json({ success: true, item: rows[0] });
+    res.json({ success: true, syllabusItem, item: rows[0] });
   } catch (error) {
     console.error('❌ PUT /api/syllabus/:id error:', error);
-    res.status(500).json({ error: 'Failed to update syllabus item', details: error.message });
+    res.status(500).json({ error: error.message || 'Failed to update syllabus item', details: error.message });
   }
 });
 
