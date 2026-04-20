@@ -2644,25 +2644,44 @@ app.post('/api/admin/set-user-password', async (req, res) => {
       });
     }
 
-    // Find user by fullName, userId, or email
+    // Find user by fullName (firstName + lastName), userId, or email
     let user;
-    const where = fullName ? `"fullName" ILIKE $1` : userId ? `"id" = $1` : `"email" = $1`;
-    const userRows = await db.$queryRawUnsafe(
-      `SELECT id, fullName, email, username, password, isActive, role FROM "User" WHERE ${where}`,
-      fullName || userId || email
-    );
+    let sql, params;
+    
+    if (fullName) {
+      // fullName might be like "SQNLDR Alexander Burns" - parse for first/last name
+      // Split by space, take last word as lastName, first word as firstName (skip title like SQNLDR)
+      const parts = fullName.trim().split(/\s+/);
+      const lastName = parts.pop(); // Last word is lastName
+      const firstName = parts.pop() || ''; // Second-to-last is firstName (skip title)
+      
+      sql = `SELECT id, ("firstName" || ' ' || "lastName") as fullName, email, username, password, isActive, role FROM "User" 
+             WHERE ("firstName" ILIKE $1 AND "lastName" ILIKE $2)
+             OR ("firstName" || ' ' || COALESCE("lastName", '')) ILIKE $3`;
+      params = [`%${firstName}%`, lastName, `%${fullName}%`];
+    } else if (userId) {
+      sql = `SELECT id, ("firstName" || ' ' || "lastName") as fullName, email, username, password, isActive, role FROM "User" WHERE "id" = $1 OR "userId" = $1`;
+      params = [userId];
+    } else {
+      sql = `SELECT id, ("firstName" || ' ' || "lastName") as fullName, email, username, password, isActive, role FROM "User" WHERE "email" = $1`;
+      params = [email];
+    }
+    
+    const userRows = await db.$queryRawUnsafe(sql, ...params);
 
     if (!userRows || userRows.length === 0) {
       return res.status(404).json({ 
         success: false, 
         error: 'User not found',
         searchBy: fullName ? 'fullName' : userId ? 'userId' : 'email',
-        searchValue: fullName || userId || email
+        searchValue: fullName || userId || email,
+        note: 'Searching by firstName + lastName combined, userId, or email'
       });
     }
 
     user = userRows[0];
-    const userIdFromDb = user.id;
+    // Handle both id and userId columns (User table has both)
+    const userIdFromDb = user.id; // Use the primary id column as it's what UPDATE uses
 
     // Hash the password using bcryptjs
     const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
