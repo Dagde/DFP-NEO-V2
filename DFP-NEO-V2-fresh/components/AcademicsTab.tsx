@@ -48,6 +48,13 @@ const TIMELINE_END   = 21; // 21:00
 const SNAP_MINS      = 5;
 const SNAP           = SNAP_MINS / 60;
 
+// Strip course code suffix from fullName (e.g. "Brown, Charles – ADF301" → "Brown, Charles")
+// Handles both em-dash (–) and hyphen (-) separators
+const stripCourse = (fullName: string): string => {
+  // Match " – COURSE" or " - COURSE" at the end (em dash or regular hyphen)
+  return fullName.replace(/\s[–—-]\s\S+$/, '').trim();
+};
+
 const STANDARD_EVENTS = [
   { code: 'MORNING_BREAK', label: 'Morning Break',    duration: 0.25,  color: '#64748b' },
   { code: 'LUNCH',         label: 'Lunch',            duration: 1.0,   color: '#78716c' },
@@ -238,7 +245,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       const statusLabel = st.status === 'paused' ? 'PAUSED' : 'UNAVAILABLE';
       const reason = st.reason || (st.status === 'paused' ? 'This trainee is currently paused.' : 'This trainee has a scheduling conflict or unavailability.');
       const confirmed = window.confirm(
-        `⚠️ ${name} is ${statusLabel}\n\n${reason}\n\nDo you still want to include them in this academic session?`
+        `⚠️ ${stripCourse(name)} is ${statusLabel}\n\n${reason}\n\nDo you still want to include them in this academic session?`
       );
       if (!confirmed) return;
     }
@@ -488,7 +495,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   width: 8, height: 8, borderRadius: '50%', backgroundColor: dotColor,
                   flexShrink: 0, display: 'inline-block'
                 }} />
-                <span style={{ fontSize: 12, color: checked ? '#f9fafb' : '#9ca3af', flex: 1 }}>{t.fullName}</span>
+                <span style={{ fontSize: 12, color: checked ? '#f9fafb' : '#9ca3af', flex: 1 }}>{stripCourse(t.fullName)}</span>
               </div>
             );
           })}
