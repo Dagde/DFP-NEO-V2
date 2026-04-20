@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
+import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem } from '../lib/syllabusService';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 
 interface SyllabusViewProps {
@@ -351,7 +352,7 @@ const DetailView: React.FC<{
     );
 };
 
-const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
+const STATIC_COURSE_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
 const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem, onAddItem }) => {
     const { isFrozen } = useSystemFreeze();
@@ -361,10 +362,27 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
 
+  // Dynamic course list: union of static list + any courses found in syllabusDetails
+  const courseLMPs = useMemo(() => {
+    const fromSyllabus = new Set<string>();
+    syllabusDetails.forEach(item => {
+      (item.courses || []).forEach(c => { if (c) fromSyllabus.add(c); });
+    });
+    const all = new Set([...STATIC_COURSE_LMPS, ...Array.from(fromSyllabus)]);
+    return Array.from(all).sort();
+  }, [syllabusDetails]);
+
   // Add Course modal state
   const [showAddLMPModal, setShowAddLMPModal] = useState(false);
   const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
   const [newLMPCourseType, setNewLMPCourseType] = useState<'Flight Training' | 'Academic Training'>('Flight Training');
+
+  // Delete Course modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Filter items based on selected course type
   const filteredSyllabusDetails = useMemo(() => {
@@ -428,35 +446,87 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
     }
   };
 
-  const handleSave = () => {
-      if (editedItem) {
-             // Detect changes
-             const changes: string[] = [];
-             if (selectedItem.preFlightTime !== editedItem.preFlightTime) {
-                 changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} minutes → ${Math.round(editedItem.preFlightTime * 60)} minutes`);
-             }
-             if (selectedItem.postFlightTime !== editedItem.postFlightTime) {
-                 changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} minutes → ${Math.round(editedItem.postFlightTime * 60)} minutes`);
-             }
-             
-             if (changes.length > 0) {
-                 logAudit({
-                     action: 'Edit',
-                     description: `Updated LMP item ${editedItem.code}`,
-                     changes: changes.join(', '),
-                     page: 'Master LMP'
-                 });
-             }
-          onUpdateItem(editedItem);
-          setSelectedItem(editedItem);
+  const handleSave = async () => {
+      if (!editedItem) return;
+      setIsSaving(true);
+      try {
+          const isNew = editedItem.id.startsWith('new-');
+          let savedItem: SyllabusItemDetail;
+          if (isNew) {
+              // Create new item in DB
+              const { id: _tmpId, ...itemWithoutTmpId } = editedItem;
+              savedItem = await createSyllabusItem(itemWithoutTmpId, 'New LMP event created via Master LMP editor');
+          } else {
+              // Update existing item in DB
+              savedItem = await updateSyllabusItem(editedItem.id, editedItem, 'Updated via Master LMP editor');
+          }
+          // Detect changes for audit
+          const changes: string[] = [];
+          if (selectedItem && selectedItem.preFlightTime !== editedItem.preFlightTime) {
+              changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min → ${Math.round(editedItem.preFlightTime * 60)} min`);
+          }
+          if (selectedItem && selectedItem.postFlightTime !== editedItem.postFlightTime) {
+              changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min → ${Math.round(editedItem.postFlightTime * 60)} min`);
+          }
+          if (changes.length > 0) {
+              logAudit({ action: 'Edit', description: `Updated LMP item ${savedItem.code}`, changes: changes.join(', '), page: 'Master LMP' });
+          }
+          onUpdateItem(savedItem);
+          setSelectedItem(savedItem);
+          setIsEditing(false);
+          setEditedItem(null);
+      } catch (err: any) {
+          alert(`❌ Save failed: ${err.message}`);
+      } finally {
+          setIsSaving(false);
       }
-      setIsEditing(false);
-      setEditedItem(null);
   };
 
   const handleCancel = () => {
       setIsEditing(false);
       setEditedItem(null);
+  };
+
+  const handleDeleteCourse = async () => {
+      if (!deletePassword) { setDeleteError('Please enter your password.'); return; }
+      setIsDeleting(true);
+      setDeleteError('');
+      try {
+          // Verify password first
+          const verifyResp = await fetch('/api/auth/verify-password', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: deletePassword }),
+          });
+          const verifyData = await verifyResp.json();
+          if (!verifyData.valid) {
+              setDeleteError('Incorrect password. Please try again.');
+              setIsDeleting(false);
+              return;
+          }
+          // Retire all items for this course
+          const itemsToDelete = syllabusDetails.filter(item =>
+              (item.courses || []).includes(selectedCourseType) &&
+              !(item.courses || []).some(c => c !== selectedCourseType)
+          );
+          await Promise.all(itemsToDelete.map(item =>
+              retireSyllabusItem(item.id, `Course deleted: ${selectedCourseType}`)
+          ));
+          logAudit({ action: 'Delete', description: `Deleted course: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: 'Master LMP' });
+          // Remove from local state
+          itemsToDelete.forEach(item => onUpdateItem({ ...item, isActive: false } as any));
+          setShowDeleteModal(false);
+          setDeletePassword('');
+          // Switch to first available course
+          const remaining = courseLMPs.filter(c => c !== selectedCourseType);
+          setSelectedCourseType(remaining[0] || 'BPC+IPC');
+          setSelectedItem(null);
+      } catch (err: any) {
+          setDeleteError(`Failed to delete: ${err.message}`);
+      } finally {
+          setIsDeleting(false);
+      }
   };
 
   const handleAddLMP = () => {
@@ -466,7 +536,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       setShowAddLMPModal(true);
   };
 
-  const handleAddLMPSave = () => {
+  const handleAddLMPSave = async () => {
       if (!newLMPName.trim()) { alert('Please enter a course title.'); return; }
       // Auto-generate a course code from the title:
       // Take first letter of each word, uppercase, max 8 chars — e.g. "Basic Flying Course" → "BFC"
@@ -502,13 +572,20 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           lmpType: 'Master LMP',
       };
       setShowAddLMPModal(false);
-      // Add to list via prop and also add to COURSE_MASTER_LMPS display
-      if (onAddItem) onAddItem(newItem);
-      // Switch to the new course code and immediately enter edit mode
-      setSelectedCourseType(autoCode);
-      setSelectedItem(newItem);
-      setEditedItem(JSON.parse(JSON.stringify(newItem)));
-      setIsEditing(true);
+      try {
+          // Persist the new course/LMP skeleton to the database
+          const { id: _tmpId, ...itemWithoutTmpId } = newItem;
+          const savedItem = await createSyllabusItem(itemWithoutTmpId, `New course created: ${newLMPName.trim()}`);
+          if (onAddItem) onAddItem(savedItem);
+          // Switch to the new course and immediately enter edit mode
+          setSelectedCourseType(autoCode);
+          setSelectedItem(savedItem);
+          setEditedItem(JSON.parse(JSON.stringify(savedItem)));
+          setIsEditing(true);
+          logAudit({ action: 'Create', description: `Created new course: ${savedItem.code}`, changes: `Course type: ${newLMPCourseType}`, page: 'Master LMP' });
+      } catch (err: any) {
+          alert(`❌ Failed to create course: ${err.message}`);
+      }
   };
 
   const handleAddEvent = () => {
@@ -539,10 +616,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           courses: [selectedCourseType],
           lmpType: 'Master LMP',
       };
+      // Add optimistically to UI, then persist to DB
+      if (onAddItem) onAddItem(newItem);
       setSelectedItem(newItem);
       setEditedItem(JSON.parse(JSON.stringify(newItem)));
       setIsEditing(true);
-      if (onAddItem) onAddItem(newItem);
+      // Persist to DB in background (save will finalize with real DB id)
+      createSyllabusItem({ ...newItem, id: undefined }, 'New event added via Master LMP editor')
+          .then(saved => { if (onAddItem) onAddItem(saved); setSelectedItem(saved); setEditedItem(JSON.parse(JSON.stringify(saved))); })
+          .catch(err => console.warn('Could not pre-create event in DB:', err));
   };
 
   return (
@@ -567,7 +649,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     }}
                     className="bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8"
                 >
-                    {COURSE_MASTER_LMPS.map(c => <option key={c} value={c}>{c}</option>)}
+                    {courseLMPs.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
             </div>
 
@@ -576,13 +658,14 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
             {isEditing ? (
                 <div className="flex items-center gap-[1px]">
                     <button onClick={handleAddEvent} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add Event</button>
-                    <button onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black">Save</button>
+                    <button onClick={handleSave} disabled={isSaving} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-60">{isSaving ? 'Saving…' : 'Save'}</button>
                     <button onClick={handleCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
                 </div>
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="Master LMP" />
                     <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add Course</button>
+                    <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">Del Course</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
@@ -767,6 +850,66 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                         className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
                     >
                         Create
+                    </button>
+                </div>
+            </div>
+        </div>
+    )}
+
+    {/* ── Delete Course Confirmation Modal ── */}
+    {showDeleteModal && (
+        <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.80)', zIndex: 10001,
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setShowDeleteModal(false)}
+        >
+            <div
+                style={{ backgroundColor: '#1f2937', border: '1px solid #ef4444', borderRadius: 12,
+                    padding: 28, width: 420, boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
+                    ⚠️ Delete Course: {selectedCourseType}
+                </h2>
+                <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, lineHeight: 1.6 }}>
+                    This will permanently retire <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{selectedCourseType}</strong> course from the database.
+                    This action cannot be undone. Enter your password to confirm.
+                </p>
+
+                <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Your Password *
+                    </label>
+                    <input
+                        type="password"
+                        value={deletePassword}
+                        onChange={e => { setDeletePassword(e.target.value); setDeleteError(''); }}
+                        onKeyDown={e => e.key === 'Enter' && handleDeleteCourse()}
+                        placeholder="Enter your password to confirm"
+                        autoFocus
+                        style={{ width: '100%', backgroundColor: '#111827', border: `1px solid ${deleteError ? '#ef4444' : '#4b5563'}`,
+                            borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' as const }}
+                    />
+                    {deleteError && (
+                        <p style={{ fontSize: 11, color: '#ef4444', marginTop: 4 }}>{deleteError}</p>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                        onClick={() => setShowDeleteModal(false)}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleDeleteCourse}
+                        disabled={isDeleting}
+                        className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-60"
+                    >
+                        {isDeleting ? 'Deleting…' : 'Delete'}
                     </button>
                 </div>
             </div>
