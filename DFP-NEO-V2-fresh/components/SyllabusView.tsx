@@ -398,6 +398,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  // Bulk Upload modal state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<{ created: number; skipped: number; errors: any[]; message: string } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -577,6 +583,33 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       }
   };
 
+  const handleBulkUpload = async () => {
+      if (!uploadFile) { alert('Please select a file first.'); return; }
+      setIsUploading(true);
+      setUploadResult(null);
+      try {
+          const formData = new FormData();
+          formData.append('file', uploadFile);
+          // Pass the current course code so uploads go into the selected course
+          formData.append('courseCode', selectedCourseType);
+          const resp = await fetch('/api/syllabus/bulk-upload', {
+              method: 'POST',
+              body: formData,
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Upload failed');
+          setUploadResult(data);
+          // Reload syllabus data by triggering a page reload after short delay
+          if (data.created > 0) {
+              setTimeout(() => window.location.reload(), 2000);
+          }
+      } catch (err: any) {
+          alert(`❌ Upload failed: ${err.message}`);
+      } finally {
+          setIsUploading(false);
+      }
+  };
+
   const handleAddLMP = () => {
       // Open the Add Course modal
       setNewLMPName('');
@@ -727,6 +760,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     <AuditButton pageName="Master LMP" />
                     <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add Course</button>
                     <button onClick={() => { setDeletePassword(''); setDeleteError(''); setShowDeleteModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-red-500 disabled:opacity-50 disabled:cursor-not-allowed">Del Course</button>
+                    <button onClick={() => { setUploadFile(null); setUploadResult(null); setShowUploadModal(true); }} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-400 disabled:opacity-50 disabled:cursor-not-allowed">Upload</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
@@ -972,6 +1006,95 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     >
                         {isDeleting ? 'Deleting…' : 'Delete'}
                     </button>
+                </div>
+            </div>
+        </div>
+    )}
+    {/* Bulk Upload Modal */}
+    {showUploadModal && (
+        <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.80)', zIndex: 10001,
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => !isUploading && setShowUploadModal(false)}
+        >
+            <div
+                style={{ backgroundColor: '#1f2937', border: '1px solid #38bdf8', borderRadius: 12,
+                    padding: 28, width: 480, boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#38bdf8', marginBottom: 8 }}>
+                    📤 Bulk Upload LMP Events
+                </h2>
+                <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4, lineHeight: 1.6 }}>
+                    Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with LMP events.
+                </p>
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
+                    The spreadsheet must have a sheet named <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong> with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical).
+                </p>
+
+                <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                        Select Excel File (.xlsx)
+                    </label>
+                    <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={e => { setUploadFile(e.target.files?.[0] || null); setUploadResult(null); }}
+                        style={{ display: 'block', width: '100%', fontSize: 13, color: '#f9fafb',
+                            backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 6, padding: '8px 12px' }}
+                    />
+                </div>
+
+                {uploadFile && !uploadResult && (
+                    <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+                        Selected: <strong style={{ color: '#d1d5db' }}>{uploadFile.name}</strong> ({(uploadFile.size / 1024).toFixed(1)} KB)
+                    </p>
+                )}
+
+                {uploadResult && (
+                    <div style={{ marginBottom: 16, padding: 12, backgroundColor: uploadResult.errors.length > 0 ? '#1c1917' : '#052e16',
+                        border: `1px solid ${uploadResult.errors.length > 0 ? '#78350f' : '#166534'}`, borderRadius: 8 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: uploadResult.errors.length > 0 ? '#fbbf24' : '#4ade80', marginBottom: 4 }}>
+                            {uploadResult.message}
+                        </p>
+                        <p style={{ fontSize: 11, color: '#9ca3af' }}>
+                            ✅ {uploadResult.created} created &nbsp;|&nbsp; ⏭ {uploadResult.skipped} skipped
+                            {uploadResult.errors.length > 0 && <span style={{ color: '#f87171' }}> &nbsp;|&nbsp; ❌ {uploadResult.errors.length} errors</span>}
+                        </p>
+                        {uploadResult.errors.length > 0 && (
+                            <div style={{ marginTop: 8, maxHeight: 100, overflowY: 'auto' }}>
+                                {uploadResult.errors.map((e: any, i: number) => (
+                                    <p key={i} style={{ fontSize: 10, color: '#f87171' }}>Row {e.row}: {e.error}</p>
+                                ))}
+                            </div>
+                        )}
+                        {uploadResult.created > 0 && (
+                            <p style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>Page will reload automatically…</p>
+                        )}
+                    </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+                    <button
+                        onClick={() => setShowUploadModal(false)}
+                        disabled={isUploading}
+                        style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                            backgroundColor: '#374151', color: '#d1d5db', border: 'none', cursor: 'pointer' }}
+                    >
+                        {uploadResult?.created ? 'Close' : 'Cancel'}
+                    </button>
+                    {!uploadResult && (
+                        <button
+                            onClick={handleBulkUpload}
+                            disabled={!uploadFile || isUploading}
+                            style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                                backgroundColor: uploadFile && !isUploading ? '#0284c7' : '#1e3a5f',
+                                color: '#fff', border: 'none', cursor: uploadFile && !isUploading ? 'pointer' : 'not-allowed' }}
+                        >
+                            {isUploading ? 'Uploading…' : '📤 Upload & Import'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
