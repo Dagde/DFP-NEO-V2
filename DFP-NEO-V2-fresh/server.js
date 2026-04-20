@@ -2563,10 +2563,21 @@ app.put('/api/syllabus/:id', async (req, res) => {
     const { id } = req.params;
     const body = req.body;
 
-    const fields = Object.keys(body).filter(k => !['id','createdAt','createdBy'].includes(k));
+    // Exclude server-managed fields and timestamp fields (updatedAt is set by NOW())
+    const EXCLUDED_FIELDS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'version'];
+    const fields = Object.keys(body).filter(k => !EXCLUDED_FIELDS.includes(k));
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
-    const setClauses = fields.map((f, i) => `"${f}" = $${i + 2}`).join(', ');
+    // Build SET clauses, casting array fields and boolean fields properly
+    const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','resourcesHuman',
+                          'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
+    const BOOL_FIELDS = ['isActive','isRemedial','cctOnly','twrDiReqd'];
+
+    const setClauses = fields.map((f, i) => {
+      if (ARRAY_FIELDS.includes(f)) return `"${f}" = $${i + 2}::text[]`;
+      if (BOOL_FIELDS.includes(f)) return `"${f}" = $${i + 2}::boolean`;
+      return `"${f}" = $${i + 2}`;
+    }).join(', ');
     const values = fields.map(f => body[f]);
 
     await db.$executeRawUnsafe(
