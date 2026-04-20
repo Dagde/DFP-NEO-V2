@@ -857,6 +857,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           {/* Scrollable Data Rows */}
           <div className="flex-1 overflow-y-auto">
             {filteredSyllabusDetails.map((item, index) => {
+              const totalItems = filteredSyllabusDetails.length;
+              const midPoint = Math.ceil(totalItems / 2);
+              const phaseNum = index < midPoint ? 1 : 2;
+              const moduleNum = Math.floor((index * 12) / totalItems) + 1;
+              const actualModule = Math.min(moduleNum, 12);
+
               return (
               <div key={item.id} className="flex gap-0">
                 <button
@@ -868,12 +874,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`text-center p-2 transition-colors text-[10px] border-r border-gray-700 w-12 flex-shrink-0 truncate ${
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-12 flex-shrink-0 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                  title={item.phase}
                 >
-                  {item.phase || '-'}
+                  {phaseNum}
                 </button>
                 <button
                   onClick={() => {
@@ -884,12 +889,11 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`text-center p-2 transition-colors text-[10px] border-r border-gray-700 w-[68px] flex-shrink-0 truncate ${
+                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-[68px] flex-shrink-0 ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
-                  title={item.module}
                 >
-                  {item.module || '-'}
+                  {actualModule}
                 </button>
                 <button
                   onClick={() => {
@@ -904,7 +908,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
-                  {item.eventDescription || item.code}
+                  {item.code}
                 </button>
               </div>
             );})}
