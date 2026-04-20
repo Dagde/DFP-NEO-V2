@@ -2473,6 +2473,19 @@ app.get('/api/syllabus/:id', async (req, res) => {
   }
 });
 
+// GET /api/syllabus/codes - Get all existing course codes (for duplicate checking)
+app.get('/api/syllabus/codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`SELECT DISTINCT "code" FROM "SyllabusItem" WHERE "isActive" = true`);
+    const codes = rows.map(r => r.code);
+    res.json({ success: true, codes });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus/codes error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/syllabus - Create a new syllabus item
 app.post('/api/syllabus', async (req, res) => {
   try {
@@ -2480,6 +2493,24 @@ app.post('/api/syllabus', async (req, res) => {
     const body = req.body;
     const { randomUUID } = await import('crypto');
     const id = randomUUID();
+
+    // Auto-resolve duplicate codes: if code already exists, append a number suffix
+    let baseCode = body.code;
+    let finalCode = baseCode;
+    let suffix = 2;
+    while (true) {
+      const existing = await db.$queryRawUnsafe(
+        `SELECT "id" FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`,
+        finalCode
+      );
+      if (existing.length === 0) break; // code is available
+      finalCode = `${baseCode}${suffix}`;
+      suffix++;
+      if (suffix > 99) break; // safety valve
+    }
+
+    // Also update the courses array to use the final code
+    let finalCourses = (body.courses || []).map(c => c === baseCode ? finalCode : c);
 
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
@@ -2497,9 +2528,9 @@ app.post('/api/syllabus', async (req, res) => {
         $24,$25,$26,$27,$28,$29,$30,$31,
         $32,$33,NOW(),NOW()
       )`,
-      id, body.code, body.eventDescription, body.phase, body.module, body.type,
+      id, finalCode, body.eventDescription, body.phase, body.module, body.type,
       body.sortieType || null, body.dayNight || 'Day',
-      body.courses || [], body.methodOfDelivery || [], body.methodOfAssessment || [],
+      finalCourses, body.methodOfDelivery || [], body.methodOfAssessment || [],
       body.resourcesPhysical || [], body.resourcesHuman || [],
       body.eventDetailsCommon || [], body.eventDetailsSortie || [],
       body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
@@ -2513,7 +2544,11 @@ app.post('/api/syllabus', async (req, res) => {
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
     const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
-    console.log(`✅ POST /api/syllabus - created: ${body.code}`);
+    if (finalCode !== baseCode) {
+      console.log(`✅ POST /api/syllabus - created: ${finalCode} (requested: ${baseCode}, was duplicate)`);
+    } else {
+      console.log(`✅ POST /api/syllabus - created: ${finalCode}`);
+    }
     res.json({ success: true, syllabusItem, item: rows[0] });
   } catch (error) {
     console.error('❌ POST /api/syllabus error:', error);

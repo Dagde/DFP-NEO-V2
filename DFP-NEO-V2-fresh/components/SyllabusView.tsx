@@ -606,7 +606,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           const savedItem = await createSyllabusItem(itemWithoutTmpId, `New course created: ${newLMPName.trim()}`);
           if (onAddItem) onAddItem(savedItem);
           // Switch to the new course and immediately enter edit mode
-          setSelectedCourseType(autoCode);
+          // Use the actual code returned by server (may differ from autoCode if duplicate was resolved)
+          const actualCode = savedItem.code || autoCode;
+          setSelectedCourseType(actualCode);
           setSelectedItem(savedItem);
           setEditedItem(JSON.parse(JSON.stringify(savedItem)));
           setIsEditing(true);
