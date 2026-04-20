@@ -42993,9 +42993,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
   const [selectedCourseType, setSelectedCourseType] = reactExports.useState("BPC+IPC");
   const [showAddLMPModal, setShowAddLMPModal] = reactExports.useState(false);
   const [newLMPName, setNewLMPName] = reactExports.useState("");
-  const [newLMPCourse, setNewLMPCourse] = reactExports.useState("BPC+IPC");
-  const [newLMPPhase, setNewLMPPhase] = reactExports.useState("");
-  const [newLMPType, setNewLMPType] = reactExports.useState("Ground School");
+  const [newLMPCourseType, setNewLMPCourseType] = reactExports.useState("Flight Training");
   const filteredSyllabusDetails = reactExports.useMemo(() => {
     return syllabusDetails.filter((item) => {
       if (!item.courses || item.courses.length === 0) {
@@ -43075,20 +43073,20 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
   };
   const handleAddLMP = () => {
     setNewLMPName("");
-    setNewLMPCourse(selectedCourseType);
-    setNewLMPPhase("");
-    setNewLMPType("Ground School");
+    setNewLMPCourseType("Flight Training");
     setShowAddLMPModal(true);
   };
   const handleAddLMPSave = () => {
     if (!newLMPName.trim()) {
-      alert("Please enter an LMP name/code.");
+      alert("Please enter a course title.");
       return;
     }
+    const words = newLMPName.trim().split(/\s+/);
+    const autoCode = words.length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : words.map((w) => w[0].toUpperCase()).join("").slice(0, 8);
     const newItem = {
       id: `new-lmp-${Date.now()}`,
-      code: newLMPName.trim().toUpperCase(),
-      phase: newLMPPhase.trim() || selectedCourseType,
+      code: autoCode,
+      phase: autoCode,
       module: newLMPName.trim(),
       dayNight: "Day",
       eventDescription: newLMPName.trim(),
@@ -43102,18 +43100,18 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
       duration: 1,
       preFlightTime: 0,
       postFlightTime: 0,
-      type: newLMPType,
+      type: newLMPCourseType === "Academic Training" ? "Academics" : "Ground School",
       methodOfDelivery: [],
       methodOfAssessment: [],
       resourcesPhysical: [],
       resourcesHuman: [],
       location: "",
-      courses: [newLMPCourse],
+      courses: [autoCode],
       lmpType: "Master LMP"
     };
     setShowAddLMPModal(false);
     if (onAddItem) onAddItem(newItem);
-    setSelectedCourseType(newLMPCourse);
+    setSelectedCourseType(autoCode);
     setSelectedItem(newItem);
     setEditedItem(JSON.parse(JSON.stringify(newItem)));
     setIsEditing(true);
@@ -43158,29 +43156,29 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
             "Master LMP: ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: selectedCourseType }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 552,
+              lineNumber: 554,
               columnNumber: 69
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 552,
+            lineNumber: 554,
             columnNumber: 11
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: "Learning Management Package Details" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 553,
+            lineNumber: 555,
             columnNumber: 11
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 551,
+          lineNumber: 553,
           columnNumber: 9
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-4", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 bg-gray-700 p-1 rounded-md", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "course-select", className: "text-xs text-gray-300 font-medium pl-2", children: "Syllabus:" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 558,
+              lineNumber: 560,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -43195,7 +43193,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                 className: "bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8",
                 children: COURSE_MASTER_LMPS.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c, children: c }, c, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                  lineNumber: 568,
+                  lineNumber: 570,
                   columnNumber: 50
                 }, void 0))
               },
@@ -43203,70 +43201,70 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
               false,
               {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 559,
+                lineNumber: 561,
                 columnNumber: 17
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 557,
+            lineNumber: 559,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-px h-8 bg-gray-600 mx-2" }, void 0, false, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 572,
+            lineNumber: 574,
             columnNumber: 13
           }, void 0),
           isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleAddEvent, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Add Event" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 576,
+              lineNumber: 578,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black", children: "Save" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 577,
+              lineNumber: 579,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 578,
+              lineNumber: 580,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 575,
+            lineNumber: 577,
             columnNumber: 17
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-[1px]", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Master LMP" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 582,
+              lineNumber: 584,
               columnNumber: 21
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Add LMP" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleAddLMP, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Add Course" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 583,
+              lineNumber: 585,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleEdit, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed", children: "Edit" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 584,
+              lineNumber: 586,
               columnNumber: 21
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 581,
+            lineNumber: 583,
             columnNumber: 17
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 556,
+          lineNumber: 558,
           columnNumber: 9
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-        lineNumber: 550,
+        lineNumber: 552,
         columnNumber: 7
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-row overflow-hidden", children: [
@@ -43274,22 +43272,22 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 flex gap-0 bg-gray-900", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700 text-center w-12 flex-shrink-0", children: "Phase" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 596,
+              lineNumber: 598,
               columnNumber: 13
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 border-r border-gray-700 text-center w-[68px] flex-shrink-0", children: "Module" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 597,
+              lineNumber: 599,
               columnNumber: 13
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-semibold text-gray-400 text-[10px] uppercase tracking-wider p-2 border-b border-gray-700 flex-1 whitespace-nowrap overflow-hidden", children: "Event" }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 598,
+              lineNumber: 600,
               columnNumber: 13
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 595,
+            lineNumber: 597,
             columnNumber: 11
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto", children: [
@@ -43318,7 +43316,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 612,
+                    lineNumber: 614,
                     columnNumber: 17
                   },
                   void 0
@@ -43341,7 +43339,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 627,
+                    lineNumber: 629,
                     columnNumber: 17
                   },
                   void 0
@@ -43364,30 +43362,30 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 642,
+                    lineNumber: 644,
                     columnNumber: 17
                   },
                   void 0
                 )
               ] }, item.id, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 611,
+                lineNumber: 613,
                 columnNumber: 15
               }, void 0);
             }),
             filteredSyllabusDetails.length === 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 text-center text-gray-500 italic text-sm", children: "No events found for this syllabus." }, void 0, false, {
               fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-              lineNumber: 660,
+              lineNumber: 662,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 602,
+            lineNumber: 604,
             columnNumber: 11
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 593,
+          lineNumber: 595,
           columnNumber: 9
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 max-w-5xl mx-auto", children: hoveredItem || selectedItem ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -43402,35 +43400,35 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
           false,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 669,
+            lineNumber: 671,
             columnNumber: 17
           },
           void 0
         ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 677,
+          lineNumber: 679,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 676,
+          lineNumber: 678,
           columnNumber: 15
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 667,
+          lineNumber: 669,
           columnNumber: 11
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-          lineNumber: 666,
+          lineNumber: 668,
           columnNumber: 9
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-        lineNumber: 591,
+        lineNumber: 593,
         columnNumber: 7
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-      lineNumber: 548,
+      lineNumber: 550,
       columnNumber: 5
     }, void 0),
     showAddLMPModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -43459,12 +43457,17 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
             },
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { style: { fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 20 }, children: "Add New LMP" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { style: { fontSize: 16, fontWeight: 700, color: "#fff", marginBottom: 6 }, children: "Add Course" }, void 0, false, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 697,
+                lineNumber: 699,
                 columnNumber: 17
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { marginBottom: 14 }, children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20 }, children: "A course code will be auto-generated from the title." }, void 0, false, {
+                fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
+                lineNumber: 702,
+                columnNumber: 17
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { style: {
                   display: "block",
                   fontSize: 11,
@@ -43473,9 +43476,9 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
                   marginBottom: 4
-                }, children: "LMP Code / Name *" }, void 0, false, {
+                }, children: "Course Title *" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                  lineNumber: 703,
+                  lineNumber: 708,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -43484,14 +43487,15 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                     type: "text",
                     value: newLMPName,
                     onChange: (e) => setNewLMPName(e.target.value),
-                    placeholder: "e.g. BGF GND1",
+                    onKeyDown: (e) => e.key === "Enter" && handleAddLMPSave(),
+                    placeholder: "e.g. Basic Flying Course",
                     autoFocus: true,
                     style: {
                       width: "100%",
                       backgroundColor: "#111827",
                       border: "1px solid #4b5563",
                       borderRadius: 6,
-                      padding: "7px 10px",
+                      padding: "8px 10px",
                       color: "#fff",
                       fontSize: 13,
                       outline: "none",
@@ -43502,67 +43506,29 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 707,
+                    lineNumber: 712,
                     columnNumber: 21
                   },
                   void 0
-                )
-              ] }, void 0, true, {
-                fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 702,
-                columnNumber: 17
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { marginBottom: 14 }, children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { style: {
-                  display: "block",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 4
-                }, children: "Course" }, void 0, false, {
-                  fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                  lineNumber: 721,
-                  columnNumber: 21
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "select",
-                  {
-                    value: newLMPCourse,
-                    onChange: (e) => setNewLMPCourse(e.target.value),
-                    style: {
-                      width: "100%",
-                      backgroundColor: "#111827",
-                      border: "1px solid #4b5563",
-                      borderRadius: 6,
-                      padding: "7px 10px",
-                      color: "#fff",
-                      fontSize: 13,
-                      outline: "none",
-                      boxSizing: "border-box"
-                    },
-                    children: ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"].map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c, children: c }, c, false, {
-                      fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                      lineNumber: 733,
-                      columnNumber: 29
-                    }, void 0))
-                  },
-                  void 0,
-                  false,
-                  {
+                ),
+                newLMPName.trim() && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 4 }, children: [
+                  "Auto-generated code: ",
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { color: "#38bdf8", fontWeight: 700 }, children: newLMPName.trim().split(/\s+/).length === 1 ? newLMPName.trim().toUpperCase().slice(0, 8) : newLMPName.trim().split(/\s+/).map((w) => w[0].toUpperCase()).join("").slice(0, 8) }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
                     lineNumber: 725,
-                    columnNumber: 21
-                  },
-                  void 0
-                )
+                    columnNumber: 50
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
+                  lineNumber: 724,
+                  columnNumber: 25
+                }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 720,
+                lineNumber: 707,
                 columnNumber: 17
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { marginBottom: 14 }, children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { marginBottom: 24 }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { style: {
                   display: "block",
                   fontSize: 11,
@@ -43571,93 +43537,36 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   textTransform: "uppercase",
                   letterSpacing: "0.05em",
                   marginBottom: 4
-                }, children: "Phase" }, void 0, false, {
+                }, children: "Course Type" }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                  lineNumber: 740,
-                  columnNumber: 21
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "input",
-                  {
-                    type: "text",
-                    value: newLMPPhase,
-                    onChange: (e) => setNewLMPPhase(e.target.value),
-                    placeholder: "e.g. BGF, BIF, FIC",
-                    style: {
-                      width: "100%",
-                      backgroundColor: "#111827",
-                      border: "1px solid #4b5563",
-                      borderRadius: 6,
-                      padding: "7px 10px",
-                      color: "#fff",
-                      fontSize: 13,
-                      outline: "none",
-                      boxSizing: "border-box"
-                    }
-                  },
-                  void 0,
-                  false,
-                  {
-                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 744,
-                    columnNumber: 21
-                  },
-                  void 0
-                )
-              ] }, void 0, true, {
-                fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 739,
-                columnNumber: 17
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { marginBottom: 22 }, children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { style: {
-                  display: "block",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                  marginBottom: 4
-                }, children: "Event Category" }, void 0, false, {
-                  fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                  lineNumber: 757,
+                  lineNumber: 736,
                   columnNumber: 21
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
                   "select",
                   {
-                    value: newLMPType,
-                    onChange: (e) => setNewLMPType(e.target.value),
+                    value: newLMPCourseType,
+                    onChange: (e) => setNewLMPCourseType(e.target.value),
                     style: {
                       width: "100%",
                       backgroundColor: "#111827",
                       border: "1px solid #4b5563",
                       borderRadius: 6,
-                      padding: "7px 10px",
+                      padding: "8px 10px",
                       color: "#fff",
                       fontSize: 13,
                       outline: "none",
                       boxSizing: "border-box"
                     },
                     children: [
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Flight", children: "Flight" }, void 0, false, {
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Flight Training", children: "Flight Training" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                        lineNumber: 768,
+                        lineNumber: 747,
                         columnNumber: 25
                       }, void 0),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "FTD", children: "FTD" }, void 0, false, {
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Academic Training", children: "Academic Training" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                        lineNumber: 769,
-                        columnNumber: 25
-                      }, void 0),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Ground School", children: "Ground Event (in-phase classroom)" }, void 0, false, {
-                        fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                        lineNumber: 770,
-                        columnNumber: 25
-                      }, void 0),
-                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Academics", children: "Academics (pre-phase theory)" }, void 0, false, {
-                        fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                        lineNumber: 771,
+                        lineNumber: 748,
                         columnNumber: 25
                       }, void 0)
                     ]
@@ -43666,19 +43575,19 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   true,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 761,
+                    lineNumber: 740,
                     columnNumber: 21
                   },
                   void 0
                 ),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 4 }, children: newLMPType === "Academics" ? "Academics: theory/classroom lessons delivered prior to the flying phase." : newLMPType === "Ground School" ? "Ground Event: classroom events delivered during the flying phase." : "" }, void 0, false, {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { style: { fontSize: 10, color: "#6b7280", marginTop: 4 }, children: newLMPCourseType === "Academic Training" ? "Academic Training: theory/classroom instruction delivered prior to the flying phase." : "Flight Training: airborne, simulator and associated ground events during the flying phase." }, void 0, false, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                  lineNumber: 773,
+                  lineNumber: 750,
                   columnNumber: 21
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 756,
+                lineNumber: 735,
                 columnNumber: 17
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8 }, children: [
@@ -43693,7 +43602,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 784,
+                    lineNumber: 759,
                     columnNumber: 21
                   },
                   void 0
@@ -43709,14 +43618,14 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                    lineNumber: 790,
+                    lineNumber: 765,
                     columnNumber: 21
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-                lineNumber: 783,
+                lineNumber: 758,
                 columnNumber: 17
               }, void 0)
             ]
@@ -43725,7 +43634,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
           true,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-            lineNumber: 692,
+            lineNumber: 694,
             columnNumber: 13
           },
           void 0
@@ -43735,14 +43644,14 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-        lineNumber: 687,
+        lineNumber: 689,
         columnNumber: 9
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
-    lineNumber: 547,
+    lineNumber: 549,
     columnNumber: 5
   }, void 0);
 };

@@ -361,12 +361,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
 
-  // Add LMP modal state
+  // Add Course modal state
   const [showAddLMPModal, setShowAddLMPModal] = useState(false);
-  const [newLMPName, setNewLMPName] = useState('');
-  const [newLMPCourse, setNewLMPCourse] = useState('BPC+IPC');
-  const [newLMPPhase, setNewLMPPhase] = useState('');
-  const [newLMPType, setNewLMPType] = useState<SyllabusItemDetail['type']>('Ground School');
+  const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
+  const [newLMPCourseType, setNewLMPCourseType] = useState<'Flight Training' | 'Academic Training'>('Flight Training');
 
   // Filter items based on selected course type
   const filteredSyllabusDetails = useMemo(() => {
@@ -462,21 +460,25 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   };
 
   const handleAddLMP = () => {
-      // Open the Add LMP basics modal — pre-fill course to current selection
+      // Open the Add Course modal
       setNewLMPName('');
-      setNewLMPCourse(selectedCourseType);
-      setNewLMPPhase('');
-      setNewLMPType('Ground School');
+      setNewLMPCourseType('Flight Training');
       setShowAddLMPModal(true);
   };
 
   const handleAddLMPSave = () => {
-      if (!newLMPName.trim()) { alert('Please enter an LMP name/code.'); return; }
-      // Build the new LMP item with basics filled in
+      if (!newLMPName.trim()) { alert('Please enter a course title.'); return; }
+      // Auto-generate a course code from the title:
+      // Take first letter of each word, uppercase, max 8 chars — e.g. "Basic Flying Course" → "BFC"
+      const words = newLMPName.trim().split(/\s+/);
+      const autoCode = words.length === 1
+          ? newLMPName.trim().toUpperCase().slice(0, 8)
+          : words.map(w => w[0].toUpperCase()).join('').slice(0, 8);
+      // Build the new course/LMP item with basics filled in
       const newItem: SyllabusItemDetail = {
           id: `new-lmp-${Date.now()}`,
-          code: newLMPName.trim().toUpperCase(),
-          phase: newLMPPhase.trim() || selectedCourseType,
+          code: autoCode,
+          phase: autoCode,
           module: newLMPName.trim(),
           dayNight: 'Day',
           eventDescription: newLMPName.trim(),
@@ -490,20 +492,20 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           duration: 1,
           preFlightTime: 0,
           postFlightTime: 0,
-          type: newLMPType,
+          type: newLMPCourseType === 'Academic Training' ? 'Academics' : 'Ground School',
           methodOfDelivery: [],
           methodOfAssessment: [],
           resourcesPhysical: [],
           resourcesHuman: [],
           location: '',
-          courses: [newLMPCourse],
+          courses: [autoCode],
           lmpType: 'Master LMP',
       };
       setShowAddLMPModal(false);
-      // Add to list via prop
+      // Add to list via prop and also add to COURSE_MASTER_LMPS display
       if (onAddItem) onAddItem(newItem);
-      // Switch to the correct course and immediately enter edit mode
-      setSelectedCourseType(newLMPCourse);
+      // Switch to the new course code and immediately enter edit mode
+      setSelectedCourseType(autoCode);
       setSelectedItem(newItem);
       setEditedItem(JSON.parse(JSON.stringify(newItem)));
       setIsEditing(true);
@@ -580,7 +582,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="Master LMP" />
-                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add LMP</button>
+                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add Course</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
@@ -694,88 +696,61 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     padding: 28, width: 420, boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
                 onClick={e => e.stopPropagation()}
             >
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 20 }}>
-                    Add New LMP
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>
+                    Add Course
                 </h2>
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20 }}>
+                    A course code will be auto-generated from the title.
+                </p>
 
-                {/* LMP Code / Name */}
-                <div style={{ marginBottom: 14 }}>
+                {/* Course Title */}
+                <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        LMP Code / Name *
+                        Course Title *
                     </label>
                     <input
                         type="text"
                         value={newLMPName}
                         onChange={e => setNewLMPName(e.target.value)}
-                        placeholder="e.g. BGF GND1"
+                        onKeyDown={e => e.key === 'Enter' && handleAddLMPSave()}
+                        placeholder="e.g. Basic Flying Course"
                         autoFocus
                         style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
-                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
-                            outline: 'none', boxSizing: 'border-box' }}
+                            borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' as const }}
                     />
+                    {newLMPName.trim() && (
+                        <p style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
+                            Auto-generated code: <span style={{ color: '#38bdf8', fontWeight: 700 }}>
+                                {newLMPName.trim().split(/\s+/).length === 1
+                                    ? newLMPName.trim().toUpperCase().slice(0, 8)
+                                    : newLMPName.trim().split(/\s+/).map((w: string) => w[0].toUpperCase()).join('').slice(0, 8)}
+                            </span>
+                        </p>
+                    )}
                 </div>
 
-                {/* Course */}
-                <div style={{ marginBottom: 14 }}>
+                {/* Course Type */}
+                <div style={{ marginBottom: 24 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
                         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        Course
+                        Course Type
                     </label>
                     <select
-                        value={newLMPCourse}
-                        onChange={e => setNewLMPCourse(e.target.value)}
+                        value={newLMPCourseType}
+                        onChange={e => setNewLMPCourseType(e.target.value as 'Flight Training' | 'Academic Training')}
                         style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
-                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
+                            borderRadius: 6, padding: '8px 10px', color: '#fff', fontSize: 13,
                             outline: 'none', boxSizing: 'border-box' as const }}
                     >
-                        {['BPC+IPC','FIC','OFI','WSO','FIC(I)','PLT CONV','QFI CONV','PLT Refresh','Staff CAT'].map(c => (
-                            <option key={c} value={c}>{c}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* Phase */}
-                <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
-                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        Phase
-                    </label>
-                    <input
-                        type="text"
-                        value={newLMPPhase}
-                        onChange={e => setNewLMPPhase(e.target.value)}
-                        placeholder="e.g. BGF, BIF, FIC"
-                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
-                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
-                            outline: 'none', boxSizing: 'border-box' }}
-                    />
-                </div>
-
-                {/* Event Type */}
-                <div style={{ marginBottom: 22 }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
-                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
-                        Event Category
-                    </label>
-                    <select
-                        value={newLMPType}
-                        onChange={e => setNewLMPType(e.target.value as SyllabusItemDetail['type'])}
-                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
-                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
-                            outline: 'none', boxSizing: 'border-box' as const }}
-                    >
-                        <option value="Flight">Flight</option>
-                        <option value="FTD">FTD</option>
-                        <option value="Ground School">Ground Event (in-phase classroom)</option>
-                        <option value="Academics">Academics (pre-phase theory)</option>
+                        <option value="Flight Training">Flight Training</option>
+                        <option value="Academic Training">Academic Training</option>
                     </select>
                     <p style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
-                        {newLMPType === 'Academics'
-                            ? 'Academics: theory/classroom lessons delivered prior to the flying phase.'
-                            : newLMPType === 'Ground School'
-                            ? 'Ground Event: classroom events delivered during the flying phase.'
-                            : ''}
+                        {newLMPCourseType === 'Academic Training'
+                            ? 'Academic Training: theory/classroom instruction delivered prior to the flying phase.'
+                            : 'Flight Training: airborne, simulator and associated ground events during the flying phase.'}
                     </p>
                 </div>
 
