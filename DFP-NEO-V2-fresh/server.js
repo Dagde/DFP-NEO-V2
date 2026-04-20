@@ -2563,7 +2563,7 @@ app.put('/api/syllabus/:id', async (req, res) => {
     const { id } = req.params;
     const body = req.body;
 
-    // Exclude server-managed fields, timestamps, and non-column metadata fields
+    // Exclude server-managed fields, timestamps, and non-column metadata fields sent from frontend
     const EXCLUDED_FIELDS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'version', 'changeReason'];
     const fields = Object.keys(body).filter(k => !EXCLUDED_FIELDS.includes(k));
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
