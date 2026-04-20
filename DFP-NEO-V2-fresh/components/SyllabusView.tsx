@@ -1,6 +1,6 @@
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
@@ -72,9 +72,10 @@ const DetailView: React.FC<{
     onItemChange: (newItem: SyllabusItemDetail) => void;
 }> = ({ item, isEditing, editedItem, onItemChange }) => {
     
-    const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' => {
+    const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
         if (syllabusItem.type === 'FTD') return 'FTD';
+        if (syllabusItem.type === 'Academics') return 'Academics';
         if (syllabusItem.type === 'Ground School') {
             if (syllabusItem.code.includes('CPT')) return 'CPT';
             return 'Ground';
@@ -89,6 +90,7 @@ const DetailView: React.FC<{
         
         if (newDisplayType === 'FTD') newType = 'FTD';
         if (newDisplayType === 'CPT' || newDisplayType === 'Ground') newType = 'Ground School';
+        if (newDisplayType === 'Academics') newType = 'Academics';
         
         onItemChange({ ...editedItem, type: newType });
     };
@@ -157,6 +159,7 @@ const DetailView: React.FC<{
                                 <option>FTD</option>
                                 <option>CPT</option>
                                 <option>Ground</option>
+                                <option>Academics</option>
                             </select>
                         </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
@@ -358,6 +361,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
 
+  // Add LMP modal state
+  const [showAddLMPModal, setShowAddLMPModal] = useState(false);
+  const [newLMPName, setNewLMPName] = useState('');
+  const [newLMPCourse, setNewLMPCourse] = useState('BPC+IPC');
+  const [newLMPPhase, setNewLMPPhase] = useState('');
+  const [newLMPType, setNewLMPType] = useState<SyllabusItemDetail['type']>('Ground School');
+
   // Filter items based on selected course type
   const filteredSyllabusDetails = useMemo(() => {
       return syllabusDetails.filter(item => {
@@ -451,6 +461,54 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       setEditedItem(null);
   };
 
+  const handleAddLMP = () => {
+      // Open the Add LMP basics modal — pre-fill course to current selection
+      setNewLMPName('');
+      setNewLMPCourse(selectedCourseType);
+      setNewLMPPhase('');
+      setNewLMPType('Ground School');
+      setShowAddLMPModal(true);
+  };
+
+  const handleAddLMPSave = () => {
+      if (!newLMPName.trim()) { alert('Please enter an LMP name/code.'); return; }
+      // Build the new LMP item with basics filled in
+      const newItem: SyllabusItemDetail = {
+          id: `new-lmp-${Date.now()}`,
+          code: newLMPName.trim().toUpperCase(),
+          phase: newLMPPhase.trim() || selectedCourseType,
+          module: newLMPName.trim(),
+          dayNight: 'Day',
+          eventDescription: newLMPName.trim(),
+          prerequisites: [],
+          prerequisitesGround: [],
+          prerequisitesFlying: [],
+          eventDetailsCommon: [],
+          eventDetailsSortie: [],
+          totalEventHours: 0,
+          flightOrSimHours: 0,
+          duration: 1,
+          preFlightTime: 0,
+          postFlightTime: 0,
+          type: newLMPType,
+          methodOfDelivery: [],
+          methodOfAssessment: [],
+          resourcesPhysical: [],
+          resourcesHuman: [],
+          location: '',
+          courses: [newLMPCourse],
+          lmpType: 'Master LMP',
+      };
+      setShowAddLMPModal(false);
+      // Add to list via prop
+      if (onAddItem) onAddItem(newItem);
+      // Switch to the correct course and immediately enter edit mode
+      setSelectedCourseType(newLMPCourse);
+      setSelectedItem(newItem);
+      setEditedItem(JSON.parse(JSON.stringify(newItem)));
+      setIsEditing(true);
+  };
+
   const handleAddEvent = () => {
       // Create a blank new item pre-filled for the currently selected course
       const newItem: SyllabusItemDetail = {
@@ -486,6 +544,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   };
 
   return (
+    <>
     <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
@@ -521,6 +580,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
             ) : (
                 <div className="flex items-center gap-[1px]">
                     <AuditButton pageName="Master LMP" />
+                    <button onClick={handleAddLMP} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Add LMP</button>
                     <button onClick={handleEdit} disabled={isFrozen} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-50 disabled:cursor-not-allowed">Edit</button>
                 </div>
             )}
@@ -621,6 +681,123 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
         </div>
       </div>
     </div>
+
+    {/* ── Add LMP Basics Modal ── */}
+    {showAddLMPModal && (
+        <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.75)', zIndex: 10000,
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setShowAddLMPModal(false)}
+        >
+            <div
+                style={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: 12,
+                    padding: 28, width: 420, boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 20 }}>
+                    Add New LMP
+                </h2>
+
+                {/* LMP Code / Name */}
+                <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        LMP Code / Name *
+                    </label>
+                    <input
+                        type="text"
+                        value={newLMPName}
+                        onChange={e => setNewLMPName(e.target.value)}
+                        placeholder="e.g. BGF GND1"
+                        autoFocus
+                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
+                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' }}
+                    />
+                </div>
+
+                {/* Course */}
+                <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Course
+                    </label>
+                    <select
+                        value={newLMPCourse}
+                        onChange={e => setNewLMPCourse(e.target.value)}
+                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
+                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' as const }}
+                    >
+                        {['BPC+IPC','FIC','OFI','WSO','FIC(I)','PLT CONV','QFI CONV','PLT Refresh','Staff CAT'].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Phase */}
+                <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Phase
+                    </label>
+                    <input
+                        type="text"
+                        value={newLMPPhase}
+                        onChange={e => setNewLMPPhase(e.target.value)}
+                        placeholder="e.g. BGF, BIF, FIC"
+                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
+                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' }}
+                    />
+                </div>
+
+                {/* Event Type */}
+                <div style={{ marginBottom: 22 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Event Category
+                    </label>
+                    <select
+                        value={newLMPType}
+                        onChange={e => setNewLMPType(e.target.value as SyllabusItemDetail['type'])}
+                        style={{ width: '100%', backgroundColor: '#111827', border: '1px solid #4b5563',
+                            borderRadius: 6, padding: '7px 10px', color: '#fff', fontSize: 13,
+                            outline: 'none', boxSizing: 'border-box' as const }}
+                    >
+                        <option value="Flight">Flight</option>
+                        <option value="FTD">FTD</option>
+                        <option value="Ground School">Ground Event (in-phase classroom)</option>
+                        <option value="Academics">Academics (pre-phase theory)</option>
+                    </select>
+                    <p style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
+                        {newLMPType === 'Academics'
+                            ? 'Academics: theory/classroom lessons delivered prior to the flying phase.'
+                            : newLMPType === 'Ground School'
+                            ? 'Ground Event: classroom events delivered during the flying phase.'
+                            : ''}
+                    </p>
+                </div>
+
+                {/* Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                        onClick={() => setShowAddLMPModal(false)}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleAddLMPSave}
+                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black"
+                    >
+                        Create
+                    </button>
+                </div>
+            </div>
+        </div>
+    )}
+    </>
   );
 };
 

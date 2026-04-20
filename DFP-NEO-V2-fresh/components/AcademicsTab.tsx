@@ -252,11 +252,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic syllabus (Ground School type only) ──
+  // ── Academic syllabus (Academics + Ground School types) ──
   const academicSyllabus = useMemo(() => {
     return syllabusDetails.filter(s =>
-      s.type === 'Ground School' &&
-      !s.methodOfDelivery?.includes('CPT') &&
+      (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
       (s.courses?.includes(selectedCourse) || s.courses?.length === 0 || !s.courses)
     );
   }, [syllabusDetails, selectedCourse]);
