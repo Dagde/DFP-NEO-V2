@@ -203,7 +203,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 Ground Event
                             </button>
                             <button style={tabStyle(activeTab === 'academics')} onClick={() => setActiveTab('academics')}>
-                                📚 Academics
+                                Academics
                             </button>
                         </div>
                         <button
@@ -340,6 +340,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 date={date || new Date().toISOString().split('T')[0]}
                                 courseColors={courseColors || activeCourses}
                                 school={school || 'ESL'}
+                                defaultLocality={(school || 'ESL') === 'ESL' ? 'East Sale' : 'Pearce'}
                                 onSave={(data) => {
                                     if (onSaveAcademic) onSaveAcademic(data);
                                     else onSave(data);

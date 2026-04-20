@@ -159,7 +159,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   date,
   courseColors,
   school,
-  defaultLocality,
   onSave,
   onClose,
 }) => {
@@ -171,16 +170,12 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     return Array.from(locs);
   }, [traineesData, school]);
 
-  const [selectedLocality, setSelectedLocality] = useState(() => {
-    // Default to the locality currently selected in the header (passed as defaultLocality)
-    if (defaultLocality && localities.includes(defaultLocality)) return defaultLocality;
-    return localities[0] || '';
-  });
+  const [selectedLocality, setSelectedLocality] = useState(localities[0] || '');
   const [selectedDate, setSelectedDate] = useState(date);
   const [workStart, setWorkStart] = useState(8);
   const [workEnd, setWorkEnd]   = useState(17);
   const [otherText, setOtherText] = useState('');
-  const [resourceId, setResourceId] = useState(''); // blank by default
+  const [resourceId, setResourceId] = useState('Ground 1');
 
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
@@ -217,32 +212,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   const [selectedTrainees, setSelectedTrainees] = useState<string[]>([]);
   useEffect(() => {
-    // Only auto-select trainees who are available — paused/unavailable start unchecked
-    setSelectedTrainees(
-      courseTrainees
-        .filter(t => traineeStatuses[t.fullName]?.status === 'available')
-        .map(t => t.fullName)
-    );
-  }, [courseTrainees, traineeStatuses]);
+    setSelectedTrainees(courseTrainees.map(t => t.fullName));
+  }, [courseTrainees]);
 
   const toggleTrainee = (name: string) => {
-    const isCurrentlySelected = selectedTrainees.includes(name);
-    if (isCurrentlySelected) {
-      // Deselecting — always allowed
-      setSelectedTrainees(prev => prev.filter(n => n !== name));
-      return;
-    }
-    // Selecting — check status first
-    const st = traineeStatuses[name];
-    if (st && st.status !== 'available') {
-      const statusLabel = st.status === 'paused' ? 'PAUSED' : 'UNAVAILABLE';
-      const reason = st.reason || (st.status === 'paused' ? 'This trainee is currently paused.' : 'This trainee has a scheduling conflict or unavailability.');
-      const confirmed = window.confirm(
-        `⚠️ ${name} is ${statusLabel}\n\n${reason}\n\nDo you still want to include them in this academic session?`
-      );
-      if (!confirmed) return;
-    }
-    setSelectedTrainees(prev => [...prev, name]);
+    setSelectedTrainees(prev =>
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
   };
 
   // ── Academic syllabus (Ground School type only) ──
@@ -611,7 +587,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={S.label}>Classroom</div>
             <select style={{ ...S.select, width: 120 }} value={resourceId} onChange={e => setResourceId(e.target.value)}>
-              <option value="">— Select —</option>
               {Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map(g => (
                 <option key={g} value={g}>{g}</option>
               ))}
