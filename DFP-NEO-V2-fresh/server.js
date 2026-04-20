@@ -2629,7 +2629,7 @@ app.post('/api/auth/verify-password', async (req, res) => {
     }
 
     // Use bcryptjs to verify password
-    const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
+    const bcrypt = require('bcryptjs');
     const valid = await bcrypt.compare(password, userData.password);
 
     if (valid) {
@@ -2698,7 +2698,7 @@ app.post('/api/admin/set-user-password', async (req, res) => {
     const userIdFromDb = user.id; // Use the primary id column as it's what UPDATE uses
 
     // Hash the password using bcryptjs
-    const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
+    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Update the user's password
@@ -2766,7 +2766,7 @@ app.post('/api/admin/set-user-password-by-id', async (req, res) => {
     }
 
     // Use bcryptjs to hash the password
-    const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
+    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Update by userId (the unique userId field, not id)
