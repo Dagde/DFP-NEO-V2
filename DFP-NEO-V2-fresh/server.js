@@ -2845,6 +2845,31 @@ app.post('/api/admin/set-user-password-by-id', async (req, res) => {
 });
 
 // GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
+// POST /api/admin/fix-syllabus-fields - Fix phase/module fields that were incorrectly set during bulk upload
+app.post('/api/admin/fix-syllabus-fields', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, phase, module: moduleName } = req.body;
+    if (!courseCode) return res.status(400).json({ error: 'courseCode required' });
+
+    // Update all items in this course that have bad phase/module values (numeric or empty)
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "phase"  = CASE WHEN "phase" ~ '^[0-9]+$' OR "phase" = '' THEN $2 ELSE "phase" END,
+        "module" = CASE WHEN "module" ~ '^[0-9]+$' OR "module" = '' THEN $3 ELSE "module" END,
+        "updatedAt" = NOW()
+      WHERE $1 = ANY("courses") AND "isActive" = true
+    `, courseCode, phase || courseCode, moduleName || courseCode);
+
+    console.log(`✅ Fixed phase/module for course ${courseCode}`);
+    res.json({ success: true, message: `Fixed phase/module fields for course ${courseCode}` });
+  } catch (error) {
+    console.error('❌ fix-syllabus-fields error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // DELETE /api/admin/purge-inactive - Hard delete all soft-deleted (isActive=false) syllabus items
 app.delete('/api/admin/purge-inactive', async (req, res) => {
   try {
@@ -2989,9 +3014,14 @@ app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) =>
           if (suffix > 99) break;
         }
 
-        // phase and module: use from sheet, or fall back to sensible defaults
-        const phase  = rawPhase  ? String(rawPhase).trim()  : (itemCourseCode || '1');
-        const module = rawModule ? String(rawModule).trim() : (courseName || itemCourseCode || finalCode);
+        // phase and module: use from sheet ONLY if non-empty string (not a number fallback)
+        // Default to course code for phase, course name for module
+        const phase  = (rawPhase  && isNaN(Number(rawPhase))  && String(rawPhase).trim())
+            ? String(rawPhase).trim()
+            : (itemCourseCode || 'GS');
+        const module = (rawModule && isNaN(Number(rawModule)) && String(rawModule).trim())
+            ? String(rawModule).trim()
+            : (courseName || itemCourseCode || finalCode);
 
         const eventDescription = rawEventDesc
           ? String(rawEventDesc).trim()

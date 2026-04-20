@@ -43576,7 +43576,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
               setUploadFile(null);
               setUploadResult(null);
               setShowUploadModal(true);
-            }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-400 disabled:opacity-50 disabled:cursor-not-allowed", children: "Upload" }, void 0, false, {
+            }, disabled: isFrozen, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black disabled:opacity-50 disabled:cursor-not-allowed", children: "Upload" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/SyllabusView.tsx",
               lineNumber: 763,
               columnNumber: 21
