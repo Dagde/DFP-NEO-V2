@@ -2581,11 +2581,11 @@ app.put('/api/syllabus/:id', async (req, res) => {
     const values = fields.map(f => body[f]);
 
     await db.$executeRawUnsafe(
-      `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1`,
+      `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,
       id, ...values
     );
 
-    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`, id);
     const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
     console.log(`✅ PUT /api/syllabus/${id}`);
     res.json({ success: true, syllabusItem, item: rows[0] });
