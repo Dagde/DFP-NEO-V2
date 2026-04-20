@@ -354,7 +354,8 @@ const DetailView: React.FC<{
             <div className="pt-4 border-t border-gray-700 mt-2 flex justify-end">
                 <button
                     onClick={() => onDeleteEvent(item)}
-                    className="px-4 py-2 text-[11px] font-semibold rounded-md bg-red-900/40 border border-red-700 text-red-400 hover:bg-red-800/60 hover:text-red-300 transition-colors"
+                    style={{ backgroundColor: '#dc2626', color: '#ffffff', border: 'none' }}
+                    className="px-4 py-2 text-[11px] font-semibold rounded-md hover:opacity-90 transition-opacity"
                 >
                     🗑 Delete This Event
                 </button>
@@ -1143,7 +1144,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                         onClick={handleDeleteEventConfirm}
                         disabled={isDeletingEvent}
                         style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, borderRadius: 6,
-                            backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #ef4444',
+                            backgroundColor: '#dc2626', color: '#ffffff', border: 'none',
                             cursor: isDeletingEvent ? 'not-allowed' : 'pointer', opacity: isDeletingEvent ? 0.6 : 1 }}
                     >
                         {isDeletingEvent ? 'Deleting…' : 'Delete Event'}

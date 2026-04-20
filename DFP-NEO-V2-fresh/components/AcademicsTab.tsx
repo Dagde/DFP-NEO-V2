@@ -252,13 +252,44 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic syllabus (Academics + Ground School types) ──
+  // ── Academic LMP courses (from syllabusDetails where type === 'Academics') ──
+  const academicLmpCourses = useMemo(() => {
+    // Find all unique course codes from syllabus items of type 'Academics' or Ground School (non-CPT)
+    const courseCodeSet = new Set<string>();
+    syllabusDetails.forEach(s => {
+      if (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) {
+        (s.courses || []).forEach(c => courseCodeSet.add(c));
+      }
+    });
+    // Build list with display titles: use module field of first matching item as title
+    return Array.from(courseCodeSet).map(code => {
+      const firstItem = syllabusDetails.find(s =>
+        (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
+        s.courses?.includes(code)
+      );
+      // module field holds the full course title (e.g. "PC-21 Ground School")
+      const title = firstItem?.module?.trim() || code;
+      return { code, title };
+    }).sort((a, b) => a.title.localeCompare(b.title));
+  }, [syllabusDetails]);
+
+  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>('');
+
+  // Auto-select first academic LMP course on load
+  useEffect(() => {
+    if (academicLmpCourses.length > 0 && !selectedAcademicLmp) {
+      setSelectedAcademicLmp(academicLmpCourses[0].code);
+    }
+  }, [academicLmpCourses, selectedAcademicLmp]);
+
+  // ── Academic syllabus filtered by selected Academic LMP course ──
   const academicSyllabus = useMemo(() => {
+    if (!selectedAcademicLmp) return [];
     return syllabusDetails.filter(s =>
       (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
-      (s.courses?.includes(selectedCourse) || s.courses?.length === 0 || !s.courses)
+      s.courses?.includes(selectedAcademicLmp)
     );
-  }, [syllabusDetails, selectedCourse]);
+  }, [syllabusDetails, selectedAcademicLmp]);
 
   const subjectGroups = useMemo(() => groupBySubject(academicSyllabus), [academicSyllabus]);
 
@@ -429,7 +460,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   return (
     <div style={S.container}>
       {/* ── Control Bar ── */}
-      <div style={{ ...S.card, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 10 }}>
+      <div style={{ ...S.card, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: 10 }}>
         <div>
           <div style={S.label}>Locality</div>
           <select style={S.select} value={selectedLocality} onChange={e => setSelectedLocality(e.target.value)}>
@@ -441,6 +472,21 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           <select style={S.select} value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
             <option value="">-- Select --</option>
             {coursesForLocality.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{ ...S.label, color: '#93c5fd' }}>Academic LMP</div>
+          <select
+            style={{ ...S.select, borderColor: '#1d4ed8' }}
+            value={selectedAcademicLmp}
+            onChange={e => {
+              setSelectedAcademicLmp(e.target.value);
+              setSelectedLessons(new Set());
+              setTiles(prev => prev.filter(t => t.isStandard));
+            }}
+          >
+            <option value="">-- Select LMP --</option>
+            {academicLmpCourses.map(c => <option key={c.code} value={c.code}>{c.title}</option>)}
           </select>
         </div>
         <div>
