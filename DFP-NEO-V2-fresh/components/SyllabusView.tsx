@@ -362,10 +362,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
 
-  // Dynamic course list: union of static list + any courses found in syllabusDetails
+  // Dynamic course list: union of static list + any courses found in active syllabusDetails
   const courseLMPs = useMemo(() => {
     const fromSyllabus = new Set<string>();
-    syllabusDetails.forEach(item => {
+    syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
       (item.courses || []).forEach(c => { if (c) fromSyllabus.add(c); });
     });
     const all = new Set([...STATIC_COURSE_LMPS, ...Array.from(fromSyllabus)]);
@@ -384,9 +384,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Filter items based on selected course type
+  // Filter items based on selected course type (exclude inactive/deleted items)
   const filteredSyllabusDetails = useMemo(() => {
       return syllabusDetails.filter(item => {
+          if (item.isActive === false) return false;
           // If no courses array defined, assume it belongs to BPC+IPC (legacy behavior)
           if (!item.courses || item.courses.length === 0) {
               return selectedCourseType === 'BPC+IPC';
@@ -510,22 +511,29 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
               return;
           }
           // Retire all items for this course
+          // Include any item that belongs to this course (even if it also belongs to others)
           const itemsToDelete = syllabusDetails.filter(item =>
-              (item.courses || []).includes(selectedCourseType) &&
-              !(item.courses || []).some(c => c !== selectedCourseType)
+              (item.courses || []).includes(selectedCourseType)
           );
-          await Promise.all(itemsToDelete.map(item =>
-              retireSyllabusItem(item.id, `Course deleted: ${selectedCourseType}`)
-          ));
+          console.log(`🗑️ Deleting ${itemsToDelete.length} items for course: ${selectedCourseType}`, itemsToDelete.map(i => i.id));
+          
+          if (itemsToDelete.length === 0) {
+              // Course exists in dropdown but has no items — just remove from UI
+              console.warn(`⚠️ No items found for course ${selectedCourseType} in syllabusDetails (${syllabusDetails.length} total items)`);
+          } else {
+              await Promise.all(itemsToDelete.map(item =>
+                  retireSyllabusItem(item.id, `Course deleted: ${selectedCourseType}`)
+              ));
+          }
           logAudit({ action: 'Delete', description: `Deleted course: ${selectedCourseType}`, changes: `${itemsToDelete.length} items retired`, page: 'Master LMP' });
-          // Remove from local state
+          // Remove from local state by marking isActive: false
           itemsToDelete.forEach(item => onUpdateItem({ ...item, isActive: false } as any));
           setShowDeleteModal(false);
           setDeletePassword('');
-          // Switch to first available course
-          const remaining = courseLMPs.filter(c => c !== selectedCourseType);
-          setSelectedCourseType(remaining[0] || 'BPC+IPC');
           setSelectedItem(null);
+          // Switch to first available course (excluding the deleted one)
+          const remaining = STATIC_COURSE_LMPS.filter(c => c !== selectedCourseType);
+          setSelectedCourseType(remaining[0] || 'BPC+IPC');
       } catch (err: any) {
           setDeleteError(`Failed to delete: ${err.message}`);
       } finally {
