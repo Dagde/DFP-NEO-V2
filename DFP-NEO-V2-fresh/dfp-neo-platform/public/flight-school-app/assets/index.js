@@ -25454,11 +25454,17 @@ const AddGroundEventFlyout = ({
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
-    color: active ? "#38bdf8" : "#9ca3af",
-    background: "none",
-    border: "none",
-    borderBottom: active ? "2px solid #38bdf8" : "2px solid transparent",
-    transition: "all 0.15s"
+    borderRadius: "8px 8px 0 0",
+    border: "2px solid",
+    borderBottomWidth: active ? 0 : "2px",
+    borderColor: active ? "#6b7280" : "#4b5563",
+    backgroundColor: active ? "#111827" : "#374151",
+    color: active ? "#ffffff" : "#d1d5db",
+    transition: "all 0.2s",
+    boxShadow: active ? "0 -2px 8px rgba(0,0,0,0.3)" : "none",
+    marginBottom: active ? "-1px" : 0,
+    position: "relative",
+    zIndex: active ? 1 : 0
   });
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25498,63 +25504,72 @@ const AddGroundEventFlyout = ({
             },
             onClick: (e) => e.stopPropagation(),
             children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 24px 0",
-                borderBottom: "1px solid #374151",
-                flexShrink: 0,
-                backgroundColor: "#1f2937"
-              }, children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "flex-end", gap: 0 }, children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { style: { fontSize: 18, fontWeight: 700, color: "#ffffff", margin: 0, paddingBottom: 14, marginRight: 24 }, children: "Add Ground Event" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { flexShrink: 0, backgroundColor: "#1f2937" }, children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "16px 24px 12px"
+                }, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { style: { fontSize: 18, fontWeight: 700, color: "#ffffff", margin: 0 }, children: "Add Ground Event" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 198,
+                    lineNumber: 203,
                     columnNumber: 29
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { style: tabStyle(activeTab === "ground"), onClick: () => setActiveTab("ground"), children: "Ground Event" }, void 0, false, {
-                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 202,
-                    columnNumber: 29
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { style: tabStyle(activeTab === "academics"), onClick: () => setActiveTab("academics"), children: "Academics" }, void 0, false, {
-                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 205,
-                    columnNumber: 29
-                  }, void 0)
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                    "button",
+                    {
+                      onClick: onClose,
+                      style: { background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 },
+                      children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { width: "24", height: "24", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
+                        fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
+                        lineNumber: 211,
+                        columnNumber: 37
+                      }, void 0) }, void 0, false, {
+                        fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
+                        lineNumber: 210,
+                        columnNumber: 33
+                      }, void 0)
+                    },
+                    void 0,
+                    false,
+                    {
+                      fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
+                      lineNumber: 206,
+                      columnNumber: 29
+                    },
+                    void 0
+                  )
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
                   lineNumber: 197,
                   columnNumber: 25
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
-                  "button",
-                  {
-                    onClick: onClose,
-                    style: { background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4, marginBottom: 10 },
-                    children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { width: "24", height: "24", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
-                      fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 214,
-                      columnNumber: 33
-                    }, void 0) }, void 0, false, {
-                      fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 213,
-                      columnNumber: 29
-                    }, void 0)
-                  },
-                  void 0,
-                  false,
-                  {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 6,
+                  padding: "0 24px",
+                  borderBottom: "1px solid #374151"
+                }, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { style: tabStyle(activeTab === "ground"), onClick: () => setActiveTab("ground"), children: "Ground Event" }, void 0, false, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 209,
-                    columnNumber: 25
-                  },
-                  void 0
-                )
+                    lineNumber: 223,
+                    columnNumber: 29
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { style: tabStyle(activeTab === "academics"), onClick: () => setActiveTab("academics"), children: "Academics" }, void 0, false, {
+                    fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
+                    lineNumber: 226,
+                    columnNumber: 29
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
+                  lineNumber: 216,
+                  columnNumber: 25
+                }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                lineNumber: 188,
+                lineNumber: 195,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { flex: 1, overflowY: "auto", padding: 24 }, children: [
@@ -25563,7 +25578,7 @@ const AddGroundEventFlyout = ({
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-event", className: "block text-sm font-medium text-gray-400", children: "Event" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 227,
+                        lineNumber: 240,
                         columnNumber: 41
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "ground-event", value: flightNumber, onChange: (e) => setFlightNumber(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: groundSyllabus.map((s) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: s.code, children: [
@@ -25572,54 +25587,54 @@ const AddGroundEventFlyout = ({
                         s.eventDescription
                       ] }, s.code, true, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 229,
+                        lineNumber: 242,
                         columnNumber: 70
                       }, void 0)) }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 228,
+                        lineNumber: 241,
                         columnNumber: 41
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 226,
+                      lineNumber: 239,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-instructor", className: "block text-sm font-medium text-gray-400", children: "Instructor" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 233,
+                        lineNumber: 246,
                         columnNumber: 41
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "ground-instructor", value: instructor, onChange: (e) => setInstructor(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: [
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: "Select an instructor" }, void 0, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 235,
+                          lineNumber: 248,
                           columnNumber: 45
                         }, void 0),
                         instructors.map((i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: i, children: i }, i, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 236,
+                          lineNumber: 249,
                           columnNumber: 67
                         }, void 0))
                       ] }, void 0, true, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 234,
+                        lineNumber: 247,
                         columnNumber: 41
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 232,
+                      lineNumber: 245,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 225,
+                    lineNumber: 238,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Attendees" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 242,
+                      lineNumber: 255,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2 space-y-4", children: [
@@ -25627,187 +25642,187 @@ const AddGroundEventFlyout = ({
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-course", className: "block text-sm font-medium text-gray-400", children: "Course" }, void 0, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 246,
+                            lineNumber: 259,
                             columnNumber: 49
                           }, void 0),
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "ground-course", value: selectedCourse2, onChange: (e) => setSelectedCourse(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Object.keys(activeCourses).map((name) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: name, children: name }, name, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 248,
+                            lineNumber: 261,
                             columnNumber: 93
                           }, void 0)) }, void 0, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 247,
+                            lineNumber: 260,
                             columnNumber: 49
                           }, void 0)
                         ] }, void 0, true, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 245,
+                          lineNumber: 258,
                           columnNumber: 45
                         }, void 0),
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3 pt-6", children: [
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", id: "entire-course", checked: isEntireCourse, onChange: handleEntireCourseChange, className: "h-5 w-5 bg-gray-700 rounded accent-sky-500" }, void 0, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 252,
+                            lineNumber: 265,
                             columnNumber: 49
                           }, void 0),
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "entire-course", className: "font-semibold text-sky-400", children: "Select Entire Course" }, void 0, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 253,
+                            lineNumber: 266,
                             columnNumber: 49
                           }, void 0)
                         ] }, void 0, true, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 251,
+                          lineNumber: 264,
                           columnNumber: 45
                         }, void 0)
                       ] }, void 0, true, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 244,
+                        lineNumber: 257,
                         columnNumber: 41
                       }, void 0),
                       !isEntireCourse && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative", ref: traineeSelectorRef, children: [
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Trainees" }, void 0, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 258,
+                          lineNumber: 271,
                           columnNumber: 49
                         }, void 0),
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setShowTraineeSelector(!showTraineeSelector), className: "mt-1 w-full text-left bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500", children: selectedTrainees.length > 0 ? `${selectedTrainees.length} selected` : "Select trainees..." }, void 0, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 259,
+                          lineNumber: 272,
                           columnNumber: 49
                         }, void 0),
                         showTraineeSelector && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute z-10 w-full mt-1 bg-gray-800 border border-gray-600 rounded-md shadow-lg max-h-60 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "p-2 space-y-1", children: availableTrainees.map((t) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 p-2 rounded hover:bg-gray-700", children: [
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked: selectedTrainees.includes(t), onChange: () => handleTraineeCheckboxChange(t), className: "h-4 w-4 accent-sky-500 bg-gray-600" }, void 0, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 268,
+                            lineNumber: 281,
                             columnNumber: 73
                           }, void 0),
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: t }, void 0, false, {
                             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                            lineNumber: 269,
+                            lineNumber: 282,
                             columnNumber: 73
                           }, void 0)
                         ] }, void 0, true, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 267,
+                          lineNumber: 280,
                           columnNumber: 69
                         }, void 0) }, t, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 266,
+                          lineNumber: 279,
                           columnNumber: 65
                         }, void 0)) }, void 0, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 264,
+                          lineNumber: 277,
                           columnNumber: 57
                         }, void 0) }, void 0, false, {
                           fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                          lineNumber: 263,
+                          lineNumber: 276,
                           columnNumber: 53
                         }, void 0)
                       ] }, void 0, true, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 257,
+                        lineNumber: 270,
                         columnNumber: 45
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 243,
+                      lineNumber: 256,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 241,
+                    lineNumber: 254,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-start", className: "block text-sm font-medium text-gray-400", children: "Start Time" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 283,
+                        lineNumber: 296,
                         columnNumber: 41
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "ground-start", value: startTime, onChange: (e) => setStartTime(parseFloat(e.target.value)), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 285,
+                        lineNumber: 298,
                         columnNumber: 69
                       }, void 0)) }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 284,
+                        lineNumber: 297,
                         columnNumber: 41
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 282,
+                      lineNumber: 295,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-duration", className: "block text-sm font-medium text-gray-400", children: "Duration (hrs)" }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 289,
+                        lineNumber: 302,
                         columnNumber: 41
                       }, void 0),
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "ground-duration", value: duration, onChange: (e) => setDuration(parseFloat(e.target.value)), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: durationOptions.map((d) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: d, children: d.toFixed(2) }, d, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 291,
+                        lineNumber: 304,
                         columnNumber: 71
                       }, void 0)) }, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 290,
+                        lineNumber: 303,
                         columnNumber: 41
                       }, void 0)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 288,
+                      lineNumber: 301,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 281,
+                    lineNumber: 294,
                     columnNumber: 33
                   }, void 0),
                   isCptEvent ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "cpt-resource", className: "block text-sm font-medium text-gray-400", children: "CPT Resource" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 298,
+                      lineNumber: 311,
                       columnNumber: 41
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c, children: c }, c, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 300,
+                      lineNumber: 313,
                       columnNumber: 107
                     }, void 0)) }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 299,
+                      lineNumber: 312,
                       columnNumber: 41
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 297,
+                    lineNumber: 310,
                     columnNumber: 37
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-resource", className: "block text-sm font-medium text-gray-400", children: "Ground Resource" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 305,
+                      lineNumber: 318,
                       columnNumber: 41
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { id: "ground-resource", value: selectedGround, onChange: (e) => setSelectedGround(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: g, children: g }, g, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 307,
+                      lineNumber: 320,
                       columnNumber: 110
                     }, void 0)) }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 306,
+                      lineNumber: 319,
                       columnNumber: 41
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 304,
+                    lineNumber: 317,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "ground-location", className: "block text-sm font-medium text-gray-400", children: isCptEvent ? "Notes" : "Location" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 313,
+                      lineNumber: 326,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25824,47 +25839,47 @@ const AddGroundEventFlyout = ({
                       false,
                       {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 314,
+                        lineNumber: 327,
                         columnNumber: 37
                       },
                       void 0
                     )
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 312,
+                    lineNumber: 325,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-[1px] pt-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 321,
+                      lineNumber: 334,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSaveGround, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-black", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
                       "Save",
                       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                        lineNumber: 325,
+                        lineNumber: 338,
                         columnNumber: 51
                       }, void 0),
                       "Event"
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 325,
+                      lineNumber: 338,
                       columnNumber: 41
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                      lineNumber: 324,
+                      lineNumber: 337,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 320,
+                    lineNumber: 333,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                  lineNumber: 224,
+                  lineNumber: 237,
                   columnNumber: 29
                 }, void 0),
                 activeTab === "academics" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25890,14 +25905,14 @@ const AddGroundEventFlyout = ({
                   false,
                   {
                     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                    lineNumber: 333,
+                    lineNumber: 346,
                     columnNumber: 29
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-                lineNumber: 220,
+                lineNumber: 233,
                 columnNumber: 21
               }, void 0)
             ]
@@ -25906,7 +25921,7 @@ const AddGroundEventFlyout = ({
           true,
           {
             fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-            lineNumber: 172,
+            lineNumber: 179,
             columnNumber: 17
           },
           void 0
@@ -25916,7 +25931,7 @@ const AddGroundEventFlyout = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-        lineNumber: 158,
+        lineNumber: 165,
         columnNumber: 13
       },
       void 0
@@ -25940,14 +25955,14 @@ const AddGroundEventFlyout = ({
       false,
       {
         fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-        lineNumber: 356,
+        lineNumber: 369,
         columnNumber: 17
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-neo-v2/DFP-NEO-V2-fresh/components/AddGroundEventFlyout.tsx",
-    lineNumber: 157,
+    lineNumber: 164,
     columnNumber: 9
   }, void 0);
 };

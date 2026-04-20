@@ -141,16 +141,23 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     const durationOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => (i + 1) * 0.25), []);
 
     // ── Tab styles ──
+    // Tab style matching TraineeView tabs — rounded-top pill tabs
     const tabStyle = (active: boolean): React.CSSProperties => ({
         padding: '8px 20px',
         fontSize: 13,
         fontWeight: 600,
         cursor: 'pointer',
-        color: active ? '#38bdf8' : '#9ca3af',
-        background: 'none',
-        border: 'none',
-        borderBottom: active ? '2px solid #38bdf8' : '2px solid transparent',
-        transition: 'all 0.15s',
+        borderRadius: '8px 8px 0 0',
+        border: '2px solid',
+        borderBottomWidth: active ? 0 : '2px',
+        borderColor: active ? '#6b7280' : '#4b5563',
+        backgroundColor: active ? '#111827' : '#374151',
+        color: active ? '#ffffff' : '#d1d5db',
+        transition: 'all 0.2s',
+        boxShadow: active ? '0 -2px 8px rgba(0,0,0,0.3)' : 'none',
+        marginBottom: active ? '-1px' : 0,
+        position: 'relative' as const,
+        zIndex: active ? 1 : 0,
     });
 
     return (
@@ -184,21 +191,35 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                     }}
                     onClick={e => e.stopPropagation()}
                 >
-                    {/* Header */}
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '14px 24px 0',
-                        borderBottom: '1px solid #374151',
-                        flexShrink: 0,
-                        backgroundColor: '#1f2937',
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 0 }}>
-                            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', margin: 0, paddingBottom: 14, marginRight: 24 }}>
+                    {/* Header — two rows: title/close on top, tabs below */}
+                    <div style={{ flexShrink: 0, backgroundColor: '#1f2937' }}>
+                        {/* Row 1: Title + Close */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '16px 24px 12px',
+                        }}>
+                            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', margin: 0 }}>
                                 Add Ground Event
                             </h2>
-                            {/* Tabs */}
+                            <button
+                                onClick={onClose}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}
+                            >
+                                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        {/* Row 2: Tabs */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'flex-end',
+                            gap: 6,
+                            padding: '0 24px',
+                            borderBottom: '1px solid #374151',
+                        }}>
                             <button style={tabStyle(activeTab === 'ground')} onClick={() => setActiveTab('ground')}>
                                 Ground Event
                             </button>
@@ -206,14 +227,6 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 Academics
                             </button>
                         </div>
-                        <button
-                            onClick={onClose}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4, marginBottom: 10 }}
-                        >
-                            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
                     </div>
 
                     {/* Tab Content */}
