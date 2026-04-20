@@ -372,6 +372,22 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
     return Array.from(all).sort();
   }, [syllabusDetails]);
 
+  // Map from course code → full display title (uses module field of first item in that course)
+  const courseTitleMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    syllabusDetails.filter(item => item.isActive !== false).forEach(item => {
+      (item.courses || []).forEach(c => {
+        if (c && !map[c] && item.module && item.module !== c) {
+          map[c] = item.module;
+        }
+      });
+    });
+    return map;
+  }, [syllabusDetails]);
+
+  // Helper: get display title for a course code
+  const getCourseTitle = (code: string) => courseTitleMap[code] || code;
+
   // Add Course modal state
   const [showAddLMPModal, setShowAddLMPModal] = useState(false);
   const [newLMPName, setNewLMPName] = useState('');       // full course title e.g. "Basic Flying Course"
@@ -645,7 +661,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       {/* Header */}
       <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
         <div>
-          <h1 className="text-2xl font-bold text-white">Master LMP: <span className="text-sky-400">{selectedCourseType}</span></h1>
+          <h1 className="text-2xl font-bold text-white">Master LMP: <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span></h1>
           <p className="text-sm text-gray-400">Learning Management Package Details</p>
         </div>
         
@@ -661,7 +677,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     }}
                     className="bg-gray-800 text-white text-sm border-none rounded focus:ring-sky-500 cursor-pointer py-1 pl-2 pr-8"
                 >
-                    {courseLMPs.map(c => <option key={c} value={c}>{c}</option>)}
+                    {courseLMPs.map(c => <option key={c} value={c}>{getCourseTitle(c)}</option>)}
                 </select>
             </div>
 
@@ -881,10 +897,10 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                 onClick={e => e.stopPropagation()}
             >
                 <h2 style={{ fontSize: 16, fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
-                    ⚠️ Delete Course: {selectedCourseType}
+                    ⚠️ Delete Course: {getCourseTitle(selectedCourseType)}
                 </h2>
                 <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, lineHeight: 1.6 }}>
-                    This will permanently retire <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{selectedCourseType}</strong> course from the database.
+                    This will permanently retire <strong style={{ color: '#f9fafb' }}>all events</strong> in the <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> course from the database.
                     This action cannot be undone. Enter your password to confirm.
                 </p>
 
