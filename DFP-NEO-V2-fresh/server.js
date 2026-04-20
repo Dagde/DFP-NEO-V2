@@ -2473,11 +2473,11 @@ app.get('/api/syllabus/:id', async (req, res) => {
   }
 });
 
-// GET /api/syllabus/codes - Get all existing course codes (for duplicate checking)
+// GET /api/syllabus/codes - Get all existing active course codes (for duplicate checking)
 app.get('/api/syllabus/codes', async (req, res) => {
   try {
     const db = await getPrisma();
-    const rows = await db.$queryRawUnsafe(`SELECT DISTINCT "code" FROM "SyllabusItem" WHERE "isActive" = true`);
+    const rows = await db.$queryRawUnsafe(`SELECT DISTINCT "code" FROM "SyllabusItem" WHERE "isActive" = true OR "isActive" IS NULL`);
     const codes = rows.map(r => r.code);
     res.json({ success: true, codes });
   } catch (error) {
@@ -2494,13 +2494,13 @@ app.post('/api/syllabus', async (req, res) => {
     const { randomUUID } = await import('crypto');
     const id = randomUUID();
 
-    // Auto-resolve duplicate codes: if code already exists, append a number suffix
+    // Auto-resolve duplicate codes: if code already exists (active items only), append a number suffix
     let baseCode = body.code;
     let finalCode = baseCode;
     let suffix = 2;
     while (true) {
       const existing = await db.$queryRawUnsafe(
-        `SELECT "id" FROM "SyllabusItem" WHERE "code" = $1 LIMIT 1`,
+        `SELECT "id" FROM "SyllabusItem" WHERE "code" = $1 AND "isActive" = true LIMIT 1`,
         finalCode
       );
       if (existing.length === 0) break; // code is available
@@ -2584,18 +2584,20 @@ app.put('/api/syllabus/:id', async (req, res) => {
   }
 });
 
-// DELETE /api/syllabus/:id - Soft delete a syllabus item
+// DELETE /api/syllabus/:id - Hard delete a syllabus item (permanently removes from DB)
 app.delete('/api/syllabus/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
+    const { hardDelete } = req.body || {};
 
+    // Always hard delete - permanently remove from DB so codes can be reused
     await db.$executeRawUnsafe(
-      `UPDATE "SyllabusItem" SET "isActive" = false, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,
+      `DELETE FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`,
       id
     );
 
-    console.log(`✅ DELETE /api/syllabus/${id} (soft delete)`);
+    console.log(`✅ DELETE /api/syllabus/${id} (hard delete)`);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ DELETE /api/syllabus/:id error:', error);
@@ -2828,6 +2830,21 @@ app.post('/api/admin/set-user-password-by-id', async (req, res) => {
 });
 
 // GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
+// DELETE /api/admin/purge-inactive - Hard delete all soft-deleted (isActive=false) syllabus items
+app.delete('/api/admin/purge-inactive', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await db.$executeRawUnsafe(
+      `DELETE FROM "SyllabusItem" WHERE "isActive" = false`
+    );
+    console.log(`✅ Purged inactive syllabus items`);
+    res.json({ success: true, message: 'Purged all inactive (soft-deleted) syllabus items' });
+  } catch (error) {
+    console.error('❌ purge-inactive error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/admin/seed-syllabus', async (req, res) => {
   const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
   const { secret, force } = req.query;
