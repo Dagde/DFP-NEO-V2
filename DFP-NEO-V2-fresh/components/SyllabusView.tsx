@@ -492,11 +492,15 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       setIsDeleting(true);
       setDeleteError('');
       try {
-          // Verify password first
+          // Verify password first - get session token from localStorage
+          const sessionToken = localStorage.getItem('dfp_session_token') || '';
           const verifyResp = await fetch('/api/auth/verify-password', {
               method: 'POST',
               credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${sessionToken}`,
+              },
               body: JSON.stringify({ password: deletePassword }),
           });
           const verifyData = await verifyResp.json();

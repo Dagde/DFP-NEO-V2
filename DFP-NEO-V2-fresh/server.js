@@ -2578,50 +2578,64 @@ app.post('/api/auth/verify-password', async (req, res) => {
       return res.status(400).json({ valid: false, error: 'Password required' });
     }
 
-    // Get user from session cookie (using the same auth logic as other routes)
-    const sessionCookie = req.cookies?.session;
-    if (!sessionCookie) {
-      return res.status(401).json({ valid: false, error: 'Not authenticated - no session cookie' });
+    // Get session token from Authorization header (Bearer token)
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+    const sessionToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (!sessionToken) {
+      return res.status(401).json({ valid: false, error: 'Not authenticated - no session token' });
     }
 
-    // Parse session to get userId (format: userId=<uuid>)
-    const sessionMatches = sessionCookie.match(/userId=([a-f0-9-]+)/i);
-    if (!sessionMatches) {
-      return res.status(401).json({ valid: false, error: 'Not authenticated - invalid session format' });
-    }
-
-    const userId = sessionMatches[1];
-
-    // Fetch user with password from database
-    const user = await db.$queryRawUnsafe(
-      `SELECT "id", "fullName", "password" FROM "User" WHERE "id" = $1 AND "isActive" = true`,
-      userId
+    // Look up the session in the Session table to get userId
+    const sessions = await db.$queryRawUnsafe(
+      `SELECT "userId", "expires" FROM "Session" WHERE "sessionToken" = $1`,
+      sessionToken
     );
 
-    if (!user || user.length === 0) {
+    if (!sessions || sessions.length === 0) {
+      return res.status(401).json({ valid: false, error: 'Invalid or expired session' });
+    }
+
+    const session = sessions[0];
+
+    // Check session has not expired
+    if (new Date(session.expires) < new Date()) {
+      return res.status(401).json({ valid: false, error: 'Session expired' });
+    }
+
+    const userDbId = session.userId;
+
+    // Fetch user with password from database using the id from Session table
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", "firstName", "lastName", password FROM "User" WHERE id = $1`,
+      userDbId
+    );
+
+    if (!users || users.length === 0) {
       return res.status(404).json({ valid: false, error: 'User not found' });
     }
 
-    const userData = user[0];
+    const userData = users[0];
+    const displayName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
 
     // Check if user has a password set
     if (!userData.password) {
-      console.warn(`⚠️ User ${userData.fullName} (${userId}) has no password set`);
+      console.warn(`⚠️ User ${displayName} has no password set`);
       return res.status(400).json({ 
         valid: false, 
-        error: 'No password set for this user. Please contact administrator.',
+        error: 'No password set for this account. Run the set-password curl command first.',
         reason: 'no_password'
       });
     }
 
-    // Use bcryptjs to verify password (loaded from dfp-neo-platform/node_modules)
+    // Use bcryptjs to verify password
     const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
     const valid = await bcrypt.compare(password, userData.password);
 
     if (valid) {
-      console.log(`✅ Password verified for user ${userData.fullName} (${userId})`);
+      console.log(`✅ Password verified for ${displayName}`);
     } else {
-      console.log(`❌ Password verification failed for user ${userData.fullName} (${userId})`);
+      console.log(`❌ Password verification failed for ${displayName}`);
     }
 
     res.json({ valid });
