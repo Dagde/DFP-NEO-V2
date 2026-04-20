@@ -2655,15 +2655,15 @@ app.post('/api/admin/set-user-password', async (req, res) => {
       const lastName = parts.pop(); // Last word is lastName
       const firstName = parts.pop() || ''; // Second-to-last is firstName (skip title)
       
-      sql = `SELECT id, ("firstName" || ' ' || "lastName") as fullName, email, username, password, isActive, role FROM "User" 
-             WHERE ("firstName" ILIKE $1 AND "lastName" ILIKE $2)
-             OR ("firstName" || ' ' || COALESCE("lastName", '')) ILIKE $3`;
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" 
+             WHERE (firstName ILIKE $1 AND lastName ILIKE $2)
+             OR (firstName || ' ' || COALESCE(lastName, '')) ILIKE $3`;
       params = [`%${firstName}%`, lastName, `%${fullName}%`];
     } else if (userId) {
-      sql = `SELECT id, ("firstName" || ' ' || "lastName") as fullName, email, username, password, isActive, role FROM "User" WHERE "id" = $1 OR "userId" = $1`;
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" WHERE id = $1 OR userId = $1`;
       params = [userId];
     } else {
-      sql = `SELECT id, ("firstName" || ' ' || "lastName") as fullName, email, username, password, isActive, role FROM "User" WHERE "email" = $1`;
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" WHERE email = $1`;
       params = [email];
     }
     
@@ -2694,14 +2694,15 @@ app.post('/api/admin/set-user-password', async (req, res) => {
       userIdFromDb
     );
 
-    console.log(`✅ Password set for user: ${user.fullName} (${userIdFromDb})`);
+    console.log(`✅ Password set for user: ${user.firstName} ${user.lastName} (${userIdFromDb})`);
     
     res.json({ 
       success: true, 
-      message: `Password set successfully for ${user.fullName}`,
+      message: `Password set successfully for ${user.firstName} ${user.lastName}`,
       user: {
         id: user.id,
-        fullName: user.fullName,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         isActive: user.isActive
       }
