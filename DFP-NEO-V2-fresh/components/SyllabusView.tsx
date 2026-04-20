@@ -71,7 +71,8 @@ const DetailView: React.FC<{
     isEditing: boolean;
     editedItem: SyllabusItemDetail | null;
     onItemChange: (newItem: SyllabusItemDetail) => void;
-}> = ({ item, isEditing, editedItem, onItemChange }) => {
+    onDeleteEvent?: (item: SyllabusItemDetail) => void;
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -348,6 +349,17 @@ const DetailView: React.FC<{
                  )}
             </div>
         </fieldset>
+
+        {isEditing && onDeleteEvent && (
+            <div className="pt-4 border-t border-gray-700 mt-2 flex justify-end">
+                <button
+                    onClick={() => onDeleteEvent(item)}
+                    className="px-4 py-2 text-[11px] font-semibold rounded-md bg-red-900/40 border border-red-700 text-red-400 hover:bg-red-800/60 hover:text-red-300 transition-colors"
+                >
+                    🗑 Delete This Event
+                </button>
+            </div>
+        )}
     </div>
     );
 };
@@ -404,6 +416,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<{ created: number; skipped: number; errors: any[]; message: string } | null>(null);
+
+  // Delete Event modal state
+  const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
+  const [deleteEventItem, setDeleteEventItem] = useState<SyllabusItemDetail | null>(null);
+  const [deleteEventPassword, setDeleteEventPassword] = useState('');
+  const [deleteEventError, setDeleteEventError] = useState('');
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -610,6 +629,63 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       }
   };
 
+  const handleDeleteEventRequest = (item: SyllabusItemDetail) => {
+      setDeleteEventItem(item);
+      setDeleteEventPassword('');
+      setDeleteEventError('');
+      setShowDeleteEventModal(true);
+  };
+
+  const handleDeleteEventConfirm = async () => {
+      if (!deleteEventItem) return;
+      if (!deleteEventPassword) { setDeleteEventError('Please enter your password.'); return; }
+      setIsDeletingEvent(true);
+      setDeleteEventError('');
+      try {
+          // Verify password
+          const sessionToken = localStorage.getItem('dfp_session_token') || '';
+          const verifyResp = await fetch('/api/auth/verify-password', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${sessionToken}`,
+              },
+              body: JSON.stringify({ password: deleteEventPassword }),
+          });
+          const verifyData = await verifyResp.json();
+          if (!verifyData.valid) {
+              setDeleteEventError('Incorrect password. Please try again.');
+              setIsDeletingEvent(false);
+              return;
+          }
+          // Hard delete the event
+          const deleteResp = await fetch(`/api/syllabus/${deleteEventItem.id}`, {
+              method: 'DELETE',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ changeReason: `Event deleted by user` }),
+          });
+          if (!deleteResp.ok) {
+              const err = await deleteResp.json();
+              throw new Error(err.error || 'Failed to delete event');
+          }
+          logAudit({ action: 'Delete', description: `Deleted event: ${deleteEventItem.code} - ${deleteEventItem.eventDescription}`, changes: `Event removed from course: ${selectedCourseType}`, page: 'Master LMP' });
+          // Remove from local state
+          onUpdateItem({ ...deleteEventItem, isActive: false } as any);
+          setShowDeleteEventModal(false);
+          setDeleteEventItem(null);
+          setDeleteEventPassword('');
+          setSelectedItem(null);
+          setEditedItem(null);
+          setIsEditing(false);
+      } catch (err: any) {
+          setDeleteEventError(`Failed to delete: ${err.message}`);
+      } finally {
+          setIsDeletingEvent(false);
+      }
+  };
+
   const handleAddLMP = () => {
       // Open the Add Course modal
       setNewLMPName('');
@@ -781,12 +857,6 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           {/* Scrollable Data Rows */}
           <div className="flex-1 overflow-y-auto">
             {filteredSyllabusDetails.map((item, index) => {
-              const totalItems = filteredSyllabusDetails.length;
-              const midPoint = Math.ceil(totalItems / 2);
-              const phaseNum = index < midPoint ? 1 : 2;
-              const moduleNum = Math.floor((index * 12) / totalItems) + 1;
-              const actualModule = Math.min(moduleNum, 12);
-              
               return (
               <div key={item.id} className="flex gap-0">
                 <button
@@ -798,11 +868,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-12 flex-shrink-0 ${
+                  className={`text-center p-2 transition-colors text-[10px] border-r border-gray-700 w-12 flex-shrink-0 truncate ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                  title={item.phase}
                 >
-                  {phaseNum}
+                  {item.phase || '-'}
                 </button>
                 <button
                   onClick={() => {
@@ -813,11 +884,12 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                   onMouseEnter={() => setHoveredItem(item)}
                   onMouseLeave={() => setHoveredItem(null)}
                   disabled={isEditing}
-                  className={`text-center p-2 transition-colors text-sm border-r border-gray-700 w-[68px] flex-shrink-0 ${
+                  className={`text-center p-2 transition-colors text-[10px] border-r border-gray-700 w-[68px] flex-shrink-0 truncate ${
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
+                  title={item.module}
                 >
-                  {actualModule}
+                  {item.module || '-'}
                 </button>
                 <button
                   onClick={() => {
@@ -832,7 +904,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                       selectedItem?.id === item.id && !isEditing ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300'
                   } ${isEditing ? 'cursor-not-allowed text-gray-500' : 'hover:bg-gray-700/50'}`}
                 >
-                  {item.code}
+                  {item.eventDescription || item.code}
                 </button>
               </div>
             );})}
@@ -851,6 +923,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     isEditing={isEditing}
                     editedItem={editedItem}
                     onItemChange={setEditedItem}
+                    onDeleteEvent={handleDeleteEventRequest}
                 />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -1010,6 +1083,72 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
             </div>
         </div>
     )}
+    {/* Delete Event Modal */}
+    {showDeleteEventModal && deleteEventItem && (
+        <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.80)', zIndex: 10002,
+                display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => !isDeletingEvent && setShowDeleteEventModal(false)}
+        >
+            <div
+                style={{ backgroundColor: '#1f2937', border: '1px solid #ef4444', borderRadius: 12,
+                    padding: 28, width: 440, boxShadow: '0 25px 50px rgba(0,0,0,0.6)' }}
+                onClick={e => e.stopPropagation()}
+            >
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: '#ef4444', marginBottom: 8 }}>
+                    🗑 Delete Event
+                </h2>
+                <p style={{ fontSize: 13, color: '#d1d5db', marginBottom: 4 }}>
+                    <strong>{deleteEventItem.code}</strong> — {deleteEventItem.eventDescription}
+                </p>
+                <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20, lineHeight: 1.6 }}>
+                    This will permanently remove this event from the database. This action cannot be undone. Enter your password to confirm.
+                </p>
+
+                <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9ca3af',
+                        textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                        Your Password *
+                    </label>
+                    <input
+                        type="password"
+                        value={deleteEventPassword}
+                        onChange={e => { setDeleteEventPassword(e.target.value); setDeleteEventError(''); }}
+                        onKeyDown={e => e.key === 'Enter' && handleDeleteEventConfirm()}
+                        autoFocus
+                        placeholder="Enter your login password"
+                        style={{ width: '100%', padding: '8px 12px', fontSize: 13, backgroundColor: '#111827',
+                            border: `1px solid ${deleteEventError ? '#ef4444' : '#374151'}`, borderRadius: 6,
+                            color: '#f9fafb', outline: 'none', boxSizing: 'border-box' }}
+                    />
+                    {deleteEventError && (
+                        <p style={{ color: '#f87171', fontSize: 11, marginTop: 4 }}>{deleteEventError}</p>
+                    )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <button
+                        onClick={() => setShowDeleteEventModal(false)}
+                        disabled={isDeletingEvent}
+                        style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                            backgroundColor: '#374151', color: '#d1d5db', border: 'none', cursor: 'pointer' }}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleDeleteEventConfirm}
+                        disabled={isDeletingEvent}
+                        style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, borderRadius: 6,
+                            backgroundColor: '#7f1d1d', color: '#fca5a5', border: '1px solid #ef4444',
+                            cursor: isDeletingEvent ? 'not-allowed' : 'pointer', opacity: isDeletingEvent ? 0.6 : 1 }}
+                    >
+                        {isDeletingEvent ? 'Deleting…' : 'Delete Event'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )}
+
     {/* Bulk Upload Modal */}
     {showUploadModal && (
         <div
