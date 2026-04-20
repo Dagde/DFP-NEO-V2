@@ -2631,6 +2631,72 @@ app.post('/api/auth/verify-password', async (req, res) => {
   }
 });
 
+// POST /api/admin/set-user-password - Set or update a user's password (for initial setup/reset)
+app.post('/api/admin/set-user-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { fullName, password, userId, email } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Password must be at least 8 characters' 
+      });
+    }
+
+    // Find user by fullName, userId, or email
+    let user;
+    const where = fullName ? `"fullName" ILIKE $1` : userId ? `"id" = $1` : `"email" = $1`;
+    const userRows = await db.$queryRawUnsafe(
+      `SELECT id, fullName, email, username, password, isActive, role FROM "User" WHERE ${where}`,
+      fullName || userId || email
+    );
+
+    if (!userRows || userRows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'User not found',
+        searchBy: fullName ? 'fullName' : userId ? 'userId' : 'email',
+        searchValue: fullName || userId || email
+      });
+    }
+
+    user = userRows[0];
+    const userIdFromDb = user.id;
+
+    // Hash the password using bcryptjs
+    const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update the user's password
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "password" = $1, "updatedAt" = NOW() WHERE "id" = $2`,
+      hashedPassword,
+      userIdFromDb
+    );
+
+    console.log(`✅ Password set for user: ${user.fullName} (${userIdFromDb})`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password set successfully for ${user.fullName}`,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/set-user-password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to set password',
+      details: error.toString()
+    });
+  }
+});
+
 // GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
 app.get('/api/admin/seed-syllabus', async (req, res) => {
   const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
