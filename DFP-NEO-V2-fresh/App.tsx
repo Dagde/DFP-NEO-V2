@@ -10115,6 +10115,44 @@ updates.forEach(update => {
         setSuccessMessage('Ground event added to the build.');
     };
 
+    // Academic session save — creates one grouped ground event per trainee, flagged isAcademic=true
+    // so NEO Build never touches it
+    const handleSaveAcademicEvent = (data: import('./components/AcademicsTab').AcademicSaveData) => {
+        if (!data.selectedTrainees.length || !data.timeline.length) return;
+
+        // Build a merged description of all selected lessons
+        const lessonCodes = data.lessons.map(l => l.code).join(', ');
+        const totalDuration = data.timeline.reduce((sum, t) => sum + t.duration, 0);
+        const firstStart = Math.min(...data.timeline.map(t => t.startTime));
+        const flightNumberLabel = lessonCodes || 'ACAD-SESSION';
+
+        // Create one event per trainee (shared academic session)
+        const newEvents: ScheduleEvent[] = data.selectedTrainees.map(traineeName => ({
+            id: uuidv4(),
+            date: data.date,
+            type: 'ground' as const,
+            flightNumber: flightNumberLabel,
+            startTime: firstStart,
+            duration: totalDuration,
+            attendees: data.selectedTrainees,
+            student: traineeName,
+            resourceId: data.resourceId,
+            color: 'bg-blue-700/80',
+            flightType: 'Dual' as const,
+            locationType: 'Local' as const,
+            origin: school,
+            destination: school,
+            isAcademic: true,
+            isTimeFixed: true, // NEO Build skips isTimeFixed events
+            notes: `Academic session: ${lessonCodes}`,
+        }));
+
+        // Add to events directly (not nextDayBuildEvents — these are permanent fixed events)
+        setEvents((prev: ScheduleEvent[]) => [...prev, ...newEvents]);
+        setShowAddGroundEvent(false);
+        setSuccessMessage(`Academic session scheduled for ${data.selectedTrainees.length} trainee(s): ${lessonCodes}`);
+    };
+
 
     // --- NEO ALGORITHM IMPLEMENTATION ---
     const generateTraineeRemedies = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[]): NeoTraineeRemedy[] => {
@@ -13550,11 +13588,19 @@ updates.forEach(update => {
                 <AddGroundEventFlyout
                     onClose={() => setShowAddGroundEvent(false)}
                     onSave={handleSaveGroundEvent}
+                    onSaveAcademic={handleSaveAcademicEvent}
                     groundSyllabus={syllabusDetails.filter(s => s.type === 'Ground School')}
                     activeCourses={courseColors}
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
                     traineesData={traineesData}
+                    syllabusDetails={syllabusDetails}
+                    scores={scores}
+                    traineeLMPs={traineeLMPs}
+                    events={events}
+                    date={buildDfpDate || new Date().toISOString().split('T')[0]}
+                    courseColors={courseColors}
+                    school={school}
                 />
             )}
             {showAuthFlyout && eventForAuth && 

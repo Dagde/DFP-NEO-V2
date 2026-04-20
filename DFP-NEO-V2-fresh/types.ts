@@ -198,6 +198,7 @@ export interface ScheduleEvent {
       dateCreated?: string;
       notes?: string;
       isSctRequest?: boolean;
+  isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
       sctRequestId?: string;
       sctRequestType?: 'flight' | 'ftd';
       isRemedialForceSchedule?: boolean;
