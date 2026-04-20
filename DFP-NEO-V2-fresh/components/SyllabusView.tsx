@@ -361,6 +361,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const [isEditing, setIsEditing] = useState(false);
   const [editedItem, setEditedItem] = useState<SyllabusItemDetail | null>(null);
   const [selectedCourseType, setSelectedCourseType] = useState<string>('BPC+IPC');
+  const [editingCourseTitle, setEditingCourseTitle] = useState<string>('');
 
   // Dynamic course list: union of static list + any courses found in active syllabusDetails
   const courseLMPs = useMemo(() => {
@@ -457,43 +458,61 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   }, [selectedCourseType]);
 
   const handleEdit = () => {
-    if (selectedItem) {
-        setEditedItem(JSON.parse(JSON.stringify(selectedItem)));
-        setIsEditing(true);
-    }
+      setEditingCourseTitle(getCourseTitle(selectedCourseType));
+      if (selectedItem) {
+          setEditedItem(JSON.parse(JSON.stringify(selectedItem)));
+      }
+      setIsEditing(true);
   };
 
   const handleSave = async () => {
-      if (!editedItem) return;
       setIsSaving(true);
       try {
-          const isNew = editedItem.id.startsWith('new-');
-          let savedItem: SyllabusItemDetail;
-          if (isNew) {
-              // Create new item in DB
-              const { id: _tmpId, ...itemWithoutTmpId } = editedItem;
-              savedItem = await createSyllabusItem(itemWithoutTmpId, 'New LMP event created via Master LMP editor');
-          } else {
-              // Update existing item in DB
-              savedItem = await updateSyllabusItem(editedItem.id, editedItem, 'Updated via Master LMP editor');
+          // Save the selected event item if one is being edited
+          if (editedItem) {
+              const isNew = editedItem.id.startsWith('new-');
+              let savedItem: SyllabusItemDetail;
+              if (isNew) {
+                  const { id: _tmpId, ...itemWithoutTmpId } = editedItem;
+                  savedItem = await createSyllabusItem(itemWithoutTmpId, 'New LMP event created via Master LMP editor');
+              } else {
+                  savedItem = await updateSyllabusItem(editedItem.id, editedItem, 'Updated via Master LMP editor');
+              }
+              // Detect changes for audit
+              const changes: string[] = [];
+              if (selectedItem && selectedItem.preFlightTime !== editedItem.preFlightTime) {
+                  changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min to ${Math.round(editedItem.preFlightTime * 60)} min`);
+              }
+              if (selectedItem && selectedItem.postFlightTime !== editedItem.postFlightTime) {
+                  changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min to ${Math.round(editedItem.postFlightTime * 60)} min`);
+              }
+              if (changes.length > 0) {
+                  logAudit({ action: 'Edit', description: `Updated LMP item ${savedItem.code}`, changes: changes.join(', '), page: 'Master LMP' });
+              }
+              onUpdateItem(savedItem);
+              setSelectedItem(savedItem);
           }
-          // Detect changes for audit
-          const changes: string[] = [];
-          if (selectedItem && selectedItem.preFlightTime !== editedItem.preFlightTime) {
-              changes.push(`Pre-flight time: ${Math.round(selectedItem.preFlightTime * 60)} min → ${Math.round(editedItem.preFlightTime * 60)} min`);
+
+          // If the course title was changed, update the module field on ALL items in this course
+          const currentTitle = getCourseTitle(selectedCourseType);
+          const newTitle = editingCourseTitle.trim();
+          if (newTitle && newTitle !== currentTitle) {
+              const courseItems = syllabusDetails.filter(item =>
+                  item.isActive !== false && (item.courses || []).includes(selectedCourseType)
+              );
+              await Promise.all(courseItems.map(item =>
+                  updateSyllabusItem(item.id, { ...item, module: newTitle }, 'Course title renamed')
+              ));
+              // Update local state for all items
+              courseItems.forEach(item => onUpdateItem({ ...item, module: newTitle }));
+              logAudit({ action: 'Edit', description: `Renamed course: ${selectedCourseType}`, changes: `Title: "${currentTitle}" renamed to "${newTitle}"`, page: 'Master LMP' });
           }
-          if (selectedItem && selectedItem.postFlightTime !== editedItem.postFlightTime) {
-              changes.push(`Post-flight time: ${Math.round(selectedItem.postFlightTime * 60)} min → ${Math.round(editedItem.postFlightTime * 60)} min`);
-          }
-          if (changes.length > 0) {
-              logAudit({ action: 'Edit', description: `Updated LMP item ${savedItem.code}`, changes: changes.join(', '), page: 'Master LMP' });
-          }
-          onUpdateItem(savedItem);
-          setSelectedItem(savedItem);
+
           setIsEditing(false);
           setEditedItem(null);
+          setEditingCourseTitle('');
       } catch (err: any) {
-          alert(`❌ Save failed: ${err.message}`);
+          alert(`Save failed: ${err.message}`);
       } finally {
           setIsSaving(false);
       }
@@ -502,6 +521,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
   const handleCancel = () => {
       setIsEditing(false);
       setEditedItem(null);
+      setEditingCourseTitle('');
   };
 
   const handleDeleteCourse = async () => {
@@ -663,8 +683,19 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
       {/* Header */}
       <div className="flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700">
         <div>
-          <h1 className="text-2xl font-bold text-white">Master LMP: <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span></h1>
-          <p className="text-sm text-gray-400">Learning Management Package Details</p>
+          <h1 className="text-2xl font-bold text-white">Master LMP: {isEditing ? (
+              <input
+                  type="text"
+                  value={editingCourseTitle}
+                  onChange={e => setEditingCourseTitle(e.target.value)}
+                  className="text-sky-400 bg-transparent border-b border-sky-400 outline-none text-2xl font-bold w-72 focus:border-sky-300"
+                  placeholder="Course title..."
+                  title="Edit course title"
+              />
+          ) : (
+              <span className="text-sky-400">{getCourseTitle(selectedCourseType)}</span>
+          )}</h1>
+          <p className="text-sm text-gray-400">{isEditing ? 'Editing course title — changes apply to all events in this course' : 'Learning Management Package Details'}</p>
         </div>
         
         <div className="flex items-center space-x-4">
