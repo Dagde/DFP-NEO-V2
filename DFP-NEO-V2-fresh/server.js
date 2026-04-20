@@ -2717,6 +2717,67 @@ app.post('/api/admin/set-user-password', async (req, res) => {
   }
 });
 
+// GET /api/admin/list-users - List all users (for debugging/user ID lookup)
+app.get('/api/admin/list-users', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const users = await db.$queryRawUnsafe(`
+      SELECT id, userId, username, email, firstName, lastName, isActive, role 
+      FROM "User" 
+      WHERE isActive = true 
+      ORDER BY firstName, lastName
+    `);
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ GET /api/admin/list-users error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error.toString()
+    });
+  }
+});
+
+// POST /api/admin/set-user-password-by-id - Set password using direct userId
+app.post('/api/admin/set-user-password-by-id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { userId, password } = req.body;
+
+    if (!userId || !password || password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'userId (password >= 8 chars)' 
+      });
+    }
+
+    // Use bcryptjs to hash the password
+    const bcrypt = require('./dfp-neo-platform/node_modules/bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update by userId (the unique userId field, not id)
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "password" = $1, "updatedAt" = NOW() WHERE "userId" = $2`,
+      hashedPassword,
+      userId
+    );
+
+    console.log(`✅ Password set for userId: ${userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password set successfully for userId ${userId}`
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/set-user-password-by-id error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to set password',
+      details: error.toString()
+    });
+  }
+});
+
 // GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
 app.get('/api/admin/seed-syllabus', async (req, res) => {
   const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
