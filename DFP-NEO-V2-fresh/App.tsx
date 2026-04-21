@@ -13972,6 +13972,7 @@ updates.forEach(update => {
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
                     courseColors={courseColors}
                     school={school}
+                    locationAbbreviations={locationAbbreviations}
                     courseAcademicProgress={courseAcademicProgress}
                     onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
                     persistedAcademicLmp={persistedAcademicLmp}

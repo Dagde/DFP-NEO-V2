@@ -25,6 +25,7 @@ interface AcademicsTabProps {
   date: string;
   courseColors: { [key: string]: string };
   school: 'ESL' | 'PEA';
+  locationAbbreviations?: Record<string, string>; // long name -> short code
   // Course-level academic completion: Map<courseCode, Set<lessonCode>>
   courseAcademicProgress?: Map<string, Set<string>>;
   onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
@@ -297,6 +298,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   date,
   courseColors,
   school,
+  locationAbbreviations,
   defaultLocality,
   courseAcademicProgress,
   onUpdateCourseAcademicProgress,
@@ -310,8 +312,19 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     const locs = new Set<string>();
     traineesData.forEach(t => { if (t.location) locs.add(t.location); });
     if (locs.size === 0) locs.add(school === 'ESL' ? 'East Sale' : 'Pearce');
-    return Array.from(locs);
-  }, [traineesData, school]);
+    // Consolidate locations that have the same long name (mapped via locationAbbreviations)
+    const locsArray = Array.from(locs);
+    const consolidated: string[] = [];
+    const seen = new Set<string>();
+    for (const loc of locsArray) {
+      const longName = Object.entries(locationAbbreviations || {}).find(([_, code]) => code === loc)?.[0] || loc;
+      if (!seen.has(longName)) {
+        consolidated.push(longName);
+        seen.add(longName);
+      }
+    }
+    return consolidated.length > 0 ? consolidated : locsArray;
+  }, [traineesData, school, locationAbbreviations]);
 
   const [selectedLocality, setSelectedLocality] = useState(() => {
     // Default to the locality currently selected in the header (passed as defaultLocality)
@@ -327,13 +340,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
     const courses = new Set<string>();
+    const locationShortCode = Object.entries(locationAbbreviations || {}).find(([name, _]) => name === selectedLocality)?.[1] || '';
     traineesData.forEach(t => {
-      if (!selectedLocality || t.location === selectedLocality || localities.length <= 1) {
+      if (!selectedLocality || t.location === selectedLocality || t.location === locationShortCode || localities.length <= 1) {
         courses.add(t.course);
       }
     });
     return Array.from(courses).sort();
-  }, [traineesData, selectedLocality, localities]);
+  }, [traineesData, selectedLocality, localities, locationAbbreviations]);
 
   const [selectedCourse, setSelectedCourse] = useState(coursesForLocality[0] || '');
 
