@@ -20,6 +20,8 @@ interface AddGroundEventFlyoutProps {
   date?: string;
   courseColors?: { [key: string]: string };
   school?: 'ESL' | 'PEA';
+  courseAcademicProgress?: Map<string, Set<string>>;
+  onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
 }
 
 type TabKey = 'ground' | 'academics';
@@ -40,6 +42,8 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     date,
     courseColors,
     school,
+    courseAcademicProgress,
+    onUpdateCourseAcademicProgress,
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('ground');
 
@@ -354,6 +358,8 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 courseColors={courseColors || activeCourses}
                                 school={school || 'ESL'}
                                 defaultLocality={(school || 'ESL') === 'ESL' ? 'East Sale' : 'Pearce'}
+                                courseAcademicProgress={courseAcademicProgress}
+                                onUpdateCourseAcademicProgress={onUpdateCourseAcademicProgress}
                                 onSave={(data) => {
                                     if (onSaveAcademic) onSaveAcademic(data);
                                     else onSave(data);

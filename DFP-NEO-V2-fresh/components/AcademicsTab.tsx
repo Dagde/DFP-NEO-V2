@@ -25,6 +25,9 @@ interface AcademicsTabProps {
   date: string;
   courseColors: { [key: string]: string };
   school: 'ESL' | 'PEA';
+  // Course-level academic completion: Map<courseCode, Set<lessonCode>>
+  courseAcademicProgress?: Map<string, Set<string>>;
+  onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -210,6 +213,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   courseColors,
   school,
   defaultLocality,
+  courseAcademicProgress,
+  onUpdateCourseAcademicProgress,
   onSave,
   onClose,
 }) => {
@@ -558,11 +563,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
       </div>
 
-      {/* ── Main 3-Panel Layout ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 10 }}>
+      {/* ── Main 2-Panel Layout (fixed combined width = timeline) ── */}
+      <div style={{ display: 'flex', gap: 10 }}>
 
-        {/* Left Panel: Trainees */}
-        <div style={{ ...S.card, maxHeight: 360, overflowY: 'auto' }}>
+        {/* Left Panel: Trainees - fixed width */}
+        <div style={{ ...S.card, width: 200, minWidth: 200, maxWidth: 200, maxHeight: 360, overflowY: 'auto', flexShrink: 0 }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Attendees
             <span style={{ fontWeight: 400, color: '#6b7280', fontSize: 10, marginLeft: 6 }}>
               {selectedTrainees.length}/{courseTrainees.length}
@@ -590,7 +595,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
 
         {/* Centre Panel: Lesson Selector + Standard Events */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 0 }}>
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
@@ -614,11 +619,12 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           )}
 
           {/* Lesson columns by module */}
-          <div style={{ ...S.card, maxHeight: 300, overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+          <div style={{ ...S.card, maxHeight: 300, overflowY: 'auto', flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
               <div style={S.label}>LMP Lessons</div>
               <span style={{ fontSize: 10, color: '#6b7280' }}>
-                ✅ = course complete &nbsp;🟡 = in progress &nbsp;⬜ = not started
+                ✅ = course complete &nbsp;⬜ = not yet complete &nbsp;
+                <span style={{ color: '#93c5fd' }}>(click ✅/⬜ to toggle course completion)</span>
               </span>
             </div>
             {moduleGroups.length === 0 ? (
@@ -629,7 +635,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
               <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                 {moduleGroups.map(({ moduleKey, label, items: moduleItems }) => (
                   <div key={moduleKey} style={{
-                    minWidth: 180, flexShrink: 0,
+                    minWidth: 190, flexShrink: 0,
                     backgroundColor: '#111827', borderRadius: 6, border: '1px solid #1d4ed8',
                     overflow: 'hidden'
                   }}>
@@ -642,31 +648,45 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                     {/* Lessons list */}
                     <div style={{ padding: '4px 2px' }}>
                       {moduleItems.map(item => {
-                        // Course-level completion: complete = ALL trainees done, partial = some done, none = none done
-                        const completion = getLessonCompletion(item.code, courseTrainees, scores);
+                        // Course-level completion: from courseAcademicProgress prop
+                        // This is separate from individual PT-051 scores
+                        const courseProgress = courseAcademicProgress?.get(selectedCourse);
+                        const isCourseDone = courseProgress?.has(item.code) ?? false;
                         const isSelected = selectedLessons.has(item.code);
-                        // Strikethrough completed lessons to indicate they are done at course level
-                        const isCourseDone = completion === 'complete';
                         return (
                           <div key={item.code}
-                            onClick={() => toggleLesson(item)}
-                            title={isCourseDone ? 'All trainees in this course have completed this lesson' : completion === 'partial' ? 'Some trainees have completed this lesson' : 'Not yet completed by this course'}
                             style={{
                               display: 'flex', alignItems: 'flex-start', gap: 5, padding: '3px 6px',
-                              cursor: 'pointer', borderRadius: 4,
+                              borderRadius: 4,
                               backgroundColor: isSelected ? 'rgba(29,78,216,0.35)' : 'transparent',
                               border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
                               marginBottom: 1,
                             }}>
-                            {/* Course-level completion indicator */}
-                            <span style={{ fontSize: 11, width: 16, textAlign: 'center', flexShrink: 0, marginTop: 1 }}>
-                              {completion === 'complete' ? '✅' : completion === 'partial' ? '🟡' : '⬜'}
-                            </span>
-                            <span style={{
-                              fontSize: 11, flex: 1, lineHeight: 1.3,
-                              color: isCourseDone ? '#6b7280' : isSelected ? '#93c5fd' : '#d1d5db',
-                              textDecoration: isCourseDone ? 'line-through' : 'none',
-                            }}>
+                            {/* Course-level completion toggle button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onUpdateCourseAcademicProgress && selectedCourse) {
+                                  onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
+                                }
+                              }}
+                              title={isCourseDone ? 'Mark as NOT completed by this course' : 'Mark as completed by this course cohort'}
+                              style={{
+                                background: 'none', border: 'none', cursor: onUpdateCourseAcademicProgress ? 'pointer' : 'default',
+                                fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, padding: 0, marginTop: 1,
+                                opacity: onUpdateCourseAcademicProgress ? 1 : 0.5,
+                              }}
+                            >
+                              {isCourseDone ? '✅' : '⬜'}
+                            </button>
+                            {/* Lesson label — click to add to timeline */}
+                            <span
+                              onClick={() => toggleLesson(item)}
+                              style={{
+                                fontSize: 11, flex: 1, lineHeight: 1.3, cursor: 'pointer',
+                                color: isCourseDone ? '#6b7280' : isSelected ? '#93c5fd' : '#d1d5db',
+                                textDecoration: isCourseDone ? 'line-through' : 'none',
+                              }}>
                               <span style={{ fontWeight: 700, color: isCourseDone ? '#6b7280' : '#f9fafb', fontSize: 10 }}>{item.code}</span>
                               {' '}{item.eventDescription}
                             </span>

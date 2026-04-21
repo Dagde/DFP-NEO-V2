@@ -5172,6 +5172,23 @@ const App: React.FC = () => {
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
+    // Course-level academic completion tracking: Map<courseCode, Set<lessonCode>>
+    // Records which academic lessons have been completed by an entire course cohort
+    const [courseAcademicProgress, setCourseAcademicProgress] = useState<Map<string, Set<string>>>(new Map());
+
+    const handleUpdateCourseAcademicProgress = (courseCode: string, lessonCode: string, completed: boolean) => {
+        setCourseAcademicProgress(prev => {
+            const updated = new Map(prev);
+            const courseSet = new Set(updated.get(courseCode) || []);
+            if (completed) {
+                courseSet.add(lessonCode);
+            } else {
+                courseSet.delete(lessonCode);
+            }
+            updated.set(courseCode, courseSet);
+            return updated;
+        });
+    };
 
     // Auto-populate coursePriorities & coursePercentages from traineesData (locality-filtered).
     // traineesData is already filtered by the active school (ESL/PEA), so only courses
@@ -13611,6 +13628,8 @@ updates.forEach(update => {
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
                     courseColors={courseColors}
                     school={school}
+                    courseAcademicProgress={courseAcademicProgress}
+                    onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
                 />
             )}
             {showAuthFlyout && eventForAuth && 
