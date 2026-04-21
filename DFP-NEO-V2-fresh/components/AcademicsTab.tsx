@@ -115,17 +115,42 @@ function getLessonCompletion(
 
 // ── Subject grouping ─────────────────────────────────────────────────────────
 
+// Derive a subject/module key from an event description prefix
+// e.g. "AERODY1" -> "AERODY", "MET Review" -> "MET", "ATC Exam" -> "ATC"
+function getDescriptionPrefix(desc: string): string {
+  if (!desc) return 'General';
+  // Strip trailing numbers and keywords like Review/Exam/Debrief/CBT
+  return desc.replace(/\s*(\d+|Review|Exam|Debrief|CBT|\d+\s*CBT)\s*$/i, '').trim() || desc;
+}
+
 function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label: string; items: SyllabusItemDetail[] }[] {
-  // Group items by their module field (module number/name)
-  // The module field on PCA events is e.g. "1", "2", "Module 1" etc.
-  // We want each module as a separate column, sorted numerically where possible.
+  // Determine grouping strategy:
+  // 1. If items have meaningful module field values (numeric or short non-title values), group by module
+  // 2. Otherwise, group by event description prefix (subject area)
   const groups: Record<string, SyllabusItemDetail[]> = {};
+
+  // Check if module fields contain meaningful module numbers/names
+  // (not just the course title repeated on every item)
+  const moduleValues = items.map(i => i.module?.trim()).filter(Boolean);
+  const uniqueModules = new Set(moduleValues);
+  // If all items share the same module value (e.g. all = "PC-21 Ground School"),
+  // or module values are missing, fall back to grouping by description prefix
+  const hasMeaningfulModules = uniqueModules.size > 1 ||
+    (uniqueModules.size === 1 && /^\d+$/.test([...uniqueModules][0] || ''));
+
   for (const item of items) {
-    // Use module as the grouping key, fall back to phase, then 'General'
-    const key = item.module?.trim() || item.phase?.trim() || 'General';
+    let key: string;
+    if (hasMeaningfulModules) {
+      // Use module field, fallback to phase, then description prefix
+      key = item.module?.trim() || item.phase?.trim() || getDescriptionPrefix(item.eventDescription);
+    } else {
+      // Fall back to event description prefix as the grouping key
+      key = getDescriptionPrefix(item.eventDescription);
+    }
     if (!groups[key]) groups[key] = [];
     groups[key].push(item);
   }
+
   // Sort keys: numeric keys first (1, 2, 3...), then alphabetical
   const sortedKeys = Object.keys(groups).sort((a, b) => {
     const numA = parseFloat(a);
@@ -135,8 +160,9 @@ function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label:
     if (!isNaN(numB)) return 1;
     return a.localeCompare(b);
   });
+
   return sortedKeys.map(key => {
-    // Build a nice display label: "Module 1", "Module 2" etc for numeric keys
+    // Build a nice display label: "Module 1" for numeric keys, else the key itself
     const num = parseFloat(key);
     const label = !isNaN(num) ? `Module ${num}` : key;
     return { moduleKey: key, label, items: groups[key] };
