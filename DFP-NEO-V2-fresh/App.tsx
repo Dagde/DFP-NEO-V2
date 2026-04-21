@@ -4663,7 +4663,7 @@ const App: React.FC = () => {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
                         const bpcIpcSyllabus = syllabusDetails.filter(
-                            (item: any) => !item.lmpType || item.lmpType === 'Master LMP'
+                            (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
                         );
                         const ficSyllabus = syllabusDetails.filter(
                             (item: any) => item.courses && item.courses.includes('FIC')
@@ -4848,7 +4848,7 @@ const App: React.FC = () => {
                             if (!alreadySet || isFicTrainee) {
                                 const masterLMP = syllabusDetails.filter(item => {
                                     if (lmpType === 'BPC+IPC') {
-                                        return !item.lmpType || item.lmpType === 'Master LMP';
+                                        return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                                     }
                                     return item.courses && item.courses.includes(lmpType);
                                 });
@@ -4936,7 +4936,7 @@ const App: React.FC = () => {
                 if (!alreadySet || isFicTrainee) {
                     const masterLMP = syllabusDetails.filter(item => {
                         if (lmpType === 'BPC+IPC') {
-                            return !item.lmpType || item.lmpType === 'Master LMP';
+                            return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                         }
                         return item.courses && item.courses.includes(lmpType);
                     });
@@ -5172,23 +5172,6 @@ const App: React.FC = () => {
     const [coursePriorities, setCoursePriorities] = useState<string[]>([]);
     const [coursePercentages, setCoursePercentages] = useState<Map<string, number>>(new Map());
     const [traineeLMPs, setTraineeLMPs] = useState<Map<string, SyllabusItemDetail[]>>(new Map());
-    // Course-level academic completion tracking: Map<courseCode, Set<lessonCode>>
-    // Records which academic lessons have been completed by an entire course cohort
-    const [courseAcademicProgress, setCourseAcademicProgress] = useState<Map<string, Set<string>>>(new Map());
-
-    const handleUpdateCourseAcademicProgress = (courseCode: string, lessonCode: string, completed: boolean) => {
-        setCourseAcademicProgress(prev => {
-            const updated = new Map(prev);
-            const courseSet = new Set(updated.get(courseCode) || []);
-            if (completed) {
-                courseSet.add(lessonCode);
-            } else {
-                courseSet.delete(lessonCode);
-            }
-            updated.set(courseCode, courseSet);
-            return updated;
-        });
-    };
 
     // Auto-populate coursePriorities & coursePercentages from traineesData (locality-filtered).
     // traineesData is already filtered by the active school (ESL/PEA), so only courses
@@ -5323,7 +5306,16 @@ const App: React.FC = () => {
         const stored = localStorage.getItem('cancellationRecords');
         return stored ? JSON.parse(stored) : [];
     });
-    
+
+    // NEO Build basis course (People Profile setting)
+    const [neoBuildCourse, setNeoBuildCourse] = useState<string>(() => {
+        return localStorage.getItem('neoBuildCourse') || '';
+    });
+    const handleUpdateNeoBuildCourse = (course: string) => {
+        setNeoBuildCourse(course);
+        localStorage.setItem('neoBuildCourse', course);
+    };
+
     // Cancellation Codes State
     const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>(() => {
         const stored = localStorage.getItem('cancellationCodes');
@@ -7144,7 +7136,7 @@ const App: React.FC = () => {
         const lmpType = newTrainee.lmpType || 'BPC+IPC';
         const masterLMP = syllabusDetails.filter(item => {
             if (lmpType === 'BPC+IPC') {
-                return !item.lmpType || item.lmpType === 'Master LMP';
+                return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
             }
             return item.courses.includes(lmpType);
         });
@@ -12844,6 +12836,8 @@ updates.forEach(update => {
                        settingsLoaded={settingsLoaded}
                        organisationSettings={organisationSettings}
                        onUpdateOrganisationSettings={setOrganisationSettings}
+                       neoBuildCourse={neoBuildCourse}
+                       onUpdateNeoBuildCourse={handleUpdateNeoBuildCourse}
                        
                 />;
             case 'CurrencyBuilder':
@@ -13437,7 +13431,7 @@ updates.forEach(update => {
                                 }
 
                                 const masterSyllabus = syllabusDetails.filter((item: any) => {
-                                    if (lmpType === 'BPC+IPC') return !item.lmpType || item.lmpType === 'Master LMP';
+                                    if (lmpType === 'BPC+IPC') return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                                     return item.courses && item.courses.includes(lmpType);
                                 });
 
@@ -13628,8 +13622,6 @@ updates.forEach(update => {
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
                     courseColors={courseColors}
                     school={school}
-                    courseAcademicProgress={courseAcademicProgress}
-                    onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
                 />
             )}
             {showAuthFlyout && eventForAuth && 
