@@ -115,15 +115,32 @@ function getLessonCompletion(
 
 // ── Subject grouping ─────────────────────────────────────────────────────────
 
-function groupBySubject(items: SyllabusItemDetail[]): Record<string, SyllabusItemDetail[]> {
+function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label: string; items: SyllabusItemDetail[] }[] {
+  // Group items by their module field (module number/name)
+  // The module field on PCA events is e.g. "1", "2", "Module 1" etc.
+  // We want each module as a separate column, sorted numerically where possible.
   const groups: Record<string, SyllabusItemDetail[]> = {};
   for (const item of items) {
-    // Use module as subject area, or phase if module is empty
-    const subject = item.module?.trim() || item.phase?.trim() || 'General';
-    if (!groups[subject]) groups[subject] = [];
-    groups[subject].push(item);
+    // Use module as the grouping key, fall back to phase, then 'General'
+    const key = item.module?.trim() || item.phase?.trim() || 'General';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(item);
   }
-  return groups;
+  // Sort keys: numeric keys first (1, 2, 3...), then alphabetical
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    if (!isNaN(numA)) return -1;
+    if (!isNaN(numB)) return 1;
+    return a.localeCompare(b);
+  });
+  return sortedKeys.map(key => {
+    // Build a nice display label: "Module 1", "Module 2" etc for numeric keys
+    const num = parseFloat(key);
+    const label = !isNaN(num) ? `Module ${num}` : key;
+    return { moduleKey: key, label, items: groups[key] };
+  });
 }
 
 // ── Trainee Status ────────────────────────────────────────────────────────────
@@ -291,7 +308,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     );
   }, [syllabusDetails, selectedAcademicLmp]);
 
-  const subjectGroups = useMemo(() => groupBySubject(academicSyllabus), [academicSyllabus]);
+  const moduleGroups = useMemo(() => groupByModule(academicSyllabus), [academicSyllabus]);
 
   // ── Timeline tiles ──
   const [tiles, setTiles] = useState<TimelineTile[]>([]);
@@ -570,52 +587,76 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             </div>
           )}
 
-          {/* Lesson columns by subject */}
-          <div style={{ ...S.card, maxHeight: 280, overflowY: 'auto' }}>
-            <div style={S.label}>LMP Lessons</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-              {Object.entries(subjectGroups).map(([subject, items]) => (
-                <div key={subject}>
-                  <div style={{
-                    fontSize: 10, fontWeight: 700, color: '#e5e7eb',
-                    backgroundColor: subjectColor(subject),
-                    padding: '2px 6px', borderRadius: 4, marginBottom: 4, textTransform: 'uppercase'
-                  }}>{subject}</div>
-                  {items.map(item => {
-                    const completion = getLessonCompletion(item.code, courseTrainees, scores);
-                    const isSelected = selectedLessons.has(item.code);
-                    return (
-                      <div key={item.code}
-                        onClick={() => toggleLesson(item)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 5, padding: '3px 4px',
-                          cursor: 'pointer', borderRadius: 4,
-                          backgroundColor: isSelected ? 'rgba(29,78,216,0.3)' : 'transparent',
-                          border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
-                          marginBottom: 2,
-                        }}>
-                        {/* Completion indicator */}
-                        <span style={{ fontSize: 10, width: 14, textAlign: 'center', flexShrink: 0 }}>
-                          {completion === 'complete' ? '✅' : completion === 'partial' ? '🟡' : '⬜'}
-                        </span>
-                        <span style={{ fontSize: 11, color: isSelected ? '#93c5fd' : '#d1d5db', flex: 1, lineHeight: 1.2 }}>
-                          <span style={{ fontWeight: 600, color: '#f9fafb' }}>{item.code}</span>
-                          {' '}{item.eventDescription}
-                        </span>
-                        <span style={{ fontSize: 10, color: '#6b7280', flexShrink: 0 }}>
-                          {item.duration ? `${item.duration}h` : ''}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-              {Object.keys(subjectGroups).length === 0 && (
-                <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>
-                  No academic lessons found for this course
-                </div>
-              )}
+          {/* Lesson columns by module */}
+          <div style={{ ...S.card, maxHeight: 300, overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+              <div style={S.label}>LMP Lessons</div>
+              <span style={{ fontSize: 10, color: '#6b7280' }}>
+                ✅ = course complete &nbsp;🟡 = in progress &nbsp;⬜ = not started
+              </span>
             </div>
+            {moduleGroups.length === 0 ? (
+              <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>
+                No academic lessons found for this course
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                {moduleGroups.map(({ moduleKey, label, items: moduleItems }) => (
+                  <div key={moduleKey} style={{
+                    minWidth: 180, flexShrink: 0,
+                    backgroundColor: '#111827', borderRadius: 6, border: '1px solid #1d4ed8',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Module header */}
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: '#bfdbfe',
+                      backgroundColor: '#1e3a5f',
+                      padding: '4px 8px', textTransform: 'uppercase', letterSpacing: 1
+                    }}>{label}</div>
+                    {/* Lessons list */}
+                    <div style={{ padding: '4px 2px' }}>
+                      {moduleItems.map(item => {
+                        // Course-level completion: complete = ALL trainees done, partial = some done, none = none done
+                        const completion = getLessonCompletion(item.code, courseTrainees, scores);
+                        const isSelected = selectedLessons.has(item.code);
+                        // Strikethrough completed lessons to indicate they are done at course level
+                        const isCourseDone = completion === 'complete';
+                        return (
+                          <div key={item.code}
+                            onClick={() => toggleLesson(item)}
+                            title={isCourseDone ? 'All trainees in this course have completed this lesson' : completion === 'partial' ? 'Some trainees have completed this lesson' : 'Not yet completed by this course'}
+                            style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 5, padding: '3px 6px',
+                              cursor: 'pointer', borderRadius: 4,
+                              backgroundColor: isSelected ? 'rgba(29,78,216,0.35)' : 'transparent',
+                              border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
+                              marginBottom: 1,
+                            }}>
+                            {/* Course-level completion indicator */}
+                            <span style={{ fontSize: 11, width: 16, textAlign: 'center', flexShrink: 0, marginTop: 1 }}>
+                              {completion === 'complete' ? '✅' : completion === 'partial' ? '🟡' : '⬜'}
+                            </span>
+                            <span style={{
+                              fontSize: 11, flex: 1, lineHeight: 1.3,
+                              color: isCourseDone ? '#6b7280' : isSelected ? '#93c5fd' : '#d1d5db',
+                              textDecoration: isCourseDone ? 'line-through' : 'none',
+                            }}>
+                              <span style={{ fontWeight: 700, color: isCourseDone ? '#6b7280' : '#f9fafb', fontSize: 10 }}>{item.code}</span>
+                              {' '}{item.eventDescription}
+                            </span>
+                            {item.duration ? (
+                              <span style={{ fontSize: 10, color: '#4b5563', flexShrink: 0, marginTop: 1 }}>
+                                {item.duration}h
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Standard Events */}
