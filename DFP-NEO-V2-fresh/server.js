@@ -1932,6 +1932,191 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
   }
 });
 
+// POST /api/trainees - Create a new trainee record
+app.post('/api/trainees', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      idNumber, name, fullName, rank, course, lmpType,
+      unit, flight, location, service, seatConfig, isPaused,
+      traineeCallsign, primaryInstructor, secondaryInstructor,
+      phoneNumber, email, permissions, unavailability
+    } = req.body;
+
+    if (!idNumber || !name) {
+      return res.status(400).json({ error: 'idNumber and name are required' });
+    }
+
+    // Check if trainee with this idNumber already exists
+    const existing = await db.trainee.findFirst({ where: { idNumber: Number(idNumber) } });
+    if (existing) {
+      // Update existing record instead
+      const updated = await db.trainee.update({
+        where: { id: existing.id },
+        data: {
+          name: name || existing.name,
+          fullName: fullName || name,
+          rank: rank || existing.rank,
+          course: course || existing.course,
+          lmpType: lmpType || existing.lmpType,
+          unit: unit !== undefined ? unit : existing.unit,
+          flight: flight !== undefined ? flight : existing.flight,
+          location: location !== undefined ? location : existing.location,
+          service: service || existing.service,
+          seatConfig: seatConfig || existing.seatConfig,
+          isPaused: isPaused !== undefined ? isPaused : existing.isPaused,
+          traineeCallsign: traineeCallsign !== undefined ? traineeCallsign : existing.traineeCallsign,
+          primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : existing.primaryInstructor),
+          secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : existing.secondaryInstructor),
+          phoneNumber: phoneNumber !== undefined ? phoneNumber : existing.phoneNumber,
+          email: email !== undefined ? email : existing.email,
+          permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : existing.permissions),
+          unavailability: unavailability || existing.unavailability,
+          isActive: true,
+        }
+      });
+      console.log(`✅ POST /api/trainees - updated existing: ${updated.name} (${updated.idNumber})`);
+      return res.json({ success: true, trainee: updated, action: 'updated' });
+    }
+
+    // Create new trainee
+    const created = await db.trainee.create({
+      data: {
+        idNumber: Number(idNumber),
+        name,
+        fullName: fullName || name,
+        rank: rank || 'FLGOFF',
+        course: course || '',
+        lmpType: lmpType || '',
+        unit: unit || '',
+        flight: flight || '',
+        location: location || '',
+        service: service || null,
+        seatConfig: seatConfig || 'Front',
+        isPaused: isPaused || false,
+        traineeCallsign: traineeCallsign || null,
+        primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : []),
+        secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : []),
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : []),
+        unavailability: unavailability || [],
+        isActive: true,
+      }
+    });
+
+    console.log(`✅ POST /api/trainees - created: ${created.name} (${created.idNumber})`);
+    res.status(201).json({ success: true, trainee: created, action: 'created' });
+  } catch (error) {
+    console.error('❌ POST /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to create trainee', details: error.message });
+  }
+});
+
+// POST /api/trainees/bulk - Bulk create or update trainees
+app.post('/api/trainees/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { trainees, course, replaceAll } = req.body;
+
+    if (!Array.isArray(trainees) || trainees.length === 0) {
+      return res.status(400).json({ error: 'trainees array is required and must not be empty' });
+    }
+
+    console.log(`🔵 POST /api/trainees/bulk - processing ${trainees.length} trainees, course: ${course || 'all'}, replaceAll: ${replaceAll}`);
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const results = [];
+
+    // If replaceAll and course is specified, mark all existing trainees in that course as inactive first
+    if (replaceAll && course) {
+      await db.trainee.updateMany({
+        where: { course, isActive: true },
+        data: { isActive: false }
+      });
+      console.log(`🔵 Marked all existing ${course} trainees as inactive for replacement`);
+    }
+
+    for (const t of trainees) {
+      try {
+        if (!t.idNumber || !t.name) {
+          skippedCount++;
+          continue;
+        }
+
+        const idNum = Number(t.idNumber);
+        if (isNaN(idNum) || idNum <= 0) {
+          skippedCount++;
+          continue;
+        }
+
+        // Look for existing trainee by idNumber in this course (or any course if no course filter)
+        const whereClause = course 
+          ? { idNumber: idNum }
+          : { idNumber: idNum };
+        
+        const existing = await db.trainee.findFirst({ where: whereClause });
+
+        const traineeData = {
+          name: t.name,
+          fullName: t.fullName || t.name,
+          rank: t.rank || 'FLGOFF',
+          course: t.course || course || '',
+          lmpType: t.lmpType || '',
+          unit: t.unit || '',
+          flight: t.flight || '',
+          location: t.location || '',
+          service: t.service || null,
+          seatConfig: t.seatConfig || 'Front',
+          isPaused: t.isPaused || false,
+          traineeCallsign: t.traineeCallsign !== undefined ? String(t.traineeCallsign) : null,
+          primaryInstructor: Array.isArray(t.primaryInstructor) ? t.primaryInstructor : (t.primaryInstructor ? [t.primaryInstructor] : []),
+          secondaryInstructor: Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : (t.secondaryInstructor ? [t.secondaryInstructor] : []),
+          phoneNumber: t.phoneNumber || null,
+          email: t.email || null,
+          permissions: Array.isArray(t.permissions) ? t.permissions : (t.permissions ? [t.permissions] : []),
+          unavailability: t.unavailability || [],
+          isActive: true,
+        };
+
+        if (existing) {
+          await db.trainee.update({
+            where: { id: existing.id },
+            data: traineeData
+          });
+          updatedCount++;
+          results.push({ idNumber: idNum, name: t.name, action: 'updated' });
+        } else {
+          const created = await db.trainee.create({
+            data: { idNumber: idNum, ...traineeData }
+          });
+          createdCount++;
+          results.push({ idNumber: idNum, name: t.name, action: 'created', id: created.id });
+        }
+      } catch (rowError) {
+        console.error(`❌ Error processing trainee ${t.idNumber} - ${t.name}:`, rowError.message);
+        skippedCount++;
+        results.push({ idNumber: t.idNumber, name: t.name, action: 'error', error: rowError.message });
+      }
+    }
+
+    console.log(`✅ POST /api/trainees/bulk complete - created: ${createdCount}, updated: ${updatedCount}, skipped: ${skippedCount}`);
+    res.json({
+      success: true,
+      created: createdCount,
+      updated: updatedCount,
+      skipped: skippedCount,
+      total: trainees.length,
+      results
+    });
+  } catch (error) {
+    console.error('❌ POST /api/trainees/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk update trainees', details: error.message });
+  }
+});
+
 // PATCH /api/trainees/:id - Update a trainee record
 app.patch('/api/trainees/:id', async (req, res) => {
   try {

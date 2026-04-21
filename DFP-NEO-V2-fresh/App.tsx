@@ -10068,20 +10068,74 @@ updates.forEach(update => {
         setSuccessMessage('Instructors successfully replaced!');
     }, []);
 
-    const handleBulkUpdateTrainees = useCallback((updatedTrainees: Trainee[]) => {
+    const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
+        // Update in-memory state immediately
         const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
-        
         setTraineesData(prevTrainees => {
             const existingIds = new Set(prevTrainees.map(t => t.idNumber));
             const updatedExisting = prevTrainees.map(t => updatedMap.get(t.idNumber) || t);
             const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
             return [...updatedExisting, ...newToAdd];
         });
+
+        // Persist to database via bulk API
+        try {
+            const course = updatedTrainees.length > 0 ? updatedTrainees[0].course : undefined;
+            const response = await fetch(`${getApiBase()}/trainees/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    trainees: updatedTrainees,
+                    course: course || undefined,
+                    replaceAll: false  // Minor update — merge, don't replace
+                })
+            });
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`✅ Bulk trainee update saved to DB: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}`);
+                setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated.`);
+            } else {
+                const err = await response.text();
+                console.error('❌ Bulk trainee DB save failed:', err);
+                setSuccessMessage('Warning: Trainees updated in session but DB save failed. Please contact admin.');
+            }
+        } catch (err) {
+            console.error('❌ Bulk trainee DB save error:', err);
+        }
     }, []);
 
-    const handleReplaceTrainees = useCallback((newTrainees: Trainee[]) => {
+    const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[]) => {
+        // Update in-memory state immediately
         setTraineesData(newTrainees);
         setSuccessMessage('Trainees successfully replaced!');
+
+        // Persist to database — replaceAll removes existing course trainees then re-creates
+        try {
+            // Determine course from the new trainees (all should have same course for a Replace operation)
+            const course = newTrainees.length > 0 ? newTrainees[0].course : undefined;
+            const response = await fetch(`${getApiBase()}/trainees/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    trainees: newTrainees,
+                    course: course || undefined,
+                    replaceAll: true  // Replace — deactivate existing, then recreate
+                })
+            });
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`✅ Replace trainees saved to DB: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}`);
+                setSuccessMessage(`Trainees replaced: ${result.created} added, ${result.updated} updated.`);
+            } else {
+                const err = await response.text();
+                console.error('❌ Replace trainees DB save failed:', err);
+                setSuccessMessage('Warning: Trainees replaced in session but DB save failed. Please contact admin.');
+            }
+        } catch (err) {
+            console.error('❌ Replace trainees DB save error:', err);
+        }
     }, []);
     
     // Refresh database data (personnel and trainees) - called when database is modified
