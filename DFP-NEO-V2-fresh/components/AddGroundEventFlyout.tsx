@@ -367,8 +367,25 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 persistedAcademicLmp={persistedAcademicLmp}
                                 onUpdatePersistedAcademicLmp={onUpdatePersistedAcademicLmp}
                                 onSave={(data) => {
-                                    if (onSaveAcademic) onSaveAcademic(data);
-                                    else onSave(data);
+                                    console.log('🎓 [AddGroundEventFlyout] AcademicsTab onSave triggered');
+                                    console.log('🎓 [AddGroundEventFlyout] onSaveAcademic prop exists?', typeof onSaveAcademic);
+                                    console.log('🎓 [AddGroundEventFlyout] data passed up:', {
+                                        course: data.course,
+                                        date: data.date,
+                                        workStart: data.workStart,
+                                        workEnd: data.workEnd,
+                                        resourceId: data.resourceId,
+                                        selectedTrainees: data.selectedTrainees,
+                                        tilesCount: data.timeline?.length,
+                                        lessonsCount: data.lessons?.length,
+                                    });
+                                    if (onSaveAcademic) {
+                                        console.log('🎓 [AddGroundEventFlyout] → calling onSaveAcademic');
+                                        onSaveAcademic(data);
+                                    } else {
+                                        console.warn('🎓 [AddGroundEventFlyout] ⚠️ onSaveAcademic not provided, falling back to onSave');
+                                        onSave(data);
+                                    }
                                 }}
                                 onClose={onClose}
                             />

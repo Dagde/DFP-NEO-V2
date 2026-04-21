@@ -478,9 +478,29 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   // ── Save ──
   const handleSave = () => {
-    if (!selectedCourse) { alert('Please select a course.'); return; }
-    if (selectedTrainees.length === 0) { alert('Please select at least one trainee.'); return; }
-    if (tiles.length === 0) { alert('Please add at least one lesson to the timeline.'); return; }
+    console.log('🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====');
+    console.log('🎓 [AcademicsTab.handleSave] selectedCourse:', selectedCourse);
+    console.log('🎓 [AcademicsTab.handleSave] selectedTrainees:', selectedTrainees, '(count:', selectedTrainees.length, ')');
+    console.log('🎓 [AcademicsTab.handleSave] tiles:', tiles, '(count:', tiles.length, ')');
+    console.log('🎓 [AcademicsTab.handleSave] selectedDate:', selectedDate);
+    console.log('🎓 [AcademicsTab.handleSave] workStart:', workStart, 'workEnd:', workEnd);
+    console.log('🎓 [AcademicsTab.handleSave] resourceId:', resourceId);
+
+    if (!selectedCourse) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse');
+      alert('Please select a course.');
+      return;
+    }
+    if (selectedTrainees.length === 0) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedTrainees');
+      alert('Please select at least one trainee.');
+      return;
+    }
+    if (tiles.length === 0) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no tiles in timeline');
+      alert('Please add at least one lesson to the timeline.');
+      return;
+    }
 
     const lessons = tiles
       .filter(t => !t.isStandard)
@@ -489,7 +509,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         return { code: t.lessonCode, description: s?.eventDescription || t.label, duration: t.duration };
       });
 
-    onSave({
+    const saveData = {
       lessons,
       timeline: tiles,
       selectedTrainees,
@@ -498,8 +518,24 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       workStart,
       workEnd,
       resourceId,
-      isAcademic: true,
+      isAcademic: true as const,
+    };
+
+    console.log('🎓 [AcademicsTab.handleSave] Calling onSave with data:', {
+      course: saveData.course,
+      date: saveData.date,
+      workStart: saveData.workStart,
+      workEnd: saveData.workEnd,
+      resourceId: saveData.resourceId,
+      selectedTrainees: saveData.selectedTrainees,
+      lessonsCount: saveData.lessons.length,
+      tilesCount: saveData.timeline.length,
+      isAcademic: saveData.isAcademic,
     });
+    console.log('🎓 [AcademicsTab.handleSave] onSave function exists?', typeof onSave);
+
+    onSave(saveData);
+    console.log('🎓 [AcademicsTab.handleSave] onSave() called successfully');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────

@@ -10360,16 +10360,50 @@ updates.forEach(update => {
     // Academic session save — creates one grouped ground event per trainee, flagged isAcademic=true
     // so NEO Build never touches it
     const handleSaveAcademicEvent = (data: import('./components/AcademicsTab').AcademicSaveData) => {
-        if (!data.selectedTrainees.length || !data.timeline.length) return;
+        console.log('🎓 [AcademicPublish] ===== handleSaveAcademicEvent CALLED =====');
+        console.log('🎓 [AcademicPublish] data received:', {
+            course: data.course,
+            date: data.date,
+            workStart: data.workStart,
+            workEnd: data.workEnd,
+            resourceId: data.resourceId,
+            selectedTrainees: data.selectedTrainees,
+            selectedTraineesCount: data.selectedTrainees?.length,
+            tilesCount: data.timeline?.length,
+            lessonsCount: data.lessons?.length,
+            timeline: data.timeline,
+            isAcademic: data.isAcademic,
+        });
+
+        // Guard: must have trainees and timeline tiles
+        if (!data.selectedTrainees || data.selectedTrainees.length === 0) {
+            console.error('🎓 [AcademicPublish] ❌ BLOCKED: no selectedTrainees — returning early');
+            return;
+        }
+        if (!data.timeline || data.timeline.length === 0) {
+            console.error('🎓 [AcademicPublish] ❌ BLOCKED: no timeline tiles — returning early');
+            return;
+        }
 
         // Build lesson codes summary (non-standard tiles only)
         const lessonCodes = data.lessons.map(l => l.code).join(', ');
         const sessionDuration = data.workEnd - data.workStart;
 
+        console.log('🎓 [AcademicPublish] lessonCodes:', lessonCodes);
+        console.log('🎓 [AcademicPublish] sessionDuration:', sessionDuration, '(workStart:', data.workStart, '→ workEnd:', data.workEnd, ')');
+
+        if (sessionDuration <= 0) {
+            console.error('🎓 [AcademicPublish] ❌ BLOCKED: sessionDuration is', sessionDuration, '— workStart/workEnd invalid');
+            return;
+        }
+
+        const eventId = uuidv4();
+        console.log('🎓 [AcademicPublish] Generated event ID:', eventId);
+
         // ONE event per classroom resource — spans full working day (workStart → workEnd)
         // Contains all timeline tiles as academicTiles for inset rendering
         const academicDayEvent: ScheduleEvent = {
-            id: uuidv4(),
+            id: eventId,
             date: data.date,
             type: 'ground' as const,
             flightNumber: 'ACAD',
@@ -10396,9 +10430,50 @@ updates.forEach(update => {
             })),
         };
 
-        setEvents((prev: ScheduleEvent[]) => [...prev, academicDayEvent]);
+        console.log('🎓 [AcademicPublish] academicDayEvent constructed:', {
+            id: academicDayEvent.id,
+            date: academicDayEvent.date,
+            type: academicDayEvent.type,
+            flightNumber: academicDayEvent.flightNumber,
+            startTime: academicDayEvent.startTime,
+            duration: academicDayEvent.duration,
+            resourceId: academicDayEvent.resourceId,
+            isAcademic: academicDayEvent.isAcademic,
+            attendees: academicDayEvent.attendees,
+            academicTilesCount: academicDayEvent.academicTiles?.length,
+        });
+
+        // FIX: Add event to publishedSchedules (the state the schedule view renders from),
+        // NOT to the legacy 'events' state which is not rendered in the daily schedule view.
+        const eventDate = data.date;
+        console.log('🎓 [AcademicPublish] Adding to publishedSchedules for date:', eventDate);
+        console.log('🎓 [AcademicPublish] Current publishedSchedules keys:', Object.keys(publishedSchedules));
+        console.log('🎓 [AcademicPublish] Current events for this date:', (publishedSchedules[eventDate] || []).length);
+
+        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+            const existing = prev[eventDate] || [];
+            const updated = [...existing, academicDayEvent];
+            console.log('🎓 [AcademicPublish] setPublishedSchedules updater — was', existing.length, 'events, now', updated.length, 'for date', eventDate);
+            return { ...prev, [eventDate]: updated };
+        });
+
+        // Also keep the legacy events state in sync (used by some sub-components)
+        setEvents((prev: ScheduleEvent[]) => {
+            console.log('🎓 [AcademicPublish] setEvents updater — appending to', prev.length, 'events');
+            return [...prev, academicDayEvent];
+        });
+
+        // Persist to DB so the event survives a page refresh
+        // We must pass the updated array directly (not rely on state) to avoid async race
+        const updatedEventsForDate = [...(publishedSchedules[eventDate] || []), academicDayEvent];
+        console.log('🎓 [AcademicPublish] Persisting', updatedEventsForDate.length, 'events for date', eventDate, 'to DB snapshot...');
+        persistScheduleForDate(eventDate, updatedEventsForDate);
+
         setShowAddGroundEvent(false);
-        setSuccessMessage(`Academic session published for ${data.date}: ${lessonCodes || 'ACAD-SESSION'}`);
+        const successMsg = `Academic session published for ${data.date}: ${lessonCodes || 'ACAD-SESSION'}`;
+        console.log('🎓 [AcademicPublish] ✅ Success:', successMsg);
+        setSuccessMessage(successMsg);
+        console.log('🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====');
     };
 
 
