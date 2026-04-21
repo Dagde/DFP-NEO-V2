@@ -415,6 +415,7 @@ interface DfpConfig {
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
+  excludedCourses: string[];
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -1624,6 +1625,7 @@ function generateDfpInternal(
     
     const activeTrainees = trainees.filter(t => 
         !t.isPaused && 
+        !(config.excludedCourses || []).includes(t.course) &&
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
     
@@ -5314,6 +5316,8 @@ const App: React.FC = () => {
     const [neoBuildCourse, setNeoBuildCourse] = useState<string>('');
     // Selected Academic LMP — persisted in DB so last selection survives hard reset
     const [persistedAcademicLmp, setPersistedAcademicLmp] = useState<string>('');
+    // Courses excluded from NEO Build (e.g. in Academics phase or on course pause)
+    const [excludedCourses, setExcludedCourses] = useState<string[]>([]);
 
     useEffect(() => {
         const loadCourseSettings = async () => {
@@ -5323,6 +5327,7 @@ const App: React.FC = () => {
                     const data = await res.json();
                     setNeoBuildCourse(data.neoBuildCourse || '');
                     setPersistedAcademicLmp(data.selectedAcademicLmp || '');
+                    setExcludedCourses(data.excludedCourses || []);
                 }
             } catch (error) {
                 console.error('[CourseSettings] Failed to load:', error);
@@ -5341,6 +5346,19 @@ const App: React.FC = () => {
             });
         } catch (error) {
             console.error('[NeoBuildCourse] Failed to save:', error);
+        }
+    };
+
+    const handleUpdateExcludedCourses = async (courses: string[]) => {
+        setExcludedCourses(courses);
+        try {
+            await fetch(`${getApiBase()}/settings/course-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ excludedCourses: courses })
+            });
+        } catch (error) {
+            console.error('[ExcludedCourses] Failed to save:', error);
         }
     };
 
@@ -9161,7 +9179,7 @@ const App: React.FC = () => {
         console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
         
         // Now proceed with normal build process
-        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
@@ -9275,6 +9293,7 @@ const App: React.FC = () => {
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
+            excludedCourses: excludedCourses,
         };
 
         setTimeout(() => {
