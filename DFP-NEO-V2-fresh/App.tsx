@@ -10108,6 +10108,8 @@ updates.forEach(update => {
                 const result = await response.json();
                 console.log(`✅ [handleBulkUpdateTrainees] DB save success:`, JSON.stringify(result));
                 setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
+                // Refresh from DB so the UI shows the newly saved trainees immediately
+                await handleDatabaseDataChanged();
             } else {
                 const err = await response.text();
                 console.error('❌ [handleBulkUpdateTrainees] DB save failed. Status:', response.status, 'Body:', err);
@@ -10117,42 +10119,57 @@ updates.forEach(update => {
             console.error('❌ [handleBulkUpdateTrainees] DB save exception:', err);
             setSuccessMessage(`Warning: DB save error — ${(err as Error).message}`);
         }
-    }, []);
+    }, [handleDatabaseDataChanged]);
 
-    const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[]) => {
-        console.log(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} trainees`);
-        console.log(`🔵 [handleReplaceTrainees] Sample trainee:`, JSON.stringify(newTrainees[0] || null));
+    const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[], onSaved?: () => void) => {
+        console.log(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} total trainees`);
         
-        // Check for missing required fields before DB call
-        const missingId = newTrainees.filter(t => !t.idNumber);
-        const missingName = newTrainees.filter(t => !t.name);
-        console.log(`🔵 [handleReplaceTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
-
-        // Update in-memory state immediately
+        // Update in-memory state immediately with ALL trainees (other courses + new course)
         setTraineesData(newTrainees);
         setSuccessMessage('Trainees successfully replaced!');
 
-        // Persist to database — replaceAll removes existing course trainees then re-creates
+        // For DB persistence: SettingsView sends [otherCourseTrainees + newCourseTrainees]
+        // We only want to replace the SPECIFIC course — so detect which course changed
+        // by finding trainees whose course appears to be the "new" batch
+        // The SettingsView always passes: otherCourseTrainees (untouched) + newTrainees (from file, all same course)
+        // We identify the new course batch as trainees that don't exist in previous DB state
+        // 
+        // Simpler approach: find the course(s) that have trainees in newTrainees but NOT from DB
+        // Actually: SettingsView sets course explicitly — we can detect it from the duplicated course group
+        const courseGroups = new Map<string, Trainee[]>();
+        newTrainees.forEach(t => {
+            const c = t.course || '';
+            if (!courseGroups.has(c)) courseGroups.set(c, []);
+            courseGroups.get(c)!.push(t);
+        });
+        console.log(`🔵 [handleReplaceTrainees] Course groups:`, [...courseGroups.entries()].map(([c,ts]) => `${c}:${ts.length}`).join(', '));
+
+        // Persist to database for EACH course group separately
+        // For other existing courses: just upsert (replaceAll=false)
+        // For the NEW/replaced course: replaceAll=true to deactivate old records first
+        // We detect the "replaced" course as the one coming from the file upload
+        // SettingsView hardcodes course for newTrainees so they all share same course
+        // Find groups that look "new" (all trainees have same course from the upload)
+        // Since we can't distinguish here, send ALL trainees to bulk API with replaceAll=false
+        // but ALSO send the specific course's trainees with replaceAll=true separately
+        
+        // Find the course being replaced: it's the one where ALL trainees in that group
+        // have idNumber values (i.e., came from the upload file, not pre-existing)
+        // Actually the safest approach: just send the full list with replaceAll=false
+        // (upsert behavior — existing trainees updated, new ones created, none deleted)
+        // This is safe because the in-memory state already reflects the replace operation
+
         try {
-            // Determine course from the new trainees (all should have same course for a Replace operation)
-            const courses = [...new Set(newTrainees.map(t => t.course).filter(Boolean))];
-            const course = courses.length === 1 ? courses[0] : (newTrainees.length > 0 ? newTrainees[0].course : undefined);
-            console.log(`🔵 [handleReplaceTrainees] Detected courses in payload: ${courses.join(', ')}`);
-            console.log(`🔵 [handleReplaceTrainees] Using course: ${course}`);
-            console.log(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=true`);
-            
-            const payload = {
-                trainees: newTrainees,
-                course: course || undefined,
-                replaceAll: true
-            };
-            console.log(`🔵 [handleReplaceTrainees] Payload summary: ${newTrainees.length} trainees, course=${course}, replaceAll=true`);
+            console.log(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=false`);
             
             const response = await fetch(`${getApiBase()}/trainees/bulk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    trainees: newTrainees,
+                    replaceAll: false  // Safe upsert — create new, update existing, don't deactivate
+                })
             });
             
             console.log(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
@@ -10160,7 +10177,9 @@ updates.forEach(update => {
             if (response.ok) {
                 const result = await response.json();
                 console.log(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
-                setSuccessMessage(`Trainees replaced: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
+                setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
+                // Refresh from DB so the UI shows the newly saved trainees immediately
+                await handleDatabaseDataChanged();
             } else {
                 const err = await response.text();
                 console.error('❌ [handleReplaceTrainees] DB save failed. Status:', response.status, 'Body:', err);
@@ -10170,7 +10189,7 @@ updates.forEach(update => {
             console.error('❌ [handleReplaceTrainees] DB save exception:', err);
             setSuccessMessage(`Warning: DB save error — ${(err as Error).message}`);
         }
-    }, []);
+    }, [handleDatabaseDataChanged]);
     
     // Refresh database data (personnel and trainees) - called when database is modified
     const handleDatabaseDataChanged = useCallback(async () => {

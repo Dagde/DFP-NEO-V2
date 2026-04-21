@@ -1229,7 +1229,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const callsign = getStr(row, ['Callsign', 'callsign']); 
         if (callsign) parsed.callsignNumber = parseInt(callsign) || undefined;
         
-        const service = getStr(row, ['Service']); if (service) parsed.service = service as 'RAAF' | 'RAN' | 'ARA';
+        const serviceRaw = getStr(row, ['Service']);
+        if (serviceRaw) {
+            // Normalise free-text service values to the exact enum the DB expects
+            const svc = serviceRaw.trim().toLowerCase();
+            if (svc === 'raaf' || svc === 'air force' || svc === 'airforce' || svc === 'royal australian air force') {
+                parsed.service = 'RAAF';
+            } else if (svc === 'ran' || svc === 'navy' || svc === 'royal australian navy') {
+                parsed.service = 'RAN';
+            } else if (svc === 'ara' || svc === 'army' || svc === 'australian army') {
+                parsed.service = 'ARA';
+            } else {
+                // Pass through as-is (may be already correct enum value)
+                parsed.service = serviceRaw as 'RAAF' | 'RAN' | 'ARA';
+            }
+        }
         const unit = getStr(row, ['Unit']); if (unit) parsed.unit = unit;
         
         // Flight - new field
@@ -1237,7 +1251,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (flight) parsed.flight = flight;
         
         const location = getStr(row, ['Location']); if (location) parsed.location = location;
-        const seatConfig = getStr(row, ['Seat Config', 'seatConfig']); if (seatConfig) parsed.seatConfig = seatConfig as SeatConfig;
+        const seatConfigRaw = getStr(row, ['Seat Config', 'seatConfig', 'Seat config']);
+        if (seatConfigRaw) {
+            // Normalise seat config to valid enum values
+            const sc = seatConfigRaw.trim().toLowerCase();
+            if (sc === 'normal' || sc === 'norm') {
+                parsed.seatConfig = 'Normal';
+            } else if (sc === 'fwd/short' || sc === 'forward/short' || sc === 'fwd' || sc === 'front') {
+                parsed.seatConfig = 'FWD/SHORT';
+            } else if (sc === 'rear/short' || sc === 'rear') {
+                parsed.seatConfig = 'REAR/SHORT';
+            } else if (sc === 'fwd/long' || sc === 'forward/long' || sc === 'long') {
+                parsed.seatConfig = 'FWD/LONG';
+            } else {
+                parsed.seatConfig = seatConfigRaw as SeatConfig;
+            }
+        }
         const phone = getStr(row, ['Phone Number', 'phoneNumber']); if (phone) parsed.phoneNumber = phone;
         const email = getStr(row, ['Email']); if (email) parsed.email = email;
         
@@ -1262,7 +1291,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (!parsed.isPaused) parsed.isPaused = false;
         if (!parsed.unit) parsed.unit = '';
         if (!parsed.rank) parsed.rank = 'FLGOFF' as TraineeRank; // Default rank
-        if (!parsed.seatConfig) parsed.seatConfig = 'Front' as SeatConfig; // Default seat config
+        if (!parsed.seatConfig) parsed.seatConfig = 'Normal' as SeatConfig; // Default seat config
         if (!parsed.unavailability) parsed.unavailability = [];
         
         if (parsed.name && parsed.course) {
