@@ -68,6 +68,8 @@ async function getPrisma() {
     await ensureAppSettingsTable(prisma);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(prisma);
+    // Ensure Course.lmpType column exists (migration for existing DBs)
+    await ensureCourseLmpTypeColumn(prisma);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
@@ -482,6 +484,8 @@ app.get('/api/courses', async (req, res) => {
       armyStart: c.armyCount || 0,
       status: c.status || 'ACTIVE',
       location: c.location || '',
+      unit: c.unit || '',
+      lmpType: c.lmpType || '',
       code: c.code || c.name,
     }));
     res.json({ courses: mapped });
@@ -495,7 +499,7 @@ app.get('/api/courses', async (req, res) => {
 app.post('/api/courses', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, status } = req.body;
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, status } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const course = await db.course.upsert({
       where: { code: name },
@@ -508,6 +512,7 @@ app.post('/api/courses', async (req, res) => {
         armyCount: armyStart || 0,
         location: location || '',
         unit: unit || '',
+        lmpType: lmpType || '',
         status: status || 'ACTIVE',
         updatedAt: new Date(),
       },
@@ -522,6 +527,7 @@ app.post('/api/courses', async (req, res) => {
         armyCount: armyStart || 0,
         location: location || '',
         unit: unit || '',
+        lmpType: lmpType || '',
         status: status || 'ACTIVE',
       },
     });
@@ -3443,6 +3449,18 @@ async function ensureCourseSettingsTables(db) {
     console.log('✅ CourseAcademicProgress table ready');
   } catch (err) {
     console.error('❌ Failed to ensure CourseSettings tables:', err.message);
+  }
+}
+
+async function ensureCourseLmpTypeColumn(db) {
+  try {
+    // Add lmpType column to Course table if it doesn't exist (migration for existing DBs)
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "lmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Course.lmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course.lmpType column:', err.message);
   }
 }
 

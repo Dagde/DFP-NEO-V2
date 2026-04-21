@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const COURSE_MASTER_LMPS = [
     'BPC+IPC',
+    'PC-21 Ground School',
     'FIC',
     'OFI',
     'WSO',
@@ -13,7 +14,8 @@ const COURSE_MASTER_LMPS = [
 ];
 
 const LMP_DESCRIPTIONS: Record<string, string> = {
-    'BPC+IPC': 'Basic Pilot Course & Initial Pilot Course (PC-21 Ground School)',
+    'BPC+IPC': 'Basic Pilot Course & Initial Pilot Course',
+    'PC-21 Ground School': 'PC-21 Ground School (academic phase)',
     'FIC': 'Flight Instructor Course (FIC syllabus)',
     'OFI': 'Operational Flying Instructor',
     'WSO': 'Weapons Systems Officer',

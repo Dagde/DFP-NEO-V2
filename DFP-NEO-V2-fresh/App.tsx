@@ -2254,7 +2254,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return null;
         }
         
-        const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.id, duration: syllabusItem.duration }, syllabusDetails);
+        const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.code, duration: syllabusItem.duration }, syllabusDetails);
         if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_STATICALLY_UNAVAILABLE');
             return null;
@@ -2286,7 +2286,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const proposedEvent = {
                     ...proposedBookingWindow,
                     instructor: instructor.name,
-                    flightNumber: syllabusItemForCheck.id,
+                    flightNumber: syllabusItemForCheck.code,
                     type: syllabusItemForCheck.type
                 };
                 const currentDutyHours = calculateInstructorDutyHours(instructor.name, proposedEvent);
@@ -2546,7 +2546,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const proposedEvent = {
                     ...proposedBookingWindow,
                     instructor: ip.name,
-                    flightNumber: syllabusItemForCheck.id,
+                    flightNumber: syllabusItemForCheck.code,
                     type: syllabusItemForCheck.type
                 };
                 const currentDutyHours = calculateInstructorDutyHours(ip.name, proposedEvent);
@@ -2636,7 +2636,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 if (hasOverlap) { _dRej.timeOverlap++; continue; }
                 // ─────────────────────────────────────────────────────────────────────
 
-                const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.id, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
+                const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
                 const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
                 if (ipEvents.length > 0) {
                     const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
@@ -2765,7 +2765,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const stbyResult = {
                 id: uuidv4(), type: type, instructor: '', student: trainee.fullName,
                 pilot: trainee.fullName,
-                flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
+                flightNumber: syllabusItem.code, duration: syllabusItem.duration, startTime, resourceId,
                 color: courseColors[trainee.course] || 'bg-gray-500',
                 flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
                 area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
@@ -2896,7 +2896,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         const result = {
             id: uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
-            flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
+            flightNumber: syllabusItem.code, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
@@ -3674,7 +3674,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     instructor: stbyInstructor,
                     student: trainee.fullName,
                     pilot: isSoloStby ? trainee.fullName : (stbyInstructor || 'TBA'),
-                    flightNumber: next.id,
+                    flightNumber: next.code,
                     duration: next.duration,
                     startTime: time,
                     resourceId: `STBY ${stbyLine}`,
@@ -3748,7 +3748,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             instructor: instructor || 'TBA',
                             student: trainee.fullName,
                                pilot: instructor || 'TBA',
-                            flightNumber: next.id,
+                            flightNumber: next.code,
                             duration: next.duration,
                             startTime: currentTime,
                             resourceId: `STBY ${currentStbyLine}`,
@@ -11608,7 +11608,7 @@ updates.forEach(update => {
             });
             
                // Log day/night classification for debugging
-               const nextEventClassification = tr.nextSyllabusEvent ? getEventDayNightClassification({ flightNumber: tr.nextSyllabusEvent.id }, syllabusDetails, sctEvents) : 'Unknown';
+               const nextEventClassification = tr.nextSyllabusEvent ? getEventDayNightClassification({ flightNumber: tr.nextSyllabusEvent.code }, syllabusDetails, sctEvents) : 'Unknown';
                
                // CRITICAL: Check if proposed time matches next event's day/night classification
                // If next event is Night, only show trainee as available during night hours

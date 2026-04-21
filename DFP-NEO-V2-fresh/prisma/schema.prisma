@@ -249,6 +249,7 @@ model Course {
   armyCount     Int?
   location      String
   unit          String
+  lmpType       String?
   status        String   @default("ACTIVE")
   color         String?
   createdAt     DateTime @default(now())
