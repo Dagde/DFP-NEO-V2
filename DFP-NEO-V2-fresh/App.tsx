@@ -10068,6 +10068,81 @@ updates.forEach(update => {
         setSuccessMessage('Instructors successfully replaced!');
     }, []);
 
+    // Refresh database data (personnel and trainees) - called when database is modified
+    const handleDatabaseDataChanged = useCallback(async () => {
+        console.log('🔄 Refreshing database data after database modification...');
+        
+        try {
+            // Fetch fresh personnel data
+            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
+            if (personnelRes.ok) {
+                const personnelData = await personnelRes.json();
+                const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
+                    ...p,
+                    // Extract qualifications.currencyStatus to top-level so Post Flight
+                    // and other in-memory reads can find it at person.currencyStatus
+                    currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+                    _dataSource: 'database' as const,
+                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
+                    unavailability: Array.isArray(p.unavailability)
+                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : p.unavailability,
+                }));
+                
+                // Update instructors - remove old database entries and add fresh ones
+                setInstructorsData(prev => {
+                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
+                    return [...nonDbInstructors, ...dbPersonnel];
+                });
+                console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
+            }
+            
+            // Fetch fresh trainees data
+            const traineesRes = await fetch('/api/trainees', { credentials: 'include' });
+            if (traineesRes.ok) {
+                const traineesData = await traineesRes.json();
+                const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
+                    ...t,
+                    _dataSource: 'database' as const,
+                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
+                    unavailability: Array.isArray(t.unavailability)
+                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : t.unavailability,
+                }));
+                
+                // Update trainees - replace old database entries with fresh ones, preserve mock
+                setTraineesData(prev => {
+                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
+                    return [...mockTrainees, ...dbTrainees];
+                });
+
+                // Register any DB trainee courses that aren't in courseColors yet
+                const defaultColors = [
+                    'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',
+                    'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
+                    'bg-red-400/80', 'bg-cyan-400/80'
+                ];
+                const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
+                setCourseColors(prev => {
+                    const updated = { ...prev };
+                    let colorIndex = Object.keys(updated).length;
+                    dbCourseNames.forEach((course: any) => {
+                        if (!updated[course]) {
+                            updated[course] = defaultColors[colorIndex % defaultColors.length];
+                            colorIndex++;
+                            console.log(`[DB Load] Added missing courseColor for "${course}"`);
+                        }
+                    });
+                    return updated;
+                });
+
+                console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
+            }
+        } catch (error) {
+            console.error('❌ Error refreshing database data:', error);
+        }
+    }, []);
+
     const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
         console.log(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
         console.log(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
@@ -10191,80 +10266,6 @@ updates.forEach(update => {
         }
     }, [handleDatabaseDataChanged]);
     
-    // Refresh database data (personnel and trainees) - called when database is modified
-    const handleDatabaseDataChanged = useCallback(async () => {
-        console.log('🔄 Refreshing database data after database modification...');
-        
-        try {
-            // Fetch fresh personnel data
-            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
-            if (personnelRes.ok) {
-                const personnelData = await personnelRes.json();
-                const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
-                    ...p,
-                    // Extract qualifications.currencyStatus to top-level so Post Flight
-                    // and other in-memory reads can find it at person.currencyStatus
-                    currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
-                    _dataSource: 'database' as const,
-                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
-                    unavailability: Array.isArray(p.unavailability)
-                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                        : p.unavailability,
-                }));
-                
-                // Update instructors - remove old database entries and add fresh ones
-                setInstructorsData(prev => {
-                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
-                    return [...nonDbInstructors, ...dbPersonnel];
-                });
-                console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
-            }
-            
-            // Fetch fresh trainees data
-            const traineesRes = await fetch('/api/trainees', { credentials: 'include' });
-            if (traineesRes.ok) {
-                const traineesData = await traineesRes.json();
-                const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
-                    ...t,
-                    _dataSource: 'database' as const,
-                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
-                    unavailability: Array.isArray(t.unavailability)
-                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                        : t.unavailability,
-                }));
-                
-                // Update trainees - replace old database entries with fresh ones, preserve mock
-                setTraineesData(prev => {
-                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
-                    return [...mockTrainees, ...dbTrainees];
-                });
-
-                // Register any DB trainee courses that aren't in courseColors yet
-                const defaultColors = [
-                    'bg-sky-400/80', 'bg-purple-400/80', 'bg-yellow-400/80', 'bg-pink-400/80',
-                    'bg-orange-400/80', 'bg-teal-400/80', 'bg-indigo-400/80', 'bg-green-400/80',
-                    'bg-red-400/80', 'bg-cyan-400/80'
-                ];
-                const dbCourseNames = [...new Set(dbTrainees.map((t: any) => t.course).filter(Boolean))];
-                setCourseColors(prev => {
-                    const updated = { ...prev };
-                    let colorIndex = Object.keys(updated).length;
-                    dbCourseNames.forEach((course: any) => {
-                        if (!updated[course]) {
-                            updated[course] = defaultColors[colorIndex % defaultColors.length];
-                            colorIndex++;
-                            console.log(`[DB Load] Added missing courseColor for "${course}"`);
-                        }
-                    });
-                    return updated;
-                });
-
-                console.log(`✅ Refreshed ${dbTrainees.length} trainees from database`);
-            }
-        } catch (error) {
-            console.error('❌ Error refreshing database data:', error);
-        }
-    }, []);
     
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
