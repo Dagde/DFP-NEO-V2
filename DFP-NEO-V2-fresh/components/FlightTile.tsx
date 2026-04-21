@@ -502,6 +502,109 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         );
     }
 
+    // ── Academic Day Tile: outer container spanning workStart→workEnd with inset lesson tiles ──
+    if ((event as any).isAcademic && (event as any).academicTiles) {
+        const acadEvent = event as any;
+        const tiles: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }[] = acadEvent.academicTiles || [];
+        const dayStart = effectiveStartTime;
+        const dayDuration = effectiveDuration;
+        const tileFullWidth = dayDuration * pixelsPerHour;
+
+        return (
+            <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+                {/* Header bar */}
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: 14,
+                    background: 'rgba(30,58,138,0.95)', borderBottom: '1px solid rgba(147,197,253,0.3)',
+                    display: 'flex', alignItems: 'center', paddingLeft: 6, zIndex: 2,
+                }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: 1 }}>
+                        ACADEMICS — {formatTime(dayStart)}–{formatTime(dayStart + dayDuration)}
+                    </span>
+                </div>
+                {/* Inset lesson tiles */}
+                <div style={{ position: 'absolute', top: 14, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+                    {tiles.map((t, i) => {
+                        // Position each inset tile proportionally within the outer tile
+                        const offsetFromStart = t.startTime - dayStart;
+                        const leftPct = (offsetFromStart / dayDuration) * 100;
+                        const widthPct = (t.duration / dayDuration) * 100;
+                        const isStandard = t.isStandard;
+                        const bgColor = t.color || '#1d4ed8';
+                        // Shorten label: just use the lessonCode for display in inset tile
+                        const shortLabel = t.lessonCode;
+                        return (
+                            <div
+                                key={i}
+                                className="academic-inset-tile"
+                                style={{
+                                    position: 'absolute',
+                                    top: 2,
+                                    bottom: 2,
+                                    left: `calc(${leftPct}% + 1px)`,
+                                    width: `calc(${widthPct}% - 2px)`,
+                                    backgroundColor: bgColor,
+                                    border: '1px solid rgba(255,255,255,0.25)',
+                                    borderRadius: 3,
+                                    overflow: 'hidden',
+                                    cursor: 'default',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    zIndex: 3,
+                                }}
+                            >
+                                {/* Tooltip on hover */}
+                                <div className="academic-tile-tooltip" style={{
+                                    position: 'absolute',
+                                    bottom: '100%',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    marginBottom: 4,
+                                    backgroundColor: '#0f172a',
+                                    border: '1px solid #3b82f6',
+                                    borderRadius: 5,
+                                    padding: '4px 8px',
+                                    whiteSpace: 'nowrap',
+                                    fontSize: 11,
+                                    color: '#e2e8f0',
+                                    fontWeight: 600,
+                                    pointerEvents: 'none',
+                                    opacity: 0,
+                                    transition: 'opacity 0.15s',
+                                    zIndex: 100,
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                                }}>
+                                    <span style={{ color: '#93c5fd' }}>{t.lessonCode}</span>
+                                    {t.label && t.label !== t.lessonCode && !t.label.startsWith(t.lessonCode + ' ')
+                                        ? ` — ${t.label}`
+                                        : t.label !== t.lessonCode
+                                            ? ` — ${t.label.slice(t.lessonCode.length).replace(/^[\s:—-]+/, '')}`
+                                            : ''}
+                                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
+                                        {formatTime(t.startTime)} – {formatTime(t.startTime + t.duration)} ({t.duration}h)
+                                    </div>
+                                </div>
+                                <span style={{
+                                    fontSize: 9, fontWeight: 700, color: '#fff',
+                                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                    paddingLeft: 3, paddingRight: 3,
+                                    lineHeight: 1,
+                                }}>
+                                    {shortLabel}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+                {/* CSS for tooltip hover */}
+                <style>{`
+                    .academic-inset-tile:hover .academic-tile-tooltip { opacity: 1 !important; }
+                `}</style>
+            </div>
+        );
+    }
+
     if (event.type === 'ftd' || event.type === 'ground' || isGroundEventFromName) {
         
         if (isDutySup) {

@@ -10231,37 +10231,43 @@ updates.forEach(update => {
     const handleSaveAcademicEvent = (data: import('./components/AcademicsTab').AcademicSaveData) => {
         if (!data.selectedTrainees.length || !data.timeline.length) return;
 
-        // Build a merged description of all selected lessons
+        // Build lesson codes summary (non-standard tiles only)
         const lessonCodes = data.lessons.map(l => l.code).join(', ');
-        const totalDuration = data.timeline.reduce((sum, t) => sum + t.duration, 0);
-        const firstStart = Math.min(...data.timeline.map(t => t.startTime));
-        const flightNumberLabel = lessonCodes || 'ACAD-SESSION';
+        const sessionDuration = data.workEnd - data.workStart;
 
-        // Create one event per trainee (shared academic session)
-        const newEvents: ScheduleEvent[] = data.selectedTrainees.map(traineeName => ({
+        // ONE event per classroom resource — spans full working day (workStart → workEnd)
+        // Contains all timeline tiles as academicTiles for inset rendering
+        const academicDayEvent: ScheduleEvent = {
             id: uuidv4(),
             date: data.date,
             type: 'ground' as const,
-            flightNumber: flightNumberLabel,
-            startTime: firstStart,
-            duration: totalDuration,
+            flightNumber: 'ACAD',
+            startTime: data.workStart,
+            duration: sessionDuration,
             attendees: data.selectedTrainees,
-            student: traineeName,
-            resourceId: data.resourceId,
-            color: 'bg-blue-700/80',
+            student: data.selectedTrainees[0] || '',
+            resourceId: data.resourceId || 'Ground 1',
+            color: 'bg-blue-800/90',
             flightType: 'Dual' as const,
             locationType: 'Local' as const,
             origin: school,
             destination: school,
             isAcademic: true,
-            isTimeFixed: true, // NEO Build skips isTimeFixed events
+            isTimeFixed: true,
             notes: `Academic session: ${lessonCodes}`,
-        }));
+            academicTiles: data.timeline.map(t => ({
+                lessonCode: t.lessonCode,
+                label: t.label,
+                startTime: t.startTime,
+                duration: t.duration,
+                color: t.color,
+                isStandard: t.isStandard,
+            })),
+        };
 
-        // Add to events directly (not nextDayBuildEvents — these are permanent fixed events)
-        setEvents((prev: ScheduleEvent[]) => [...prev, ...newEvents]);
+        setEvents((prev: ScheduleEvent[]) => [...prev, academicDayEvent]);
         setShowAddGroundEvent(false);
-        setSuccessMessage(`Academic session scheduled for ${data.selectedTrainees.length} trainee(s): ${lessonCodes}`);
+        setSuccessMessage(`Academic session published for ${data.date}: ${lessonCodes || 'ACAD-SESSION'}`);
     };
 
 

@@ -376,10 +376,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       setSelectedLessons(prev => new Set(prev).add(key));
       const dur = item.duration || 1;
       const start = getNextStart(dur);
+      // Avoid duplicate: if eventDescription already starts with the code, use it directly
+      const tileLabel = item.eventDescription?.startsWith(key)
+        ? item.eventDescription
+        : `${key} ${item.eventDescription}`;
       setTiles(prev => [...prev, {
         id: uuidv4(),
         lessonCode: key,
-        label: `${key}: ${item.eventDescription}`,
+        label: tileLabel,
         startTime: start,
         duration: dur,
         color: ACADEMIC_TILE_COLOR,
@@ -685,8 +689,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                               title={isCourseDone ? 'Mark as NOT completed by this course' : 'Mark as completed by this course cohort'}
                               style={{
                                 background: 'none', border: 'none', cursor: onUpdateCourseAcademicProgress ? 'pointer' : 'default',
-                                fontSize: 13, width: 20, textAlign: 'center', flexShrink: 0, padding: 0, marginTop: 1,
-                                opacity: onUpdateCourseAcademicProgress ? 1 : 0.5,
+                                fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0, padding: 0, marginTop: 0,
+                                opacity: onUpdateCourseAcademicProgress ? 1 : 0.6,
+                                filter: 'brightness(1.3)',
                               }}
                             >
                               {isCourseDone ? '✅' : '⬜'}
@@ -696,14 +701,16 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                               onClick={() => toggleLesson(item)}
                               style={{
                                 fontSize: 11, flex: 1, lineHeight: 1.3, cursor: 'pointer',
-                                color: isCourseDone ? '#6b7280' : isSelected ? '#93c5fd' : '#d1d5db',
+                                color: isCourseDone ? '#9ca3af' : isSelected ? '#93c5fd' : '#e5e7eb',
                                 textDecoration: isCourseDone ? 'line-through' : 'none',
                               }}>
-                              <span style={{ fontWeight: 700, color: isCourseDone ? '#6b7280' : '#f9fafb', fontSize: 10 }}>{item.code}</span>
-                              {' '}{item.eventDescription}
+                              <span style={{ fontWeight: 700, color: isCourseDone ? '#9ca3af' : '#f9fafb', fontSize: 11 }}>{item.code}</span>
+                              {item.eventDescription && !item.eventDescription.startsWith(item.code)
+                                ? <>{' '}{item.eventDescription}</>
+                                : null}
                             </span>
                             {item.duration ? (
-                              <span style={{ fontSize: 10, color: '#4b5563', flexShrink: 0, marginTop: 1 }}>
+                              <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, marginTop: 1 }}>
                                 {item.duration}h
                               </span>
                             ) : null}
@@ -869,8 +876,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         <button onClick={onClose} className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
           Cancel
         </button>
-        <button onClick={handleSave} className="w-[120px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
-          Save Academic Session
+        <button onClick={handleSave} className="w-[160px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
+          Publish Academic Session
         </button>
       </div>
     </div>

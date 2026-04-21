@@ -5468,7 +5468,7 @@ const RightSidebar = ({
       lineNumber: 62,
       columnNumber: 7
     }, void 0),
-    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("nav", { className: "flex-1 overflow-y-auto pt-[1px] pb-4 px-2 space-y-[1px] flex flex-col items-center", children: [
+    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("nav", { className: "flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
         "button",
         {
@@ -6536,6 +6536,153 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
         columnNumber: 13
       }, void 0);
     }
+    if (event.isAcademic && event.academicTiles) {
+      const acadEvent = event;
+      const tiles = acadEvent.academicTiles || [];
+      const dayStart = effectiveStartTime;
+      const dayDuration = effectiveDuration;
+      return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "relative", width: "100%", height: "100%", overflow: "hidden" }, children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 14,
+          background: "rgba(30,58,138,0.95)",
+          borderBottom: "1px solid rgba(147,197,253,0.3)",
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 6,
+          zIndex: 2
+        }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, fontWeight: 700, color: "#93c5fd", textTransform: "uppercase", letterSpacing: 1 }, children: [
+          "ACADEMICS — ",
+          formatTime$6(dayStart),
+          "–",
+          formatTime$6(dayStart + dayDuration)
+        ] }, void 0, true, {
+          fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+          lineNumber: 521,
+          columnNumber: 21
+        }, void 0) }, void 0, false, {
+          fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+          lineNumber: 516,
+          columnNumber: 17
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { position: "absolute", top: 14, left: 0, right: 0, bottom: 0, overflow: "hidden" }, children: tiles.map((t, i) => {
+          const offsetFromStart = t.startTime - dayStart;
+          const leftPct = offsetFromStart / dayDuration * 100;
+          const widthPct = t.duration / dayDuration * 100;
+          t.isStandard;
+          const bgColor = t.color || "#1d4ed8";
+          const shortLabel = t.lessonCode;
+          return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+            "div",
+            {
+              className: "academic-inset-tile",
+              style: {
+                position: "absolute",
+                top: 2,
+                bottom: 2,
+                left: `calc(${leftPct}% + 1px)`,
+                width: `calc(${widthPct}% - 2px)`,
+                backgroundColor: bgColor,
+                border: "1px solid rgba(255,255,255,0.25)",
+                borderRadius: 3,
+                overflow: "hidden",
+                cursor: "default",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 3
+              },
+              children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "academic-tile-tooltip", style: {
+                  position: "absolute",
+                  bottom: "100%",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  marginBottom: 4,
+                  backgroundColor: "#0f172a",
+                  border: "1px solid #3b82f6",
+                  borderRadius: 5,
+                  padding: "4px 8px",
+                  whiteSpace: "nowrap",
+                  fontSize: 11,
+                  color: "#e2e8f0",
+                  fontWeight: 600,
+                  pointerEvents: "none",
+                  opacity: 0,
+                  transition: "opacity 0.15s",
+                  zIndex: 100,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.5)"
+                }, children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { color: "#93c5fd" }, children: t.lessonCode }, void 0, false, {
+                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+                    lineNumber: 578,
+                    columnNumber: 37
+                  }, void 0),
+                  t.label && t.label !== t.lessonCode && !t.label.startsWith(t.lessonCode + " ") ? ` — ${t.label}` : t.label !== t.lessonCode ? ` — ${t.label.slice(t.lessonCode.length).replace(/^[\s:—-]+/, "")}` : "",
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { fontSize: 10, color: "#94a3b8", marginTop: 1 }, children: [
+                    formatTime$6(t.startTime),
+                    " – ",
+                    formatTime$6(t.startTime + t.duration),
+                    " (",
+                    t.duration,
+                    "h)"
+                  ] }, void 0, true, {
+                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+                    lineNumber: 584,
+                    columnNumber: 37
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+                  lineNumber: 558,
+                  columnNumber: 33
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "#fff",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  paddingLeft: 3,
+                  paddingRight: 3,
+                  lineHeight: 1
+                }, children: shortLabel }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+                  lineNumber: 588,
+                  columnNumber: 33
+                }, void 0)
+              ]
+            },
+            i,
+            true,
+            {
+              fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+              lineNumber: 537,
+              columnNumber: 29
+            },
+            void 0
+          );
+        }) }, void 0, false, {
+          fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+          lineNumber: 526,
+          columnNumber: 17
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("style", { children: `
+                    .academic-inset-tile:hover .academic-tile-tooltip { opacity: 1 !important; }
+                ` }, void 0, false, {
+          fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+          lineNumber: 601,
+          columnNumber: 17
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
+        lineNumber: 514,
+        columnNumber: 13
+      }, void 0);
+    }
     if (event.type === "ftd" || event.type === "ground" || isGroundEventFromName) {
       if (isDutySup) {
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center items-center h-full w-full px-2", style: textStyle, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "overflow-hidden text-center", children: [
@@ -6543,12 +6690,12 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
             picName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 511,
+              lineNumber: 614,
               columnNumber: 97
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 511,
+            lineNumber: 614,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/80 truncate", children: [
@@ -6558,23 +6705,23 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
               "]"
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 513,
+              lineNumber: 616,
               columnNumber: 29
             }, void 0),
             " ",
             isTwrDiEvent ? "TWR DI" : event.flightNumber
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 512,
+            lineNumber: 615,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 510,
+          lineNumber: 613,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 509,
+          lineNumber: 612,
           columnNumber: 17
         }, void 0);
       }
@@ -6584,33 +6731,33 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
             displayPicName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 523,
+              lineNumber: 626,
               columnNumber: 171
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 523,
+            lineNumber: 626,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: isTwrDiEvent ? "TWR DI" : typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             displayStudentName?.split(" – ")[0],
             studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 524,
+              lineNumber: 627,
               columnNumber: 249
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 524,
+            lineNumber: 627,
             columnNumber: 188
           }, void 0) : studentDisplay }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 524,
+            lineNumber: 627,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 522,
+          lineNumber: 625,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-end justify-between h-full pl-1 flex-shrink-0", style: { minWidth: "fit-content" }, children: [
@@ -6621,33 +6768,33 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
               "]"
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 529,
+              lineNumber: 632,
               columnNumber: 29
             }, void 0),
             " ",
             isTwrDiEvent ? "TWR DI" : event.flightNumber
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 528,
+            lineNumber: 631,
             columnNumber: 25
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 527,
+            lineNumber: 630,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 532,
+            lineNumber: 635,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 526,
+          lineNumber: 629,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 521,
+        lineNumber: 624,
         columnNumber: 13
       }, void 0);
     }
@@ -6658,33 +6805,33 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
             displayPicName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 542,
+              lineNumber: 645,
               columnNumber: 171
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 542,
+            lineNumber: 645,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: isTwrDiEvent ? "TWR DI" : typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             displayStudentName?.split(" – ")[0],
             studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 543,
+              lineNumber: 646,
               columnNumber: 249
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 543,
+            lineNumber: 646,
             columnNumber: 188
           }, void 0) : studentDisplay }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 543,
+            lineNumber: 646,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 541,
+          lineNumber: 644,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-end justify-between h-full pl-1 flex-shrink-0", style: { minWidth: "fit-content" }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-white/80 text-right whitespace-nowrap", children: [
@@ -6694,27 +6841,27 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
             "]"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 549,
+            lineNumber: 652,
             columnNumber: 29
           }, void 0),
           " ",
           isTwrDiEvent ? "TWR DI" : event.flightNumber
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 548,
+          lineNumber: 651,
           columnNumber: 25
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 547,
+          lineNumber: 650,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 546,
+          lineNumber: 649,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 540,
+        lineNumber: 643,
         columnNumber: 13
       }, void 0),
       event.aircraftNumber && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -6735,7 +6882,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
         true,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 556,
+          lineNumber: 659,
           columnNumber: 17
         },
         void 0
@@ -6756,7 +6903,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 569,
+            lineNumber: 672,
             columnNumber: 21
           },
           void 0
@@ -6776,19 +6923,19 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 581,
+            lineNumber: 684,
             columnNumber: 21
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 567,
+        lineNumber: 670,
         columnNumber: 13
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 539,
+      lineNumber: 642,
       columnNumber: 9
     }, void 0);
   };
@@ -6831,68 +6978,68 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
           picName?.split(" – ")[0],
           picSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 662,
+            lineNumber: 765,
             columnNumber: 136
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 662,
+          lineNumber: 765,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: studentClasses.replace("truncate", ""), children: typeof studentDisplay === "string" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           studentDisplay,
           studentSeatConfig && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: studentSeatConfig }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 663,
+            lineNumber: 766,
             columnNumber: 159
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 663,
+          lineNumber: 766,
           columnNumber: 119
         }, void 0) : studentDisplay }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 663,
+          lineNumber: 766,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 661,
+        lineNumber: 764,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "h-6 w-px bg-gray-600" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 665,
+        lineNumber: 768,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono font-semibold text-sky-400", children: event.flightNumber }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 667,
+          lineNumber: 770,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-gray-400", children: formatTime$6(effectiveStartTime) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 668,
+          lineNumber: 771,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 666,
+        lineNumber: 769,
         columnNumber: 21
       }, void 0),
       callsign && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "font-mono text-gray-500 text-[10px]", children: callsign }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-        lineNumber: 670,
+        lineNumber: 773,
         columnNumber: 34
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 660,
+      lineNumber: 763,
       columnNumber: 16
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 658,
+      lineNumber: 761,
       columnNumber: 11
     }, void 0);
   };
@@ -6912,20 +7059,20 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
       children: [
         isChanged && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 691,
+          lineNumber: 794,
           columnNumber: 13
         }, void 0),
         isPauseCompleted && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute top-0.5 left-0.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center pointer-events-none z-30", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-2.5 h-2.5 text-white", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 3, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 696,
+          lineNumber: 799,
           columnNumber: 21
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 695,
+          lineNumber: 798,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 694,
+          lineNumber: 797,
           columnNumber: 13
         }, void 0),
         isStbyEvent && !isPreview && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -6940,7 +7087,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 701,
+            lineNumber: 804,
             columnNumber: 13
           },
           void 0
@@ -6965,7 +7112,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                  lineNumber: 713,
+                  lineNumber: 816,
                   columnNumber: 17
                 },
                 void 0
@@ -6984,7 +7131,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                  lineNumber: 721,
+                  lineNumber: 824,
                   columnNumber: 17
                 },
                 void 0
@@ -6995,7 +7142,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
           true,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 709,
+            lineNumber: 812,
             columnNumber: 13
           },
           void 0
@@ -7013,7 +7160,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
               false,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                lineNumber: 734,
+                lineNumber: 837,
                 columnNumber: 21
               },
               void 0
@@ -7029,14 +7176,14 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
               false,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-                lineNumber: 740,
+                lineNumber: 843,
                 columnNumber: 21
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-            lineNumber: 733,
+            lineNumber: 836,
             columnNumber: 17
           }, void 0) : !isSmallTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
             "div",
@@ -7049,7 +7196,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-              lineNumber: 749,
+              lineNumber: 852,
               columnNumber: 21
             },
             void 0
@@ -7058,7 +7205,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
           renderFlyout()
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-          lineNumber: 731,
+          lineNumber: 834,
           columnNumber: 9
         }, void 0)
       ]
@@ -7067,7 +7214,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onMouseDown, onMouse
     true,
     {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightTile.tsx",
-      lineNumber: 677,
+      lineNumber: 780,
       columnNumber: 5
     },
     void 0
@@ -18811,7 +18958,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, isPauseViewMode = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -19038,7 +19185,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 737,
+        lineNumber: 735,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -19054,7 +19201,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               label.toLowerCase()
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 744,
+              lineNumber: 742,
               columnNumber: 21
             }, void 0),
             staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].map((instructor) => {
@@ -19062,21 +19209,21 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               const displayText = `${stats.rank} ${instructor.name}`;
               return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: instructor.name, children: displayText }, instructor.name, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 751,
+                lineNumber: 749,
                 columnNumber: 37
               }, void 0);
             }) }, unit, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 746,
+              lineNumber: 744,
               columnNumber: 25
             }, void 0)),
             includePax && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("optgroup", { label: "─── Other ───", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "PAX", children: "PAX" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 760,
+              lineNumber: 758,
               columnNumber: 29
             }, void 0) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 759,
+              lineNumber: 757,
               columnNumber: 25
             }, void 0)
           ]
@@ -19085,14 +19232,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         true,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 738,
+          lineNumber: 736,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 736,
+      lineNumber: 734,
       columnNumber: 13
     }, void 0);
   };
@@ -19100,7 +19247,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Trainee" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 771,
+        lineNumber: 769,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -19113,7 +19260,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: "Select a trainee" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 779,
+              lineNumber: 777,
               columnNumber: 21
             }, void 0),
             traineesByCourse.sortedCourses.map((course) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("optgroup", { label: `─── ${course} ───`, children: traineesByCourse.grouped[course].map((trainee) => {
@@ -19122,12 +19269,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               const displayText = `${stats.rank} ${traineeData?.name || trainee.name}`;
               return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: trainee.name, children: displayText }, trainee.name, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 788,
+                lineNumber: 786,
                 columnNumber: 37
               }, void 0);
             }) }, course, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 781,
+              lineNumber: 779,
               columnNumber: 25
             }, void 0))
           ]
@@ -19136,14 +19283,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         true,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 772,
+          lineNumber: 770,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 770,
+      lineNumber: 768,
       columnNumber: 13
     }, void 0);
   };
@@ -19774,34 +19921,34 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `space-y-4 ${crew.length > 1 ? "p-3 bg-gray-700/50 rounded-lg" : ""}`, children: [
       crew.length > 1 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-bold text-sky-400", children: formationCallsign }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1631,
+        lineNumber: 1629,
         columnNumber: 33
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Dual/Solo" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1634,
+          lineNumber: 1632,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: crewMember.flightType, onChange: (e) => handleCrewChange(index, "flightType", e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Dual", children: "Dual" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1636,
+            lineNumber: 1634,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Solo", children: "Solo" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1637,
+            lineNumber: 1635,
             columnNumber: 21
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1635,
+          lineNumber: 1633,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1633,
+        lineNumber: 1631,
         columnNumber: 13
       }, void 0),
       crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -19826,18 +19973,18 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           ),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center my-3", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-base font-bold text-gray-500", children: "- OR -" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1672,
+            lineNumber: 1670,
             columnNumber: 33
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1671,
+            lineNumber: 1669,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border border-gray-600 rounded bg-gray-700/30 relative", ref: groupInputRef, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center mb-2", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-sm font-medium text-gray-300", children: "Group" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1677,
+                lineNumber: 1675,
                 columnNumber: 37
               }, void 0),
               crewMember.groupTraineeIds?.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-sky-400 font-mono bg-gray-800 px-2 py-0.5 rounded-full border border-gray-600", children: [
@@ -19845,12 +19992,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 " Selected"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1679,
+                lineNumber: 1677,
                 columnNumber: 41
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1676,
+              lineNumber: 1674,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -19863,11 +20010,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 mr-2 text-sky-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1692,
+                    lineNumber: 1690,
                     columnNumber: 41
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1691,
+                    lineNumber: 1689,
                     columnNumber: 37
                   }, void 0),
                   "Add Names"
@@ -19877,7 +20024,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               true,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1685,
+                lineNumber: 1683,
                 columnNumber: 33
               },
               void 0
@@ -19900,19 +20047,19 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     false,
                     {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                      lineNumber: 1708,
+                      lineNumber: 1706,
                       columnNumber: 57
                     },
                     void 0
                   ),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "uppercase text-xs", children: course.name }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1714,
+                    lineNumber: 1712,
                     columnNumber: 57
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1707,
+                  lineNumber: 1705,
                   columnNumber: 53
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800", children: course.trainees.map((trainee) => {
@@ -19935,14 +20082,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                           false,
                           {
                             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                            lineNumber: 1725,
+                            lineNumber: 1723,
                             columnNumber: 69
                           },
                           void 0
                         ),
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: trainee.name }, void 0, false, {
                           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                          lineNumber: 1731,
+                          lineNumber: 1729,
                           columnNumber: 69
                         }, void 0)
                       ]
@@ -19951,34 +20098,34 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     true,
                     {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                      lineNumber: 1720,
+                      lineNumber: 1718,
                       columnNumber: 65
                     },
                     void 0
                   );
                 }) }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1716,
+                  lineNumber: 1714,
                   columnNumber: 53
                 }, void 0)
               ] }, course.name, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1706,
+                lineNumber: 1704,
                 columnNumber: 49
               }, void 0);
             }) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1699,
+              lineNumber: 1697,
               columnNumber: 37
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1675,
+            lineNumber: 1673,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1663,
+          lineNumber: 1661,
           columnNumber: 25
         }, void 0),
         showCrewField && renderStaffInstructorDropdown(
@@ -19991,14 +20138,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1642,
+        lineNumber: 1640,
         columnNumber: 17
       }, void 0) : (
         // Solo - Use staff dropdown for SCT and Staff CAT
         useStaffOnly ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Pilot" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1760,
+            lineNumber: 1758,
             columnNumber: 28
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20011,7 +20158,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: "Select pilot" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1767,
+                  lineNumber: 1765,
                   columnNumber: 32
                 }, void 0),
                 staffInstructorsByUnit.sortedUnits.map((unit) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("optgroup", { label: `─── ${unit} ───`, children: staffInstructorsByUnit.grouped[unit].filter((instructor) => {
@@ -20025,12 +20172,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   const displayText = `${stats.rank} ${instructor.name}`;
                   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: instructor.name, children: displayText }, instructor.name, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1786,
+                    lineNumber: 1784,
                     columnNumber: 52
                   }, void 0);
                 }) }, unit, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1769,
+                  lineNumber: 1767,
                   columnNumber: 36
                 }, void 0))
               ]
@@ -20039,25 +20186,25 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             true,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1761,
+              lineNumber: 1759,
               columnNumber: 28
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1759,
+          lineNumber: 1757,
           columnNumber: 24
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Pilot" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1797,
+            lineNumber: 1795,
             columnNumber: 28
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: crewMember.pilot, onChange: (e) => handleCrewChange(index, "pilot", e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: "Select pilot" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1799,
+              lineNumber: 1797,
               columnNumber: 32
             }, void 0),
             traineeList.filter((name) => {
@@ -20068,23 +20215,23 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               return true;
             }).map((name) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: name, children: name }, name, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1812,
+              lineNumber: 1810,
               columnNumber: 49
             }, void 0))
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1798,
+            lineNumber: 1796,
             columnNumber: 28
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1796,
+          lineNumber: 1794,
           columnNumber: 24
         }, void 0)
       )
     ] }, index, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 1630,
+      lineNumber: 1628,
       columnNumber: 9
     }, void 0);
   };
@@ -20102,7 +20249,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       false,
       {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1822,
+        lineNumber: 1820,
         columnNumber: 13
       },
       void 0
@@ -20119,7 +20266,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       false,
       {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1836,
+        lineNumber: 1834,
         columnNumber: 17
       },
       void 0
@@ -20128,7 +20275,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `py-[5px] px-2 border-b border-gray-700 flex justify-center items-center relative ${event.color} flex-shrink-0 min-h-[65px]`, children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-white", children: modalTitle }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1844,
+          lineNumber: 1842,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute right-2 flex items-center space-x-4", children: [
@@ -20151,57 +20298,52 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               false,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1848,
+                lineNumber: 1846,
                 columnNumber: 37
               },
               void 0
             ),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-semibold text-white", children: "Add Deployment" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1860,
+              lineNumber: 1858,
               columnNumber: 37
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1847,
+            lineNumber: 1845,
             columnNumber: 33
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative", children: [
-            (isFrozen || isPauseViewMode) && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
+            isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1865,
+              lineNumber: 1863,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setShowDeleteChoice(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md", style: { backgroundColor: "#FF6666", color: "white" }, "aria-label": "Delete Event", children: "Delete" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1867,
+              lineNumber: 1865,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1863,
+            lineNumber: 1861,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1845,
+          lineNumber: 1843,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1843,
+        lineNumber: 1841,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-row overflow-hidden", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center relative", children: [
-          isPauseViewMode && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
-            fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1879,
-            columnNumber: 33
-          }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[85px] flex-shrink-0 border-r border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-grow" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1881,
+            lineNumber: 1875,
             columnNumber: 29
           }, void 0),
           " ",
@@ -20209,7 +20351,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1886,
+                lineNumber: 1880,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20222,13 +20364,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                     "Trainee",
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                      lineNumber: 1893,
+                      lineNumber: 1887,
                       columnNumber: 96
                     }, void 0),
                     "Scores"
                   ] }, void 0, true, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1893,
+                    lineNumber: 1887,
                     columnNumber: 45
                   }, void 0)
                 },
@@ -20236,20 +20378,20 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1888,
+                  lineNumber: 1882,
                   columnNumber: 41
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1884,
+              lineNumber: 1878,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1898,
+                lineNumber: 1892,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20259,7 +20401,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "LMP" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1904,
+                    lineNumber: 1898,
                     columnNumber: 45
                   }, void 0)
                 },
@@ -20267,20 +20409,20 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1900,
+                  lineNumber: 1894,
                   columnNumber: 41
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1896,
+              lineNumber: 1890,
               columnNumber: 37
             }, void 0),
             traineeObject && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.pt051Entries && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1911,
+                lineNumber: 1905,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20290,7 +20432,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "PT-051" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 1917,
+                    lineNumber: 1911,
                     columnNumber: 49
                   }, void 0)
                 },
@@ -20298,51 +20440,51 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1913,
+                  lineNumber: 1907,
                   columnNumber: 45
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1909,
+              lineNumber: 1903,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1923,
+                lineNumber: 1917,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setIsEditing(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "Edit" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1926,
+                lineNumber: 1920,
                 columnNumber: 45
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 1925,
+                lineNumber: 1919,
                 columnNumber: 41
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1921,
+              lineNumber: 1915,
               columnNumber: 37
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1883,
+            lineNumber: 1877,
             columnNumber: 33
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1876,
+          lineNumber: 1874,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-y-auto p-6", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mb-6", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400 mb-3", children: "Event Category" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1939,
+              lineNumber: 1933,
               columnNumber: 44
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-5 gap-3", children: [
@@ -20358,7 +20500,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1941,
+                  lineNumber: 1935,
                   columnNumber: 48
                 },
                 void 0
@@ -20375,7 +20517,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1952,
+                  lineNumber: 1946,
                   columnNumber: 48
                 },
                 void 0
@@ -20392,7 +20534,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1963,
+                  lineNumber: 1957,
                   columnNumber: 48
                 },
                 void 0
@@ -20409,7 +20551,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1974,
+                  lineNumber: 1968,
                   columnNumber: 48
                 },
                 void 0
@@ -20426,7 +20568,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 1985,
+                  lineNumber: 1979,
                   columnNumber: 1
                 },
                 void 0
@@ -20434,19 +20576,19 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               "                                           "
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1940,
+              lineNumber: 1934,
               columnNumber: 44
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1938,
+            lineNumber: 1932,
             columnNumber: 40
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `grid grid-cols-1 ${eventType === "flight" ? "md:grid-cols-4" : "md:grid-cols-3"} gap-4`, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Syllabus Item" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2e3,
+                lineNumber: 1994,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20460,17 +20602,17 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", disabled: true, children: isOracleContext ? "Select a crew member first" : "Select an item" }, void 0, false, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                      lineNumber: 2008,
+                      lineNumber: 2002,
                       columnNumber: 49
                     }, void 0),
                     isAddingTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "SCT FORM", children: "SCT FORM" }, void 0, false, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                      lineNumber: 2011,
+                      lineNumber: 2005,
                       columnNumber: 66
                     }, void 0),
                     filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: item, children: item }, item, false, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                      lineNumber: 2012,
+                      lineNumber: 2006,
                       columnNumber: 122
                     }, void 0))
                   ]
@@ -20479,32 +20621,52 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 true,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2001,
+                  lineNumber: 1995,
                   columnNumber: 45
                 },
                 void 0
               ),
               syllabusSelectionError && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in", children: "Select a crew member first." }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2015,
+                lineNumber: 2009,
                 columnNumber: 49
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 1999,
+              lineNumber: 1993,
               columnNumber: 41
             }, void 0),
             eventType === "flight" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Area" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2021,
+                  lineNumber: 2015,
                   columnNumber: 45
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: area, onChange: (e) => setArea(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: areas.map((a) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: a, children: a }, a, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2023,
+                  lineNumber: 2017,
                   columnNumber: 65
+                }, void 0)) }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
+                  lineNumber: 2016,
+                  columnNumber: 45
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
+                lineNumber: 2014,
+                columnNumber: 41
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft Number" }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
+                  lineNumber: 2021,
+                  columnNumber: 45
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: num, children: num }, num, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
+                  lineNumber: 2023,
+                  columnNumber: 130
                 }, void 0)) }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                   lineNumber: 2022,
@@ -20514,36 +20676,16 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
                 lineNumber: 2020,
                 columnNumber: 41
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft Number" }, void 0, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2027,
-                  columnNumber: 45
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: num, children: num }, num, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2029,
-                  columnNumber: 130
-                }, void 0)) }, void 0, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2028,
-                  columnNumber: 45
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2026,
-                columnNumber: 41
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2019,
+              lineNumber: 2013,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Start Time" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2035,
+                lineNumber: 2029,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20558,7 +20700,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   className: `mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === "startTime" ? "ring-2 ring-red-500" : ""}`,
                   children: timeOptions.map((opt) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: opt.value, children: opt.label }, opt.value, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 2045,
+                    lineNumber: 2039,
                     columnNumber: 73
                   }, void 0))
                 },
@@ -20566,20 +20708,20 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2036,
+                  lineNumber: 2030,
                   columnNumber: 45
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2034,
+              lineNumber: 2028,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Duration" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2049,
+                lineNumber: 2043,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20597,25 +20739,25 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2050,
+                  lineNumber: 2044,
                   columnNumber: 45
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2048,
+              lineNumber: 2042,
               columnNumber: 41
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 1998,
+            lineNumber: 1992,
             columnNumber: 37
           }, void 0),
           eventType === "flight" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Location" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2064,
+              lineNumber: 2058,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20628,12 +20770,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Local", children: "Local" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 2071,
+                    lineNumber: 2065,
                     columnNumber: 49
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Land Away", children: "Land Away" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 2072,
+                    lineNumber: 2066,
                     columnNumber: 49
                   }, void 0)
                 ]
@@ -20642,21 +20784,21 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               true,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2065,
+                lineNumber: 2059,
                 columnNumber: 45
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2063,
+            lineNumber: 2057,
             columnNumber: 41
           }, void 0),
           eventType === "flight" && locationType === "Land Away" && !isDeploy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-4", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Origin" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2079,
+                lineNumber: 2073,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20673,20 +20815,20 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2080,
+                  lineNumber: 2074,
                   columnNumber: 49
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2078,
+              lineNumber: 2072,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Destination" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2090,
+                lineNumber: 2084,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20703,32 +20845,32 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2091,
+                  lineNumber: 2085,
                   columnNumber: 49
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2089,
+              lineNumber: 2083,
               columnNumber: 45
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2077,
+            lineNumber: 2071,
             columnNumber: 41
           }, void 0),
           eventType === "flight" && locationType === "Land Away" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-600 rounded-lg mb-4", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Deployment Period" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2106,
+              lineNumber: 2100,
               columnNumber: 49
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2 grid grid-cols-4 gap-2 bg-gray-700/30 p-3 rounded-lg", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-medium text-gray-400", children: "Start Time" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2109,
+                  lineNumber: 2103,
                   columnNumber: 57
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", value: deploymentStartTime, onChange: (e) => {
@@ -20736,34 +20878,34 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   setDeploymentStartTime(value);
                 }, placeholder: "0800", className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2110,
+                  lineNumber: 2104,
                   columnNumber: 57
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2108,
+                lineNumber: 2102,
                 columnNumber: 53
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-medium text-gray-400", children: "Start Date" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2117,
+                  lineNumber: 2111,
                   columnNumber: 57
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", value: deploymentStartDate, onChange: (e) => setDeploymentStartDate(e.target.value), style: { colorScheme: "dark" }, className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2118,
+                  lineNumber: 2112,
                   columnNumber: 57
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2116,
+                lineNumber: 2110,
                 columnNumber: 53
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-medium text-gray-400", children: "End Time" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2121,
+                  lineNumber: 2115,
                   columnNumber: 57
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "text", value: deploymentEndTime, onChange: (e) => {
@@ -20771,39 +20913,39 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   setDeploymentEndTime(value);
                 }, placeholder: "1700", className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm text-center" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2122,
+                  lineNumber: 2116,
                   columnNumber: 57
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2120,
+                lineNumber: 2114,
                 columnNumber: 53
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-medium text-gray-400", children: "End Date" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2129,
+                  lineNumber: 2123,
                   columnNumber: 57
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", value: deploymentEndDate, onChange: (e) => setDeploymentEndDate(e.target.value), style: { colorScheme: "dark" }, className: "mt-1 w-full bg-gray-800 border-gray-600 rounded py-1 px-2 text-sm" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2130,
+                  lineNumber: 2124,
                   columnNumber: 57
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2128,
+                lineNumber: 2122,
                 columnNumber: 53
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2107,
+              lineNumber: 2101,
               columnNumber: 49
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2 bg-gray-700/30 p-3 rounded-lg", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-medium text-gray-400 mb-1", children: "Number of Aircraft" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2134,
+                lineNumber: 2128,
                 columnNumber: 56
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -20820,41 +20962,41 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2135,
+                  lineNumber: 2129,
                   columnNumber: 56
                 },
                 void 0
               ),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-2 text-xs text-gray-500", children: "aircraft deploying" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2143,
+                lineNumber: 2137,
                 columnNumber: 56
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2133,
+              lineNumber: 2127,
               columnNumber: 52
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2105,
+            lineNumber: 2099,
             columnNumber: 45
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2104,
+            lineNumber: 2098,
             columnNumber: 41
           }, void 0),
           flightNumber === "SCT FORM" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-3 bg-gray-900/50 rounded-lg space-y-4", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "font-semibold text-gray-300", children: "Formation Details" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2152,
+              lineNumber: 2146,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Formation Callsign" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2155,
+                  lineNumber: 2149,
                   columnNumber: 53
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: formationType, onChange: (e) => setFormationType(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: filteredCallsigns ? filteredCallsigns.map((cs) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: cs.code, children: [
@@ -20865,61 +21007,61 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   cs.unit
                 ] }, cs.code, true, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2159,
+                  lineNumber: 2153,
                   columnNumber: 68
                 }, void 0)) : formationTypes.map((type) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: type, children: type }, type, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2164,
+                  lineNumber: 2158,
                   columnNumber: 91
                 }, void 0)) }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2156,
+                  lineNumber: 2150,
                   columnNumber: 53
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2154,
+                lineNumber: 2148,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft Count" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2169,
+                  lineNumber: 2163,
                   columnNumber: 53
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { value: aircraftCount, onChange: (e) => setAircraftCount(parseInt(e.target.value)), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 7 }, (_, i) => i + 2).map((n) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: n, children: n }, n, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2171,
+                  lineNumber: 2165,
                   columnNumber: 108
                 }, void 0)) }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2170,
+                  lineNumber: 2164,
                   columnNumber: 53
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2168,
+                lineNumber: 2162,
                 columnNumber: 49
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2153,
+              lineNumber: 2147,
               columnNumber: 45
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2151,
+            lineNumber: 2145,
             columnNumber: 41
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: crew.map(renderCrewFields) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2177,
+            lineNumber: 2171,
             columnNumber: 37
           }, void 0),
           (eventType === "flight" || eventType === "ftd" || eventType === "cpt") && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-600 pt-6 mt-6", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-semibold text-white mb-4", children: "Add to Deployment" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2182,
+              lineNumber: 2176,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-3", children: getCurrentDeployments().length > 0 ? getCurrentDeployments().map((deployment) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 cursor-pointer hover:bg-gray-700 p-2 rounded", children: [
@@ -20941,14 +21083,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2187,
+                  lineNumber: 2181,
                   columnNumber: 61
                 },
                 void 0
               ),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm text-gray-300", children: formatDeploymentTitle(deployment) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2199,
+                lineNumber: 2193,
                 columnNumber: 61
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-500 ml-2", children: [
@@ -20957,49 +21099,49 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 ")"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2202,
+                lineNumber: 2196,
                 columnNumber: 61
               }, void 0)
             ] }, deployment.id, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2186,
+              lineNumber: 2180,
               columnNumber: 57
             }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-500 italic", children: "No deployments available for this event type" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2208,
+              lineNumber: 2202,
               columnNumber: 53
             }, void 0) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2183,
+              lineNumber: 2177,
               columnNumber: 45
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2181,
+            lineNumber: 2175,
             columnNumber: 41
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1936,
+          lineNumber: 1930,
           columnNumber: 33
         }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-300 space-y-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Syllabus Item:" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2218,
+              lineNumber: 2212,
               columnNumber: 40
             }, void 0),
             " ",
             event.flightNumber
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2218,
+            lineNumber: 2212,
             columnNumber: 37
           }, void 0),
           event.type === "flight" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Route:" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2219,
+              lineNumber: 2213,
               columnNumber: 68
             }, void 0),
             " ",
@@ -21008,63 +21150,63 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             event.destination
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2219,
+            lineNumber: 2213,
             columnNumber: 65
           }, void 0),
           event.type === "flight" && event.area && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Area:" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2220,
+              lineNumber: 2214,
               columnNumber: 82
             }, void 0),
             " ",
             event.area
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2220,
+            lineNumber: 2214,
             columnNumber: 79
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Dual/Solo:" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2221,
+              lineNumber: 2215,
               columnNumber: 40
             }, void 0),
             " ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold", children: event.flightType }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2221,
+              lineNumber: 2215,
               columnNumber: 68
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2221,
+            lineNumber: 2215,
             columnNumber: 37
           }, void 0),
           event.flightType === "Dual" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             event.eventCategory === "sct" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Instructor:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2225,
+                lineNumber: 2219,
                 columnNumber: 52
               }, void 0),
               " ",
               event.instructor || event.pilot
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2225,
+              lineNumber: 2219,
               columnNumber: 49
             }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Instructor:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2227,
+                lineNumber: 2221,
                 columnNumber: 52
               }, void 0),
               " ",
               event.instructor
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2227,
+              lineNumber: 2221,
               columnNumber: 49
             }, void 0),
             event.type === "ground" && event.attendees && event.attendees.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
@@ -21074,86 +21216,86 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 "):"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2231,
+                lineNumber: 2225,
                 columnNumber: 56
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2231,
+                lineNumber: 2225,
                 columnNumber: 53
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 bg-gray-700/50 p-2 rounded-md max-h-32 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-1", children: event.attendees.map((attendee) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "text-sm text-gray-300", children: attendee.split(" – ")[0] }, attendee, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2235,
+                lineNumber: 2229,
                 columnNumber: 65
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2233,
+                lineNumber: 2227,
                 columnNumber: 57
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2232,
+                lineNumber: 2226,
                 columnNumber: 53
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2230,
+              lineNumber: 2224,
               columnNumber: 49
             }, void 0) : event.eventCategory === "sct" ? null : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Student:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2241,
+                lineNumber: 2235,
                 columnNumber: 52
               }, void 0),
               " ",
               event.student || event.group
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2241,
+              lineNumber: 2235,
               columnNumber: 49
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2223,
+            lineNumber: 2217,
             columnNumber: 41
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "PIC:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2246,
+                lineNumber: 2240,
                 columnNumber: 48
               }, void 0),
               " ",
               event.pilot
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2246,
+              lineNumber: 2240,
               columnNumber: 45
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "flex items-center gap-2", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Second Position:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2248,
+                lineNumber: 2242,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "inline-block px-2 py-0.5 bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 rounded text-sm font-semibold", children: "SOLO" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2249,
+                lineNumber: 2243,
                 columnNumber: 49
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2247,
+              lineNumber: 2241,
               columnNumber: 45
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2245,
+            lineNumber: 2239,
             columnNumber: 41
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Duration:" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2255,
+              lineNumber: 2249,
               columnNumber: 40
             }, void 0),
             " ",
@@ -21161,13 +21303,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             " hours"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2255,
+            lineNumber: 2249,
             columnNumber: 37
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Start Time:" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2256,
+              lineNumber: 2250,
               columnNumber: 40
             }, void 0),
             " ",
@@ -21176,49 +21318,44 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             String(Math.round(event.startTime % 1 * 60)).padStart(2, "0")
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2256,
+            lineNumber: 2250,
             columnNumber: 37
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2217,
+          lineNumber: 2211,
           columnNumber: 33
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 1934,
+          lineNumber: 1928,
           columnNumber: 25
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center relative", children: [
-          isPauseViewMode && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-x-0 top-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all", bottom: "63px" } }, void 0, false, {
-            fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2265,
-            columnNumber: 33
-          }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[85px] flex-shrink-0 border-l border-gray-700 bg-gray-800/50 p-2 flex flex-col items-center", children: [
           !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[75px] p-2 border border-gray-600 rounded-lg text-center bg-gray-700/50 mb-[1px]", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-[10px] font-semibold text-gray-400", children: "Conflict?" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2270,
+                lineNumber: 2260,
                 columnNumber: 41
               }, void 0),
               isConflict ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-lg font-bold text-red-500", children: "YES" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2272,
+                lineNumber: 2262,
                 columnNumber: 45
               }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-lg font-bold text-green-500", children: "NO" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2274,
+                lineNumber: 2264,
                 columnNumber: 45
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2269,
+              lineNumber: 2259,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2280,
+                lineNumber: 2270,
                 columnNumber: 45
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21228,7 +21365,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 2286,
+                    lineNumber: 2276,
                     columnNumber: 45
                   }, void 0)
                 },
@@ -21236,40 +21373,40 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2282,
+                  lineNumber: 2272,
                   columnNumber: 41
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2278,
+              lineNumber: 2268,
               columnNumber: 37
             }, void 0),
             event.type === "flight" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.flightAuthorisation && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2293,
+                lineNumber: 2283,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleAuthClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "Auth" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2296,
+                lineNumber: 2286,
                 columnNumber: 49
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2295,
+                lineNumber: 2285,
                 columnNumber: 45
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2291,
+              lineNumber: 2281,
               columnNumber: 41
             }, void 0),
             (traineeObject && event.type === "ground" || (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB"))) && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2304,
+                lineNumber: 2294,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21279,7 +21416,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]",
                   children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "Complete" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                    lineNumber: 2310,
+                    lineNumber: 2300,
                     columnNumber: 49
                   }, void 0)
                 },
@@ -21287,140 +21424,140 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2306,
+                  lineNumber: 2296,
                   columnNumber: 45
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2302,
+              lineNumber: 2292,
               columnNumber: 41
             }, void 0),
             event.type === "flight" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.postFlightTimes && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2318,
+                lineNumber: 2308,
                 columnNumber: 49
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handlePostFlightClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: [
                 "Post",
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2321,
+                  lineNumber: 2311,
                   columnNumber: 97
                 }, void 0),
                 "Flight"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2321,
+                lineNumber: 2311,
                 columnNumber: 49
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2320,
+                lineNumber: 2310,
                 columnNumber: 45
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2316,
+              lineNumber: 2306,
               columnNumber: 41
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2268,
+            lineNumber: 2258,
             columnNumber: 33
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-grow" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2327,
+            lineNumber: 2317,
             columnNumber: 29
           }, void 0),
           " ",
           isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "Save" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2331,
+              lineNumber: 2321,
               columnNumber: 37
             }, void 0) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2330,
+              lineNumber: 2320,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleVisualAdjust, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[15px]", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: [
               "Visual",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2334,
+                lineNumber: 2324,
                 columnNumber: 94
               }, void 0),
               "Adjust"
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2334,
+              lineNumber: 2324,
               columnNumber: 44
             }, void 0) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-              lineNumber: 2333,
+              lineNumber: 2323,
               columnNumber: 40
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2329,
+            lineNumber: 2319,
             columnNumber: 36
           }, void 0) : null,
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-center leading-tight", children: "Close" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2339,
+            lineNumber: 2329,
             columnNumber: 37
           }, void 0) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2338,
+            lineNumber: 2328,
             columnNumber: 33
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2262,
+          lineNumber: 2256,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 1874,
+        lineNumber: 1872,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 1842,
+      lineNumber: 1840,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 1841,
+      lineNumber: 1839,
       columnNumber: 13
     }, void 0),
     showDeleteChoice && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowDeleteChoice(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-red-500/50", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-red-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2352,
+          lineNumber: 2342,
           columnNumber: 33
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2351,
+          lineNumber: 2341,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-red-400", children: "Delete Event" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2354,
+          lineNumber: 2344,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 2350,
+        lineNumber: 2340,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 text-sm", children: "What would you like to do with this event?" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2359,
+          lineNumber: 2349,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21434,31 +21571,31 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-amber-600/20 flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2371,
+                lineNumber: 2361,
                 columnNumber: 41
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2370,
+                lineNumber: 2360,
                 columnNumber: 37
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2369,
+                lineNumber: 2359,
                 columnNumber: 33
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-amber-300 font-semibold text-sm", children: "Cancel Flight" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2375,
+                  lineNumber: 2365,
                   columnNumber: 37
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-xs mt-0.5", children: "Stays on the schedule with a redline through it. Requires a cancellation code." }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2376,
+                  lineNumber: 2366,
                   columnNumber: 37
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2374,
+                lineNumber: 2364,
                 columnNumber: 33
               }, void 0)
             ]
@@ -21467,7 +21604,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           true,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2362,
+            lineNumber: 2352,
             columnNumber: 29
           },
           void 0
@@ -21483,31 +21620,31 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-red-600/20 flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2390,
+                lineNumber: 2380,
                 columnNumber: 41
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2389,
+                lineNumber: 2379,
                 columnNumber: 37
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2388,
+                lineNumber: 2378,
                 columnNumber: 33
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-red-300 font-semibold text-sm", children: "Remove from Schedule" }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2394,
+                  lineNumber: 2384,
                   columnNumber: 37
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-400 text-xs mt-0.5", children: "Permanently removes the event. Not visible on the schedule and deleted from the database." }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                  lineNumber: 2395,
+                  lineNumber: 2385,
                   columnNumber: 37
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-                lineNumber: 2393,
+                lineNumber: 2383,
                 columnNumber: 33
               }, void 0)
             ]
@@ -21516,14 +21653,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           true,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-            lineNumber: 2381,
+            lineNumber: 2371,
             columnNumber: 29
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 2358,
+        lineNumber: 2348,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-3 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21537,22 +21674,22 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-          lineNumber: 2402,
+          lineNumber: 2392,
           columnNumber: 29
         },
         void 0
       ) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 2401,
+        lineNumber: 2391,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 2348,
+      lineNumber: 2338,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-      lineNumber: 2347,
+      lineNumber: 2337,
       columnNumber: 17
     }, void 0),
     showCancelConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -21575,7 +21712,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       false,
       {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 2414,
+        lineNumber: 2404,
         columnNumber: 17
       },
       void 0
@@ -21673,7 +21810,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       false,
       {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 2431,
+        lineNumber: 2421,
         columnNumber: 17
       },
       void 0
@@ -21693,14 +21830,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       false,
       {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-        lineNumber: 2543,
+        lineNumber: 2533,
         columnNumber: 17
       },
       void 0
     )
   ] }, void 0, true, {
     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/FlightDetailModal.tsx",
-    lineNumber: 1833,
+    lineNumber: 1831,
     columnNumber: 9
   }, void 0);
 };
@@ -24616,10 +24753,11 @@ Do you still want to include them in this academic session?`
       setSelectedLessons((prev) => new Set(prev).add(key));
       const dur = item.duration || 1;
       const start = getNextStart(dur);
+      const tileLabel = item.eventDescription?.startsWith(key) ? item.eventDescription : `${key} ${item.eventDescription}`;
       setTiles((prev) => [...prev, {
         id: v4(),
         lessonCode: key,
-        label: `${key}: ${item.eventDescription}`,
+        label: tileLabel,
         startTime: start,
         duration: dur,
         color: ACADEMIC_TILE_COLOR
@@ -24742,54 +24880,54 @@ Do you still want to include them in this academic session?`
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Locality" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 524,
+          lineNumber: 528,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: S.select, value: selectedLocality, onChange: (e) => setSelectedLocality(e.target.value), children: localities.map((l) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: l, children: l }, l, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 526,
+          lineNumber: 530,
           columnNumber: 34
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 525,
+          lineNumber: 529,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 523,
+        lineNumber: 527,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Course" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 530,
+          lineNumber: 534,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: S.select, value: selectedCourse2, onChange: (e) => setSelectedCourse(e.target.value), children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "-- Select --" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 532,
+            lineNumber: 536,
             columnNumber: 13
           }, void 0),
           coursesForLocality.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c, children: c }, c, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 533,
+            lineNumber: 537,
             columnNumber: 42
           }, void 0))
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 531,
+          lineNumber: 535,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 529,
+        lineNumber: 533,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.label, color: "#93c5fd" }, children: "Academic LMP" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 537,
+          lineNumber: 541,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -24806,12 +24944,12 @@ Do you still want to include them in this academic session?`
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "-- Select LMP --" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 548,
+                lineNumber: 552,
                 columnNumber: 13
               }, void 0),
               academicLmpCourses.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c.code, children: c.title }, c.code, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 549,
+                lineNumber: 553,
                 columnNumber: 42
               }, void 0))
             ]
@@ -24820,36 +24958,36 @@ Do you still want to include them in this academic session?`
           true,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 538,
+            lineNumber: 542,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 536,
+        lineNumber: 540,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Date" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 553,
+          lineNumber: 557,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", style: S.input, value: selectedDate2, onChange: (e) => setSelectedDate(e.target.value) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 554,
+          lineNumber: 558,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 552,
+        lineNumber: 556,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Work Start" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 557,
+          lineNumber: 561,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -24867,20 +25005,20 @@ Do you still want to include them in this academic session?`
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 558,
+            lineNumber: 562,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 556,
+        lineNumber: 560,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Work End" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 567,
+          lineNumber: 571,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -24898,19 +25036,19 @@ Do you still want to include them in this academic session?`
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 568,
+            lineNumber: 572,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 566,
+        lineNumber: 570,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 522,
+      lineNumber: 526,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", gap: 10 }, children: [
@@ -24923,17 +25061,17 @@ Do you still want to include them in this academic session?`
             courseTrainees.length
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 584,
+            lineNumber: 588,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 583,
+          lineNumber: 587,
           columnNumber: 11
         }, void 0),
         courseTrainees.length === 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { color: "#6b7280", fontSize: 12, fontStyle: "italic" }, children: "Select a course" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 589,
+          lineNumber: 593,
           columnNumber: 13
         }, void 0),
         courseTrainees.map((t) => {
@@ -24950,7 +25088,7 @@ Do you still want to include them in this academic session?`
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked, onChange: () => {
                 }, style: { accentColor: "#38bdf8", width: 14, height: 14 } }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 598,
+                  lineNumber: 602,
                   columnNumber: 17
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
@@ -24962,12 +25100,12 @@ Do you still want to include them in this academic session?`
                   display: "inline-block"
                 } }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 599,
+                  lineNumber: 603,
                   columnNumber: 17
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 12, color: checked ? "#f9fafb" : "#9ca3af", flex: 1 }, children: stripCourse(t.fullName) }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 603,
+                  lineNumber: 607,
                   columnNumber: 17
                 }, void 0)
               ]
@@ -24976,7 +25114,7 @@ Do you still want to include them in this academic session?`
             true,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 596,
+              lineNumber: 600,
               columnNumber: 15
             },
             void 0
@@ -24984,14 +25122,14 @@ Do you still want to include them in this academic session?`
         })
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 582,
+        lineNumber: 586,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexDirection: "column", gap: 10, flex: 1, minWidth: 0 }, children: [
         suggestions.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.card, backgroundColor: "#1e3a5f", border: "1px solid #1d4ed8" }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.label, color: "#93c5fd" }, children: "💡 Suggested Next Lessons" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 615,
+            lineNumber: 619,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: suggestions.map((s) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25014,47 +25152,47 @@ Do you still want to include them in this academic session?`
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 618,
+              lineNumber: 622,
               columnNumber: 19
             },
             void 0
           )) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 616,
+            lineNumber: 620,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 614,
+          lineNumber: 618,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.card, maxHeight: 300, overflowY: "auto", flex: 1, minWidth: 0 }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, flexWrap: "wrap" }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "LMP Lessons" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 636,
+              lineNumber: 640,
               columnNumber: 15
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 10, color: "#6b7280" }, children: [
               "✅ = course complete  ⬜ = not yet complete  ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { color: "#93c5fd" }, children: "(click ✅/⬜ to toggle course completion)" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 639,
+                lineNumber: 643,
                 columnNumber: 17
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 637,
+              lineNumber: 641,
               columnNumber: 15
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 635,
+            lineNumber: 639,
             columnNumber: 13
           }, void 0),
           moduleGroups.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { color: "#6b7280", fontSize: 12, fontStyle: "italic" }, children: "No academic lessons found for this course" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 643,
+            lineNumber: 647,
             columnNumber: 15
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }, children: moduleGroups.map(({ moduleKey, label, items: moduleItems }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
             minWidth: 190,
@@ -25074,7 +25212,7 @@ Do you still want to include them in this academic session?`
               letterSpacing: 1
             }, children: label }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 655,
+              lineNumber: 659,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "4px 2px" }, children: moduleItems.map((item) => {
@@ -25109,13 +25247,14 @@ Do you still want to include them in this academic session?`
                           background: "none",
                           border: "none",
                           cursor: onUpdateCourseAcademicProgress ? "pointer" : "default",
-                          fontSize: 13,
-                          width: 20,
+                          fontSize: 16,
+                          width: 22,
                           textAlign: "center",
                           flexShrink: 0,
                           padding: 0,
-                          marginTop: 1,
-                          opacity: onUpdateCourseAcademicProgress ? 1 : 0.5
+                          marginTop: 0,
+                          opacity: onUpdateCourseAcademicProgress ? 1 : 0.6,
+                          filter: "brightness(1.3)"
                         },
                         children: isCourseDone ? "✅" : "⬜"
                       },
@@ -25123,7 +25262,7 @@ Do you still want to include them in this academic session?`
                       false,
                       {
                         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                        lineNumber: 678,
+                        lineNumber: 682,
                         columnNumber: 29
                       },
                       void 0
@@ -25137,34 +25276,40 @@ Do you still want to include them in this academic session?`
                           flex: 1,
                           lineHeight: 1.3,
                           cursor: "pointer",
-                          color: isCourseDone ? "#6b7280" : isSelected ? "#93c5fd" : "#d1d5db",
+                          color: isCourseDone ? "#9ca3af" : isSelected ? "#93c5fd" : "#e5e7eb",
                           textDecoration: isCourseDone ? "line-through" : "none"
                         },
                         children: [
-                          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: 700, color: isCourseDone ? "#6b7280" : "#f9fafb", fontSize: 10 }, children: item.code }, void 0, false, {
+                          /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: 700, color: isCourseDone ? "#9ca3af" : "#f9fafb", fontSize: 11 }, children: item.code }, void 0, false, {
                             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                            lineNumber: 702,
+                            lineNumber: 707,
                             columnNumber: 31
                           }, void 0),
-                          " ",
-                          item.eventDescription
+                          item.eventDescription && !item.eventDescription.startsWith(item.code) ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
+                            " ",
+                            item.eventDescription
+                          ] }, void 0, true, {
+                            fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
+                            lineNumber: 709,
+                            columnNumber: 35
+                          }, void 0) : null
                         ]
                       },
                       void 0,
                       true,
                       {
                         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                        lineNumber: 695,
+                        lineNumber: 700,
                         columnNumber: 29
                       },
                       void 0
                     ),
-                    item.duration ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 10, color: "#4b5563", flexShrink: 0, marginTop: 1 }, children: [
+                    item.duration ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 11, color: "#9ca3af", flexShrink: 0, marginTop: 1 }, children: [
                       item.duration,
                       "h"
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 706,
+                      lineNumber: 713,
                       columnNumber: 31
                     }, void 0) : null
                   ]
@@ -25173,34 +25318,34 @@ Do you still want to include them in this academic session?`
                 true,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 669,
+                  lineNumber: 673,
                   columnNumber: 27
                 },
                 void 0
               );
             }) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 661,
+              lineNumber: 665,
               columnNumber: 21
             }, void 0)
           ] }, moduleKey, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 649,
+            lineNumber: 653,
             columnNumber: 19
           }, void 0)) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 647,
+            lineNumber: 651,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 634,
+          lineNumber: 638,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.card, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Standard Events" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 722,
+            lineNumber: 729,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: STANDARD_EVENTS.map((ev) => {
@@ -25230,7 +25375,7 @@ Do you still want to include them in this academic session?`
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 728,
+                  lineNumber: 735,
                   columnNumber: 21
                 },
                 void 0
@@ -25248,34 +25393,34 @@ Do you still want to include them in this academic session?`
                 false,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 742,
+                  lineNumber: 749,
                   columnNumber: 23
                 },
                 void 0
               )
             ] }, ev.code, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 727,
+              lineNumber: 734,
               columnNumber: 19
             }, void 0);
           }) }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 723,
+            lineNumber: 730,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 721,
+          lineNumber: 728,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 610,
+        lineNumber: 614,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 579,
+      lineNumber: 583,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.card, children: [
@@ -25287,39 +25432,39 @@ Do you still want to include them in this academic session?`
           fmtTime(workEnd)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 761,
+          lineNumber: 768,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Classroom" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 763,
+            lineNumber: 770,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: { ...S.select, width: 120 }, value: resourceId, onChange: (e) => setResourceId(e.target.value), children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— Select —" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 765,
+              lineNumber: 772,
               columnNumber: 15
             }, void 0),
             Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: g, children: g }, g, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 767,
+              lineNumber: 774,
               columnNumber: 17
             }, void 0))
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 764,
+            lineNumber: 771,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 762,
+          lineNumber: 769,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 760,
+        lineNumber: 767,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25339,7 +25484,7 @@ Do you still want to include them in this academic session?`
               borderRight: "1px dashed #374151"
             } }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 779,
+              lineNumber: 786,
               columnNumber: 11
             }, void 0),
             hourMarkers.map((h) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
@@ -25350,11 +25495,11 @@ Do you still want to include them in this academic session?`
               borderLeft: "1px solid #1f2937"
             }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, color: "#4b5563", paddingLeft: 2, paddingTop: 2, display: "block" }, children: String(h).padStart(2, "0") }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 794,
+              lineNumber: 801,
               columnNumber: 15
             }, void 0) }, h, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 789,
+              lineNumber: 796,
               columnNumber: 13
             }, void 0)),
             tiles.map((tile) => {
@@ -25387,7 +25532,7 @@ Do you still want to include them in this academic session?`
                   children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: tile.label }, void 0, false, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 829,
+                      lineNumber: 836,
                       columnNumber: 17
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, color: "rgba(255,255,255,0.7)" }, children: [
@@ -25396,7 +25541,7 @@ Do you still want to include them in this academic session?`
                       fmtTime(tile.startTime + tile.duration)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 832,
+                      lineNumber: 839,
                       columnNumber: 17
                     }, void 0)
                   ]
@@ -25405,7 +25550,7 @@ Do you still want to include them in this academic session?`
                 true,
                 {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 807,
+                  lineNumber: 814,
                   columnNumber: 15
                 },
                 void 0
@@ -25417,7 +25562,7 @@ Do you still want to include them in this academic session?`
         true,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 774,
+          lineNumber: 781,
           columnNumber: 9
         },
         void 0
@@ -25438,7 +25583,7 @@ Do you still want to include them in this academic session?`
           tile.lessonCode
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 848,
+          lineNumber: 855,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25467,44 +25612,44 @@ Do you still want to include them in this academic session?`
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 849,
+            lineNumber: 856,
             columnNumber: 17
           },
           void 0
         )
       ] }, tile.id, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 844,
+        lineNumber: 851,
         columnNumber: 15
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 842,
+        lineNumber: 849,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 759,
+      lineNumber: 766,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 4 }, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 869,
+        lineNumber: 876,
         columnNumber: 9
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "w-[120px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500", children: "Save Academic Session" }, void 0, false, {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "w-[160px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500", children: "Publish Academic Session" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 872,
+        lineNumber: 879,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 868,
+      lineNumber: 875,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-    lineNumber: 520,
+    lineNumber: 524,
     columnNumber: 5
   }, void 0);
 };
@@ -42288,9 +42433,8 @@ function populatePrerequisites$1(items) {
 async function loadSyllabusFromDB() {
   const cached = getCachedSyllabus();
   if (cached && !cached.expired) {
-    const remapped = cached.data.map((item) => ({ ...item, id: item.code }));
-    console.log(`📚 [Syllabus] Using fresh cache (${remapped.length} items)`);
-    return { syllabus: remapped, source: "cache" };
+    console.log(`📚 [Syllabus] Using fresh cache (${cached.data.length} items)`);
+    return { syllabus: cached.data, source: "cache" };
   }
   try {
     console.log("📚 [Syllabus] Fetching from database...");
@@ -42302,8 +42446,7 @@ async function loadSyllabusFromDB() {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     const data = await response.json();
-    const rawItemsRaw = data.syllabus || data.syllabusItems || [];
-    const rawItems = rawItemsRaw.map((item) => ({ ...item, id: item.code }));
+    const rawItems = data.syllabus || data.syllabusItems || [];
     if (rawItems.length === 0) {
       throw new Error("No syllabus items returned from database");
     }
@@ -42315,10 +42458,9 @@ async function loadSyllabusFromDB() {
     const errMsg = error instanceof Error ? error.message : "Unknown error";
     console.error(`❌ [Syllabus] Database fetch failed: ${errMsg}`);
     if (cached && cached.expired) {
-      const remapped = cached.data.map((item) => ({ ...item, id: item.code }));
-      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${remapped.length} items)`);
+      console.warn(`⚠️ [Syllabus] Using expired cache as fallback (${cached.data.length} items)`);
       return {
-        syllabus: remapped,
+        syllabus: cached.data,
         source: "expired-cache",
         error: `Database unavailable - showing cached syllabus. Error: ${errMsg}`
       };
@@ -80601,6 +80743,1981 @@ const TraineeMockDataTable = ({ traineesData, onDeleteFromMockdata }) => {
     columnNumber: 9
   }, void 0);
 };
+const API_BASE = "/api";
+async function fetchAPI(endpoint, options) {
+  try {
+    const url = `${API_BASE}${endpoint}`;
+    console.log("🌐 API Request:", url);
+    const response = await fetch(url, {
+      ...options,
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    console.log("✅ API Response:", url, data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("❌ API Error:", endpoint, error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+async function fetchInstructors() {
+  const result = await fetchAPI("/personnel");
+  if (result.success && result.data?.personnel) {
+    return result.data.personnel.map((p) => ({
+      ...p,
+      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
+    }));
+  }
+  return [];
+}
+async function fetchTrainees() {
+  const result = await fetchAPI("/trainees");
+  if (result.success && result.data?.trainees) {
+    return result.data.trainees;
+  }
+  return [];
+}
+async function fetchAircraft() {
+  const result = await fetchAPI("/aircraft");
+  if (result.success && result.data?.aircraft) {
+    return result.data.aircraft;
+  }
+  return [];
+}
+async function fetchScores() {
+  const result = await fetchAPI("/scores");
+  if (result.success && result.data?.scores) {
+    const scoresObj = {};
+    result.data.scores.forEach(([fullName, scores]) => {
+      const normalized = scores.map((s) => ({
+        ...s,
+        event: typeof s.event === "string" ? s.event.replace("*", "") : s.event
+      }));
+      const eventIds = normalized.map((s) => s.event);
+      if (eventIds.includes("BIF FTD2") && !eventIds.includes("BIF FTD1")) {
+        normalized.push({ event: "BIF FTD1", score: 3, date: "", instructor: "", notes: "", details: [] });
+      }
+      if (eventIds.includes("BIF1") && !eventIds.includes("BIF FTD3")) {
+        normalized.push({ event: "BIF FTD3", score: 3, date: "", instructor: "", notes: "", details: [] });
+      }
+      scoresObj[fullName] = normalized;
+    });
+    return scoresObj;
+  }
+  return {};
+}
+async function migratePersonnelToDatabase(personnelList) {
+  const result = await fetchAPI(
+    "/personnel/bulk",
+    {
+      method: "POST",
+      body: JSON.stringify({ personnel: personnelList })
+    }
+  );
+  if (result.success && result.data) {
+    return result.data;
+  }
+  return { success: false, error: result.error || "Migration failed" };
+}
+async function fetchCourses() {
+  const result = await fetchAPI("/courses");
+  if (result.success && result.data?.courses) {
+    return result.data.courses;
+  }
+  return [];
+}
+async function saveCourse(course) {
+  const result = await fetchAPI("/courses", {
+    method: "POST",
+    body: JSON.stringify(course)
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
+}
+async function deleteCourse(name) {
+  const result = await fetchAPI(`/courses/${encodeURIComponent(name)}`, {
+    method: "DELETE"
+  });
+  return result.success ? { success: true } : { success: false, error: result.error };
+}
+async function fetchSchedule(startDate, endDate) {
+  let endpoint = "/schedule";
+  const params = new URLSearchParams();
+  if (params.toString()) endpoint += `?${params.toString()}`;
+  const result = await fetchAPI(endpoint);
+  if (result.success && result.data?.schedules) {
+    return result.data.schedules;
+  }
+  return [];
+}
+const createSyllabusItem = (code, description, courses = ["BPC+IPC"]) => {
+  if (!code) {
+    console.error("❌ ERROR: createSyllabusItem called with undefined/null code parameter");
+    console.trace();
+  }
+  if (!description) {
+    console.error("❌ ERROR: createSyllabusItem called with undefined/null description parameter");
+    console.trace();
+  }
+  code = code || "";
+  description = description || "";
+  let phase = "BGF";
+  if (code.startsWith("BIF")) phase = "BIF";
+  else if (code.startsWith("BNF")) phase = "BNF";
+  else if (code.startsWith("BNAV")) phase = "BNAV";
+  else if (code.startsWith("FIC")) phase = "FIC";
+  else if (code.startsWith("AIT")) phase = "FIC";
+  else if (code.startsWith("WSO")) phase = "WSO";
+  else if (code.startsWith("OFI")) phase = "OFI";
+  let module = "Basic General Flying";
+  if (phase === "BIF") module = "Basic Instrument Flying";
+  else if (phase === "BNF") module = "Basic Night Flying";
+  else if (phase === "BNAV") module = "Basic Navigation";
+  else if (phase === "FIC") module = "Flight Instructor Course";
+  else if (phase === "WSO") module = "Weapons Systems Officer";
+  else if (phase === "OFI") module = "Operational Flying Instructor";
+  let methodOfDelivery = [];
+  let flightOrSimHours = 0;
+  let totalEventHours = 0;
+  let type = "Flight";
+  let sortieType = "Dual";
+  let preFlightTime = 0;
+  let postFlightTime = 0;
+  let location = "";
+  if (code.includes("FTD")) {
+    methodOfDelivery = ["FTD", "Brief", "Debrief"];
+    flightOrSimHours = 1.5;
+    totalEventHours = 2.5;
+    type = "FTD";
+    preFlightTime = 40 / 60;
+    postFlightTime = 30 / 60;
+    location = "FTD Complex";
+  } else if (code.includes("CPT")) {
+    methodOfDelivery = ["CPT", "Brief"];
+    flightOrSimHours = 1;
+    totalEventHours = 1;
+    type = "Ground School";
+    preFlightTime = 0;
+    postFlightTime = 0;
+    location = "CPT Rooms";
+  } else if (code.includes("MB") || code.includes("TUT") || code.includes("QUIZ") || code.includes("Lec")) {
+    methodOfDelivery = ["Classroom", "Brief"];
+    flightOrSimHours = 0;
+    totalEventHours = 1;
+    type = "Ground School";
+    preFlightTime = 0;
+    postFlightTime = 0;
+    location = "Classrooms";
+  } else {
+    methodOfDelivery = ["Aircraft", "Brief", "Debrief"];
+    if (code.startsWith("BNF")) {
+      flightOrSimHours = 1;
+      totalEventHours = 2.5;
+    } else {
+      flightOrSimHours = 1.2;
+      totalEventHours = 3;
+    }
+    type = "Flight";
+    if (["BGF11", "BGF18"].includes(code)) {
+      sortieType = "Solo";
+    } else {
+      sortieType = "Dual";
+    }
+    preFlightTime = 75 / 60;
+    postFlightTime = 30 / 60;
+    location = "Airfield";
+  }
+  const cleanedDescription = (description || "").replace(/\n/g, " ").replace(/;/g, "; ").replace(/\s\s+/g, " ").trim();
+  const eventDetails = cleanedDescription.split(";").map((s) => s.trim()).filter(Boolean);
+  const itemCode = (code || "").replace("*", "");
+  const isGround = type === "Ground School";
+  const dayNight = code.startsWith("BNF") || code === "Night SCT" ? "Night" : "Day";
+  return {
+    id: itemCode,
+    code: itemCode,
+    dayNight,
+    phase,
+    module,
+    eventDescription: description,
+    prerequisites: [],
+    prerequisitesGround: [],
+    prerequisitesFlying: [],
+    eventDetailsCommon: eventDetails,
+    eventDetailsSortie: [],
+    totalEventHours,
+    flightOrSimHours,
+    duration: isGround ? totalEventHours : flightOrSimHours,
+    preFlightTime,
+    postFlightTime,
+    type,
+    sortieType,
+    twrDiReqd: code === "BGF11" || code === "BGF18" ? "YES" : "NO",
+    cctOnly: code === "BGF10" ? "YES" : "NO",
+    location,
+    methodOfDelivery,
+    methodOfAssessment: ["Practical Assessment", "Debrief"],
+    resourcesPhysical: methodOfDelivery.includes("Aircraft") ? ["PC-21 Aircraft"] : methodOfDelivery.includes("FTD") ? ["PC-21 FTD"] : ["Classroom"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    courses
+  };
+};
+const syllabusItems = [
+  // BPC + IPC Items
+  createSyllabusItem("BGF MB1", "Preparation and Pre / Post Flight Admin"),
+  createSyllabusItem("BGF MB2", "Ground Operations and Checklist"),
+  createSyllabusItem("BGF CPT1", "Checklist Procedures - Ground"),
+  createSyllabusItem("BGF TUT1A", "Ejection Seat Strap-in"),
+  createSyllabusItem("BGF TUT1B", "FTD Safety Brief"),
+  createSyllabusItem("BGF TUT2", "Flight Preparation, Checklist and Walkaround"),
+  createSyllabusItem("BGF MB3", "Effects of Controls; Attitude Flying; Straight and Level; Turning"),
+  createSyllabusItem("BGF MB4", "Climbing and Descending and Climbing and Descending Turns"),
+  createSyllabusItem("BGF MB5", "Re-join; Landing; Local Circuit Procedures"),
+  createSyllabusItem("BGF MB6", "Emergency Handling and Procedures"),
+  createSyllabusItem("BGF CPT2", "Airborne Procedures"),
+  createSyllabusItem("BGF FTD1", "Strap in and Ground Procedures"),
+  createSyllabusItem("BGF MB7", "Normal Circuits"),
+  createSyllabusItem("BGF1", "Effects of Controls; Attitude Flying; Straight and Level; Turning; Steep Turn"),
+  createSyllabusItem("BGF FTD2", "Climbing; Descending; Climbing, Turning and Descending"),
+  createSyllabusItem("BGF2", "Basic AP Operation; Climbing; Descending; Climbing, Turning and Descending; Re-join; Landing"),
+  createSyllabusItem("BGF MB8", "Ground and Airborne Emergency Procedures"),
+  createSyllabusItem("BGF CPT3", "Emergency Procedures"),
+  createSyllabusItem("BGF MB9", "Wingover and Stalling"),
+  createSyllabusItem("BGF TUT3", "Stalling; Circuits"),
+  createSyllabusItem("BGF FTD3", "Normal Circuits - Base & Final; Go Around; Wingovers; Clean Stalls; Accelerated Stall"),
+  createSyllabusItem("BGF3", "Normal Circuit - Base and Final Technique; Go Around; Wingovers; Clean Stalls; Accelerated Stall"),
+  createSyllabusItem("BGF FTD4", "Emergency Procedures; Normal Circuit"),
+  createSyllabusItem("BGF4", "Configured Stalls; Normal Circuit"),
+  createSyllabusItem("BGF5", "Consolidate Stalls and Circuits"),
+  createSyllabusItem("BGF MB10", "Abnormal Recovery"),
+  createSyllabusItem("BGF MB11", "Solo Malfunctions"),
+  createSyllabusItem("BGF MB12", "Solo Briefing"),
+  createSyllabusItem("BGF CPT4", "Emergency Procedures"),
+  createSyllabusItem("BGF6", "Consolidate Circuits"),
+  createSyllabusItem("BGF MB13", "HUD Intro - Handling, Stalls, Normal CCT"),
+  createSyllabusItem("BGF CPT5", "HUD Intro"),
+  createSyllabusItem("PRE-SOLO QUIZ", "Pre-Solo Quiz"),
+  createSyllabusItem("BGF7", "HUD Intro - Handling, Stalls, Normal Circuit; Demo Abnormal Landing"),
+  createSyllabusItem("BGF FTD5", "Flapless & AIL PWR OFF S-l app; Circuit Consolidation"),
+  createSyllabusItem("BGF8", "Flapless & AIL PWR OFF S-1 app; Consolidation"),
+  createSyllabusItem("PERRT CPT1", "Hypoxia"),
+  createSyllabusItem("BGF9", "WSL Diversion; Controllability Check; Circuit Consolidation"),
+  createSyllabusItem("BGF MB14", "Low Level Circuit: Glide Circuit; Forced Landings"),
+  createSyllabusItem("BGF FTD6", "Emergency Handling - Solo"),
+  createSyllabusItem("BGF10", "Day Circuit Solo Check"),
+  createSyllabusItem("BGF11", "Day Circuit Solo"),
+  createSyllabusItem("BGF MB15", "G Warm Up; Basic Aerobatics; Unusual Attitude Recovery"),
+  createSyllabusItem("BGF MB16", "Spin Recovery"),
+  createSyllabusItem("BGF FTD7", "Gliding; Glide Circuit; Low Level Circuit"),
+  createSyllabusItem("BGF12", "Glide Circuit"),
+  createSyllabusItem("BGF13", "Low Level Circuit"),
+  createSyllabusItem("BGF14", "Unusual Attitude Recovery; G Warm Up; Wingover; Loop"),
+  createSyllabusItem("BGF FTD8", "Practice Forced Landing"),
+  createSyllabusItem("BGF15", "U/A NH NCR; Aileron Roll, Incipient Spin"),
+  createSyllabusItem("AREA SOLO QUIZ", "Area Solo Quiz"),
+  createSyllabusItem("BGF16", "Spin Recovery; PFL Area"),
+  createSyllabusItem("BGF TUT4", "Glide Circuit; Practice Forced Landing; Spinning; G Stall; G Warm Up; Basic Aerobatics; Unusual Attitude Recovery"),
+  createSyllabusItem("BGF FTD9", "Emergency Handling - Area Solo"),
+  createSyllabusItem("BGF17", "Area Solo Check"),
+  createSyllabusItem("BGF18", "Area Solo"),
+  createSyllabusItem("BGF19", "GF Consolidation"),
+  createSyllabusItem("BGF20", "General Flying Proficiency Test"),
+  createSyllabusItem("BIF MB1", "Basic Instrument Flying"),
+  createSyllabusItem("BIF MB2", "IF UA Recoveries; IF Orientation"),
+  createSyllabusItem("BIF TUT1", "Instrument Flying Basics; Radial Intercepts & Tracking"),
+  createSyllabusItem("BIF CPT1", "Instrument Flying Basics"),
+  createSyllabusItem("BIF CPT2", "Radial Intercept and Tracking"),
+  createSyllabusItem("BIF FTD1", "IF Take-off; S&L, Climbing, Turning and Descending; Steep Turn; Radar Vectors to Initial"),
+  createSyllabusItem("BIF FTD2", "Radial Intercept and Tracking; A Recovery"),
+  createSyllabusItem("BIF FTD3", "Basic IF Consolidation"),
+  createSyllabusItem("BIF1", "IF Take-off; S&; Climbing, Turning and Descending; Steep Turn; UA Recovery; Radar Vectors to Straight In Approach"),
+  createSyllabusItem("BIF2", "IF Consol; Radial Intercept and Tracking; RNP Demo"),
+  createSyllabusItem("BNF MB1", "Night Flying"),
+  createSyllabusItem("BNF FTD1", "Night Circuits"),
+  createSyllabusItem("BNF1", "Night Circuits"),
+  createSyllabusItem("BNF2", "Night Circuits"),
+  createSyllabusItem("BNF3", "Night Solo Check"),
+  createSyllabusItem("BNF4", "Night Solo"),
+  createSyllabusItem("BIF MB3", "Instrument Approaches"),
+  createSyllabusItem("BIF MB4", "Holding"),
+  createSyllabusItem("BIF MB5", "RNP Approach"),
+  createSyllabusItem("BIF TUT2", "RNP Approach; Missed & Circling Approach"),
+  createSyllabusItem("BIF CPT3", "RNP Approach"),
+  createSyllabusItem("BIF FTD4", "RNP Approach; Circling Approach"),
+  createSyllabusItem("BIF FTD5", "RNP Approach; Missed Approach"),
+  createSyllabusItem("BIF FTD6", "RNP Approach HUD Off"),
+  createSyllabusItem("BIF3", "RNP Approach; Circling Approach; Missed Approach"),
+  createSyllabusItem("BIF4", "IF Consol; RNP Approach - HUD Off"),
+  createSyllabusItem("BIF5", "Instrument Flying Proficiency Test"),
+  createSyllabusItem("BGF MB17", "Advanced GF"),
+  createSyllabusItem("BGF FTD10", "GF Consol; Intermediate Emergency Handling; Unfamiliar Airfield"),
+  createSyllabusItem("BGF21", "GF Consolidation; Barrel Roll; L MFD Fail"),
+  createSyllabusItem("BGF22", "GF Consolidation; Stall Turn"),
+  createSyllabusItem("BGF23", "GF Consolidation"),
+  createSyllabusItem("BGF24", "General Flying Test"),
+  createSyllabusItem("BNAV MB1", "Medium Level Nav"),
+  createSyllabusItem("BNAV TUT1", "Nav Planning Tutorial"),
+  createSyllabusItem("BNAV FTD1", "Medium Level Navigation"),
+  createSyllabusItem("BNAV1", "Medium Level Navigation (Land Away)"),
+  createSyllabusItem("BNAV2", "Medium Level Navigation (RTB)"),
+  createSyllabusItem("BNAV3 NAVPT", "Navigation Proficiency Test"),
+  createSyllabusItem("SCT GF", "Sector General Flying"),
+  createSyllabusItem("SCT IF", "Sector Instrument Flying"),
+  createSyllabusItem("SCT NAV", "Sector Navigation"),
+  createSyllabusItem("SCT FORM", "Sector Formation"),
+  createSyllabusItem("Night SCT", "Night Sector Training"),
+  // =========================================================================
+  // FIC SYLLABUS - MASTER LMP (Full Rebuild)
+  // Phase 1 / Module 1: FIC Core Events (MB, FTD, Flying)
+  // Phase 1 / Module 2: FIC Instrument Flying Events
+  // Phase 2 / Module 3: AIT Events
+  // =========================================================================
+  // --- Phase 1 / Module 1: FIC Core Events ---
+  {
+    id: "FIC MB1",
+    code: "FIC MB1",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Introduction to military flight instruction. Covers instructional theory, adult learning principles, lesson planning frameworks, and the standards required of a qualified flying instructor (QFI). Trainee will understand the role and responsibilities of an instructor on the PC-21.",
+    prerequisites: [],
+    prerequisitesGround: [],
+    prerequisitesFlying: [],
+    eventDetailsCommon: [
+      "Role of the Flying Instructor",
+      "Adult Learning Principles and Motivation",
+      "Lesson Planning and Sequencing",
+      "Standards and Assessment Framework",
+      "QFI Responsibilities and Duties"
+    ],
+    eventDetailsSortie: [],
+    totalEventHours: 2,
+    flightOrSimHours: 0,
+    duration: 2,
+    preFlightTime: 0,
+    postFlightTime: 0,
+    type: "Ground School",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Classroom", "Brief"],
+    methodOfAssessment: ["Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["Classroom"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Classrooms",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC MB2",
+    code: "FIC MB2",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Detailed study of instructional patter, two-crew communication standards, and right-hand seat operating procedures. Covers demonstration-performance technique, handling over/taking control, and common student error management. Trainee will be able to plan and deliver basic patter sequences prior to simulator entry.",
+    prerequisites: ["FIC MB1"],
+    prerequisitesGround: ["FIC MB1"],
+    prerequisitesFlying: [],
+    eventDetailsCommon: [
+      "Instructional Patter Structure and Delivery",
+      "Two-Crew Communication and Crew Resource Management",
+      "Right-Hand Seat Operating Procedures",
+      "Demonstration-Performance Technique",
+      "Handing Over and Taking Control Procedures",
+      "Identifying and Correcting Common Student Errors"
+    ],
+    eventDetailsSortie: [],
+    totalEventHours: 2,
+    flightOrSimHours: 0,
+    duration: 2,
+    preFlightTime: 0,
+    postFlightTime: 0,
+    type: "Ground School",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Classroom", "Brief"],
+    methodOfAssessment: ["Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["Classroom"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Classrooms",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC FTD1",
+    code: "FIC FTD1",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "First simulator instructional sortie. Trainee practices right-hand seat familiarisation, cockpit management, and delivery of circuit patter. Emphasis on patter accuracy, aircraft control from the right seat, and initial instructional technique. Conducted under close QFI supervision.",
+    prerequisites: ["FIC MB2"],
+    prerequisitesGround: ["FIC MB2"],
+    prerequisitesFlying: [],
+    eventDetailsCommon: [
+      "Right-Hand Seat Cockpit Familiarisation",
+      "Pre-flight and Startup Patter Delivery",
+      "Normal Circuit Patter – Downwind, Base, Final",
+      "Instructor Intervention Techniques",
+      "Post-sortie Debrief and Self-assessment"
+    ],
+    eventDetailsSortie: [
+      "Demonstrate startup, taxi and take-off patter",
+      "Conduct minimum two circuit patter sequences",
+      "Practice handing over and taking control"
+    ],
+    totalEventHours: 2.5,
+    flightOrSimHours: 1.5,
+    duration: 1.5,
+    preFlightTime: 0.67,
+    postFlightTime: 0.5,
+    type: "FTD",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["FTD", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 FTD"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "FTD Complex",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC FTD2",
+    code: "FIC FTD2",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Simulator patter development for general handling. Trainee delivers instructional patter for climbing, descending, level turns, and basic manoeuvring exercises. Focus on smooth patter flow, accurate sequencing, and maintaining aircraft control while instructing.",
+    prerequisites: ["FIC FTD1"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC FTD1"],
+    eventDetailsCommon: [
+      "Patter for Climbing and Descending",
+      "Level Turn Instruction Patter",
+      "General Handling Sequence Delivery",
+      "Tempo and Clarity of Instruction",
+      "Managing Trainee Errors in General Handling"
+    ],
+    eventDetailsSortie: [
+      "Deliver complete general handling instructional sequence",
+      "Demonstrate recovery from student-induced deviations",
+      "Practice controlled patter interruption and reinstatement"
+    ],
+    totalEventHours: 2.5,
+    flightOrSimHours: 1.5,
+    duration: 1.5,
+    preFlightTime: 0.67,
+    postFlightTime: 0.5,
+    type: "FTD",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["FTD", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 FTD"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "FTD Complex",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC1",
+    code: "FIC1",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "First airborne instructional sortie. Trainee flies from the right-hand seat and familiarises with airborne cockpit environment, power management, and basic aircraft handling. QFI demonstrates instructional technique for general handling and the trainee attempts initial patter delivery.",
+    prerequisites: ["FIC FTD2"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC FTD2"],
+    eventDetailsCommon: [
+      "Right-Hand Seat Airborne Familiarisation",
+      "Power Management and Basic Aircraft Control",
+      "Situational Awareness from Right Seat",
+      "Initial Patter Delivery Attempt",
+      "QFI Demonstration of Instructional Technique"
+    ],
+    eventDetailsSortie: [
+      "Conduct general handling sequence under QFI supervision",
+      "Deliver patter for at least two exercise areas",
+      "Demonstrate take-off and recovery patter"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC2",
+    code: "FIC2",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Instructional sortie focusing on teaching circuit patterns and take-off and landing sequences. Trainee delivers complete circuit patter including downwind checks, base turn, approach, and go-around procedures. QFI assesses patter accuracy, aircraft control, and error management.",
+    prerequisites: ["FIC1"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC1"],
+    eventDetailsCommon: [
+      "Circuit Patter Delivery – Full Sequence",
+      "Downwind Checks and Spacing Instruction",
+      "Base Turn and Final Approach Patter",
+      "Go-Around and Missed Approach Instruction",
+      "Landing and Roll-out Instruction"
+    ],
+    eventDetailsSortie: [
+      "Deliver minimum three complete circuit patter sequences",
+      "Demonstrate go-around decision and patter",
+      "Manage student deviation during final approach"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC3",
+    code: "FIC3",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Advanced general handling instructional sortie. Trainee teaches stall recognition and recovery, steep turns, and unusual attitude recovery. Focus on delivering clear, progressive instruction, managing safety of flight during student exercises, and adapting patter to student performance.",
+    prerequisites: ["FIC2"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC2"],
+    eventDetailsCommon: [
+      "Stall Recognition and Recovery Patter",
+      "Steep Turn Instructional Sequence",
+      "Unusual Attitude Recovery Instruction",
+      "Adapting Instruction to Student Level",
+      "Safety of Flight Management While Instructing"
+    ],
+    eventDetailsSortie: [
+      "Deliver stall series instruction for clean and landing configuration",
+      "Conduct steep turn exercise with student",
+      "Demonstrate unusual attitude recovery teaching sequence"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC FTD3",
+    code: "FIC FTD3",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Simulator patter development for emergency procedures instruction. Trainee practices teaching engine malfunctions, forced landing sequences, and emergency drills. Emphasis on maintaining patter composure during high-workload emergency scenarios.",
+    prerequisites: ["FIC3"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC3"],
+    eventDetailsCommon: [
+      "Engine Failure and Forced Landing Instruction Patter",
+      "Emergency Drill Teaching Sequence",
+      "Maintaining Patter Composure Under Pressure",
+      "Prioritisation – Aviate, Navigate, Communicate, Instruct",
+      "Student Management During Emergency Scenarios"
+    ],
+    eventDetailsSortie: [
+      "Demonstrate engine failure at altitude patter sequence",
+      "Conduct simulated forced landing approach instruction",
+      "Deliver emergency drill patter for two separate emergency types"
+    ],
+    totalEventHours: 2.5,
+    flightOrSimHours: 1.5,
+    duration: 1.5,
+    preFlightTime: 0.67,
+    postFlightTime: 0.5,
+    type: "FTD",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["FTD", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 FTD"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "FTD Complex",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC4",
+    code: "FIC4",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Instructional sortie covering aerobatic instruction technique. Trainee delivers instructional patter for wingovers, barrel rolls, and aerobatic entry/exit sequences. QFI assesses trainee ability to maintain positive aircraft control, deliver accurate patter, and manage student situational awareness during dynamic manoeuvres.",
+    prerequisites: ["FIC FTD3"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC FTD3"],
+    eventDetailsCommon: [
+      "Aerobatic Instruction Safety Brief",
+      "Wingover Instructional Patter",
+      "Barrel Roll Teaching Sequence",
+      "Aerobatic Entry and Exit Patter",
+      "G-awareness Instruction and Management"
+    ],
+    eventDetailsSortie: [
+      "Deliver complete wingover instructional sequence",
+      "Conduct barrel roll instruction with student follow-through",
+      "Demonstrate recovery from mishandled aerobatic entry"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC5",
+    code: "FIC5",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Advanced instructional sortie integrating multiple exercise areas. Trainee plans and executes a complete instructional sortie profile covering general handling, circuit, and selected emergency procedures. Assessed on lesson continuity, student management, and overall instructional quality.",
+    prerequisites: ["FIC4"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC4"],
+    eventDetailsCommon: [
+      "Integrated Sortie Planning and Briefing",
+      "Multi-exercise Instructional Delivery",
+      "Lesson Continuity and Transitions Between Exercises",
+      "In-flight Student Progress Assessment",
+      "Comprehensive Post-sortie Debrief Technique"
+    ],
+    eventDetailsSortie: [
+      "Execute planned instructional sortie with minimum three exercise areas",
+      "Conduct at least one emergency exercise with student",
+      "Deliver structured debrief covering all exercises"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC6",
+    code: "FIC6",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "FIC core flying phase consolidation sortie. Trainee demonstrates the ability to plan, brief, execute, and debrief a complete instructional sortie to the standard required of a qualified instructor. This is the final assessment of core instructional flying competency before IF phase entry.",
+    prerequisites: ["FIC5"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC5"],
+    eventDetailsCommon: [
+      "Full Instructional Sortie to QFI Standard",
+      "Comprehensive Pre-flight Brief",
+      "General Handling, Circuits and Emergency Instruction",
+      "Instructor-Standard Aircraft Control and Airmanship",
+      "Structured Post-sortie Debrief to Standard"
+    ],
+    eventDetailsSortie: [
+      "Plan and brief a complete instructional sortie profile",
+      "Execute sortie to QFI standard covering all required exercise areas",
+      "Conduct assessed debrief demonstrating lesson analysis skills"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC FTD4",
+    code: "FIC FTD4",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Simulator consolidation for advanced handling instruction. Covers patter development for spin recovery, advanced stalls, and high-energy manoeuvre instruction. Trainee demonstrates the ability to manage complex student scenarios, deliver accurate recovery patter, and maintain instructional composure.",
+    prerequisites: ["FIC6"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC6"],
+    eventDetailsCommon: [
+      "Spin Recognition and Recovery Instruction Patter",
+      "Advanced Stall Series Teaching Technique",
+      "High-energy Manoeuvre Instruction",
+      "Composure Management During Critical Exercises",
+      "Debrief Technique for Complex Sorties"
+    ],
+    eventDetailsSortie: [
+      "Deliver spin recovery instructional sequence from both seats",
+      "Conduct advanced stall instruction including accelerated stalls",
+      "Demonstrate management of student near-departure from controlled flight"
+    ],
+    totalEventHours: 2.5,
+    flightOrSimHours: 1.5,
+    duration: 1.5,
+    preFlightTime: 0.67,
+    postFlightTime: 0.5,
+    type: "FTD",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["FTD", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 FTD"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "FTD Complex",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC FTD5",
+    code: "FIC FTD5",
+    phase: "Phase 1",
+    module: "Module 1: FIC Events",
+    dayNight: "Day",
+    eventDescription: "Simulator-based preparation for instrument flying instruction. Trainee practices instructing under-the-hood procedures, recovery from unusual attitudes under instruments, and transition between visual and instrument flight phases. Preparation for the IF instruction phase.",
+    prerequisites: ["FIC FTD4"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC FTD4"],
+    eventDetailsCommon: [
+      "Instrument Flying Instructional Overview",
+      "Under-the-hood Procedures and Teaching Technique",
+      "Unusual Attitude Recovery Instruction – Instruments",
+      "Transition Between Visual and Instrument Phases",
+      "IF Sortie Planning and Briefing Preparation"
+    ],
+    eventDetailsSortie: [
+      "Deliver instrument flying instructional patter for basic IF manoeuvres",
+      "Conduct unusual attitude recovery instruction on instruments",
+      "Demonstrate transition brief from visual to instrument flight"
+    ],
+    totalEventHours: 2.5,
+    flightOrSimHours: 1.5,
+    duration: 1.5,
+    preFlightTime: 0.67,
+    postFlightTime: 0.5,
+    type: "FTD",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["FTD", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 FTD"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "FTD Complex",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  // --- Phase 1 / Module 2: FIC Instrument Flying Events ---
+  {
+    id: "FIC IF1",
+    code: "FIC IF1",
+    phase: "Phase 1",
+    module: "Module 2: FIC IF Events",
+    dayNight: "Day",
+    eventDescription: "First instrument flying instructional sortie. Trainee delivers airborne instruction for basic instrument flying — straight and level, climbing, descending, and turning under instruments. QFI assesses quality of patter delivery, management of student under the hood, and maintenance of safe IFR standards.",
+    prerequisites: ["FIC FTD5"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC FTD5"],
+    eventDetailsCommon: [
+      "Basic IF Instruction – Straight and Level, Climb, Descent",
+      "Instrument Turning Instruction",
+      "Managing a Student Under the Hood",
+      "IF Situational Awareness Instruction",
+      "IFR Communication and Clearance Instruction"
+    ],
+    eventDetailsSortie: [
+      "Deliver instrument flying patter for all basic IF manoeuvres",
+      "Manage student hood-down and spatial disorientation risk",
+      "Demonstrate IFR communication instruction"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC IF2",
+    code: "FIC IF2",
+    phase: "Phase 1",
+    module: "Module 2: FIC IF Events",
+    dayNight: "Day",
+    eventDescription: "Instrument approach instruction sortie. Trainee teaches instrument approach procedures including VOR/NDB/RNP approach sequences, missed approach procedures, and approach briefing technique. Focus on managing student workload during high-concentration approach phases.",
+    prerequisites: ["FIC IF1"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC IF1"],
+    eventDetailsCommon: [
+      "Instrument Approach Instructional Briefing",
+      "RNP/GNSS Approach Patter Sequence",
+      "Missed Approach Instruction and Go-around Patter",
+      "Approach Plate Study and Student Guidance",
+      "Managing Student Workload on Approach"
+    ],
+    eventDetailsSortie: [
+      "Deliver complete instrument approach instructional sequence",
+      "Conduct missed approach instruction with student",
+      "Demonstrate approach plate briefing technique"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC IF3",
+    code: "FIC IF3",
+    phase: "Phase 1",
+    module: "Module 2: FIC IF Events",
+    dayNight: "Day",
+    eventDescription: "Advanced instrument flying instruction sortie. Covers teaching of holding procedures, radar vectoring response, and instrument-based navigation exercises. Trainee demonstrates the ability to instruct in a high-workload IFR environment while maintaining safety and instructional quality.",
+    prerequisites: ["FIC IF2"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC IF2"],
+    eventDetailsCommon: [
+      "Holding Pattern Entry and Instruction",
+      "Radar Vectors Instruction and Response",
+      "Instrument Navigation Teaching Technique",
+      "High-workload IFR Instruction Management",
+      "ATC Interface Instruction During IF Sortie"
+    ],
+    eventDetailsSortie: [
+      "Teach holding pattern entry and timing procedures",
+      "Conduct radar vectoring instruction sequence",
+      "Manage student IFR navigation with instructor oversight"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC IF4",
+    code: "FIC IF4",
+    phase: "Phase 1",
+    module: "Module 2: FIC IF Events",
+    dayNight: "Day",
+    eventDescription: "IF phase consolidation and final assessment sortie. Trainee plans and executes a complete IFR instructional flight to the standard required of a qualified IF instructor. Assessed on briefing quality, airborne instruction, student management, and post-sortie debrief.",
+    prerequisites: ["FIC IF3"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC IF3"],
+    eventDetailsCommon: [
+      "Complete IFR Sortie Planning and Briefing",
+      "Full Instrument Instructional Sequence",
+      "In-flight Assessment of Student IF Progress",
+      "Emergency Handling in IFR Environment",
+      "Comprehensive IF Debrief and Lesson Analysis"
+    ],
+    eventDetailsSortie: [
+      "Plan and execute a complete IFR instructional sortie",
+      "Deliver IF instruction covering navigation, approaches, and holds",
+      "Conduct assessed debrief to IF instructor standard"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "FIC FTD6",
+    code: "FIC FTD6",
+    phase: "Phase 1",
+    module: "Module 2: FIC IF Events",
+    dayNight: "Day",
+    eventDescription: "Simulator consolidation supporting the IF instructional phase. Covers advanced IF procedures instruction including partial panel flying, instrument failure recognition and management, and high-density IFR environment instruction. Provides a safe training environment for rehearsing complex IF teaching scenarios.",
+    prerequisites: ["FIC IF4"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC IF4"],
+    eventDetailsCommon: [
+      "Partial Panel Flying Instruction",
+      "Instrument Failure Recognition and Teaching",
+      "High-density IFR Environment Simulation",
+      "Complex IF Student Error Management",
+      "Multi-approach IFR Sortie Instruction"
+    ],
+    eventDetailsSortie: [
+      "Conduct partial panel instruction sequence in FTD",
+      "Demonstrate instrument failure recognition teaching",
+      "Deliver multi-approach IFR instructional profile"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.5,
+    duration: 1.5,
+    preFlightTime: 0.67,
+    postFlightTime: 0.5,
+    type: "FTD",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["FTD", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 FTD"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "FTD Complex",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  // --- Phase 2 / Module 3: AIT Events ---
+  {
+    id: "AIT1",
+    code: "AIT1",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "Advanced Instructor Training entry sortie. Trainee demonstrates consolidation of core QFI skills in preparation for advanced instruction qualification. Covers advanced general handling instruction, student management in complex scenarios, and assessment of trainee readiness to progress to advanced instructional tasks.",
+    prerequisites: ["FIC FTD6"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["FIC FTD6"],
+    eventDetailsCommon: [
+      "Advanced Instructional Technique Review",
+      "Complex Student Scenario Management",
+      "Advanced General Handling Instruction",
+      "Instructor Readiness Assessment for AIT",
+      "AIT Programme Standards and Requirements Brief"
+    ],
+    eventDetailsSortie: [
+      "Demonstrate advanced general handling instruction to AIT entry standard",
+      "Conduct complex student scenario management exercise",
+      "Receive AIT standards brief and confirm training objectives"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT2",
+    code: "AIT2",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "Advanced instruction of navigation and tactical low-level flying. Trainee teaches navigation planning, map reading, low-level route-following, and tactical airspace awareness. Focus on managing student navigation errors, route deviations, and maintaining safety in low-level environment.",
+    prerequisites: ["AIT1"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT1"],
+    eventDetailsCommon: [
+      "Navigation Planning Instruction",
+      "Map Reading and Route-following Teaching",
+      "Low-level Route Instruction and Safety Management",
+      "Tactical Airspace Awareness Instruction",
+      "Managing Student Navigation Errors and Deviations"
+    ],
+    eventDetailsSortie: [
+      "Teach navigation planning and pre-flight preparation",
+      "Conduct low-level route instruction with student",
+      "Manage student navigation error and demonstrate recovery instruction"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT3",
+    code: "AIT3",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "Advanced formation flying instruction. Trainee teaches two-ship formation join-up, close formation station keeping, and lead/wingman responsibilities. Focus on delivering clear formation instruction, managing student geometry errors, and maintaining safe separation standards.",
+    prerequisites: ["AIT2"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT2"],
+    eventDetailsCommon: [
+      "Formation Join-up Instruction",
+      "Close Formation Station Keeping Patter",
+      "Lead and Wingman Responsibilities Instruction",
+      "Formation Geometry Error Management",
+      "Safe Separation Standards and Instruction"
+    ],
+    eventDetailsSortie: [
+      "Teach two-ship formation join-up sequence",
+      "Conduct close formation instruction with student as wingman",
+      "Manage student geometry error and correct with instruction"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT4",
+    code: "AIT4",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "Advanced instrument flying instruction under AIT standards. Trainee teaches advanced IFR procedures including non-precision approaches, circling approaches, and en-route navigation in IMC. QFI assesses ability to maintain instructional quality in complex IFR environment.",
+    prerequisites: ["AIT3"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT3"],
+    eventDetailsCommon: [
+      "Non-precision Approach Instruction – NDB/VOR",
+      "Circling Approach Instruction and Safety Management",
+      "En-route Navigation in IMC Instruction",
+      "Advanced IFR Student Workload Management",
+      "Adverse Weather Decision-making Instruction"
+    ],
+    eventDetailsSortie: [
+      "Teach non-precision approach procedures to student",
+      "Conduct circling approach instruction with appropriate safety brief",
+      "Deliver en-route IMC navigation instruction sequence"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT5",
+    code: "AIT5",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "Advanced tactical instruction and airspace deconfliction. Trainee teaches tactical area operations, airspace coordination, and mission planning instruction. Focus on instructing in a dynamic tactical environment while maintaining safety oversight and CRM standards.",
+    prerequisites: ["AIT4"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT4"],
+    eventDetailsCommon: [
+      "Tactical Area Operations Instruction",
+      "Airspace Coordination and Deconfliction Teaching",
+      "Mission Planning Instruction",
+      "CRM in Tactical Environment",
+      "Safety Oversight in Dynamic Tactical Instruction"
+    ],
+    eventDetailsSortie: [
+      "Teach tactical area operations procedures and airspace management",
+      "Conduct mission planning instruction with student",
+      "Demonstrate CRM instruction in simulated tactical scenario"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT6",
+    code: "AIT6",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "Advanced student management and remedial instruction. Trainee practices teaching techniques for managing underperforming students, delivering remedial instruction, documenting student progress, and making training progress recommendations. Focus on instructor decision-making and pastoral responsibility.",
+    prerequisites: ["AIT5"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT5"],
+    eventDetailsCommon: [
+      "Remedial Instruction Technique",
+      "Underperforming Student Management",
+      "Progress Documentation and Reporting",
+      "Training Progress Recommendations",
+      "Instructor Pastoral Responsibilities"
+    ],
+    eventDetailsSortie: [
+      "Conduct remedial instruction exercise with simulated underperforming student",
+      "Prepare and present a student progress report",
+      "Demonstrate training recommendation decision-making process"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT7",
+    code: "AIT7",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "AIT pre-final check and self-assessment sortie. Trainee conducts a self-assessed instructional sortie covering selected AIT exercise areas. Focus on independent preparation, execution, and self-critique. QFI observes and provides post-sortie assessment against AIT standards.",
+    prerequisites: ["AIT6"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT6"],
+    eventDetailsCommon: [
+      "Independent Sortie Planning and Briefing",
+      "Self-assessed Instructional Performance",
+      "AIT Standard Exercise Coverage",
+      "Post-sortie Self-critique and Analysis",
+      "QFI Assessment Against AIT Standards"
+    ],
+    eventDetailsSortie: [
+      "Plan and execute independent instructional sortie to AIT standard",
+      "Cover minimum three AIT exercise areas",
+      "Deliver self-critique debrief prior to QFI assessment"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  {
+    id: "AIT8",
+    code: "AIT8",
+    phase: "Phase 2",
+    module: "Module 3: AIT Events",
+    dayNight: "Day",
+    eventDescription: "AIT final grading sortie. Trainee demonstrates complete Advanced Instructor Training competency across all required areas. This is the final assessment flight for the FIC course. Successful completion results in qualification as a Qualified Flying Instructor (QFI) on type.",
+    prerequisites: ["AIT7"],
+    prerequisitesGround: [],
+    prerequisitesFlying: ["AIT7"],
+    eventDetailsCommon: [
+      "Full AIT Final Assessment Sortie",
+      "Comprehensive Instructional Sequence Coverage",
+      "Advanced Student Management in Final Assessment",
+      "QFI Standard Aircraft Control and Airmanship",
+      "Final Grading Debrief and Course Completion"
+    ],
+    eventDetailsSortie: [
+      "Execute final AIT grading sortie covering all assessed areas",
+      "Demonstrate QFI-standard instruction throughout sortie",
+      "Receive final grading debrief and course completion assessment"
+    ],
+    totalEventHours: 3,
+    flightOrSimHours: 1.2,
+    duration: 1.2,
+    preFlightTime: 1.25,
+    postFlightTime: 0.5,
+    type: "Flight",
+    sortieType: "Dual",
+    twrDiReqd: "NO",
+    cctOnly: "NO",
+    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
+    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
+    resourcesPhysical: ["PC-21 Aircraft"],
+    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
+    location: "Airfield",
+    courses: ["FIC"],
+    lmpType: "Master LMP"
+  },
+  // WSO Items
+  createSyllabusItem("WSO MB1", "Role of the WSO", ["WSO"]),
+  createSyllabusItem("WSO FTD1", "Sensor Operations Basics", ["WSO"]),
+  createSyllabusItem("WSO1", "Navigational Systems Management", ["WSO"]),
+  // OFI Items
+  createSyllabusItem("OFI MB1", "Advanced Operational Concepts", ["OFI"]),
+  createSyllabusItem("OFI1", "Tactical Formation Lead", ["OFI"]),
+  // PLT Refresh Items
+  createSyllabusItem("PLT REF MB1", "Refresher Admin Brief", ["PLT Refresh", "PLT CONV"]),
+  createSyllabusItem("PLT REF FTD1", "Emergency Procedures Refresh", ["PLT Refresh"]),
+  createSyllabusItem("PLT REF1", "General Handling Recency", ["PLT Refresh"]),
+  // QFI CONV
+  createSyllabusItem("QFI CONV MB1", "QFI Conversion Requirements", ["QFI CONV"]),
+  createSyllabusItem("QFI CONV1", "Instructional Technique - Advanced", ["QFI CONV"]),
+  // Staff CAT (Staff Continuous Training Categorisation)
+  createSyllabusItem("QIP 1", "QFI Induction Program 1", ["Staff CAT"]),
+  createSyllabusItem("QIP 2", "QFI Induction Program 2", ["Staff CAT"]),
+  createSyllabusItem("QIP 3", "QFI Induction Program 3", ["Staff CAT"]),
+  createSyllabusItem("QIP 4", "QFI Induction Program 4", ["Staff CAT"]),
+  createSyllabusItem("C CAT 1", "C Categorisation 1", ["Staff CAT"]),
+  createSyllabusItem("C CAT 2", "C Categorisation 2", ["Staff CAT"]),
+  createSyllabusItem("C CAT 3", "C Categorisation 3", ["Staff CAT"]),
+  createSyllabusItem("C CAT 4", "C Categorisation 4", ["Staff CAT"]),
+  createSyllabusItem("B CAT 1", "B Categorisation 1", ["Staff CAT"]),
+  createSyllabusItem("B CAT 2", "B Categorisation 2", ["Staff CAT"]),
+  createSyllabusItem("B CAT 3", "B Categorisation 3", ["Staff CAT"]),
+  createSyllabusItem("B CAT 4", "B Categorisation 4", ["Staff CAT"])
+];
+const populatePrerequisites = (syllabus) => {
+  return syllabus.map((item, index, arr) => {
+    const hasExplicitPrereqs = item.prerequisites && item.prerequisites.length > 0 || item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
+    if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
+      return item;
+    }
+    const prerequisitesGround = [];
+    const prerequisitesFlying = [];
+    for (let i = index - 1; i >= 0; i--) {
+      const prereqCandidate = arr[i];
+      if (prereqCandidate.code.includes(" MB")) continue;
+      const sharedCourses = prereqCandidate.courses.some((c) => item.courses.includes(c));
+      if (!sharedCourses) break;
+      if (prereqCandidate.type === "Flight" || prereqCandidate.type === "FTD") {
+        prerequisitesFlying.push(prereqCandidate.code);
+      } else {
+        prerequisitesGround.push(prereqCandidate.code);
+      }
+      break;
+    }
+    return { ...item, prerequisitesGround, prerequisitesFlying, prerequisites: [...prerequisitesGround, ...prerequisitesFlying] };
+  });
+};
+const INITIAL_SYLLABUS_DETAILS = populatePrerequisites(syllabusItems);
+const firstNames = ["Olivia", "Emma", "Amelia", "Ava", "Sophia", "Isabella", "Mia", "Charlotte", "Luna", "Harper", "Liam", "Noah", "Oliver", "Elijah", "James", "William", "Henry", "Lucas", "Benjamin", "Theodore", "Emily", "Michael", "Jessica", "David", "Sarah", "Chris", "Daniel", "Matthew", "Ashley", "Jennifer", "Robert", "John", "Linda", "Barbara", "Susan", "Mary", "Patricia", "Richard", "Joseph", "Thomas", "Charles", "Steven", "Paul", "Mark"];
+const lastNames = ["Smith", "Jones", "Williams", "Brown", "Taylor", "Davies", "Evans", "Thomas", "Roberts", "Johnson", "Walker", "Robinson", "Thompson", "White", "Green", "Harris", "Clark", "Lewis", "Hall", "Baker", "Martin", "Jackson", "Wood", "Turner", "Hill", "Moore", "Scott", "Cooper", "King", "Wright", "Lee", "Mitchell", "Anderson", "Carter", "Parker", "Edwards", "Stewart", "Morris"];
+const usedNames = /* @__PURE__ */ new Set();
+const generateRandomName = () => {
+  let name = "";
+  do {
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    name = `${lastName}, ${firstName}`;
+  } while (usedNames.has(name));
+  usedNames.add(name);
+  return name;
+};
+const flightOptions = ["A", "B", "C", "D"];
+const getRandomFlight = () => flightOptions[Math.floor(Math.random() * flightOptions.length)];
+const usedIdNumbers = /* @__PURE__ */ new Set();
+const generateRandomIdNumber = () => {
+  let id;
+  do {
+    id = Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6;
+  } while (usedIdNumbers.has(id));
+  usedIdNumbers.add(id);
+  return id;
+};
+const generateTraineesForCourse = (courseName, rankDistribution, unit) => {
+  const location = unit === "2FTS" ? "Pearce" : "East Sale";
+  const trainees = [];
+  rankDistribution.forEach(({ rank, count: numToGenerate }) => {
+    for (let i = 0; i < numToGenerate; i++) {
+      const name = generateRandomName();
+      let service = "RAAF";
+      if (rank === "MIDN" || rank === "SBLT") service = "RAN";
+      if (rank === "2LT") service = "ARA";
+      const phoneNumber = `04${Math.floor(1e7 + Math.random() * 9e7)}`.substring(0, 10);
+      const nameParts = name.split(", ");
+      const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase();
+      const traineeCallsign = `CHLE${Math.floor(Math.random() * 101) + 300}`;
+      trainees.push({
+        idNumber: generateRandomIdNumber(),
+        fullName: `${name} – ${courseName}`,
+        name,
+        rank,
+        course: courseName,
+        seatConfig: "Normal",
+        isPaused: Math.random() < 0.05,
+        // 5% chance of being paused
+        unit,
+        flight: getRandomFlight(),
+        service,
+        location,
+        phoneNumber,
+        email,
+        unavailability: [],
+        traineeCallsign,
+        permissions: ["Trainee"]
+        // lastEventDate and lastFlightDate will be populated by the scoring simulation
+      });
+    }
+  });
+  return trainees.sort(() => Math.random() - 0.5);
+};
+const generateInstructors = (targetLocation) => {
+  const qfis = [];
+  const simIps = [];
+  let qfiCallsignCounter = 10;
+  const categories = ["UnCat", "D", "C", "B", "A"];
+  const isESL = targetLocation === "ESL";
+  const num1FTSExecutives = isESL ? 4 : 0;
+  const executiveRanks = ["WGCDR", ...Array(5).fill("SQNLDR")];
+  for (let i = 0; i < executiveRanks.length; i++) {
+    const rank = executiveRanks[i];
+    let service = "RAAF";
+    const randService = Math.random();
+    if (randService > 0.95) service = "ARA";
+    else if (randService > 0.9) service = "RAN";
+    const name = generateRandomName();
+    const nameParts = name.split(", ");
+    const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, "");
+    const isCommandingOfficer = rank === "WGCDR";
+    const isCFI = !isCommandingOfficer && Math.random() < 0.2;
+    qfis.push({
+      idNumber: generateRandomIdNumber(),
+      name,
+      rank,
+      role: "QFI",
+      callsignNumber: qfiCallsignCounter++,
+      service,
+      category: "A",
+      isTestingOfficer: true,
+      isQFI: true,
+      isOFI: false,
+      seatConfig: "Normal",
+      isExecutive: true,
+      isFlyingSupervisor: true,
+      isIRE: Math.random() < 0.2,
+      isCommandingOfficer,
+      isCFI,
+      location: isESL ? "East Sale" : "Pearce",
+      unit: isESL ? i < num1FTSExecutives ? "1FTS" : "CFS" : "2FTS",
+      unavailability: [],
+      email,
+      permissions: ["Staff", "Course Supervisor", "Admin"],
+      flight: isCommandingOfficer || isCFI ? "EXEC" : getRandomFlight()
+    });
+  }
+  const num1FTSFltlts = isESL ? 34 : 0;
+  const numCFSFltlts = isESL ? 15 : 0;
+  const num2FTSFltlts = isESL ? 0 : 31;
+  const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
+  for (let i = 0; i < numFltlts; i++) {
+    let service = "RAAF";
+    const phoneNumber = `04${Math.floor(1e7 + Math.random() * 9e7)}`.substring(0, 10);
+    const name = generateRandomName();
+    const nameParts = name.split(", ");
+    const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, "");
+    const randService = Math.random();
+    if (randService > 0.95) service = "ARA";
+    else if (randService > 0.9) service = "RAN";
+    const isExecutive = Math.random() < 0.1;
+    qfis.push({
+      idNumber: generateRandomIdNumber(),
+      name,
+      rank: "FLTLT",
+      role: "QFI",
+      callsignNumber: qfiCallsignCounter++,
+      service,
+      category: categories[Math.floor(Math.random() * categories.length)],
+      seatConfig: "Normal",
+      isExecutive,
+      isFlyingSupervisor: false,
+      isTestingOfficer: false,
+      isQFI: true,
+      isOFI: false,
+      isIRE: isExecutive && Math.random() < 0.2,
+      location: isESL ? "East Sale" : "Pearce",
+      unit: isESL ? i < num1FTSFltlts ? "1FTS" : "CFS" : "2FTS",
+      flight: getRandomFlight(),
+      phoneNumber,
+      email,
+      unavailability: [],
+      permissions: ["Staff"]
+    });
+  }
+  const shuffledFltltIndices = Array.from(Array(numFltlts).keys()).sort(() => Math.random() - 0.5);
+  const fltltSupervisorIndices = new Set(shuffledFltltIndices.slice(0, 5));
+  const execOffset = 6;
+  fltltSupervisorIndices.forEach((index) => {
+    const fltlt = qfis[execOffset + index];
+    if (fltlt) {
+      fltlt.isFlyingSupervisor = true;
+      fltlt.isTestingOfficer = Math.random() < 0.4;
+      if (fltlt.isFlyingSupervisor) {
+        fltlt.permissions?.push("Course Supervisor");
+      }
+    }
+  });
+  if (isESL) {
+    const joeBloggs = {
+      idNumber: generateRandomIdNumber(),
+      name: "Bloggs, Joe",
+      rank: "FLTLT",
+      role: "QFI",
+      callsignNumber: 99,
+      service: "RAAF",
+      category: "A",
+      isTestingOfficer: true,
+      isQFI: true,
+      isOFI: false,
+      seatConfig: "Normal",
+      isExecutive: true,
+      isFlyingSupervisor: true,
+      isIRE: true,
+      location: "East Sale",
+      unit: "CFS",
+      flight: "A",
+      phoneNumber: "0412345678",
+      email: "joe.bloggs@flightschool.mil",
+      unavailability: [],
+      permissions: ["Staff", "Ops", "Course Supervisor", "Admin", "Super Admin"]
+    };
+    usedNames.add("Bloggs, Joe");
+    qfis.push(joeBloggs);
+  }
+  const numSimIps = 4;
+  for (let i = 0; i < numSimIps; i++) {
+    const phoneNumber = `04${Math.floor(1e7 + Math.random() * 9e7)}`.substring(0, 10);
+    const name = generateRandomName();
+    const nameParts = name.split(", ");
+    const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, "");
+    simIps.push({
+      idNumber: generateRandomIdNumber(),
+      name,
+      rank: "Mr",
+      role: "SIM IP",
+      callsignNumber: 0,
+      service: void 0,
+      category: "UnCat",
+      isTestingOfficer: false,
+      isQFI: false,
+      isOFI: false,
+      seatConfig: "Normal",
+      isExecutive: false,
+      isFlyingSupervisor: false,
+      isIRE: false,
+      location: isESL ? "East Sale" : "Pearce",
+      unit: isESL ? i < 3 ? "1FTS" : "CFS" : "2FTS",
+      // Deterministic: 3 to 1FTS, 1 to CFS
+      phoneNumber,
+      email,
+      unavailability: [],
+      permissions: ["Staff"]
+    });
+  }
+  const rankOrder = {
+    "WGCDR": 1,
+    "SQNLDR": 2,
+    "FLTLT": 3,
+    "FLGOFF": 4,
+    "PLTOFF": 5,
+    "Mr": 6
+  };
+  const sortedQfis = qfis.sort((a, b) => {
+    const rankA = rankOrder[a.rank] || 99;
+    const rankB = rankOrder[b.rank] || 99;
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+    return a.name.localeCompare(b.name);
+  });
+  return [...sortedQfis, ...simIps.sort((a, b) => a.name.localeCompare(b.name))];
+};
+const courseProgressRanges = {
+  "ADF301": { start: "BIF4", end: "BGF23" },
+  "ADF302": { start: "BGF15", end: "BIF4" },
+  "ADF303": { start: "BGF6", end: "BGF17" },
+  "FIC 210": { start: "BGF1", end: "BGF5" },
+  "FIC211": { start: "BGF1", end: "BGF10" },
+  "ADF304": { start: "BGF1", end: "BGF10" },
+  "ADF305": { start: "BGF5", end: "BGF15" },
+  "IFF 6": { start: "BIF1", end: "BIF5" }
+};
+const simulateProgressAndScores = (trainees, syllabus, instructors) => {
+  const scoreMap = /* @__PURE__ */ new Map();
+  const qfiInstructors = instructors.filter((i) => i.role === "QFI");
+  const syllabusIds = syllabus.map((s) => s.code);
+  trainees.forEach((trainee) => {
+    const range = courseProgressRanges[trainee.course];
+    if (!range) {
+      scoreMap.set(trainee.fullName, []);
+      return;
+    }
+    const startIndex = syllabusIds.indexOf(range.start);
+    const endIndex = syllabusIds.indexOf(range.end);
+    if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
+      scoreMap.set(trainee.fullName, []);
+      return;
+    }
+    const progressIndex = Math.floor(Math.random() * (endIndex - startIndex + 1)) + startIndex;
+    const completedEvents = syllabus.slice(0, progressIndex);
+    const traineeScores = [];
+    let latestEventDate = null;
+    let latestFlightDate = null;
+    const today = /* @__PURE__ */ new Date();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 180);
+    completedEvents.forEach((event) => {
+      let scoreValue;
+      if (event.code.includes("MB")) {
+        scoreValue = 5;
+      } else if (event.type === "Ground School") {
+        scoreValue = 5;
+      } else {
+        scoreValue = Math.floor(Math.random() * 5) + 1;
+      }
+      const instructor = qfiInstructors.length > 0 ? qfiInstructors[Math.floor(Math.random() * qfiInstructors.length)].name : "Unknown Instructor";
+      const daysToAdd = Math.floor(Math.random() * 3) + 1;
+      startDate.setDate(startDate.getDate() + daysToAdd);
+      const scoreDate = new Date(startDate);
+      traineeScores.push({
+        event: event.code,
+        score: scoreValue,
+        date: scoreDate.toISOString().split("T")[0],
+        instructor,
+        notes: scoreValue === 5 ? `Ground event completed for ${event.code}.` : `Simulated score for ${event.code}.`,
+        details: scoreValue === 5 ? [] : [{ criteria: "General Handling", score: scoreValue, comment: "Auto-generated comment." }]
+      });
+      latestEventDate = scoreDate;
+      if (event.type === "Flight") {
+        latestFlightDate = scoreDate;
+      }
+    });
+    scoreMap.set(trainee.fullName, traineeScores);
+    if (latestEventDate) {
+      trainee.lastEventDate = latestEventDate.toISOString().split("T")[0];
+    }
+    if (latestFlightDate) {
+      trainee.lastFlightDate = latestFlightDate.toISOString().split("T")[0];
+    } else if (latestEventDate) {
+      trainee.lastFlightDate = latestEventDate.toISOString().split("T")[0];
+    }
+  });
+  return scoreMap;
+};
+const allocateInstructors = (trainees, instructors) => {
+  const allocatableInstructors = instructors.filter((i) => i.role === "QFI");
+  if (!allocatableInstructors.length || !trainees.length) return trainees;
+  const traineesWithAssignments = JSON.parse(JSON.stringify(trainees));
+  const eligibleTrainees = traineesWithAssignments.filter((t) => !t.course.includes("FIC"));
+  if (!eligibleTrainees.length) return traineesWithAssignments;
+  traineesWithAssignments.forEach((t) => {
+    if (!Array.isArray(t.primaryInstructor)) {
+      t.primaryInstructor = t.primaryInstructor ? [t.primaryInstructor] : [];
+    }
+    if (!Array.isArray(t.secondaryInstructor)) {
+      t.secondaryInstructor = t.secondaryInstructor ? [t.secondaryInstructor] : [];
+    }
+  });
+  const MAX_PER_INSTRUCTOR = 3;
+  const primaryLoad = /* @__PURE__ */ new Map();
+  const secondaryLoad = /* @__PURE__ */ new Map();
+  allocatableInstructors.forEach((i) => {
+    primaryLoad.set(i.name, 0);
+    secondaryLoad.set(i.name, 0);
+  });
+  const getInstructorsByUnit = (unit, loadMap) => {
+    if (!unit) return [];
+    return allocatableInstructors.filter((i) => i.unit === unit && (loadMap.get(i.name) ?? 0) < MAX_PER_INSTRUCTOR).sort((a, b) => (loadMap.get(a.name) ?? 0) - (loadMap.get(b.name) ?? 0));
+  };
+  for (let round = 0; round < 2; round++) {
+    for (const trainee of eligibleTrainees) {
+      const primaries = trainee.primaryInstructor;
+      if (primaries.length > round) continue;
+      if (!trainee.unit) continue;
+      const candidates = getInstructorsByUnit(trainee.unit, primaryLoad).filter((i) => !primaries.includes(i.name));
+      if (!candidates.length) continue;
+      primaries.push(candidates[0].name);
+      primaryLoad.set(candidates[0].name, (primaryLoad.get(candidates[0].name) ?? 0) + 1);
+    }
+  }
+  for (let round = 0; round < 2; round++) {
+    for (const trainee of eligibleTrainees) {
+      const primaries = trainee.primaryInstructor;
+      const secondaries = trainee.secondaryInstructor;
+      if (secondaries.length > round) continue;
+      if (!trainee.unit) continue;
+      const candidates = getInstructorsByUnit(trainee.unit, secondaryLoad).filter((i) => !secondaries.includes(i.name) && !primaries.includes(i.name));
+      const fallback = candidates.length > 0 ? candidates : getInstructorsByUnit(trainee.unit, secondaryLoad).filter((i) => !secondaries.includes(i.name));
+      if (!fallback.length) continue;
+      secondaries.push(fallback[0].name);
+      secondaryLoad.set(fallback[0].name, (secondaryLoad.get(fallback[0].name) ?? 0) + 1);
+    }
+  }
+  return traineesWithAssignments;
+};
+const generateFullSchedule = (instructors, trainees, courses, aircraftCount, location, date) => {
+  const newEvents = [];
+  const personnelSchedule = {};
+  const areas = ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"];
+  const courseColors = Object.fromEntries(courses.map((c) => [c.name, c.color]));
+  const isAvailable = (personName, startTime, duration) => {
+    if (!personnelSchedule[personName]) {
+      return true;
+    }
+    const endTime = startTime + duration;
+    return !personnelSchedule[personName].some(
+      (slot) => startTime < slot.end && endTime > slot.start
+    );
+  };
+  const bookPerson = (personName, startTime, duration) => {
+    if (!personnelSchedule[personName]) {
+      personnelSchedule[personName] = [];
+    }
+    personnelSchedule[personName].push({ start: startTime, end: startTime + duration });
+  };
+  const waves = [
+    { start: 8, name: "AM" },
+    { start: 10.5, name: "MID" },
+    { start: 13.5, name: "PM" }
+  ];
+  const timeBetweenTakeoffs = 0.1;
+  const qfis = instructors.filter((i) => i.role === "QFI");
+  const simIps = instructors.filter((i) => i.role === "SIM IP");
+  const flightSyllabus = INITIAL_SYLLABUS_DETAILS.filter((s) => s.code.startsWith("BGF") && s.type === "Flight");
+  waves.forEach((wave) => {
+    for (let i = 0; i < aircraftCount; i++) {
+      const startTime = wave.start + i * timeBetweenTakeoffs;
+      const syllabusItem = flightSyllabus[Math.floor(Math.random() * flightSyllabus.length)];
+      if (!syllabusItem) continue;
+      const duration = syllabusItem.flightOrSimHours;
+      const instructor = qfis.find((inst) => isAvailable(inst.name, startTime, duration));
+      if (!instructor) continue;
+      const trainee = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
+      if (!trainee) continue;
+      bookPerson(instructor.name, startTime, duration);
+      bookPerson(trainee.fullName, startTime, duration);
+      newEvents.push({
+        id: v4(),
+        date,
+        type: "flight",
+        instructor: instructor.name,
+        student: trainee.fullName,
+        flightNumber: syllabusItem.code,
+        duration,
+        startTime,
+        resourceId: `PC-21 ${i + 1}`,
+        color: courseColors[trainee.course] || "bg-gray-400/50",
+        flightType: "Dual",
+        locationType: "Local",
+        origin: location,
+        destination: location,
+        area: areas[Math.floor(Math.random() * areas.length)]
+      });
+    }
+  });
+  const ftdSyllabus = INITIAL_SYLLABUS_DETAILS.filter((s) => s.type === "FTD");
+  const groundSyllabus = INITIAL_SYLLABUS_DETAILS.filter((s) => s.type === "Ground School" && s.code.includes("MB"));
+  for (let i = 0; i < 2; i++) {
+    const startTime = 9 + i * 2.5;
+    const syllabusItem = ftdSyllabus[Math.floor(Math.random() * ftdSyllabus.length)];
+    if (!syllabusItem) continue;
+    const duration = syllabusItem.flightOrSimHours;
+    const simIp = simIps.find((ip) => isAvailable(ip.name, startTime, duration));
+    if (!simIp) continue;
+    const trainee = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
+    if (!trainee) continue;
+    bookPerson(simIp.name, startTime, duration);
+    bookPerson(trainee.fullName, startTime, duration);
+    newEvents.push({
+      id: v4(),
+      date,
+      type: "ftd",
+      instructor: simIp.name,
+      student: trainee.fullName,
+      flightNumber: syllabusItem.code,
+      duration,
+      startTime,
+      resourceId: `FTD ${i + 1}`,
+      color: "bg-indigo-400/50",
+      flightType: "Dual",
+      locationType: "Local",
+      origin: location,
+      destination: location
+    });
+  }
+  const groundSyllabusItem = groundSyllabus[Math.floor(Math.random() * groundSyllabus.length)];
+  const qfiForGround = qfis.find((q) => isAvailable(q.name, 16, 1));
+  const courseForGround = courses[0]?.name;
+  const traineesForGround = courseForGround ? trainees.filter((t) => t.course === courseForGround && isAvailable(t.fullName, 16, 1)).slice(0, 10) : [];
+  if (qfiForGround && traineesForGround.length > 0 && groundSyllabusItem) {
+    bookPerson(qfiForGround.name, 16, 1);
+    traineesForGround.forEach((t) => bookPerson(t.fullName, 16, 1));
+    const isCPT = groundSyllabusItem.methodOfDelivery.includes("CPT");
+    const eventType = isCPT ? "cpt" : "ground";
+    const resourceId = isCPT ? "CPT 1" : "Ground 1";
+    newEvents.push({
+      id: v4(),
+      date,
+      type: eventType,
+      instructor: qfiForGround.name,
+      attendees: traineesForGround.map((t) => t.fullName),
+      flightNumber: groundSyllabusItem.code,
+      duration: 1,
+      startTime: 16,
+      resourceId,
+      color: "bg-teal-400/50",
+      flightType: "Dual",
+      locationType: "Local",
+      origin: location,
+      destination: location
+    });
+  }
+  return newEvents;
+};
+const generateHistoricalEvents = (instructors, trainees, syllabus) => {
+  const events = [];
+  const today = /* @__PURE__ */ new Date();
+  const startHistoryDate = new Date(today.getFullYear(), today.getMonth() - 24, 1);
+  const flightSyllabus = syllabus.filter((s) => s.type === "Flight" && !s.code.includes("MB"));
+  const ftdSyllabus = syllabus.filter((s) => s.type === "FTD");
+  trainees.forEach((trainee) => {
+    if (trainee.isPaused) return;
+    for (let i = 0; i < 24; i++) {
+      const monthDate = new Date(startHistoryDate.getFullYear(), startHistoryDate.getMonth() + i, 1);
+      const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+      for (let j = 0; j < 5; j++) {
+        const isFlight = Math.random() > 0.4;
+        const item = isFlight ? flightSyllabus[Math.floor(Math.random() * flightSyllabus.length)] : ftdSyllabus[Math.floor(Math.random() * ftdSyllabus.length)];
+        if (!item) continue;
+        const instructor = instructors[Math.floor(Math.random() * instructors.length)];
+        const dayOfMonth = Math.floor(Math.random() * daysInMonth) + 1;
+        const dateStr = new Date(monthDate.getFullYear(), monthDate.getMonth(), dayOfMonth).toISOString().split("T")[0];
+        const startTime = 8 + Math.floor(Math.random() * 13);
+        events.push({
+          id: v4(),
+          date: dateStr,
+          type: isFlight ? "flight" : "ftd",
+          instructor: instructor.name,
+          student: trainee.fullName,
+          flightNumber: item.code,
+          duration: item.duration,
+          startTime,
+          resourceId: isFlight ? `PC-21 ${Math.floor(Math.random() * 20) + 1}` : `FTD ${Math.floor(Math.random() * 5) + 1}`,
+          color: "bg-gray-500",
+          flightType: "Dual",
+          locationType: "Local",
+          origin: "ESL",
+          destination: "ESL"
+        });
+      }
+    }
+  });
+  return events;
+};
+const eslCourses = [
+  { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
+  { name: "ADF302", color: "bg-purple-400/50", startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
+  { name: "ADF303", color: "bg-yellow-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
+  { name: "FIC 210", color: "bg-pink-400/50", startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+];
+const peaCourses = [
+  { name: "ADF304", color: "bg-teal-400/50", startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
+  { name: "ADF305", color: "bg-indigo-400/50", startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
+  { name: "IFF 6", color: "bg-cyan-400/50", startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
+  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
+];
+const generateDataSet = (location) => {
+  const isESL = location === "ESL";
+  const courses = isESL ? eslCourses : peaCourses;
+  const aircraftCount = isESL ? 15 : 12;
+  const instructors = generateInstructors(location);
+  let trainees = [];
+  courses.forEach((c) => {
+    const total = c.raafStart + c.navyStart + c.armyStart;
+    const distribution = [{ rank: "PLTOFF", count: total }];
+    trainees = [...trainees, ...generateTraineesForCourse(c.name, distribution, isESL ? "1FTS" : "2FTS")];
+  });
+  const allocatedTrainees = allocateInstructors(trainees, instructors);
+  const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
+  const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
+    const timezoneOffset = 11;
+    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
+    const adjustedDate = new Date(date.getTime() + offsetMs);
+    const year = adjustedDate.getUTCFullYear();
+    const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(adjustedDate.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const todayStr = getLocalDateString();
+  let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
+  const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
+  events = [...events, ...historicalEvents];
+  const courseColors = {};
+  const coursePriorities = [];
+  const coursePercentages = /* @__PURE__ */ new Map();
+  const archivedCourses = {};
+  courses.forEach((c, idx) => {
+    courseColors[c.name] = c.color;
+    coursePriorities.push(c.name);
+    coursePercentages.set(c.name, Math.floor(100 / courses.length));
+  });
+  const traineeLMPs = /* @__PURE__ */ new Map();
+  allocatedTrainees.forEach((t) => traineeLMPs.set(t.fullName, INITIAL_SYLLABUS_DETAILS));
+  return {
+    instructors,
+    trainees: allocatedTrainees,
+    scores,
+    pt051Assessments: /* @__PURE__ */ new Map(),
+    courses,
+    courseColors,
+    archivedCourses,
+    coursePriorities,
+    coursePercentages,
+    traineeLMPs,
+    events
+  };
+};
+const ESL_DATA = generateDataSet("ESL");
+generateDataSet("PEA");
 const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
   const [settings, setSettings] = reactExports.useState({
     staff: false,
@@ -80645,9 +82762,25 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     }
   };
   const handleMigrateStaff = async () => {
-    setMigrationState("error");
+    setMigrationState("running");
     setMigrationResult(null);
-    console.warn("Migration tool is deprecated - staff data is already in the database.");
+    try {
+      const mockInstructors = ESL_DATA.instructors;
+      console.log(`🚀 Migrating ${mockInstructors.length} mock staff to database...`);
+      const result = await migratePersonnelToDatabase(mockInstructors);
+      if (result.success) {
+        setMigrationState("done");
+        setMigrationResult({ inserted: result.inserted, skipped: result.skipped, errors: result.errors });
+        onShowSuccess(`Migration complete: ${result.inserted} staff inserted, ${result.skipped} already existed.`);
+      } else {
+        setMigrationState("error");
+        setMigrationResult(null);
+        console.error("Migration failed:", result.error);
+      }
+    } catch (err) {
+      console.error("Migration error:", err);
+      setMigrationState("error");
+    }
   };
   const Toggle = ({ enabled, onToggle }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
     "button",
@@ -80663,7 +82796,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 86,
+          lineNumber: 101,
           columnNumber: 7
         },
         void 0
@@ -80673,7 +82806,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     false,
     {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 80,
+      lineNumber: 95,
       columnNumber: 5
     },
     void 0
@@ -80682,85 +82815,85 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: `w-8 h-8 rounded-full ${iconBg} flex items-center justify-center`, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: `h-4 w-4 ${iconColor}`, viewBox: "0 0 20 20", fill: "currentColor", children: icon }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 108,
+        lineNumber: 123,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 107,
+        lineNumber: 122,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white font-semibold", children: label }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 113,
+          lineNumber: 128,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs mt-0.5", children: description }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 114,
+          lineNumber: 129,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 112,
+        lineNumber: 127,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 106,
+      lineNumber: 121,
       columnNumber: 9
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 105,
+      lineNumber: 120,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-3 ml-4", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `text-xs font-medium ${enabled ? labelColor : "text-gray-500"}`, children: enabled ? "ON" : "OFF" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 119,
+        lineNumber: 134,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Toggle, { enabled, onToggle }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 122,
+        lineNumber: 137,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 118,
+      lineNumber: 133,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-    lineNumber: 104,
+    lineNumber: 119,
     columnNumber: 5
   }, void 0);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-4", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 overflow-hidden", children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-800/80 border-b border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-lg font-bold text-sky-400", children: "Data Sources" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 132,
+        lineNumber: 147,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 131,
+        lineNumber: 146,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400 mt-1", children: "Control which data sources are active. Changes take effect on next app reload." }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 134,
+        lineNumber: 149,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 130,
+      lineNumber: 145,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-6", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Database Records" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 143,
+          lineNumber: 158,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-3", children: [
@@ -80776,7 +82909,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-green-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z", clipRule: "evenodd" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 154,
+                lineNumber: 169,
                 columnNumber: 23
               }, void 0)
             },
@@ -80784,7 +82917,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 146,
+              lineNumber: 161,
               columnNumber: 15
             },
             void 0
@@ -80801,7 +82934,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-teal-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 165,
+                lineNumber: 180,
                 columnNumber: 23
               }, void 0)
             },
@@ -80809,30 +82942,30 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 157,
+              lineNumber: 172,
               columnNumber: 15
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 144,
+          lineNumber: 159,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 142,
+        lineNumber: 157,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-700" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 172,
+        lineNumber: 187,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "MockData" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 176,
+          lineNumber: 191,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-3", children: [
@@ -80848,7 +82981,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-sky-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 187,
+                lineNumber: 202,
                 columnNumber: 23
               }, void 0)
             },
@@ -80856,7 +82989,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 179,
+              lineNumber: 194,
               columnNumber: 15
             },
             void 0
@@ -80873,7 +83006,7 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
               labelColor: "text-indigo-400",
               icon: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 198,
+                lineNumber: 213,
                 columnNumber: 23
               }, void 0)
             },
@@ -80881,30 +83014,30 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 190,
+              lineNumber: 205,
               columnNumber: 15
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 177,
+          lineNumber: 192,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 175,
+        lineNumber: 190,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "border-t border-gray-700" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 205,
+        lineNumber: 220,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3", children: "Migration Tools" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 209,
+          lineNumber: 224,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-700/40 rounded-lg border border-gray-600 space-y-4", children: [
@@ -80912,68 +83045,68 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-8 h-8 rounded-full bg-violet-900/50 flex items-center justify-center flex-shrink-0 mt-0.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-violet-400", viewBox: "0 0 20 20", fill: "currentColor", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 214,
+                lineNumber: 229,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 215,
+                lineNumber: 230,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 216,
+                lineNumber: 231,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 213,
+              lineNumber: 228,
               columnNumber: 19
             }, void 0) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 212,
+              lineNumber: 227,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-white font-semibold", children: "Migrate Mock Staff to Database" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 220,
+                lineNumber: 235,
                 columnNumber: 19
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-xs mt-0.5", children: "Saves the current mock-generated staff records permanently into the database. Existing records (by ID number) are skipped. Once migrated, staff will persist across app resets." }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 221,
+                lineNumber: 236,
                 columnNumber: 19
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 219,
+              lineNumber: 234,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 211,
+            lineNumber: 226,
             columnNumber: 15
           }, void 0),
           migrationState === "done" && migrationResult && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-3 bg-green-900/30 border border-green-700/50 rounded-lg", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2 mb-1", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-green-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 233,
+                lineNumber: 248,
                 columnNumber: 23
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 232,
+                lineNumber: 247,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-green-400 text-sm font-semibold", children: "Migration Complete" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 235,
+                lineNumber: 250,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 231,
+              lineNumber: 246,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-xs text-green-300/80 space-y-0.5", children: [
@@ -80981,85 +83114,85 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
                 "✅ Inserted: ",
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-green-300", children: migrationResult.inserted }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 238,
+                  lineNumber: 253,
                   columnNumber: 36
                 }, void 0),
                 " new staff records"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 238,
+                lineNumber: 253,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
                 "⏭️ Skipped: ",
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-green-300", children: migrationResult.skipped }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 239,
+                  lineNumber: 254,
                   columnNumber: 36
                 }, void 0),
                 " already existed"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 239,
+                lineNumber: 254,
                 columnNumber: 21
               }, void 0),
               migrationResult.errors && migrationResult.errors.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
                 "⚠️ Errors: ",
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-amber-300", children: migrationResult.errors.length }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 241,
+                  lineNumber: 256,
                   columnNumber: 37
                 }, void 0),
                 " records failed"
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 241,
+                lineNumber: 256,
                 columnNumber: 23
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-green-400/70 mt-1", children: "Now toggle Staff MockData OFF and reload to use only database records." }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 243,
+                lineNumber: 258,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 237,
+              lineNumber: 252,
               columnNumber: 19
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 230,
+            lineNumber: 245,
             columnNumber: 17
           }, void 0),
           migrationState === "error" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-3 bg-red-900/30 border border-red-700/50 rounded-lg", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 252,
+                lineNumber: 267,
                 columnNumber: 23
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 251,
+                lineNumber: 266,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-red-400 text-sm font-semibold", children: "Migration Failed" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 254,
+                lineNumber: 269,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 250,
+              lineNumber: 265,
               columnNumber: 19
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-red-400/80 text-xs mt-1", children: "Could not connect to the database. Check server logs for details." }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 256,
+              lineNumber: 271,
               columnNumber: 19
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 249,
+            lineNumber: 264,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -81072,62 +83205,12 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "animate-spin h-4 w-4 text-violet-400", xmlns: "http://www.w3.org/2000/svg", fill: "none", viewBox: "0 0 24 24", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                    lineNumber: 274,
+                    lineNumber: 289,
                     columnNumber: 23
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                    lineNumber: 275,
-                    columnNumber: 23
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 273,
-                  columnNumber: 21
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Migrating..." }, void 0, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 277,
-                  columnNumber: 21
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 272,
-                columnNumber: 19
-              }, void 0) : migrationState === "done" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }, void 0, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 282,
-                  columnNumber: 23
-                }, void 0) }, void 0, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 281,
-                  columnNumber: 21
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Re-run Migration" }, void 0, false, {
-                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 284,
-                  columnNumber: 21
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 280,
-                columnNumber: 19
-              }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" }, void 0, false, {
-                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                    lineNumber: 289,
-                    columnNumber: 23
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" }, void 0, false, {
-                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
                     lineNumber: 290,
-                    columnNumber: 23
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" }, void 0, false, {
-                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                    lineNumber: 291,
                     columnNumber: 23
                   }, void 0)
                 ] }, void 0, true, {
@@ -81135,14 +83218,64 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
                   lineNumber: 288,
                   columnNumber: 21
                 }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Migrate Mock Staff to Database" }, void 0, false, {
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Migrating..." }, void 0, false, {
                   fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                  lineNumber: 293,
+                  lineNumber: 292,
                   columnNumber: 21
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
                 lineNumber: 287,
+                columnNumber: 19
+              }, void 0) : migrationState === "done" ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                  lineNumber: 297,
+                  columnNumber: 23
+                }, void 0) }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                  lineNumber: 296,
+                  columnNumber: 21
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Re-run Migration" }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                  lineNumber: 299,
+                  columnNumber: 21
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                lineNumber: 295,
+                columnNumber: 19
+              }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4", viewBox: "0 0 20 20", fill: "currentColor", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z" }, void 0, false, {
+                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                    lineNumber: 304,
+                    columnNumber: 23
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z" }, void 0, false, {
+                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                    lineNumber: 305,
+                    columnNumber: 23
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z" }, void 0, false, {
+                    fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                    lineNumber: 306,
+                    columnNumber: 23
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                  lineNumber: 303,
+                  columnNumber: 21
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "Migrate Mock Staff to Database" }, void 0, false, {
+                  fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                  lineNumber: 308,
+                  columnNumber: 21
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
+                lineNumber: 302,
                 columnNumber: 19
               }, void 0)
             },
@@ -81150,177 +83283,177 @@ const DataSourcesSettings = ({ onShowSuccess, onSettingsChanged }) => {
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 260,
+              lineNumber: 275,
               columnNumber: 15
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 210,
+          lineNumber: 225,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 208,
+        lineNumber: 223,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-gray-700/30 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Current Configuration" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 302,
+          lineNumber: 317,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-2 text-xs", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.staffDb ? "bg-green-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 305,
+              lineNumber: 320,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Staff DB: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.staffDb ? "text-green-400" : "text-gray-500", children: settings.staffDb ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 306,
+                lineNumber: 321,
                 columnNumber: 59
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 306,
+              lineNumber: 321,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 304,
+            lineNumber: 319,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.traineeDb ? "bg-teal-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 309,
+              lineNumber: 324,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Trainee DB: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.traineeDb ? "text-teal-400" : "text-gray-500", children: settings.traineeDb ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 310,
+                lineNumber: 325,
                 columnNumber: 61
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 310,
+              lineNumber: 325,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 308,
+            lineNumber: 323,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.staff ? "bg-sky-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 313,
+              lineNumber: 328,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Staff Mock: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.staff ? "text-sky-400" : "text-gray-500", children: settings.staff ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 314,
+                lineNumber: 329,
                 columnNumber: 61
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 314,
+              lineNumber: 329,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 312,
+            lineNumber: 327,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center space-x-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `w-2 h-2 rounded-full ${settings.trainee ? "bg-indigo-400" : "bg-gray-600"}` }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 317,
+              lineNumber: 332,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300", children: [
               "Trainee Mock: ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: settings.trainee ? "text-indigo-400" : "text-gray-500", children: settings.trainee ? "ON" : "OFF" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-                lineNumber: 318,
+                lineNumber: 333,
                 columnNumber: 63
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-              lineNumber: 318,
+              lineNumber: 333,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 316,
+            lineNumber: 331,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 303,
+          lineNumber: 318,
           columnNumber: 13
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 301,
+        lineNumber: 316,
         columnNumber: 11
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 bg-amber-900/20 border border-amber-700/50 rounded-lg", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-start space-x-3", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 text-amber-400 mt-0.5 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { fillRule: "evenodd", d: "M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 327,
+          lineNumber: 342,
           columnNumber: 17
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 326,
+          lineNumber: 341,
           columnNumber: 15
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-amber-300 text-sm font-semibold", children: "Reload Required" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 330,
+            lineNumber: 345,
             columnNumber: 17
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-amber-400/80 text-xs mt-1", children: "After toggling, reload the app (refresh the page) for changes to take effect. To use MockData only: turn DB OFF and MockData ON. To use Database only: turn MockData OFF and DB ON." }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-            lineNumber: 331,
+            lineNumber: 346,
             columnNumber: 17
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-          lineNumber: 329,
+          lineNumber: 344,
           columnNumber: 15
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 325,
+        lineNumber: 340,
         columnNumber: 13
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-        lineNumber: 324,
+        lineNumber: 339,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-      lineNumber: 139,
+      lineNumber: 154,
       columnNumber: 9
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-    lineNumber: 129,
+    lineNumber: 144,
     columnNumber: 7
   }, void 0) }, void 0, false, {
     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/DataSourcesSettings.tsx",
-    lineNumber: 128,
+    lineNumber: 143,
     columnNumber: 5
   }, void 0);
 };
@@ -95055,1968 +97188,6 @@ const NextDayTraineeScheduleView = ({
     columnNumber: 5
   }, void 0);
 };
-const createSyllabusItem = (code, description, courses = ["BPC+IPC"]) => {
-  if (!code) {
-    console.error("❌ ERROR: createSyllabusItem called with undefined/null code parameter");
-    console.trace();
-  }
-  if (!description) {
-    console.error("❌ ERROR: createSyllabusItem called with undefined/null description parameter");
-    console.trace();
-  }
-  code = code || "";
-  description = description || "";
-  let phase = "BGF";
-  if (code.startsWith("BIF")) phase = "BIF";
-  else if (code.startsWith("BNF")) phase = "BNF";
-  else if (code.startsWith("BNAV")) phase = "BNAV";
-  else if (code.startsWith("FIC")) phase = "FIC";
-  else if (code.startsWith("AIT")) phase = "FIC";
-  else if (code.startsWith("WSO")) phase = "WSO";
-  else if (code.startsWith("OFI")) phase = "OFI";
-  let module = "Basic General Flying";
-  if (phase === "BIF") module = "Basic Instrument Flying";
-  else if (phase === "BNF") module = "Basic Night Flying";
-  else if (phase === "BNAV") module = "Basic Navigation";
-  else if (phase === "FIC") module = "Flight Instructor Course";
-  else if (phase === "WSO") module = "Weapons Systems Officer";
-  else if (phase === "OFI") module = "Operational Flying Instructor";
-  let methodOfDelivery = [];
-  let flightOrSimHours = 0;
-  let totalEventHours = 0;
-  let type = "Flight";
-  let sortieType = "Dual";
-  let preFlightTime = 0;
-  let postFlightTime = 0;
-  let location = "";
-  if (code.includes("FTD")) {
-    methodOfDelivery = ["FTD", "Brief", "Debrief"];
-    flightOrSimHours = 1.5;
-    totalEventHours = 2.5;
-    type = "FTD";
-    preFlightTime = 40 / 60;
-    postFlightTime = 30 / 60;
-    location = "FTD Complex";
-  } else if (code.includes("CPT")) {
-    methodOfDelivery = ["CPT", "Brief"];
-    flightOrSimHours = 1;
-    totalEventHours = 1;
-    type = "Ground School";
-    preFlightTime = 0;
-    postFlightTime = 0;
-    location = "CPT Rooms";
-  } else if (code.includes("MB") || code.includes("TUT") || code.includes("QUIZ") || code.includes("Lec")) {
-    methodOfDelivery = ["Classroom", "Brief"];
-    flightOrSimHours = 0;
-    totalEventHours = 1;
-    type = "Ground School";
-    preFlightTime = 0;
-    postFlightTime = 0;
-    location = "Classrooms";
-  } else {
-    methodOfDelivery = ["Aircraft", "Brief", "Debrief"];
-    if (code.startsWith("BNF")) {
-      flightOrSimHours = 1;
-      totalEventHours = 2.5;
-    } else {
-      flightOrSimHours = 1.2;
-      totalEventHours = 3;
-    }
-    type = "Flight";
-    if (["BGF11", "BGF18"].includes(code)) {
-      sortieType = "Solo";
-    } else {
-      sortieType = "Dual";
-    }
-    preFlightTime = 75 / 60;
-    postFlightTime = 30 / 60;
-    location = "Airfield";
-  }
-  const cleanedDescription = (description || "").replace(/\n/g, " ").replace(/;/g, "; ").replace(/\s\s+/g, " ").trim();
-  const eventDetails = cleanedDescription.split(";").map((s) => s.trim()).filter(Boolean);
-  const itemCode = (code || "").replace("*", "");
-  const isGround = type === "Ground School";
-  const dayNight = code.startsWith("BNF") || code === "Night SCT" ? "Night" : "Day";
-  return {
-    id: itemCode,
-    code: itemCode,
-    dayNight,
-    phase,
-    module,
-    eventDescription: description,
-    prerequisites: [],
-    prerequisitesGround: [],
-    prerequisitesFlying: [],
-    eventDetailsCommon: eventDetails,
-    eventDetailsSortie: [],
-    totalEventHours,
-    flightOrSimHours,
-    duration: isGround ? totalEventHours : flightOrSimHours,
-    preFlightTime,
-    postFlightTime,
-    type,
-    sortieType,
-    twrDiReqd: code === "BGF11" || code === "BGF18" ? "YES" : "NO",
-    cctOnly: code === "BGF10" ? "YES" : "NO",
-    location,
-    methodOfDelivery,
-    methodOfAssessment: ["Practical Assessment", "Debrief"],
-    resourcesPhysical: methodOfDelivery.includes("Aircraft") ? ["PC-21 Aircraft"] : methodOfDelivery.includes("FTD") ? ["PC-21 FTD"] : ["Classroom"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    courses
-  };
-};
-const syllabusItems = [
-  // BPC + IPC Items
-  createSyllabusItem("BGF MB1", "Preparation and Pre / Post Flight Admin"),
-  createSyllabusItem("BGF MB2", "Ground Operations and Checklist"),
-  createSyllabusItem("BGF CPT1", "Checklist Procedures - Ground"),
-  createSyllabusItem("BGF TUT1A", "Ejection Seat Strap-in"),
-  createSyllabusItem("BGF TUT1B", "FTD Safety Brief"),
-  createSyllabusItem("BGF TUT2", "Flight Preparation, Checklist and Walkaround"),
-  createSyllabusItem("BGF MB3", "Effects of Controls; Attitude Flying; Straight and Level; Turning"),
-  createSyllabusItem("BGF MB4", "Climbing and Descending and Climbing and Descending Turns"),
-  createSyllabusItem("BGF MB5", "Re-join; Landing; Local Circuit Procedures"),
-  createSyllabusItem("BGF MB6", "Emergency Handling and Procedures"),
-  createSyllabusItem("BGF CPT2", "Airborne Procedures"),
-  createSyllabusItem("BGF FTD1", "Strap in and Ground Procedures"),
-  createSyllabusItem("BGF MB7", "Normal Circuits"),
-  createSyllabusItem("BGF1", "Effects of Controls; Attitude Flying; Straight and Level; Turning; Steep Turn"),
-  createSyllabusItem("BGF FTD2", "Climbing; Descending; Climbing, Turning and Descending"),
-  createSyllabusItem("BGF2", "Basic AP Operation; Climbing; Descending; Climbing, Turning and Descending; Re-join; Landing"),
-  createSyllabusItem("BGF MB8", "Ground and Airborne Emergency Procedures"),
-  createSyllabusItem("BGF CPT3", "Emergency Procedures"),
-  createSyllabusItem("BGF MB9", "Wingover and Stalling"),
-  createSyllabusItem("BGF TUT3", "Stalling; Circuits"),
-  createSyllabusItem("BGF FTD3", "Normal Circuits - Base & Final; Go Around; Wingovers; Clean Stalls; Accelerated Stall"),
-  createSyllabusItem("BGF3", "Normal Circuit - Base and Final Technique; Go Around; Wingovers; Clean Stalls; Accelerated Stall"),
-  createSyllabusItem("BGF FTD4", "Emergency Procedures; Normal Circuit"),
-  createSyllabusItem("BGF4", "Configured Stalls; Normal Circuit"),
-  createSyllabusItem("BGF5", "Consolidate Stalls and Circuits"),
-  createSyllabusItem("BGF MB10", "Abnormal Recovery"),
-  createSyllabusItem("BGF MB11", "Solo Malfunctions"),
-  createSyllabusItem("BGF MB12", "Solo Briefing"),
-  createSyllabusItem("BGF CPT4", "Emergency Procedures"),
-  createSyllabusItem("BGF6", "Consolidate Circuits"),
-  createSyllabusItem("BGF MB13", "HUD Intro - Handling, Stalls, Normal CCT"),
-  createSyllabusItem("BGF CPT5", "HUD Intro"),
-  createSyllabusItem("PRE-SOLO QUIZ", "Pre-Solo Quiz"),
-  createSyllabusItem("BGF7", "HUD Intro - Handling, Stalls, Normal Circuit; Demo Abnormal Landing"),
-  createSyllabusItem("BGF FTD5", "Flapless & AIL PWR OFF S-l app; Circuit Consolidation"),
-  createSyllabusItem("BGF8", "Flapless & AIL PWR OFF S-1 app; Consolidation"),
-  createSyllabusItem("PERRT CPT1", "Hypoxia"),
-  createSyllabusItem("BGF9", "WSL Diversion; Controllability Check; Circuit Consolidation"),
-  createSyllabusItem("BGF MB14", "Low Level Circuit: Glide Circuit; Forced Landings"),
-  createSyllabusItem("BGF FTD6", "Emergency Handling - Solo"),
-  createSyllabusItem("BGF10", "Day Circuit Solo Check"),
-  createSyllabusItem("BGF11", "Day Circuit Solo"),
-  createSyllabusItem("BGF MB15", "G Warm Up; Basic Aerobatics; Unusual Attitude Recovery"),
-  createSyllabusItem("BGF MB16", "Spin Recovery"),
-  createSyllabusItem("BGF FTD7", "Gliding; Glide Circuit; Low Level Circuit"),
-  createSyllabusItem("BGF12", "Glide Circuit"),
-  createSyllabusItem("BGF13", "Low Level Circuit"),
-  createSyllabusItem("BGF14", "Unusual Attitude Recovery; G Warm Up; Wingover; Loop"),
-  createSyllabusItem("BGF FTD8", "Practice Forced Landing"),
-  createSyllabusItem("BGF15", "U/A NH NCR; Aileron Roll, Incipient Spin"),
-  createSyllabusItem("AREA SOLO QUIZ", "Area Solo Quiz"),
-  createSyllabusItem("BGF16", "Spin Recovery; PFL Area"),
-  createSyllabusItem("BGF TUT4", "Glide Circuit; Practice Forced Landing; Spinning; G Stall; G Warm Up; Basic Aerobatics; Unusual Attitude Recovery"),
-  createSyllabusItem("BGF FTD9", "Emergency Handling - Area Solo"),
-  createSyllabusItem("BGF17", "Area Solo Check"),
-  createSyllabusItem("BGF18", "Area Solo"),
-  createSyllabusItem("BGF19", "GF Consolidation"),
-  createSyllabusItem("BGF20", "General Flying Proficiency Test"),
-  createSyllabusItem("BIF MB1", "Basic Instrument Flying"),
-  createSyllabusItem("BIF MB2", "IF UA Recoveries; IF Orientation"),
-  createSyllabusItem("BIF TUT1", "Instrument Flying Basics; Radial Intercepts & Tracking"),
-  createSyllabusItem("BIF CPT1", "Instrument Flying Basics"),
-  createSyllabusItem("BIF CPT2", "Radial Intercept and Tracking"),
-  createSyllabusItem("BIF FTD1", "IF Take-off; S&L, Climbing, Turning and Descending; Steep Turn; Radar Vectors to Initial"),
-  createSyllabusItem("BIF FTD2", "Radial Intercept and Tracking; A Recovery"),
-  createSyllabusItem("BIF FTD3", "Basic IF Consolidation"),
-  createSyllabusItem("BIF1", "IF Take-off; S&; Climbing, Turning and Descending; Steep Turn; UA Recovery; Radar Vectors to Straight In Approach"),
-  createSyllabusItem("BIF2", "IF Consol; Radial Intercept and Tracking; RNP Demo"),
-  createSyllabusItem("BNF MB1", "Night Flying"),
-  createSyllabusItem("BNF FTD1", "Night Circuits"),
-  createSyllabusItem("BNF1", "Night Circuits"),
-  createSyllabusItem("BNF2", "Night Circuits"),
-  createSyllabusItem("BNF3", "Night Solo Check"),
-  createSyllabusItem("BNF4", "Night Solo"),
-  createSyllabusItem("BIF MB3", "Instrument Approaches"),
-  createSyllabusItem("BIF MB4", "Holding"),
-  createSyllabusItem("BIF MB5", "RNP Approach"),
-  createSyllabusItem("BIF TUT2", "RNP Approach; Missed & Circling Approach"),
-  createSyllabusItem("BIF CPT3", "RNP Approach"),
-  createSyllabusItem("BIF FTD4", "RNP Approach; Circling Approach"),
-  createSyllabusItem("BIF FTD5", "RNP Approach; Missed Approach"),
-  createSyllabusItem("BIF FTD6", "RNP Approach HUD Off"),
-  createSyllabusItem("BIF3", "RNP Approach; Circling Approach; Missed Approach"),
-  createSyllabusItem("BIF4", "IF Consol; RNP Approach - HUD Off"),
-  createSyllabusItem("BIF5", "Instrument Flying Proficiency Test"),
-  createSyllabusItem("BGF MB17", "Advanced GF"),
-  createSyllabusItem("BGF FTD10", "GF Consol; Intermediate Emergency Handling; Unfamiliar Airfield"),
-  createSyllabusItem("BGF21", "GF Consolidation; Barrel Roll; L MFD Fail"),
-  createSyllabusItem("BGF22", "GF Consolidation; Stall Turn"),
-  createSyllabusItem("BGF23", "GF Consolidation"),
-  createSyllabusItem("BGF24", "General Flying Test"),
-  createSyllabusItem("BNAV MB1", "Medium Level Nav"),
-  createSyllabusItem("BNAV TUT1", "Nav Planning Tutorial"),
-  createSyllabusItem("BNAV FTD1", "Medium Level Navigation"),
-  createSyllabusItem("BNAV1", "Medium Level Navigation (Land Away)"),
-  createSyllabusItem("BNAV2", "Medium Level Navigation (RTB)"),
-  createSyllabusItem("BNAV3 NAVPT", "Navigation Proficiency Test"),
-  createSyllabusItem("SCT GF", "Sector General Flying"),
-  createSyllabusItem("SCT IF", "Sector Instrument Flying"),
-  createSyllabusItem("SCT NAV", "Sector Navigation"),
-  createSyllabusItem("SCT FORM", "Sector Formation"),
-  createSyllabusItem("Night SCT", "Night Sector Training"),
-  // =========================================================================
-  // FIC SYLLABUS - MASTER LMP (Full Rebuild)
-  // Phase 1 / Module 1: FIC Core Events (MB, FTD, Flying)
-  // Phase 1 / Module 2: FIC Instrument Flying Events
-  // Phase 2 / Module 3: AIT Events
-  // =========================================================================
-  // --- Phase 1 / Module 1: FIC Core Events ---
-  {
-    id: "FIC MB1",
-    code: "FIC MB1",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Introduction to military flight instruction. Covers instructional theory, adult learning principles, lesson planning frameworks, and the standards required of a qualified flying instructor (QFI). Trainee will understand the role and responsibilities of an instructor on the PC-21.",
-    prerequisites: [],
-    prerequisitesGround: [],
-    prerequisitesFlying: [],
-    eventDetailsCommon: [
-      "Role of the Flying Instructor",
-      "Adult Learning Principles and Motivation",
-      "Lesson Planning and Sequencing",
-      "Standards and Assessment Framework",
-      "QFI Responsibilities and Duties"
-    ],
-    eventDetailsSortie: [],
-    totalEventHours: 2,
-    flightOrSimHours: 0,
-    duration: 2,
-    preFlightTime: 0,
-    postFlightTime: 0,
-    type: "Ground School",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Classroom", "Brief"],
-    methodOfAssessment: ["Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["Classroom"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Classrooms",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC MB2",
-    code: "FIC MB2",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Detailed study of instructional patter, two-crew communication standards, and right-hand seat operating procedures. Covers demonstration-performance technique, handling over/taking control, and common student error management. Trainee will be able to plan and deliver basic patter sequences prior to simulator entry.",
-    prerequisites: ["FIC MB1"],
-    prerequisitesGround: ["FIC MB1"],
-    prerequisitesFlying: [],
-    eventDetailsCommon: [
-      "Instructional Patter Structure and Delivery",
-      "Two-Crew Communication and Crew Resource Management",
-      "Right-Hand Seat Operating Procedures",
-      "Demonstration-Performance Technique",
-      "Handing Over and Taking Control Procedures",
-      "Identifying and Correcting Common Student Errors"
-    ],
-    eventDetailsSortie: [],
-    totalEventHours: 2,
-    flightOrSimHours: 0,
-    duration: 2,
-    preFlightTime: 0,
-    postFlightTime: 0,
-    type: "Ground School",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Classroom", "Brief"],
-    methodOfAssessment: ["Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["Classroom"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Classrooms",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC FTD1",
-    code: "FIC FTD1",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "First simulator instructional sortie. Trainee practices right-hand seat familiarisation, cockpit management, and delivery of circuit patter. Emphasis on patter accuracy, aircraft control from the right seat, and initial instructional technique. Conducted under close QFI supervision.",
-    prerequisites: ["FIC MB2"],
-    prerequisitesGround: ["FIC MB2"],
-    prerequisitesFlying: [],
-    eventDetailsCommon: [
-      "Right-Hand Seat Cockpit Familiarisation",
-      "Pre-flight and Startup Patter Delivery",
-      "Normal Circuit Patter – Downwind, Base, Final",
-      "Instructor Intervention Techniques",
-      "Post-sortie Debrief and Self-assessment"
-    ],
-    eventDetailsSortie: [
-      "Demonstrate startup, taxi and take-off patter",
-      "Conduct minimum two circuit patter sequences",
-      "Practice handing over and taking control"
-    ],
-    totalEventHours: 2.5,
-    flightOrSimHours: 1.5,
-    duration: 1.5,
-    preFlightTime: 0.67,
-    postFlightTime: 0.5,
-    type: "FTD",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["FTD", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 FTD"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "FTD Complex",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC FTD2",
-    code: "FIC FTD2",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Simulator patter development for general handling. Trainee delivers instructional patter for climbing, descending, level turns, and basic manoeuvring exercises. Focus on smooth patter flow, accurate sequencing, and maintaining aircraft control while instructing.",
-    prerequisites: ["FIC FTD1"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC FTD1"],
-    eventDetailsCommon: [
-      "Patter for Climbing and Descending",
-      "Level Turn Instruction Patter",
-      "General Handling Sequence Delivery",
-      "Tempo and Clarity of Instruction",
-      "Managing Trainee Errors in General Handling"
-    ],
-    eventDetailsSortie: [
-      "Deliver complete general handling instructional sequence",
-      "Demonstrate recovery from student-induced deviations",
-      "Practice controlled patter interruption and reinstatement"
-    ],
-    totalEventHours: 2.5,
-    flightOrSimHours: 1.5,
-    duration: 1.5,
-    preFlightTime: 0.67,
-    postFlightTime: 0.5,
-    type: "FTD",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["FTD", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 FTD"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "FTD Complex",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC1",
-    code: "FIC1",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "First airborne instructional sortie. Trainee flies from the right-hand seat and familiarises with airborne cockpit environment, power management, and basic aircraft handling. QFI demonstrates instructional technique for general handling and the trainee attempts initial patter delivery.",
-    prerequisites: ["FIC FTD2"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC FTD2"],
-    eventDetailsCommon: [
-      "Right-Hand Seat Airborne Familiarisation",
-      "Power Management and Basic Aircraft Control",
-      "Situational Awareness from Right Seat",
-      "Initial Patter Delivery Attempt",
-      "QFI Demonstration of Instructional Technique"
-    ],
-    eventDetailsSortie: [
-      "Conduct general handling sequence under QFI supervision",
-      "Deliver patter for at least two exercise areas",
-      "Demonstrate take-off and recovery patter"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC2",
-    code: "FIC2",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Instructional sortie focusing on teaching circuit patterns and take-off and landing sequences. Trainee delivers complete circuit patter including downwind checks, base turn, approach, and go-around procedures. QFI assesses patter accuracy, aircraft control, and error management.",
-    prerequisites: ["FIC1"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC1"],
-    eventDetailsCommon: [
-      "Circuit Patter Delivery – Full Sequence",
-      "Downwind Checks and Spacing Instruction",
-      "Base Turn and Final Approach Patter",
-      "Go-Around and Missed Approach Instruction",
-      "Landing and Roll-out Instruction"
-    ],
-    eventDetailsSortie: [
-      "Deliver minimum three complete circuit patter sequences",
-      "Demonstrate go-around decision and patter",
-      "Manage student deviation during final approach"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC3",
-    code: "FIC3",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Advanced general handling instructional sortie. Trainee teaches stall recognition and recovery, steep turns, and unusual attitude recovery. Focus on delivering clear, progressive instruction, managing safety of flight during student exercises, and adapting patter to student performance.",
-    prerequisites: ["FIC2"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC2"],
-    eventDetailsCommon: [
-      "Stall Recognition and Recovery Patter",
-      "Steep Turn Instructional Sequence",
-      "Unusual Attitude Recovery Instruction",
-      "Adapting Instruction to Student Level",
-      "Safety of Flight Management While Instructing"
-    ],
-    eventDetailsSortie: [
-      "Deliver stall series instruction for clean and landing configuration",
-      "Conduct steep turn exercise with student",
-      "Demonstrate unusual attitude recovery teaching sequence"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC FTD3",
-    code: "FIC FTD3",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Simulator patter development for emergency procedures instruction. Trainee practices teaching engine malfunctions, forced landing sequences, and emergency drills. Emphasis on maintaining patter composure during high-workload emergency scenarios.",
-    prerequisites: ["FIC3"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC3"],
-    eventDetailsCommon: [
-      "Engine Failure and Forced Landing Instruction Patter",
-      "Emergency Drill Teaching Sequence",
-      "Maintaining Patter Composure Under Pressure",
-      "Prioritisation – Aviate, Navigate, Communicate, Instruct",
-      "Student Management During Emergency Scenarios"
-    ],
-    eventDetailsSortie: [
-      "Demonstrate engine failure at altitude patter sequence",
-      "Conduct simulated forced landing approach instruction",
-      "Deliver emergency drill patter for two separate emergency types"
-    ],
-    totalEventHours: 2.5,
-    flightOrSimHours: 1.5,
-    duration: 1.5,
-    preFlightTime: 0.67,
-    postFlightTime: 0.5,
-    type: "FTD",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["FTD", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 FTD"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "FTD Complex",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC4",
-    code: "FIC4",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Instructional sortie covering aerobatic instruction technique. Trainee delivers instructional patter for wingovers, barrel rolls, and aerobatic entry/exit sequences. QFI assesses trainee ability to maintain positive aircraft control, deliver accurate patter, and manage student situational awareness during dynamic manoeuvres.",
-    prerequisites: ["FIC FTD3"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC FTD3"],
-    eventDetailsCommon: [
-      "Aerobatic Instruction Safety Brief",
-      "Wingover Instructional Patter",
-      "Barrel Roll Teaching Sequence",
-      "Aerobatic Entry and Exit Patter",
-      "G-awareness Instruction and Management"
-    ],
-    eventDetailsSortie: [
-      "Deliver complete wingover instructional sequence",
-      "Conduct barrel roll instruction with student follow-through",
-      "Demonstrate recovery from mishandled aerobatic entry"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC5",
-    code: "FIC5",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Advanced instructional sortie integrating multiple exercise areas. Trainee plans and executes a complete instructional sortie profile covering general handling, circuit, and selected emergency procedures. Assessed on lesson continuity, student management, and overall instructional quality.",
-    prerequisites: ["FIC4"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC4"],
-    eventDetailsCommon: [
-      "Integrated Sortie Planning and Briefing",
-      "Multi-exercise Instructional Delivery",
-      "Lesson Continuity and Transitions Between Exercises",
-      "In-flight Student Progress Assessment",
-      "Comprehensive Post-sortie Debrief Technique"
-    ],
-    eventDetailsSortie: [
-      "Execute planned instructional sortie with minimum three exercise areas",
-      "Conduct at least one emergency exercise with student",
-      "Deliver structured debrief covering all exercises"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC6",
-    code: "FIC6",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "FIC core flying phase consolidation sortie. Trainee demonstrates the ability to plan, brief, execute, and debrief a complete instructional sortie to the standard required of a qualified instructor. This is the final assessment of core instructional flying competency before IF phase entry.",
-    prerequisites: ["FIC5"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC5"],
-    eventDetailsCommon: [
-      "Full Instructional Sortie to QFI Standard",
-      "Comprehensive Pre-flight Brief",
-      "General Handling, Circuits and Emergency Instruction",
-      "Instructor-Standard Aircraft Control and Airmanship",
-      "Structured Post-sortie Debrief to Standard"
-    ],
-    eventDetailsSortie: [
-      "Plan and brief a complete instructional sortie profile",
-      "Execute sortie to QFI standard covering all required exercise areas",
-      "Conduct assessed debrief demonstrating lesson analysis skills"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC FTD4",
-    code: "FIC FTD4",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Simulator consolidation for advanced handling instruction. Covers patter development for spin recovery, advanced stalls, and high-energy manoeuvre instruction. Trainee demonstrates the ability to manage complex student scenarios, deliver accurate recovery patter, and maintain instructional composure.",
-    prerequisites: ["FIC6"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC6"],
-    eventDetailsCommon: [
-      "Spin Recognition and Recovery Instruction Patter",
-      "Advanced Stall Series Teaching Technique",
-      "High-energy Manoeuvre Instruction",
-      "Composure Management During Critical Exercises",
-      "Debrief Technique for Complex Sorties"
-    ],
-    eventDetailsSortie: [
-      "Deliver spin recovery instructional sequence from both seats",
-      "Conduct advanced stall instruction including accelerated stalls",
-      "Demonstrate management of student near-departure from controlled flight"
-    ],
-    totalEventHours: 2.5,
-    flightOrSimHours: 1.5,
-    duration: 1.5,
-    preFlightTime: 0.67,
-    postFlightTime: 0.5,
-    type: "FTD",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["FTD", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 FTD"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "FTD Complex",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC FTD5",
-    code: "FIC FTD5",
-    phase: "Phase 1",
-    module: "Module 1: FIC Events",
-    dayNight: "Day",
-    eventDescription: "Simulator-based preparation for instrument flying instruction. Trainee practices instructing under-the-hood procedures, recovery from unusual attitudes under instruments, and transition between visual and instrument flight phases. Preparation for the IF instruction phase.",
-    prerequisites: ["FIC FTD4"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC FTD4"],
-    eventDetailsCommon: [
-      "Instrument Flying Instructional Overview",
-      "Under-the-hood Procedures and Teaching Technique",
-      "Unusual Attitude Recovery Instruction – Instruments",
-      "Transition Between Visual and Instrument Phases",
-      "IF Sortie Planning and Briefing Preparation"
-    ],
-    eventDetailsSortie: [
-      "Deliver instrument flying instructional patter for basic IF manoeuvres",
-      "Conduct unusual attitude recovery instruction on instruments",
-      "Demonstrate transition brief from visual to instrument flight"
-    ],
-    totalEventHours: 2.5,
-    flightOrSimHours: 1.5,
-    duration: 1.5,
-    preFlightTime: 0.67,
-    postFlightTime: 0.5,
-    type: "FTD",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["FTD", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 FTD"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "FTD Complex",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  // --- Phase 1 / Module 2: FIC Instrument Flying Events ---
-  {
-    id: "FIC IF1",
-    code: "FIC IF1",
-    phase: "Phase 1",
-    module: "Module 2: FIC IF Events",
-    dayNight: "Day",
-    eventDescription: "First instrument flying instructional sortie. Trainee delivers airborne instruction for basic instrument flying — straight and level, climbing, descending, and turning under instruments. QFI assesses quality of patter delivery, management of student under the hood, and maintenance of safe IFR standards.",
-    prerequisites: ["FIC FTD5"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC FTD5"],
-    eventDetailsCommon: [
-      "Basic IF Instruction – Straight and Level, Climb, Descent",
-      "Instrument Turning Instruction",
-      "Managing a Student Under the Hood",
-      "IF Situational Awareness Instruction",
-      "IFR Communication and Clearance Instruction"
-    ],
-    eventDetailsSortie: [
-      "Deliver instrument flying patter for all basic IF manoeuvres",
-      "Manage student hood-down and spatial disorientation risk",
-      "Demonstrate IFR communication instruction"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC IF2",
-    code: "FIC IF2",
-    phase: "Phase 1",
-    module: "Module 2: FIC IF Events",
-    dayNight: "Day",
-    eventDescription: "Instrument approach instruction sortie. Trainee teaches instrument approach procedures including VOR/NDB/RNP approach sequences, missed approach procedures, and approach briefing technique. Focus on managing student workload during high-concentration approach phases.",
-    prerequisites: ["FIC IF1"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC IF1"],
-    eventDetailsCommon: [
-      "Instrument Approach Instructional Briefing",
-      "RNP/GNSS Approach Patter Sequence",
-      "Missed Approach Instruction and Go-around Patter",
-      "Approach Plate Study and Student Guidance",
-      "Managing Student Workload on Approach"
-    ],
-    eventDetailsSortie: [
-      "Deliver complete instrument approach instructional sequence",
-      "Conduct missed approach instruction with student",
-      "Demonstrate approach plate briefing technique"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC IF3",
-    code: "FIC IF3",
-    phase: "Phase 1",
-    module: "Module 2: FIC IF Events",
-    dayNight: "Day",
-    eventDescription: "Advanced instrument flying instruction sortie. Covers teaching of holding procedures, radar vectoring response, and instrument-based navigation exercises. Trainee demonstrates the ability to instruct in a high-workload IFR environment while maintaining safety and instructional quality.",
-    prerequisites: ["FIC IF2"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC IF2"],
-    eventDetailsCommon: [
-      "Holding Pattern Entry and Instruction",
-      "Radar Vectors Instruction and Response",
-      "Instrument Navigation Teaching Technique",
-      "High-workload IFR Instruction Management",
-      "ATC Interface Instruction During IF Sortie"
-    ],
-    eventDetailsSortie: [
-      "Teach holding pattern entry and timing procedures",
-      "Conduct radar vectoring instruction sequence",
-      "Manage student IFR navigation with instructor oversight"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC IF4",
-    code: "FIC IF4",
-    phase: "Phase 1",
-    module: "Module 2: FIC IF Events",
-    dayNight: "Day",
-    eventDescription: "IF phase consolidation and final assessment sortie. Trainee plans and executes a complete IFR instructional flight to the standard required of a qualified IF instructor. Assessed on briefing quality, airborne instruction, student management, and post-sortie debrief.",
-    prerequisites: ["FIC IF3"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC IF3"],
-    eventDetailsCommon: [
-      "Complete IFR Sortie Planning and Briefing",
-      "Full Instrument Instructional Sequence",
-      "In-flight Assessment of Student IF Progress",
-      "Emergency Handling in IFR Environment",
-      "Comprehensive IF Debrief and Lesson Analysis"
-    ],
-    eventDetailsSortie: [
-      "Plan and execute a complete IFR instructional sortie",
-      "Deliver IF instruction covering navigation, approaches, and holds",
-      "Conduct assessed debrief to IF instructor standard"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "FIC FTD6",
-    code: "FIC FTD6",
-    phase: "Phase 1",
-    module: "Module 2: FIC IF Events",
-    dayNight: "Day",
-    eventDescription: "Simulator consolidation supporting the IF instructional phase. Covers advanced IF procedures instruction including partial panel flying, instrument failure recognition and management, and high-density IFR environment instruction. Provides a safe training environment for rehearsing complex IF teaching scenarios.",
-    prerequisites: ["FIC IF4"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC IF4"],
-    eventDetailsCommon: [
-      "Partial Panel Flying Instruction",
-      "Instrument Failure Recognition and Teaching",
-      "High-density IFR Environment Simulation",
-      "Complex IF Student Error Management",
-      "Multi-approach IFR Sortie Instruction"
-    ],
-    eventDetailsSortie: [
-      "Conduct partial panel instruction sequence in FTD",
-      "Demonstrate instrument failure recognition teaching",
-      "Deliver multi-approach IFR instructional profile"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.5,
-    duration: 1.5,
-    preFlightTime: 0.67,
-    postFlightTime: 0.5,
-    type: "FTD",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["FTD", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 FTD"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "FTD Complex",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  // --- Phase 2 / Module 3: AIT Events ---
-  {
-    id: "AIT1",
-    code: "AIT1",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "Advanced Instructor Training entry sortie. Trainee demonstrates consolidation of core QFI skills in preparation for advanced instruction qualification. Covers advanced general handling instruction, student management in complex scenarios, and assessment of trainee readiness to progress to advanced instructional tasks.",
-    prerequisites: ["FIC FTD6"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["FIC FTD6"],
-    eventDetailsCommon: [
-      "Advanced Instructional Technique Review",
-      "Complex Student Scenario Management",
-      "Advanced General Handling Instruction",
-      "Instructor Readiness Assessment for AIT",
-      "AIT Programme Standards and Requirements Brief"
-    ],
-    eventDetailsSortie: [
-      "Demonstrate advanced general handling instruction to AIT entry standard",
-      "Conduct complex student scenario management exercise",
-      "Receive AIT standards brief and confirm training objectives"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT2",
-    code: "AIT2",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "Advanced instruction of navigation and tactical low-level flying. Trainee teaches navigation planning, map reading, low-level route-following, and tactical airspace awareness. Focus on managing student navigation errors, route deviations, and maintaining safety in low-level environment.",
-    prerequisites: ["AIT1"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT1"],
-    eventDetailsCommon: [
-      "Navigation Planning Instruction",
-      "Map Reading and Route-following Teaching",
-      "Low-level Route Instruction and Safety Management",
-      "Tactical Airspace Awareness Instruction",
-      "Managing Student Navigation Errors and Deviations"
-    ],
-    eventDetailsSortie: [
-      "Teach navigation planning and pre-flight preparation",
-      "Conduct low-level route instruction with student",
-      "Manage student navigation error and demonstrate recovery instruction"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT3",
-    code: "AIT3",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "Advanced formation flying instruction. Trainee teaches two-ship formation join-up, close formation station keeping, and lead/wingman responsibilities. Focus on delivering clear formation instruction, managing student geometry errors, and maintaining safe separation standards.",
-    prerequisites: ["AIT2"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT2"],
-    eventDetailsCommon: [
-      "Formation Join-up Instruction",
-      "Close Formation Station Keeping Patter",
-      "Lead and Wingman Responsibilities Instruction",
-      "Formation Geometry Error Management",
-      "Safe Separation Standards and Instruction"
-    ],
-    eventDetailsSortie: [
-      "Teach two-ship formation join-up sequence",
-      "Conduct close formation instruction with student as wingman",
-      "Manage student geometry error and correct with instruction"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT4",
-    code: "AIT4",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "Advanced instrument flying instruction under AIT standards. Trainee teaches advanced IFR procedures including non-precision approaches, circling approaches, and en-route navigation in IMC. QFI assesses ability to maintain instructional quality in complex IFR environment.",
-    prerequisites: ["AIT3"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT3"],
-    eventDetailsCommon: [
-      "Non-precision Approach Instruction – NDB/VOR",
-      "Circling Approach Instruction and Safety Management",
-      "En-route Navigation in IMC Instruction",
-      "Advanced IFR Student Workload Management",
-      "Adverse Weather Decision-making Instruction"
-    ],
-    eventDetailsSortie: [
-      "Teach non-precision approach procedures to student",
-      "Conduct circling approach instruction with appropriate safety brief",
-      "Deliver en-route IMC navigation instruction sequence"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT5",
-    code: "AIT5",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "Advanced tactical instruction and airspace deconfliction. Trainee teaches tactical area operations, airspace coordination, and mission planning instruction. Focus on instructing in a dynamic tactical environment while maintaining safety oversight and CRM standards.",
-    prerequisites: ["AIT4"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT4"],
-    eventDetailsCommon: [
-      "Tactical Area Operations Instruction",
-      "Airspace Coordination and Deconfliction Teaching",
-      "Mission Planning Instruction",
-      "CRM in Tactical Environment",
-      "Safety Oversight in Dynamic Tactical Instruction"
-    ],
-    eventDetailsSortie: [
-      "Teach tactical area operations procedures and airspace management",
-      "Conduct mission planning instruction with student",
-      "Demonstrate CRM instruction in simulated tactical scenario"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT6",
-    code: "AIT6",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "Advanced student management and remedial instruction. Trainee practices teaching techniques for managing underperforming students, delivering remedial instruction, documenting student progress, and making training progress recommendations. Focus on instructor decision-making and pastoral responsibility.",
-    prerequisites: ["AIT5"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT5"],
-    eventDetailsCommon: [
-      "Remedial Instruction Technique",
-      "Underperforming Student Management",
-      "Progress Documentation and Reporting",
-      "Training Progress Recommendations",
-      "Instructor Pastoral Responsibilities"
-    ],
-    eventDetailsSortie: [
-      "Conduct remedial instruction exercise with simulated underperforming student",
-      "Prepare and present a student progress report",
-      "Demonstrate training recommendation decision-making process"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT7",
-    code: "AIT7",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "AIT pre-final check and self-assessment sortie. Trainee conducts a self-assessed instructional sortie covering selected AIT exercise areas. Focus on independent preparation, execution, and self-critique. QFI observes and provides post-sortie assessment against AIT standards.",
-    prerequisites: ["AIT6"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT6"],
-    eventDetailsCommon: [
-      "Independent Sortie Planning and Briefing",
-      "Self-assessed Instructional Performance",
-      "AIT Standard Exercise Coverage",
-      "Post-sortie Self-critique and Analysis",
-      "QFI Assessment Against AIT Standards"
-    ],
-    eventDetailsSortie: [
-      "Plan and execute independent instructional sortie to AIT standard",
-      "Cover minimum three AIT exercise areas",
-      "Deliver self-critique debrief prior to QFI assessment"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  {
-    id: "AIT8",
-    code: "AIT8",
-    phase: "Phase 2",
-    module: "Module 3: AIT Events",
-    dayNight: "Day",
-    eventDescription: "AIT final grading sortie. Trainee demonstrates complete Advanced Instructor Training competency across all required areas. This is the final assessment flight for the FIC course. Successful completion results in qualification as a Qualified Flying Instructor (QFI) on type.",
-    prerequisites: ["AIT7"],
-    prerequisitesGround: [],
-    prerequisitesFlying: ["AIT7"],
-    eventDetailsCommon: [
-      "Full AIT Final Assessment Sortie",
-      "Comprehensive Instructional Sequence Coverage",
-      "Advanced Student Management in Final Assessment",
-      "QFI Standard Aircraft Control and Airmanship",
-      "Final Grading Debrief and Course Completion"
-    ],
-    eventDetailsSortie: [
-      "Execute final AIT grading sortie covering all assessed areas",
-      "Demonstrate QFI-standard instruction throughout sortie",
-      "Receive final grading debrief and course completion assessment"
-    ],
-    totalEventHours: 3,
-    flightOrSimHours: 1.2,
-    duration: 1.2,
-    preFlightTime: 1.25,
-    postFlightTime: 0.5,
-    type: "Flight",
-    sortieType: "Dual",
-    twrDiReqd: "NO",
-    cctOnly: "NO",
-    methodOfDelivery: ["Aircraft", "Brief", "Debrief"],
-    methodOfAssessment: ["Practical Assessment", "Instructor Observation", "Structured Debrief"],
-    resourcesPhysical: ["PC-21 Aircraft"],
-    resourcesHuman: ["Qualified Flying Instructor", "Trainee"],
-    location: "Airfield",
-    courses: ["FIC"],
-    lmpType: "Master LMP"
-  },
-  // WSO Items
-  createSyllabusItem("WSO MB1", "Role of the WSO", ["WSO"]),
-  createSyllabusItem("WSO FTD1", "Sensor Operations Basics", ["WSO"]),
-  createSyllabusItem("WSO1", "Navigational Systems Management", ["WSO"]),
-  // OFI Items
-  createSyllabusItem("OFI MB1", "Advanced Operational Concepts", ["OFI"]),
-  createSyllabusItem("OFI1", "Tactical Formation Lead", ["OFI"]),
-  // PLT Refresh Items
-  createSyllabusItem("PLT REF MB1", "Refresher Admin Brief", ["PLT Refresh", "PLT CONV"]),
-  createSyllabusItem("PLT REF FTD1", "Emergency Procedures Refresh", ["PLT Refresh"]),
-  createSyllabusItem("PLT REF1", "General Handling Recency", ["PLT Refresh"]),
-  // QFI CONV
-  createSyllabusItem("QFI CONV MB1", "QFI Conversion Requirements", ["QFI CONV"]),
-  createSyllabusItem("QFI CONV1", "Instructional Technique - Advanced", ["QFI CONV"]),
-  // Staff CAT (Staff Continuous Training Categorisation)
-  createSyllabusItem("QIP 1", "QFI Induction Program 1", ["Staff CAT"]),
-  createSyllabusItem("QIP 2", "QFI Induction Program 2", ["Staff CAT"]),
-  createSyllabusItem("QIP 3", "QFI Induction Program 3", ["Staff CAT"]),
-  createSyllabusItem("QIP 4", "QFI Induction Program 4", ["Staff CAT"]),
-  createSyllabusItem("C CAT 1", "C Categorisation 1", ["Staff CAT"]),
-  createSyllabusItem("C CAT 2", "C Categorisation 2", ["Staff CAT"]),
-  createSyllabusItem("C CAT 3", "C Categorisation 3", ["Staff CAT"]),
-  createSyllabusItem("C CAT 4", "C Categorisation 4", ["Staff CAT"]),
-  createSyllabusItem("B CAT 1", "B Categorisation 1", ["Staff CAT"]),
-  createSyllabusItem("B CAT 2", "B Categorisation 2", ["Staff CAT"]),
-  createSyllabusItem("B CAT 3", "B Categorisation 3", ["Staff CAT"]),
-  createSyllabusItem("B CAT 4", "B Categorisation 4", ["Staff CAT"])
-];
-const populatePrerequisites = (syllabus) => {
-  return syllabus.map((item, index, arr) => {
-    const hasExplicitPrereqs = item.prerequisites && item.prerequisites.length > 0 || item.prerequisitesGround && item.prerequisitesGround.length > 0 || item.prerequisitesFlying && item.prerequisitesFlying.length > 0;
-    if (hasExplicitPrereqs || item.lmpType === "Master LMP") {
-      return item;
-    }
-    const prerequisitesGround = [];
-    const prerequisitesFlying = [];
-    for (let i = index - 1; i >= 0; i--) {
-      const prereqCandidate = arr[i];
-      if (prereqCandidate.code.includes(" MB")) continue;
-      const sharedCourses = prereqCandidate.courses.some((c) => item.courses.includes(c));
-      if (!sharedCourses) break;
-      if (prereqCandidate.type === "Flight" || prereqCandidate.type === "FTD") {
-        prerequisitesFlying.push(prereqCandidate.code);
-      } else {
-        prerequisitesGround.push(prereqCandidate.code);
-      }
-      break;
-    }
-    return { ...item, prerequisitesGround, prerequisitesFlying, prerequisites: [...prerequisitesGround, ...prerequisitesFlying] };
-  });
-};
-const INITIAL_SYLLABUS_DETAILS = populatePrerequisites(syllabusItems);
-const firstNames = ["Olivia", "Emma", "Amelia", "Ava", "Sophia", "Isabella", "Mia", "Charlotte", "Luna", "Harper", "Liam", "Noah", "Oliver", "Elijah", "James", "William", "Henry", "Lucas", "Benjamin", "Theodore", "Emily", "Michael", "Jessica", "David", "Sarah", "Chris", "Daniel", "Matthew", "Ashley", "Jennifer", "Robert", "John", "Linda", "Barbara", "Susan", "Mary", "Patricia", "Richard", "Joseph", "Thomas", "Charles", "Steven", "Paul", "Mark"];
-const lastNames = ["Smith", "Jones", "Williams", "Brown", "Taylor", "Davies", "Evans", "Thomas", "Roberts", "Johnson", "Walker", "Robinson", "Thompson", "White", "Green", "Harris", "Clark", "Lewis", "Hall", "Baker", "Martin", "Jackson", "Wood", "Turner", "Hill", "Moore", "Scott", "Cooper", "King", "Wright", "Lee", "Mitchell", "Anderson", "Carter", "Parker", "Edwards", "Stewart", "Morris"];
-const usedNames = /* @__PURE__ */ new Set();
-const generateRandomName = () => {
-  let name = "";
-  do {
-    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    name = `${lastName}, ${firstName}`;
-  } while (usedNames.has(name));
-  usedNames.add(name);
-  return name;
-};
-const flightOptions = ["A", "B", "C", "D"];
-const getRandomFlight = () => flightOptions[Math.floor(Math.random() * flightOptions.length)];
-const usedIdNumbers = /* @__PURE__ */ new Set();
-const generateRandomIdNumber = () => {
-  let id;
-  do {
-    id = Math.floor(Math.random() * (9999999 - 1e6 + 1)) + 1e6;
-  } while (usedIdNumbers.has(id));
-  usedIdNumbers.add(id);
-  return id;
-};
-const generateTraineesForCourse = (courseName, rankDistribution, unit) => {
-  const location = unit === "2FTS" ? "Pearce" : "East Sale";
-  const trainees = [];
-  rankDistribution.forEach(({ rank, count: numToGenerate }) => {
-    for (let i = 0; i < numToGenerate; i++) {
-      const name = generateRandomName();
-      let service = "RAAF";
-      if (rank === "MIDN" || rank === "SBLT") service = "RAN";
-      if (rank === "2LT") service = "ARA";
-      const phoneNumber = `04${Math.floor(1e7 + Math.random() * 9e7)}`.substring(0, 10);
-      const nameParts = name.split(", ");
-      const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase();
-      const traineeCallsign = `CHLE${Math.floor(Math.random() * 101) + 300}`;
-      trainees.push({
-        idNumber: generateRandomIdNumber(),
-        fullName: `${name} – ${courseName}`,
-        name,
-        rank,
-        course: courseName,
-        seatConfig: "Normal",
-        isPaused: Math.random() < 0.05,
-        // 5% chance of being paused
-        unit,
-        flight: getRandomFlight(),
-        service,
-        location,
-        phoneNumber,
-        email,
-        unavailability: [],
-        traineeCallsign,
-        permissions: ["Trainee"]
-        // lastEventDate and lastFlightDate will be populated by the scoring simulation
-      });
-    }
-  });
-  return trainees.sort(() => Math.random() - 0.5);
-};
-const generateInstructors = (targetLocation) => {
-  const qfis = [];
-  const simIps = [];
-  let qfiCallsignCounter = 10;
-  const categories = ["UnCat", "D", "C", "B", "A"];
-  const isESL = targetLocation === "ESL";
-  const num1FTSExecutives = isESL ? 4 : 0;
-  const executiveRanks = ["WGCDR", ...Array(5).fill("SQNLDR")];
-  for (let i = 0; i < executiveRanks.length; i++) {
-    const rank = executiveRanks[i];
-    let service = "RAAF";
-    const randService = Math.random();
-    if (randService > 0.95) service = "ARA";
-    else if (randService > 0.9) service = "RAN";
-    const name = generateRandomName();
-    const nameParts = name.split(", ");
-    const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, "");
-    const isCommandingOfficer = rank === "WGCDR";
-    const isCFI = !isCommandingOfficer && Math.random() < 0.2;
-    qfis.push({
-      idNumber: generateRandomIdNumber(),
-      name,
-      rank,
-      role: "QFI",
-      callsignNumber: qfiCallsignCounter++,
-      service,
-      category: "A",
-      isTestingOfficer: true,
-      isQFI: true,
-      isOFI: false,
-      seatConfig: "Normal",
-      isExecutive: true,
-      isFlyingSupervisor: true,
-      isIRE: Math.random() < 0.2,
-      isCommandingOfficer,
-      isCFI,
-      location: isESL ? "East Sale" : "Pearce",
-      unit: isESL ? i < num1FTSExecutives ? "1FTS" : "CFS" : "2FTS",
-      unavailability: [],
-      email,
-      permissions: ["Staff", "Course Supervisor", "Admin"],
-      flight: isCommandingOfficer || isCFI ? "EXEC" : getRandomFlight()
-    });
-  }
-  const num1FTSFltlts = isESL ? 34 : 0;
-  const numCFSFltlts = isESL ? 15 : 0;
-  const num2FTSFltlts = isESL ? 0 : 31;
-  const numFltlts = num1FTSFltlts + numCFSFltlts + num2FTSFltlts;
-  for (let i = 0; i < numFltlts; i++) {
-    let service = "RAAF";
-    const phoneNumber = `04${Math.floor(1e7 + Math.random() * 9e7)}`.substring(0, 10);
-    const name = generateRandomName();
-    const nameParts = name.split(", ");
-    const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, "");
-    const randService = Math.random();
-    if (randService > 0.95) service = "ARA";
-    else if (randService > 0.9) service = "RAN";
-    const isExecutive = Math.random() < 0.1;
-    qfis.push({
-      idNumber: generateRandomIdNumber(),
-      name,
-      rank: "FLTLT",
-      role: "QFI",
-      callsignNumber: qfiCallsignCounter++,
-      service,
-      category: categories[Math.floor(Math.random() * categories.length)],
-      seatConfig: "Normal",
-      isExecutive,
-      isFlyingSupervisor: false,
-      isTestingOfficer: false,
-      isQFI: true,
-      isOFI: false,
-      isIRE: isExecutive && Math.random() < 0.2,
-      location: isESL ? "East Sale" : "Pearce",
-      unit: isESL ? i < num1FTSFltlts ? "1FTS" : "CFS" : "2FTS",
-      flight: getRandomFlight(),
-      phoneNumber,
-      email,
-      unavailability: [],
-      permissions: ["Staff"]
-    });
-  }
-  const shuffledFltltIndices = Array.from(Array(numFltlts).keys()).sort(() => Math.random() - 0.5);
-  const fltltSupervisorIndices = new Set(shuffledFltltIndices.slice(0, 5));
-  const execOffset = 6;
-  fltltSupervisorIndices.forEach((index) => {
-    const fltlt = qfis[execOffset + index];
-    if (fltlt) {
-      fltlt.isFlyingSupervisor = true;
-      fltlt.isTestingOfficer = Math.random() < 0.4;
-      if (fltlt.isFlyingSupervisor) {
-        fltlt.permissions?.push("Course Supervisor");
-      }
-    }
-  });
-  if (isESL) {
-    const joeBloggs = {
-      idNumber: generateRandomIdNumber(),
-      name: "Bloggs, Joe",
-      rank: "FLTLT",
-      role: "QFI",
-      callsignNumber: 99,
-      service: "RAAF",
-      category: "A",
-      isTestingOfficer: true,
-      isQFI: true,
-      isOFI: false,
-      seatConfig: "Normal",
-      isExecutive: true,
-      isFlyingSupervisor: true,
-      isIRE: true,
-      location: "East Sale",
-      unit: "CFS",
-      flight: "A",
-      phoneNumber: "0412345678",
-      email: "joe.bloggs@flightschool.mil",
-      unavailability: [],
-      permissions: ["Staff", "Ops", "Course Supervisor", "Admin", "Super Admin"]
-    };
-    usedNames.add("Bloggs, Joe");
-    qfis.push(joeBloggs);
-  }
-  const numSimIps = 4;
-  for (let i = 0; i < numSimIps; i++) {
-    const phoneNumber = `04${Math.floor(1e7 + Math.random() * 9e7)}`.substring(0, 10);
-    const name = generateRandomName();
-    const nameParts = name.split(", ");
-    const email = `${nameParts[1]}.${nameParts[0]}@flightschool.mil`.toLowerCase().replace(/\s/g, "");
-    simIps.push({
-      idNumber: generateRandomIdNumber(),
-      name,
-      rank: "Mr",
-      role: "SIM IP",
-      callsignNumber: 0,
-      service: void 0,
-      category: "UnCat",
-      isTestingOfficer: false,
-      isQFI: false,
-      isOFI: false,
-      seatConfig: "Normal",
-      isExecutive: false,
-      isFlyingSupervisor: false,
-      isIRE: false,
-      location: isESL ? "East Sale" : "Pearce",
-      unit: isESL ? i < 3 ? "1FTS" : "CFS" : "2FTS",
-      // Deterministic: 3 to 1FTS, 1 to CFS
-      phoneNumber,
-      email,
-      unavailability: [],
-      permissions: ["Staff"]
-    });
-  }
-  const rankOrder = {
-    "WGCDR": 1,
-    "SQNLDR": 2,
-    "FLTLT": 3,
-    "FLGOFF": 4,
-    "PLTOFF": 5,
-    "Mr": 6
-  };
-  const sortedQfis = qfis.sort((a, b) => {
-    const rankA = rankOrder[a.rank] || 99;
-    const rankB = rankOrder[b.rank] || 99;
-    if (rankA !== rankB) {
-      return rankA - rankB;
-    }
-    return a.name.localeCompare(b.name);
-  });
-  return [...sortedQfis, ...simIps.sort((a, b) => a.name.localeCompare(b.name))];
-};
-const courseProgressRanges = {
-  "ADF301": { start: "BIF4", end: "BGF23" },
-  "ADF302": { start: "BGF15", end: "BIF4" },
-  "ADF303": { start: "BGF6", end: "BGF17" },
-  "FIC 210": { start: "BGF1", end: "BGF5" },
-  "FIC211": { start: "BGF1", end: "BGF10" },
-  "ADF304": { start: "BGF1", end: "BGF10" },
-  "ADF305": { start: "BGF5", end: "BGF15" },
-  "IFF 6": { start: "BIF1", end: "BIF5" }
-};
-const simulateProgressAndScores = (trainees, syllabus, instructors) => {
-  const scoreMap = /* @__PURE__ */ new Map();
-  const qfiInstructors = instructors.filter((i) => i.role === "QFI");
-  const syllabusIds = syllabus.map((s) => s.code);
-  trainees.forEach((trainee) => {
-    const range = courseProgressRanges[trainee.course];
-    if (!range) {
-      scoreMap.set(trainee.fullName, []);
-      return;
-    }
-    const startIndex = syllabusIds.indexOf(range.start);
-    const endIndex = syllabusIds.indexOf(range.end);
-    if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
-      scoreMap.set(trainee.fullName, []);
-      return;
-    }
-    const progressIndex = Math.floor(Math.random() * (endIndex - startIndex + 1)) + startIndex;
-    const completedEvents = syllabus.slice(0, progressIndex);
-    const traineeScores = [];
-    let latestEventDate = null;
-    let latestFlightDate = null;
-    const today = /* @__PURE__ */ new Date();
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - 180);
-    completedEvents.forEach((event) => {
-      let scoreValue;
-      if (event.code.includes("MB")) {
-        scoreValue = 5;
-      } else if (event.type === "Ground School") {
-        scoreValue = 5;
-      } else {
-        scoreValue = Math.floor(Math.random() * 5) + 1;
-      }
-      const instructor = qfiInstructors.length > 0 ? qfiInstructors[Math.floor(Math.random() * qfiInstructors.length)].name : "Unknown Instructor";
-      const daysToAdd = Math.floor(Math.random() * 3) + 1;
-      startDate.setDate(startDate.getDate() + daysToAdd);
-      const scoreDate = new Date(startDate);
-      traineeScores.push({
-        event: event.code,
-        score: scoreValue,
-        date: scoreDate.toISOString().split("T")[0],
-        instructor,
-        notes: scoreValue === 5 ? `Ground event completed for ${event.code}.` : `Simulated score for ${event.code}.`,
-        details: scoreValue === 5 ? [] : [{ criteria: "General Handling", score: scoreValue, comment: "Auto-generated comment." }]
-      });
-      latestEventDate = scoreDate;
-      if (event.type === "Flight") {
-        latestFlightDate = scoreDate;
-      }
-    });
-    scoreMap.set(trainee.fullName, traineeScores);
-    if (latestEventDate) {
-      trainee.lastEventDate = latestEventDate.toISOString().split("T")[0];
-    }
-    if (latestFlightDate) {
-      trainee.lastFlightDate = latestFlightDate.toISOString().split("T")[0];
-    } else if (latestEventDate) {
-      trainee.lastFlightDate = latestEventDate.toISOString().split("T")[0];
-    }
-  });
-  return scoreMap;
-};
-const allocateInstructors = (trainees, instructors) => {
-  const allocatableInstructors = instructors.filter((i) => i.role === "QFI");
-  if (!allocatableInstructors.length || !trainees.length) return trainees;
-  const traineesWithAssignments = JSON.parse(JSON.stringify(trainees));
-  const eligibleTrainees = traineesWithAssignments.filter((t) => !t.course.includes("FIC"));
-  if (!eligibleTrainees.length) return traineesWithAssignments;
-  traineesWithAssignments.forEach((t) => {
-    if (!Array.isArray(t.primaryInstructor)) {
-      t.primaryInstructor = t.primaryInstructor ? [t.primaryInstructor] : [];
-    }
-    if (!Array.isArray(t.secondaryInstructor)) {
-      t.secondaryInstructor = t.secondaryInstructor ? [t.secondaryInstructor] : [];
-    }
-  });
-  const MAX_PER_INSTRUCTOR = 3;
-  const primaryLoad = /* @__PURE__ */ new Map();
-  const secondaryLoad = /* @__PURE__ */ new Map();
-  allocatableInstructors.forEach((i) => {
-    primaryLoad.set(i.name, 0);
-    secondaryLoad.set(i.name, 0);
-  });
-  const getInstructorsByUnit = (unit, loadMap) => {
-    if (!unit) return [];
-    return allocatableInstructors.filter((i) => i.unit === unit && (loadMap.get(i.name) ?? 0) < MAX_PER_INSTRUCTOR).sort((a, b) => (loadMap.get(a.name) ?? 0) - (loadMap.get(b.name) ?? 0));
-  };
-  for (let round = 0; round < 2; round++) {
-    for (const trainee of eligibleTrainees) {
-      const primaries = trainee.primaryInstructor;
-      if (primaries.length > round) continue;
-      if (!trainee.unit) continue;
-      const candidates = getInstructorsByUnit(trainee.unit, primaryLoad).filter((i) => !primaries.includes(i.name));
-      if (!candidates.length) continue;
-      primaries.push(candidates[0].name);
-      primaryLoad.set(candidates[0].name, (primaryLoad.get(candidates[0].name) ?? 0) + 1);
-    }
-  }
-  for (let round = 0; round < 2; round++) {
-    for (const trainee of eligibleTrainees) {
-      const primaries = trainee.primaryInstructor;
-      const secondaries = trainee.secondaryInstructor;
-      if (secondaries.length > round) continue;
-      if (!trainee.unit) continue;
-      const candidates = getInstructorsByUnit(trainee.unit, secondaryLoad).filter((i) => !secondaries.includes(i.name) && !primaries.includes(i.name));
-      const fallback = candidates.length > 0 ? candidates : getInstructorsByUnit(trainee.unit, secondaryLoad).filter((i) => !secondaries.includes(i.name));
-      if (!fallback.length) continue;
-      secondaries.push(fallback[0].name);
-      secondaryLoad.set(fallback[0].name, (secondaryLoad.get(fallback[0].name) ?? 0) + 1);
-    }
-  }
-  return traineesWithAssignments;
-};
-const generateFullSchedule = (instructors, trainees, courses, aircraftCount, location, date) => {
-  const newEvents = [];
-  const personnelSchedule = {};
-  const areas = ["A", "B", "C", "D", "E", "F", "G", "H", "S", "T", "U", "V", "W", "X", "Y", "Z"];
-  const courseColors = Object.fromEntries(courses.map((c) => [c.name, c.color]));
-  const isAvailable = (personName, startTime, duration) => {
-    if (!personnelSchedule[personName]) {
-      return true;
-    }
-    const endTime = startTime + duration;
-    return !personnelSchedule[personName].some(
-      (slot) => startTime < slot.end && endTime > slot.start
-    );
-  };
-  const bookPerson = (personName, startTime, duration) => {
-    if (!personnelSchedule[personName]) {
-      personnelSchedule[personName] = [];
-    }
-    personnelSchedule[personName].push({ start: startTime, end: startTime + duration });
-  };
-  const waves = [
-    { start: 8, name: "AM" },
-    { start: 10.5, name: "MID" },
-    { start: 13.5, name: "PM" }
-  ];
-  const timeBetweenTakeoffs = 0.1;
-  const qfis = instructors.filter((i) => i.role === "QFI");
-  const simIps = instructors.filter((i) => i.role === "SIM IP");
-  const flightSyllabus = INITIAL_SYLLABUS_DETAILS.filter((s) => s.code.startsWith("BGF") && s.type === "Flight");
-  waves.forEach((wave) => {
-    for (let i = 0; i < aircraftCount; i++) {
-      const startTime = wave.start + i * timeBetweenTakeoffs;
-      const syllabusItem = flightSyllabus[Math.floor(Math.random() * flightSyllabus.length)];
-      if (!syllabusItem) continue;
-      const duration = syllabusItem.flightOrSimHours;
-      const instructor = qfis.find((inst) => isAvailable(inst.name, startTime, duration));
-      if (!instructor) continue;
-      const trainee = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
-      if (!trainee) continue;
-      bookPerson(instructor.name, startTime, duration);
-      bookPerson(trainee.fullName, startTime, duration);
-      newEvents.push({
-        id: v4(),
-        date,
-        type: "flight",
-        instructor: instructor.name,
-        student: trainee.fullName,
-        flightNumber: syllabusItem.code,
-        duration,
-        startTime,
-        resourceId: `PC-21 ${i + 1}`,
-        color: courseColors[trainee.course] || "bg-gray-400/50",
-        flightType: "Dual",
-        locationType: "Local",
-        origin: location,
-        destination: location,
-        area: areas[Math.floor(Math.random() * areas.length)]
-      });
-    }
-  });
-  const ftdSyllabus = INITIAL_SYLLABUS_DETAILS.filter((s) => s.type === "FTD");
-  const groundSyllabus = INITIAL_SYLLABUS_DETAILS.filter((s) => s.type === "Ground School" && s.code.includes("MB"));
-  for (let i = 0; i < 2; i++) {
-    const startTime = 9 + i * 2.5;
-    const syllabusItem = ftdSyllabus[Math.floor(Math.random() * ftdSyllabus.length)];
-    if (!syllabusItem) continue;
-    const duration = syllabusItem.flightOrSimHours;
-    const simIp = simIps.find((ip) => isAvailable(ip.name, startTime, duration));
-    if (!simIp) continue;
-    const trainee = trainees.find((t) => !t.isPaused && isAvailable(t.fullName, startTime, duration));
-    if (!trainee) continue;
-    bookPerson(simIp.name, startTime, duration);
-    bookPerson(trainee.fullName, startTime, duration);
-    newEvents.push({
-      id: v4(),
-      date,
-      type: "ftd",
-      instructor: simIp.name,
-      student: trainee.fullName,
-      flightNumber: syllabusItem.code,
-      duration,
-      startTime,
-      resourceId: `FTD ${i + 1}`,
-      color: "bg-indigo-400/50",
-      flightType: "Dual",
-      locationType: "Local",
-      origin: location,
-      destination: location
-    });
-  }
-  const groundSyllabusItem = groundSyllabus[Math.floor(Math.random() * groundSyllabus.length)];
-  const qfiForGround = qfis.find((q) => isAvailable(q.name, 16, 1));
-  const courseForGround = courses[0]?.name;
-  const traineesForGround = courseForGround ? trainees.filter((t) => t.course === courseForGround && isAvailable(t.fullName, 16, 1)).slice(0, 10) : [];
-  if (qfiForGround && traineesForGround.length > 0 && groundSyllabusItem) {
-    bookPerson(qfiForGround.name, 16, 1);
-    traineesForGround.forEach((t) => bookPerson(t.fullName, 16, 1));
-    const isCPT = groundSyllabusItem.methodOfDelivery.includes("CPT");
-    const eventType = isCPT ? "cpt" : "ground";
-    const resourceId = isCPT ? "CPT 1" : "Ground 1";
-    newEvents.push({
-      id: v4(),
-      date,
-      type: eventType,
-      instructor: qfiForGround.name,
-      attendees: traineesForGround.map((t) => t.fullName),
-      flightNumber: groundSyllabusItem.code,
-      duration: 1,
-      startTime: 16,
-      resourceId,
-      color: "bg-teal-400/50",
-      flightType: "Dual",
-      locationType: "Local",
-      origin: location,
-      destination: location
-    });
-  }
-  return newEvents;
-};
-const generateHistoricalEvents = (instructors, trainees, syllabus) => {
-  const events = [];
-  const today = /* @__PURE__ */ new Date();
-  const startHistoryDate = new Date(today.getFullYear(), today.getMonth() - 24, 1);
-  const flightSyllabus = syllabus.filter((s) => s.type === "Flight" && !s.code.includes("MB"));
-  const ftdSyllabus = syllabus.filter((s) => s.type === "FTD");
-  trainees.forEach((trainee) => {
-    if (trainee.isPaused) return;
-    for (let i = 0; i < 24; i++) {
-      const monthDate = new Date(startHistoryDate.getFullYear(), startHistoryDate.getMonth() + i, 1);
-      const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
-      for (let j = 0; j < 5; j++) {
-        const isFlight = Math.random() > 0.4;
-        const item = isFlight ? flightSyllabus[Math.floor(Math.random() * flightSyllabus.length)] : ftdSyllabus[Math.floor(Math.random() * ftdSyllabus.length)];
-        if (!item) continue;
-        const instructor = instructors[Math.floor(Math.random() * instructors.length)];
-        const dayOfMonth = Math.floor(Math.random() * daysInMonth) + 1;
-        const dateStr = new Date(monthDate.getFullYear(), monthDate.getMonth(), dayOfMonth).toISOString().split("T")[0];
-        const startTime = 8 + Math.floor(Math.random() * 13);
-        events.push({
-          id: v4(),
-          date: dateStr,
-          type: isFlight ? "flight" : "ftd",
-          instructor: instructor.name,
-          student: trainee.fullName,
-          flightNumber: item.code,
-          duration: item.duration,
-          startTime,
-          resourceId: isFlight ? `PC-21 ${Math.floor(Math.random() * 20) + 1}` : `FTD ${Math.floor(Math.random() * 5) + 1}`,
-          color: "bg-gray-500",
-          flightType: "Dual",
-          locationType: "Local",
-          origin: "ESL",
-          destination: "ESL"
-        });
-      }
-    }
-  });
-  return events;
-};
-const eslCourses = [
-  { name: "ADF301", color: "bg-sky-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 15, navyStart: 5, armyStart: 5 },
-  { name: "ADF302", color: "bg-purple-400/50", startDate: "2025-07-01", gradDate: "2026-04-01", raafStart: 18, navyStart: 7, armyStart: 0 },
-  { name: "ADF303", color: "bg-yellow-400/50", startDate: "2025-07-01", gradDate: "2026-02-01", raafStart: 20, navyStart: 5, armyStart: 0 },
-  { name: "FIC 210", color: "bg-pink-400/50", startDate: "2025-10-01", gradDate: "2026-04-01", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
-];
-const peaCourses = [
-  { name: "ADF304", color: "bg-teal-400/50", startDate: "2023-02-15", gradDate: "2023-07-20", raafStart: 12, navyStart: 0, armyStart: 0 },
-  { name: "ADF305", color: "bg-indigo-400/50", startDate: "2023-04-10", gradDate: "2023-10-05", raafStart: 10, navyStart: 2, armyStart: 0 },
-  { name: "IFF 6", color: "bg-cyan-400/50", startDate: "2023-06-01", gradDate: "2023-08-15", raafStart: 4, navyStart: 0, armyStart: 0 },
-  { name: "FIC211", color: "bg-teal-400/50", startDate: "2025-12-01", gradDate: "2026-06-01", raafStart: 8, navyStart: 2, armyStart: 0 }
-];
-const generateDataSet = (location) => {
-  const isESL = location === "ESL";
-  const courses = isESL ? eslCourses : peaCourses;
-  const aircraftCount = isESL ? 15 : 12;
-  const instructors = generateInstructors(location);
-  let trainees = [];
-  courses.forEach((c) => {
-    const total = c.raafStart + c.navyStart + c.armyStart;
-    const distribution = [{ rank: "PLTOFF", count: total }];
-    trainees = [...trainees, ...generateTraineesForCourse(c.name, distribution, isESL ? "1FTS" : "2FTS")];
-  });
-  const allocatedTrainees = allocateInstructors(trainees, instructors);
-  const scores = simulateProgressAndScores(allocatedTrainees, INITIAL_SYLLABUS_DETAILS, instructors);
-  const getLocalDateString = (date = /* @__PURE__ */ new Date()) => {
-    const timezoneOffset = 11;
-    const offsetMs = timezoneOffset * 60 * 60 * 1e3;
-    const adjustedDate = new Date(date.getTime() + offsetMs);
-    const year = adjustedDate.getUTCFullYear();
-    const month = String(adjustedDate.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(adjustedDate.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const todayStr = getLocalDateString();
-  let events = generateFullSchedule(instructors, allocatedTrainees, courses, aircraftCount, location, todayStr);
-  const historicalEvents = generateHistoricalEvents(instructors, allocatedTrainees, INITIAL_SYLLABUS_DETAILS);
-  events = [...events, ...historicalEvents];
-  const courseColors = {};
-  const coursePriorities = [];
-  const coursePercentages = /* @__PURE__ */ new Map();
-  const archivedCourses = {};
-  courses.forEach((c, idx) => {
-    courseColors[c.name] = c.color;
-    coursePriorities.push(c.name);
-    coursePercentages.set(c.name, Math.floor(100 / courses.length));
-  });
-  const traineeLMPs = /* @__PURE__ */ new Map();
-  allocatedTrainees.forEach((t) => traineeLMPs.set(t.fullName, INITIAL_SYLLABUS_DETAILS));
-  return {
-    instructors,
-    trainees: allocatedTrainees,
-    scores,
-    pt051Assessments: /* @__PURE__ */ new Map(),
-    courses,
-    courseColors,
-    archivedCourses,
-    coursePriorities,
-    coursePercentages,
-    traineeLMPs,
-    events
-  };
-};
-generateDataSet("ESL");
-generateDataSet("PEA");
-const API_BASE = "/api";
-async function fetchAPI(endpoint, options) {
-  try {
-    const url = `${API_BASE}${endpoint}`;
-    console.log("🌐 API Request:", url);
-    const response = await fetch(url, {
-      ...options,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers
-      }
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const data = await response.json();
-    console.log("✅ API Response:", url, data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("❌ API Error:", endpoint, error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
-  }
-}
-async function fetchInstructors() {
-  const result = await fetchAPI("/personnel");
-  if (result.success && result.data?.personnel) {
-    return result.data.personnel.map((p) => ({
-      ...p,
-      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
-    }));
-  }
-  return [];
-}
-async function fetchTrainees() {
-  const result = await fetchAPI("/trainees");
-  if (result.success && result.data?.trainees) {
-    return result.data.trainees;
-  }
-  return [];
-}
-async function fetchAircraft() {
-  const result = await fetchAPI("/aircraft");
-  if (result.success && result.data?.aircraft) {
-    return result.data.aircraft;
-  }
-  return [];
-}
-async function fetchScores() {
-  const result = await fetchAPI("/scores");
-  if (result.success && result.data?.scores) {
-    const scoresObj = {};
-    result.data.scores.forEach(([fullName, scores]) => {
-      const normalized = scores.map((s) => ({
-        ...s,
-        event: typeof s.event === "string" ? s.event.replace("*", "") : s.event
-      }));
-      const eventIds = normalized.map((s) => s.event);
-      if (eventIds.includes("BIF FTD2") && !eventIds.includes("BIF FTD1")) {
-        normalized.push({ event: "BIF FTD1", score: 3, date: "", instructor: "", notes: "", details: [] });
-      }
-      if (eventIds.includes("BIF1") && !eventIds.includes("BIF FTD3")) {
-        normalized.push({ event: "BIF FTD3", score: 3, date: "", instructor: "", notes: "", details: [] });
-      }
-      scoresObj[fullName] = normalized;
-    });
-    return scoresObj;
-  }
-  return {};
-}
-async function fetchCourses() {
-  const result = await fetchAPI("/courses");
-  if (result.success && result.data?.courses) {
-    return result.data.courses;
-  }
-  return [];
-}
-async function saveCourse(course) {
-  const result = await fetchAPI("/courses", {
-    method: "POST",
-    body: JSON.stringify(course)
-  });
-  return result.success ? { success: true } : { success: false, error: result.error };
-}
-async function deleteCourse(name) {
-  const result = await fetchAPI(`/courses/${encodeURIComponent(name)}`, {
-    method: "DELETE"
-  });
-  return result.success ? { success: true } : { success: false, error: result.error };
-}
-async function fetchSchedule(startDate, endDate) {
-  let endpoint = "/schedule";
-  const params = new URLSearchParams();
-  if (params.toString()) endpoint += `?${params.toString()}`;
-  const result = await fetchAPI(endpoint);
-  if (result.success && result.data?.schedules) {
-    return result.data.schedules;
-  }
-  return [];
-}
 function toInstructorArray(val) {
   if (!val) return [];
   if (Array.isArray(val)) return val;
@@ -97150,7 +97321,7 @@ function assignTraineesToInstructors(trainees, instructors) {
   };
 }
 async function initializeData() {
-  console.log("🔧 initializeData() v4.0 - DB-only, no mock data");
+  console.log("🔧 initializeData() v3.0 - Starting data initialization (DB-only, no mock data)");
   let instructors = [];
   let trainees = [];
   let aircraft = [];
@@ -97160,22 +97331,19 @@ async function initializeData() {
     console.log("🌐 Initializing data from API...");
     console.log("👨‍🏫 Fetching instructors from API...");
     const allPersonnel = await fetchInstructors();
-    instructors = allPersonnel.map((i) => ({ ...i, _dataSource: "database" }));
+    instructors = allPersonnel;
     console.log("✅ Staff DB loaded:", instructors.length, "personnel records");
-    instructors.forEach((inst) => {
+    allPersonnel.forEach((inst) => {
       const hasUserId = inst.userId && inst.userId !== "";
       console.log(`  DB Personnel: ${inst.name} | idNumber: ${inst.idNumber} | unit: ${inst.unit || "N/A"} | role: ${inst.role || "N/A"} | isQFI: ${inst.isQFI || false} | userId: ${hasUserId ? "YES" : "NO"}`);
     });
-    if (instructors.length === 0) {
-      console.warn("⚠️ No instructors from API - returning empty list");
-    }
+    instructors = instructors.map((i) => ({ ...i, _dataSource: "database" }));
+    console.log("🔄 Loaded staff from DB only:", instructors.length, "records (mock data excluded at load time)");
     console.log("👨‍🎓 Fetching trainees from API...");
     trainees = await fetchTrainees();
-    trainees = trainees.map((t) => ({ ...t, _dataSource: "database" }));
     console.log("✅ Trainee DB loaded:", trainees.length);
-    if (trainees.length === 0) {
-      console.warn("⚠️ No trainees from API - returning empty list");
-    }
+    trainees = trainees.map((t) => ({ ...t, _dataSource: "database" }));
+    console.log("🔄 Loaded trainees from DB only:", trainees.length, "records (mock data excluded at load time)");
     try {
       console.log("🔧 Applying trainee assignment logic...");
       const assignmentResult = assignTraineesToInstructors(trainees, instructors);
@@ -97183,15 +97351,12 @@ async function initializeData() {
       console.log("✅ Trainee assignment complete");
       console.log("📊 Assignment Summary:", assignmentResult.summary);
     } catch (error) {
-      console.error("❌ Error during trainee assignment:", error);
-      console.warn("⚠️ Continuing without trainee assignment - trainees will have no instructors assigned");
+      console.error("\\u274c Error during trainee assignment:", error);
+      console.warn("\\u26a0️ Continuing without trainee assignment - trainees will have no instructors assigned");
     }
     console.log("✈️ Fetching aircraft from API...");
     aircraft = await fetchAircraft();
     console.log("✅ Aircraft loaded:", aircraft.length);
-    if (aircraft.length === 0) {
-      console.log("ℹ️ No aircraft records in database - aircraft count managed via availableAircraftCount setting");
-    }
     console.log("📊 Fetching scores from API...");
     scores = await fetchScores();
     console.log("✅ Scores loaded:", Object.keys(scores).length, "trainees with scores");
@@ -97201,6 +97366,16 @@ async function initializeData() {
     console.log("🎓 Fetching courses from API...");
     const courses = await fetchCourses();
     console.log("✅ Courses loaded:", courses.length);
+    if (instructors.length === 0) {
+      console.log("⚠️ No instructors from API - returning empty list (no mock data fallback)");
+    }
+    if (trainees.length === 0) {
+      console.log("⚠️ No trainees from API - returning empty list (no mock data fallback)");
+    }
+    if (aircraft.length === 0) {
+      console.log("⚠️ No aircraft from API, using mock data");
+      aircraft = ESL_DATA.aircraft || [];
+    }
     console.log("📊 Data loaded successfully:", {
       instructors: instructors.length,
       trainees: trainees.length,
@@ -97209,10 +97384,17 @@ async function initializeData() {
       events: events.length,
       courses: courses.length
     });
-    return { instructors, trainees, aircraft, scores, events, courses };
+    return {
+      instructors,
+      trainees,
+      aircraft,
+      scores,
+      events,
+      courses
+    };
   } catch (error) {
     console.error("❌ Failed to load data from API:", error);
-    console.warn("⚠️ API error - returning empty data (no mock data fallback)");
+    console.log("⚠️ API error - returning empty data (no mock data fallback)");
     return {
       instructors: [],
       trainees: [],
@@ -104946,32 +105128,37 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const handleSaveAcademicEvent = (data) => {
     if (!data.selectedTrainees.length || !data.timeline.length) return;
     const lessonCodes = data.lessons.map((l) => l.code).join(", ");
-    const totalDuration = data.timeline.reduce((sum, t) => sum + t.duration, 0);
-    const firstStart = Math.min(...data.timeline.map((t) => t.startTime));
-    const flightNumberLabel = lessonCodes || "ACAD-SESSION";
-    const newEvents = data.selectedTrainees.map((traineeName) => ({
+    const sessionDuration = data.workEnd - data.workStart;
+    const academicDayEvent = {
       id: v4(),
       date: data.date,
       type: "ground",
-      flightNumber: flightNumberLabel,
-      startTime: firstStart,
-      duration: totalDuration,
+      flightNumber: "ACAD",
+      startTime: data.workStart,
+      duration: sessionDuration,
       attendees: data.selectedTrainees,
-      student: traineeName,
-      resourceId: data.resourceId,
-      color: "bg-blue-700/80",
+      student: data.selectedTrainees[0] || "",
+      resourceId: data.resourceId || "Ground 1",
+      color: "bg-blue-800/90",
       flightType: "Dual",
       locationType: "Local",
       origin: school,
       destination: school,
       isAcademic: true,
       isTimeFixed: true,
-      // NEO Build skips isTimeFixed events
-      notes: `Academic session: ${lessonCodes}`
-    }));
-    setEvents((prev) => [...prev, ...newEvents]);
+      notes: `Academic session: ${lessonCodes}`,
+      academicTiles: data.timeline.map((t) => ({
+        lessonCode: t.lessonCode,
+        label: t.label,
+        startTime: t.startTime,
+        duration: t.duration,
+        color: t.color,
+        isStandard: t.isStandard
+      }))
+    };
+    setEvents((prev) => [...prev, academicDayEvent]);
     setShowAddGroundEvent(false);
-    setSuccessMessage(`Academic session scheduled for ${data.selectedTrainees.length} trainee(s): ${lessonCodes}`);
+    setSuccessMessage(`Academic session published for ${data.date}: ${lessonCodes || "ACAD-SESSION"}`);
   };
   const generateTraineeRemedies = reactExports.useCallback((conflictedEvent, allEvents) => {
     const suggestions = [];
@@ -105966,7 +106153,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11415,
+            lineNumber: 11421,
             columnNumber: 24
           },
           void 0
@@ -106004,7 +106191,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11571,
+            lineNumber: 11577,
             columnNumber: 24
           },
           void 0
@@ -106064,7 +106251,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11640,
+              lineNumber: 11646,
               columnNumber: 28
             },
             void 0
@@ -106119,7 +106306,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11693,
+            lineNumber: 11699,
             columnNumber: 24
           },
           void 0
@@ -106164,7 +106351,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11711,
+            lineNumber: 11717,
             columnNumber: 24
           },
           void 0
@@ -106297,7 +106484,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11751,
+            lineNumber: 11757,
             columnNumber: 24
           },
           void 0
@@ -106416,7 +106603,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11885,
+            lineNumber: 11891,
             columnNumber: 24
           },
           void 0
@@ -106534,7 +106721,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12018,
+              lineNumber: 12024,
               columnNumber: 28
             },
             void 0
@@ -106554,7 +106741,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12146,
+              lineNumber: 12152,
               columnNumber: 28
             },
             void 0
@@ -106620,7 +106807,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12154,
+            lineNumber: 12160,
             columnNumber: 24
           },
           void 0
@@ -106813,7 +107000,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12210,
+            lineNumber: 12216,
             columnNumber: 24
           },
           void 0
@@ -106834,7 +107021,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12400,
+            lineNumber: 12406,
             columnNumber: 24
           },
           void 0
@@ -106866,7 +107053,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12410,
+            lineNumber: 12416,
             columnNumber: 24
           },
           void 0
@@ -106884,7 +107071,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12431,
+            lineNumber: 12437,
             columnNumber: 24
           },
           void 0
@@ -106916,7 +107103,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12438,
+            lineNumber: 12444,
             columnNumber: 25
           },
           void 0
@@ -107047,7 +107234,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12465,
+            lineNumber: 12471,
             columnNumber: 24
           },
           void 0
@@ -107071,7 +107258,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12606,
+            lineNumber: 12612,
             columnNumber: 24
           },
           void 0
@@ -107150,7 +107337,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12621,
+            lineNumber: 12627,
             columnNumber: 24
           },
           void 0
@@ -107233,7 +107420,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12696,
+            lineNumber: 12702,
             columnNumber: 24
           },
           void 0
@@ -107271,7 +107458,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12776,
+            lineNumber: 12782,
             columnNumber: 28
           },
           void 0
@@ -107293,7 +107480,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12803,
+            lineNumber: 12809,
             columnNumber: 24
           },
           void 0
@@ -107335,7 +107522,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               false,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 12844,
+                lineNumber: 12850,
                 columnNumber: 32
               },
               void 0
@@ -107344,7 +107531,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Error: Could not load trainee LMP." }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 12855,
+          lineNumber: 12861,
           columnNumber: 24
         }, void 0);
       case "Currency":
@@ -107363,7 +107550,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12858,
+              lineNumber: 12864,
               columnNumber: 28
             },
             void 0
@@ -107441,7 +107628,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12869,
+            lineNumber: 12875,
             columnNumber: 24
           },
           void 0
@@ -107460,7 +107647,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12937,
+            lineNumber: 12943,
             columnNumber: 24
           },
           void 0
@@ -107590,7 +107777,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12965,
+              lineNumber: 12971,
               columnNumber: 28
             },
             void 0
@@ -107604,7 +107791,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13099,
+            lineNumber: 13105,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -107612,7 +107799,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13100,
+            lineNumber: 13106,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -107620,7 +107807,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             eventForPt051 ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13101,
+            lineNumber: 13107,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -107634,14 +107821,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13102,
+              lineNumber: 13108,
               columnNumber: 21
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13098,
+          lineNumber: 13104,
           columnNumber: 24
         }, void 0);
       case "PostFlight":
@@ -107770,7 +107957,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13111,
+              lineNumber: 13117,
               columnNumber: 28
             },
             void 0
@@ -107798,7 +107985,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13258,
+              lineNumber: 13264,
               columnNumber: 28
             },
             void 0
@@ -107808,13 +107995,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       case "AUTH":
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13275,
+          lineNumber: 13281,
           columnNumber: 24
         }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13277,
+          lineNumber: 13283,
           columnNumber: 24
         }, void 0);
     }
@@ -107856,7 +108043,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SystemFreezeBanner, {}, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13331,
+      lineNumber: 13337,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -107870,7 +108057,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       false,
       {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13332,
+        lineNumber: 13338,
         columnNumber: 9
       },
       void 0
@@ -107914,7 +108101,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13338,
+          lineNumber: 13344,
           columnNumber: 13
         },
         void 0
@@ -107952,19 +108139,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13371,
+            lineNumber: 13377,
             columnNumber: 49
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13399,
+          lineNumber: 13405,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13370,
+        lineNumber: 13376,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -107985,14 +108172,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13403,
+          lineNumber: 13409,
           columnNumber: 13
         },
         void 0
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Magnifier, { isEnabled: isMagnifierEnabled }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13415,
+        lineNumber: 13421,
         columnNumber: 36
       }, void 0),
       selectedEvent && isAddingTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -108025,7 +108212,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13418,
+          lineNumber: 13424,
           columnNumber: 17
         },
         void 0
@@ -108155,7 +108342,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13444,
+          lineNumber: 13450,
           columnNumber: 17
         },
         void 0
@@ -108163,7 +108350,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       conflict && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13584,
+        lineNumber: 13590,
         columnNumber: 26
       }, void 0),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -108178,7 +108365,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13586,
+          lineNumber: 13592,
           columnNumber: 17
         },
         void 0
@@ -108186,11 +108373,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowNeoChoiceModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Resolution Options" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13597,
+          lineNumber: 13603,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13596,
+          lineNumber: 13602,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 text-center", children: [
@@ -108198,13 +108385,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             "NEO has found multiple ways to resolve the conflict for ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: neoProblemTileForFlyout?.event.flightNumber }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13600,
+              lineNumber: 13606,
               columnNumber: 114
             }, void 0),
             ". Please choose an option:"
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13600,
+            lineNumber: 13606,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-4 pt-4", children: [
@@ -108216,12 +108403,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Time Shift" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13606,
+                    lineNumber: 13612,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13607,
+                    lineNumber: 13613,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -108230,7 +108417,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13602,
+                lineNumber: 13608,
                 columnNumber: 33
               },
               void 0
@@ -108243,12 +108430,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13613,
+                    lineNumber: 13619,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
                     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13614,
+                    lineNumber: 13620,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -108257,38 +108444,38 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13609,
+                lineNumber: 13615,
                 columnNumber: 33
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13601,
+            lineNumber: 13607,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13599,
+          lineNumber: 13605,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13595,
+        lineNumber: 13601,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13594,
+        lineNumber: 13600,
         columnNumber: 17
       }, void 0),
       showTimeOnlyRemedyConfirm && timeOnlyRemedyForConfirmation && neoProblemTileForFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: handleCancelTimeOnlyRemedy, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Time Change" }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13625,
+          lineNumber: 13631,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13624,
+          lineNumber: 13630,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: [
@@ -108296,89 +108483,89 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Current Start Time:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13630,
+                lineNumber: 13636,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-mono font-bold", children: formatDecimalHourToString(neoProblemTileForFlyout.event.startTime) }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13631,
+                lineNumber: 13637,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13629,
+              lineNumber: 13635,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13634,
+                lineNumber: 13640,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" }, void 0, false, {
                 fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13635,
+                lineNumber: 13641,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13633,
+              lineNumber: 13639,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13628,
+            lineNumber: 13634,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center pt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-2 text-sm", children: "Proposed New Start Time" }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13646,
+              lineNumber: 13652,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl font-bold text-green-400 font-mono tracking-wider", children: formatDecimalHourToString(timeOnlyRemedyForConfirmation.newStartTime) }, void 0, false, {
               fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13647,
+              lineNumber: 13653,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13645,
+            lineNumber: 13651,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13627,
+          lineNumber: 13633,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelTimeOnlyRemedy, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13653,
+            lineNumber: 13659,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSwitchToCrewChange, className: "px-4 py-2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors text-sm font-semibold", children: "Change Crew Instead" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13654,
+            lineNumber: 13660,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleConfirmTimeOnlyRemedy, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Accept Time Change" }, void 0, false, {
             fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13655,
+            lineNumber: 13661,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13652,
+          lineNumber: 13658,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13623,
+        lineNumber: 13629,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13622,
+        lineNumber: 13628,
         columnNumber: 18
       }, void 0),
       showDutyWarning && dutyWarningRemedy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -108393,49 +108580,49 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13661,
+          lineNumber: 13667,
           columnNumber: 17
         },
         void 0
       ),
       showInfoNotification && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13670,
+        lineNumber: 13676,
         columnNumber: 38
       }, void 0),
       showNightFlyingInfo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13671,
+        lineNumber: 13677,
         columnNumber: 37
       }, void 0),
       isBuildingDfp && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13672,
+        lineNumber: 13678,
         columnNumber: 31
       }, void 0),
       showDateWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13673,
+        lineNumber: 13679,
         columnNumber: 33
       }, void 0),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13674,
+        lineNumber: 13680,
         columnNumber: 56
       }, void 0),
       showPublishConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13675,
+        lineNumber: 13681,
         columnNumber: 36
       }, void 0),
       isLocalityChangeVisible && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LocalityChangeFlyout, { locality: school }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13676,
+        lineNumber: 13682,
         columnNumber: 41
       }, void 0),
       successMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SuccessNotification, { message: successMessage, onClose: () => setSuccessMessage(null) }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13677,
+        lineNumber: 13683,
         columnNumber: 32
       }, void 0),
       showCurrencySetup && selectedPersonForCurrency && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -108456,7 +108643,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13679,
+          lineNumber: 13685,
           columnNumber: 17
         },
         void 0
@@ -108472,7 +108659,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13695,
+          lineNumber: 13701,
           columnNumber: 17
         },
         void 0
@@ -108504,7 +108691,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13702,
+          lineNumber: 13708,
           columnNumber: 17
         },
         void 0
@@ -108551,7 +108738,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13725,
+          lineNumber: 13731,
           columnNumber: 17
         },
         void 0
@@ -108570,7 +108757,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13763,
+          lineNumber: 13769,
           columnNumber: 17
         },
         void 0
@@ -108589,7 +108776,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13773,
+          lineNumber: 13779,
           columnNumber: 17
         },
         void 0
@@ -108645,7 +108832,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13783,
+          lineNumber: 13789,
           columnNumber: 17
         },
         void 0
@@ -108667,7 +108854,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13836,
+          lineNumber: 13842,
           columnNumber: 17
         },
         void 0
@@ -108690,7 +108877,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13851,
+          lineNumber: 13857,
           columnNumber: 17
         },
         void 0
@@ -108706,44 +108893,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13867,
+          lineNumber: 13873,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13337,
+      lineNumber: 13343,
       columnNumber: 9
     }, void 0),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoginModal, { onLoginSuccess: handleLoginSuccess }, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13877,
+      lineNumber: 13883,
       columnNumber: 13
     }, void 0),
     authLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13884,
+        lineNumber: 13890,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." }, void 0, false, {
         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13885,
+        lineNumber: 13891,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13883,
+      lineNumber: 13889,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13882,
+      lineNumber: 13888,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/App.tsx",
-    lineNumber: 13330,
+    lineNumber: 13336,
     columnNumber: 5
   }, void 0);
 };
