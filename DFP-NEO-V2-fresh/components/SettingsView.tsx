@@ -1160,21 +1160,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const parseTraineeRow = (row: any): Partial<Trainee> | null => {
+        const rowKeys = Object.keys(row);
+        
+        // Try to find PMKeys/ID with detailed logging
         const idValue = getNum(row, ['PMKeys/ID', 'idNumber']);
-        if (idValue === undefined) return null;
+        if (idValue === undefined) {
+            // Check what keys exist related to ID
+            const idRelatedKeys = rowKeys.filter(k => k.toLowerCase().includes('id') || k.toLowerCase().includes('pm') || k.toLowerCase().includes('key'));
+            console.warn('🔴 [PARSE] Row missing idNumber. Row keys:', rowKeys.join(', '));
+            console.warn('🔴 [PARSE] ID-related keys found:', idRelatedKeys.join(', '));
+            console.warn('🔴 [PARSE] Full row:', JSON.stringify(row));
+            return null;
+        }
 
         const parsed: Partial<Trainee> = { idNumber: idValue };
 
         // Try to get name from combined "Name" column first
-        const nameField = getStr(row, ['Name', 'Name [Surname, Firstname]']);
+        // The template column is "Name\n [Surname, Firstname]" — try multiple variants
+        const nameField = getStr(row, [
+            'Name\n [Surname, Firstname]',
+            'Name [Surname, Firstname]',
+            'Name  [Surname, Firstname]',
+            'Name',
+            'Full Name',
+            'FullName'
+        ]);
         if (nameField) {
             parsed.name = nameField;
+            console.log(`✅ [PARSE] ID=${idValue} name from combined field: "${nameField}"`);
         } else {
             // Fallback to separate Surname and Firstname columns
             const surname = getStr(row, ['Surname', 'Last Name']);
             const firstname = getStr(row, ['First Name', 'Firstname', 'Given Name']);
             if (surname && firstname) {
                 parsed.name = `${surname}, ${firstname}`;
+                console.log(`✅ [PARSE] ID=${idValue} name from Surname+Firstname: "${parsed.name}"`);
+            } else {
+                // Last resort: check all keys for any name-like field
+                const nameKey = rowKeys.find(k => k.toLowerCase().includes('name') || k.toLowerCase().includes('surname'));
+                if (nameKey && row[nameKey]) {
+                    parsed.name = String(row[nameKey]);
+                    console.warn(`🟡 [PARSE] ID=${idValue} name from fallback key "${nameKey}": "${parsed.name}"`);
+                } else {
+                    console.error(`🔴 [PARSE] ID=${idValue} — NO NAME FOUND. Row keys: ${rowKeys.join(', ')}`);
+                    console.error(`🔴 [PARSE] Row values:`, JSON.stringify(row));
+                }
             }
         }
 
@@ -1288,26 +1318,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 // For trainee bulk update with course selection
                 if (course) {
                     const parsedRows = rows.map(parseTraineeRow);
-                    console.log('🔵 BULK UPDATE DEBUG - Parsed rows:', parsedRows.length);
-                    console.log('🔵 First parsed row:', parsedRows[0]);
+                    console.log('🔵 [BULK] Raw Excel rows:', rows.length);
+                    console.log('🔵 [BULK] First raw row keys:', rows[0] ? Object.keys(rows[0]) : 'NO ROWS');
+                    console.log('🔵 [BULK] First raw row values:', rows[0]);
+                    console.log('🔵 [BULK] Parsed rows:', parsedRows.length);
+                    console.log('🔵 [BULK] First parsed row:', JSON.stringify(parsedRows[0]));
+                    console.log('🔵 [BULK] Rows with null result:', parsedRows.filter(r => r === null).length);
+                    console.log('🔵 [BULK] Rows missing idNumber:', parsedRows.filter(r => r && !r.idNumber).length);
+                    console.log('🔵 [BULK] Rows missing name:', parsedRows.filter(r => r && r.idNumber && !r.name).length);
                     finalRows = parsedRows.filter(t => t && t.idNumber && t.name);
-                    console.log('🔵 Filtered rows (with ID and name):', finalRows.length);
+                    console.log('🔵 [BULK] Filtered rows (with ID and name):', finalRows.length);
                     if (finalRows.length === 0) {
-                        console.error('🔴 NO ROWS PASSED FILTER! Check if rows have idNumber and name');
-                        console.log('🔴 Sample parsed row:', parsedRows[0]);
+                        console.error('🔴 [BULK] NO ROWS PASSED FILTER!');
+                        console.error('🔴 [BULK] All parsed rows:', JSON.stringify(parsedRows.slice(0, 3)));
+                        console.error('🔴 [BULK] All raw rows:', JSON.stringify(rows.slice(0, 3)));
                     }
                     // Remove all existing trainees from the selected course
                     const otherCourseTrainees = traineesData.filter(t => t.course !== course);
-                    console.log('🔵 Other course trainees:', otherCourseTrainees.length);
-                    // Add new trainees from file (they should have course set in the file)
+                    console.log('🔵 [BULK] Other course trainees (kept):', otherCourseTrainees.length);
+                    // Add new trainees from file (override course with selected course)
                     const newTrainees = finalRows.map(t => ({ ...t, course } as Trainee));
-                    console.log('🔵 New trainees to add:', newTrainees.length);
-                    console.log('🔵 Sample new trainee:', newTrainees[0]);
-                    console.log('🔵 Total trainees after update:', otherCourseTrainees.length + newTrainees.length);
+                    console.log('🔵 [BULK] New trainees to add:', newTrainees.length);
+                    console.log('🔵 [BULK] Sample new trainee:', JSON.stringify(newTrainees[0]));
+                    console.log('🔵 [BULK] Total trainees after update:', otherCourseTrainees.length + newTrainees.length);
+                    console.log('🔵 [BULK] Calling onReplaceTrainees with', [...otherCourseTrainees, ...newTrainees].length, 'total trainees');
                     onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
                 } else {
                     // Legacy behavior: replace all trainees
+                    console.warn('🟡 [BULK] No course selected — replacing ALL trainees');
                     finalRows = rows.map(parseTraineeRow).filter(t => t && t.idNumber && t.name);
+                    console.log('🔵 [BULK] Legacy replace — rows:', finalRows.length);
                     onReplaceTrainees(finalRows as Trainee[]);
                 }
                 break;

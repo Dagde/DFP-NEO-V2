@@ -2019,7 +2019,15 @@ app.post('/api/trainees/bulk', async (req, res) => {
     const db = await getPrisma();
     const { trainees, course, replaceAll } = req.body;
 
+    console.log(`🔵 POST /api/trainees/bulk - received request body keys: ${Object.keys(req.body).join(', ')}`);
+    console.log(`🔵 POST /api/trainees/bulk - trainees type: ${typeof trainees}, isArray: ${Array.isArray(trainees)}, length: ${Array.isArray(trainees) ? trainees.length : 'N/A'}`);
+    console.log(`🔵 POST /api/trainees/bulk - course: ${course}, replaceAll: ${replaceAll}`);
+    if (Array.isArray(trainees) && trainees.length > 0) {
+      console.log(`🔵 POST /api/trainees/bulk - first trainee sample: ${JSON.stringify(trainees[0])}`);
+    }
+
     if (!Array.isArray(trainees) || trainees.length === 0) {
+      console.error(`❌ POST /api/trainees/bulk - invalid trainees array`);
       return res.status(400).json({ error: 'trainees array is required and must not be empty' });
     }
 

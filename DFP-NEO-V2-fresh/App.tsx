@@ -10069,18 +10069,30 @@ updates.forEach(update => {
     }, []);
 
     const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
+        console.log(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
+        console.log(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
+        
+        const missingId = updatedTrainees.filter(t => !t.idNumber);
+        const missingName = updatedTrainees.filter(t => !t.name);
+        console.log(`🔵 [handleBulkUpdateTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
+
         // Update in-memory state immediately
         const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
         setTraineesData(prevTrainees => {
             const existingIds = new Set(prevTrainees.map(t => t.idNumber));
             const updatedExisting = prevTrainees.map(t => updatedMap.get(t.idNumber) || t);
             const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
+            console.log(`🔵 [handleBulkUpdateTrainees] State update: ${updatedExisting.length} existing updated, ${newToAdd.length} new added`);
             return [...updatedExisting, ...newToAdd];
         });
 
         // Persist to database via bulk API
         try {
-            const course = updatedTrainees.length > 0 ? updatedTrainees[0].course : undefined;
+            const courses = [...new Set(updatedTrainees.map(t => t.course).filter(Boolean))];
+            const course = courses.length === 1 ? courses[0] : (updatedTrainees.length > 0 ? updatedTrainees[0].course : undefined);
+            console.log(`🔵 [handleBulkUpdateTrainees] Courses in payload: ${courses.join(', ')}, using: ${course}`);
+            console.log(`🔵 [handleBulkUpdateTrainees] Calling POST ${getApiBase()}/trainees/bulk`);
+            
             const response = await fetch(`${getApiBase()}/trainees/bulk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -10088,24 +10100,34 @@ updates.forEach(update => {
                 body: JSON.stringify({
                     trainees: updatedTrainees,
                     course: course || undefined,
-                    replaceAll: false  // Minor update — merge, don't replace
+                    replaceAll: false
                 })
             });
+            console.log(`🔵 [handleBulkUpdateTrainees] API response status: ${response.status}`);
             if (response.ok) {
                 const result = await response.json();
-                console.log(`✅ Bulk trainee update saved to DB: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}`);
-                setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated.`);
+                console.log(`✅ [handleBulkUpdateTrainees] DB save success:`, JSON.stringify(result));
+                setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
             } else {
                 const err = await response.text();
-                console.error('❌ Bulk trainee DB save failed:', err);
-                setSuccessMessage('Warning: Trainees updated in session but DB save failed. Please contact admin.');
+                console.error('❌ [handleBulkUpdateTrainees] DB save failed. Status:', response.status, 'Body:', err);
+                setSuccessMessage(`Warning: Trainees updated in session but DB save failed (${response.status}). Check console.`);
             }
         } catch (err) {
-            console.error('❌ Bulk trainee DB save error:', err);
+            console.error('❌ [handleBulkUpdateTrainees] DB save exception:', err);
+            setSuccessMessage(`Warning: DB save error — ${(err as Error).message}`);
         }
     }, []);
 
     const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[]) => {
+        console.log(`🔵 [handleReplaceTrainees] Called with ${newTrainees.length} trainees`);
+        console.log(`🔵 [handleReplaceTrainees] Sample trainee:`, JSON.stringify(newTrainees[0] || null));
+        
+        // Check for missing required fields before DB call
+        const missingId = newTrainees.filter(t => !t.idNumber);
+        const missingName = newTrainees.filter(t => !t.name);
+        console.log(`🔵 [handleReplaceTrainees] Missing idNumber: ${missingId.length}, missing name: ${missingName.length}`);
+
         // Update in-memory state immediately
         setTraineesData(newTrainees);
         setSuccessMessage('Trainees successfully replaced!');
@@ -10113,28 +10135,40 @@ updates.forEach(update => {
         // Persist to database — replaceAll removes existing course trainees then re-creates
         try {
             // Determine course from the new trainees (all should have same course for a Replace operation)
-            const course = newTrainees.length > 0 ? newTrainees[0].course : undefined;
+            const courses = [...new Set(newTrainees.map(t => t.course).filter(Boolean))];
+            const course = courses.length === 1 ? courses[0] : (newTrainees.length > 0 ? newTrainees[0].course : undefined);
+            console.log(`🔵 [handleReplaceTrainees] Detected courses in payload: ${courses.join(', ')}`);
+            console.log(`🔵 [handleReplaceTrainees] Using course: ${course}`);
+            console.log(`🔵 [handleReplaceTrainees] Calling POST ${getApiBase()}/trainees/bulk with ${newTrainees.length} trainees, replaceAll=true`);
+            
+            const payload = {
+                trainees: newTrainees,
+                course: course || undefined,
+                replaceAll: true
+            };
+            console.log(`🔵 [handleReplaceTrainees] Payload summary: ${newTrainees.length} trainees, course=${course}, replaceAll=true`);
+            
             const response = await fetch(`${getApiBase()}/trainees/bulk`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    trainees: newTrainees,
-                    course: course || undefined,
-                    replaceAll: true  // Replace — deactivate existing, then recreate
-                })
+                body: JSON.stringify(payload)
             });
+            
+            console.log(`🔵 [handleReplaceTrainees] API response status: ${response.status}`);
+            
             if (response.ok) {
                 const result = await response.json();
-                console.log(`✅ Replace trainees saved to DB: created=${result.created}, updated=${result.updated}, skipped=${result.skipped}`);
-                setSuccessMessage(`Trainees replaced: ${result.created} added, ${result.updated} updated.`);
+                console.log(`✅ [handleReplaceTrainees] DB save success:`, JSON.stringify(result));
+                setSuccessMessage(`Trainees replaced: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
             } else {
                 const err = await response.text();
-                console.error('❌ Replace trainees DB save failed:', err);
-                setSuccessMessage('Warning: Trainees replaced in session but DB save failed. Please contact admin.');
+                console.error('❌ [handleReplaceTrainees] DB save failed. Status:', response.status, 'Body:', err);
+                setSuccessMessage(`Warning: Trainees replaced in session but DB save failed (${response.status}). Check console.`);
             }
         } catch (err) {
-            console.error('❌ Replace trainees DB save error:', err);
+            console.error('❌ [handleReplaceTrainees] DB save exception:', err);
+            setSuccessMessage(`Warning: DB save error — ${(err as Error).message}`);
         }
     }, []);
     
