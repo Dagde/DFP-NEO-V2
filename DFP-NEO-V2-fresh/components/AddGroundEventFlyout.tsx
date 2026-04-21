@@ -369,6 +369,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 onUpdateCourseAcademicProgress={onUpdateCourseAcademicProgress}
                                 persistedAcademicLmp={persistedAcademicLmp}
                                 onUpdatePersistedAcademicLmp={onUpdatePersistedAcademicLmp}
+                                instructors={instructors}
                                 onSave={(data) => {
                                     console.log('🎓 [AddGroundEventFlyout] AcademicsTab onSave triggered');
                                     console.log('🎓 [AddGroundEventFlyout] onSaveAcademic prop exists?', typeof onSaveAcademic);

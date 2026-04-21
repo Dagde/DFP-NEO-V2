@@ -32,6 +32,7 @@ interface AcademicsTabProps {
   // Persisted Academic LMP selection (survives hard reset)
   persistedAcademicLmp?: string;
   onUpdatePersistedAcademicLmp?: (lmp: string) => void;
+  instructors?: string[];    // list of instructor names for allocation dropdown
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -45,6 +46,7 @@ export interface AcademicSaveData {
   workStart: number;
   workEnd: number;
   resourceId: string;
+  instructor: string;
   isAcademic: true;
 }
 
@@ -304,6 +306,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   onUpdateCourseAcademicProgress,
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
+  instructors = [],
   onSave,
   onClose,
 }) => {
@@ -336,6 +339,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [workEnd, setWorkEnd]   = useState(17);
   const [otherText, setOtherText] = useState('');
   const [resourceId, setResourceId] = useState(''); // blank by default
+  const [instructor, setInstructor] = useState(''); // allocated instructor for this academic session
+
+  // Edit-tile modal state
+  const [editTileId, setEditTileId] = useState<string | null>(null);
+  const editTile = editTileId ? tiles.find(t => t.id === editTileId) || null : null;
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editDuration, setEditDuration] = useState('');
 
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
@@ -401,18 +411,15 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic LMP courses (ONLY type === 'Academics' — Ground School is a flying phase activity) ──
+  // ── Academic LMP courses — includes ALL syllabus types (not just 'Academics')
+  // so Ground School, PC-21 Ground School etc are all selectable ──────────────
   const academicLmpCourses = useMemo(() => {
     const courseCodeSet = new Set<string>();
     syllabusDetails.forEach(s => {
-      if (s.type === 'Academics') {
-        (s.courses || []).forEach(c => courseCodeSet.add(c));
-      }
+      (s.courses || []).forEach(c => courseCodeSet.add(c));
     });
     return Array.from(courseCodeSet).map(code => {
-      const firstItem = syllabusDetails.find(s =>
-        s.type === 'Academics' && s.courses?.includes(code)
-      );
+      const firstItem = syllabusDetails.find(s => s.courses?.includes(code));
       // module field holds the full course title (e.g. "PC-21 Ground School")
       const title = firstItem?.module?.trim() || code;
       return { code, title };
@@ -438,12 +445,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     }
   }, [academicLmpCourses]);
 
-  // ── Academic syllabus filtered by selected Academic LMP course (Academics type only) ──
+  // ── Academic syllabus filtered by selected Academic LMP course ─────────────
+  // Includes all event types — Ground School, Academics, etc.
   const academicSyllabus = useMemo(() => {
     if (!selectedAcademicLmp) return [];
-    return syllabusDetails.filter(s =>
-      s.type === 'Academics' && s.courses?.includes(selectedAcademicLmp)
-    );
+    return syllabusDetails.filter(s => s.courses?.includes(selectedAcademicLmp));
   }, [syllabusDetails, selectedAcademicLmp]);
 
   const moduleGroups = useMemo(() => groupByModule(academicSyllabus), [academicSyllabus]);
@@ -614,6 +620,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       workStart,
       workEnd,
       resourceId,
+      instructor,
       isAcademic: true as const,
     };
 
@@ -898,7 +905,19 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       <div style={S.card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={S.label}>Timeline — {fmtTime(workStart)} to {fmtTime(workEnd)}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Instructor allocation */}
+            {instructors.length > 0 && (
+              <>
+                <div style={S.label}>Instructor</div>
+                <select style={{ ...S.select, width: 160 }} value={instructor} onChange={e => setInstructor(e.target.value)}>
+                  <option value="">— Unallocated —</option>
+                  {instructors.map(i => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                </select>
+              </>
+            )}
             <div style={S.label}>Classroom</div>
             <select style={{ ...S.select, width: 120 }} value={resourceId} onChange={e => setResourceId(e.target.value)}>
               <option value="">— Select —</option>
@@ -947,7 +966,14 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 key={tile.id}
                 className="acad-tile"
                 onMouseDown={e => onMouseDownTile(e, tile.id)}
-                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)}`}
+                onDoubleClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditTileId(tile.id);
+                  setEditStartTime(fmtTime(tile.startTime));
+                  setEditDuration(String(tile.duration));
+                }}
+                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)} | Double-click to edit`}
                 style={{
                   position: 'absolute',
                   top: 18,
@@ -1002,6 +1028,94 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* ── Edit Tile Modal ── */}
+      {editTile && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 200,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setEditTileId(null)}
+        >
+          <div
+            style={{
+              background: '#1e2535', border: '1px solid #334155', borderRadius: 8,
+              padding: '20px 24px', minWidth: 300, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, color: '#93c5fd', fontSize: 14, marginBottom: 12 }}>
+              Edit: {editTile.lessonCode}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label style={{ color: '#94a3b8', fontSize: 12 }}>
+                Start Time (HH:MM)
+                <input
+                  type="text"
+                  value={editStartTime}
+                  onChange={e => setEditStartTime(e.target.value)}
+                  placeholder="e.g. 09:00"
+                  style={{
+                    display: 'block', marginTop: 4, width: '100%',
+                    background: '#0f172a', border: '1px solid #475569', borderRadius: 4,
+                    color: '#fff', padding: '6px 10px', fontSize: 13,
+                  }}
+                />
+              </label>
+              <label style={{ color: '#94a3b8', fontSize: 12 }}>
+                Duration (hours, e.g. 1.0)
+                <input
+                  type="number"
+                  min="0.25"
+                  max="8"
+                  step="0.25"
+                  value={editDuration}
+                  onChange={e => setEditDuration(e.target.value)}
+                  style={{
+                    display: 'block', marginTop: 4, width: '100%',
+                    background: '#0f172a', border: '1px solid #475569', borderRadius: 4,
+                    color: '#fff', padding: '6px 10px', fontSize: 13,
+                  }}
+                />
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button
+                onClick={() => setEditTileId(null)}
+                style={{
+                  padding: '6px 14px', background: 'transparent',
+                  border: '1px solid #475569', borderRadius: 4, color: '#94a3b8',
+                  cursor: 'pointer', fontSize: 12,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Parse HH:MM start time
+                  const parts = editStartTime.split(':');
+                  const h = parseInt(parts[0] || '0', 10);
+                  const m = parseInt(parts[1] || '0', 10);
+                  const newStart = snap(h + m / 60);
+                  const newDur = Math.max(0.25, parseFloat(editDuration) || 1);
+                  setTiles(prev => prev.map(t =>
+                    t.id === editTileId ? { ...t, startTime: newStart, duration: newDur } : t
+                  ));
+                  setEditTileId(null);
+                }}
+                style={{
+                  padding: '6px 14px', background: '#2563eb',
+                  border: 'none', borderRadius: 4, color: '#fff',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>

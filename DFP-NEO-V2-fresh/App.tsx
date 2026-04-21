@@ -10496,6 +10496,7 @@ updates.forEach(update => {
             duration: sessionDuration,
             attendees: data.selectedTrainees,
             student: data.selectedTrainees[0] || '',
+            instructor: data.instructor || '',
             resourceId: data.resourceId || 'Ground 1',
             color: 'bg-blue-800/90',
             flightType: 'Dual' as const,

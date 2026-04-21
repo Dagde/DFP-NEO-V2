@@ -547,19 +547,15 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         };
 
         return (
-            <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-                {/* Header bar */}
-                <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, height: 14,
-                    background: 'rgba(30,58,138,0.95)', borderBottom: '1px solid rgba(147,197,253,0.3)',
-                    display: 'flex', alignItems: 'center', paddingLeft: 6, zIndex: 2,
-                }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#93c5fd', textTransform: 'uppercase', letterSpacing: 1 }}>
-                        ACADEMICS — {formatTime(dayStart)}–{formatTime(dayStart + dayDuration)}
-                    </span>
-                </div>
-                {/* Inset lesson tiles */}
-                <div style={{ position: 'absolute', top: 14, left: 0, right: 0, bottom: 0, overflow: 'hidden' }}>
+            <div style={{
+                position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
+                background: 'rgba(186,230,253,0.07)',
+                border: '2px solid rgba(147,197,253,0.40)',
+                borderRadius: 5,
+                boxSizing: 'border-box',
+            }}>
+                {/* Inset lesson tiles — no header text, just the coloured lesson blocks */}
+                <div style={{ position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, overflow: 'hidden' }}>
                     {tiles.map((t, i) => {
                         // Position each inset tile proportionally within the outer tile
                         const offsetFromStart = t.startTime - dayStart;
@@ -567,7 +563,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                         const widthPct = (t.duration / dayDuration) * 100;
                         const isStandard = t.isStandard;
                         const bgColor = getAcadTileColor(t.lessonCode, t.color || '#1d4ed8', t.isStandard);
-                        // Shorten label: just use the lessonCode for display in inset tile
+                        // Display the lesson code as the primary label
                         const shortLabel = t.lessonCode;
                         return (
                             <div
@@ -575,19 +571,21 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                                 className="academic-inset-tile"
                                 style={{
                                     position: 'absolute',
-                                    top: 2,
-                                    bottom: 2,
+                                    top: 0,
+                                    bottom: 0,
                                     left: `calc(${leftPct}% + 1px)`,
                                     width: `calc(${widthPct}% - 2px)`,
                                     backgroundColor: bgColor,
-                                    border: '1px solid rgba(255,255,255,0.25)',
-                                    borderRadius: 3,
+                                    border: '1px solid rgba(255,255,255,0.30)',
+                                    borderRadius: 4,
                                     overflow: 'hidden',
                                     cursor: 'default',
                                     display: 'flex',
+                                    flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     zIndex: 3,
+                                    padding: '0 4px',
                                 }}
                             >
                                 {/* Tooltip on hover */}
@@ -621,13 +619,20 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                                         {formatTime(t.startTime)} – {formatTime(t.startTime + t.duration)} ({t.duration}h)
                                     </div>
                                 </div>
+                                {/* Lesson code label — larger and more readable */}
                                 <span style={{
-                                    fontSize: 9, fontWeight: 700, color: '#fff',
+                                    fontSize: 11, fontWeight: 700, color: '#fff',
                                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                                    paddingLeft: 3, paddingRight: 3,
-                                    lineHeight: 1,
+                                    lineHeight: 1.2, textAlign: 'center',
                                 }}>
                                     {shortLabel}
+                                </span>
+                                {/* Start time sub-label */}
+                                <span style={{
+                                    fontSize: 9, color: 'rgba(255,255,255,0.65)',
+                                    whiteSpace: 'nowrap', lineHeight: 1.1, textAlign: 'center',
+                                }}>
+                                    {formatTime(t.startTime)}
                                 </span>
                             </div>
                         );
