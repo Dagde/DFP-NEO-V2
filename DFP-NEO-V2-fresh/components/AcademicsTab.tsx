@@ -994,7 +994,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
           Cancel
         </button>
-        <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-400">
+        <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
           Publish
         </button>
       </div>
