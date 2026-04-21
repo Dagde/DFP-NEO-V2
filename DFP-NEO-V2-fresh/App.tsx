@@ -415,6 +415,7 @@ interface DfpConfig {
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
+  excludedCourses: string[]; // Courses excluded from NEO Build (e.g. in Academics phase or on pause)
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -1622,10 +1623,15 @@ function generateDfpInternal(
 
     setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
     
+    const excludedCourses = config.excludedCourses || [];
     const activeTrainees = trainees.filter(t => 
         !t.isPaused && 
+        !excludedCourses.includes(t.course) &&
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
+    if (excludedCourses.length > 0) {
+        console.log(`[NEO-Build] Excluding courses from build: ${excludedCourses.join(', ')} (${trainees.filter(t => excludedCourses.includes(t.course)).length} trainees excluded)`);
+    }
     
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 
@@ -5323,6 +5329,7 @@ const App: React.FC = () => {
                     const data = await res.json();
                     setNeoBuildCourse(data.neoBuildCourse || '');
                     setPersistedAcademicLmp(data.selectedAcademicLmp || '');
+                    setExcludedCourses(data.excludedCourses || []);
                 }
             } catch (error) {
                 console.error('[CourseSettings] Failed to load:', error);
@@ -5406,6 +5413,35 @@ const App: React.FC = () => {
             }
         } catch (error) {
             console.error('[CourseAcademicProgress] Failed to save:', error);
+        }
+    };
+
+    // Excluded Courses from NEO Build — persisted in DB
+    const [excludedCourses, setExcludedCourses] = useState<string[]>([]);
+    useEffect(() => {
+        const loadExcludedCourses = async () => {
+            try {
+                const res = await fetch(`${getApiBase()}/settings/course-settings`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setExcludedCourses(data.excludedCourses || []);
+                }
+            } catch (error) {
+                console.error('[ExcludedCourses] Failed to load:', error);
+            }
+        };
+        loadExcludedCourses();
+    }, []);
+    const handleUpdateExcludedCourses = async (courses: string[]) => {
+        setExcludedCourses(courses);
+        try {
+            await fetch(`${getApiBase()}/settings/course-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ excludedCourses: courses })
+            });
+        } catch (error) {
+            console.error('[ExcludedCourses] Failed to save:', error);
         }
     };
 
@@ -9161,7 +9197,7 @@ const App: React.FC = () => {
         console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
         
         // Now proceed with normal build process
-        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
@@ -9275,6 +9311,7 @@ const App: React.FC = () => {
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
+            excludedCourses: excludedCourses,
         };
 
         setTimeout(() => {
@@ -12937,6 +12974,8 @@ updates.forEach(update => {
                        onUpdateOrganisationSettings={setOrganisationSettings}
                        neoBuildCourse={neoBuildCourse}
                        onUpdateNeoBuildCourse={handleUpdateNeoBuildCourse}
+                       excludedCourses={excludedCourses}
+                       onUpdateExcludedCourses={handleUpdateExcludedCourses}
                        
                 />;
             case 'CurrencyBuilder':

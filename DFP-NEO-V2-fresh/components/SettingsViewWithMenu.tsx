@@ -97,6 +97,8 @@ interface SettingsViewWithMenuProps {
     onDatabaseDataChanged?: () => void;  // Called when staff/trainee database is modified
     neoBuildCourse?: string;
     onUpdateNeoBuildCourse?: (course: string) => void;
+    excludedCourses?: string[];
+    onUpdateExcludedCourses?: (courses: string[]) => void;
     }
 
 type SettingsSection =
@@ -728,6 +730,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             locations={props.locations}
                             neoBuildCourse={props.neoBuildCourse || ''}
                             onUpdateNeoBuildCourse={props.onUpdateNeoBuildCourse || (() => {})}
+                            excludedCourses={props.excludedCourses || []}
+                            onUpdateExcludedCourses={props.onUpdateExcludedCourses || (() => {})}
                             onShowSuccess={props.onShowSuccess}
                             currentUserPermission={props.currentUserPermission}
                         />
