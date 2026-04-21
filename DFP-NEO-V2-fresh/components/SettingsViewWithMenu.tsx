@@ -397,7 +397,7 @@ const sectionColors: Record<SettingsSection, string> = {
   'scoring-matrix':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'currencies':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'sct-events':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
-  'people-profile':    'from-teal-500/20 to-teal-600/10 border-teal-500/30 text-teal-400',
+  'people-profile':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   // OPERATIONS RULES - amber icons
   'event-limits':      'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'duty-turnaround':   'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',

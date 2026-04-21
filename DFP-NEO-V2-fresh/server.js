@@ -66,6 +66,8 @@ async function getPrisma() {
     }
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(prisma);
+    // Ensure CourseSettings and CourseAcademicProgress tables exist
+    await ensureCourseSettingsTables(prisma);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
@@ -253,47 +255,54 @@ app.post('/api/settings', async (req, res) => {
 // Course Settings API Routes
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// GET /api/settings/course-settings - Get course settings (neoBuildCourse)
+// GET /api/settings/course-settings - Get course settings (neoBuildCourse + selectedAcademicLmp)
 app.get('/api/settings/course-settings', async (req, res) => {
   try {
     const db = await getPrisma();
     const rows = await db.$queryRawUnsafe(
-      'SELECT "neoBuildCourse" FROM "CourseSettings" LIMIT 1'
+      'SELECT "neoBuildCourse", "selectedAcademicLmp" FROM "CourseSettings" LIMIT 1'
     );
     const setting = rows && rows.length > 0 ? rows[0] : null;
-    return res.json({ neoBuildCourse: setting ? setting.neoBuildCourse : null });
+    return res.json({
+      neoBuildCourse: setting ? (setting.neoBuildCourse || null) : null,
+      selectedAcademicLmp: setting ? (setting.selectedAcademicLmp || null) : null,
+    });
   } catch (error) {
     console.error('[CourseSettings] GET error:', error);
     res.status(500).json({ error: 'Failed to load course settings', details: error.message });
   }
 });
 
-// PUT /api/settings/course-settings - Update course settings (neoBuildCourse)
+// PUT /api/settings/course-settings - Update course settings (neoBuildCourse and/or selectedAcademicLmp)
 app.put('/api/settings/course-settings', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { neoBuildCourse, userId } = req.body;
-    if (!neoBuildCourse) {
-      return res.status(400).json({ error: 'Missing neoBuildCourse' });
+    const { neoBuildCourse, selectedAcademicLmp } = req.body;
+    // At least one field must be present (allow empty string to clear a value)
+    if (neoBuildCourse === undefined && selectedAcademicLmp === undefined) {
+      return res.status(400).json({ error: 'No settings fields provided' });
     }
     const existing = await db.$queryRawUnsafe(
-      'SELECT id FROM "CourseSettings" LIMIT 1'
+      'SELECT id, "neoBuildCourse", "selectedAcademicLmp" FROM "CourseSettings" LIMIT 1'
     );
     const now = new Date().toISOString();
     if (existing && existing.length > 0) {
+      const row = existing[0];
+      const newNeoBuildCourse = neoBuildCourse !== undefined ? neoBuildCourse : row.neoBuildCourse;
+      const newSelectedAcademicLmp = selectedAcademicLmp !== undefined ? selectedAcademicLmp : row.selectedAcademicLmp;
       await db.$executeRawUnsafe(
-        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "updatedAt" = $2::timestamp WHERE id = $3',
-        neoBuildCourse, now, existing[0].id
+        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "selectedAcademicLmp" = $2, "updatedAt" = $3::timestamp WHERE id = $4',
+        newNeoBuildCourse || null, newSelectedAcademicLmp || null, now, row.id
       );
     } else {
       const newId = require('crypto').randomUUID();
       await db.$executeRawUnsafe(
-        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "createdAt", "updatedAt") VALUES ($1, $2, $3::timestamp, $4::timestamp)',
-        newId, neoBuildCourse, now, now
+        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "selectedAcademicLmp", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4::timestamp, $5::timestamp)',
+        newId, neoBuildCourse || null, selectedAcademicLmp || null, now, now
       );
     }
-    console.log(`[CourseSettings] updated neoBuildCourse to: ${neoBuildCourse}`);
-    res.json({ success: true, neoBuildCourse });
+    console.log(`[CourseSettings] updated: neoBuildCourse=${neoBuildCourse}, selectedAcademicLmp=${selectedAcademicLmp}`);
+    res.json({ success: true, neoBuildCourse, selectedAcademicLmp });
   } catch (error) {
     console.error('[CourseSettings] PUT error:', error);
     res.status(500).json({ error: 'Failed to update course settings', details: error.message });
@@ -3181,6 +3190,52 @@ async function ensureAppSettingsTable(db) {
     console.log('✅ AppSettings table ready');
   } catch (err) {
     console.error('❌ Failed to ensure AppSettings table:', err.message);
+  }
+}
+
+async function ensureCourseSettingsTables(db) {
+  try {
+    // CourseSettings: stores neoBuildCourse + selectedAcademicLmp
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CourseSettings" (
+        "id"                  TEXT         NOT NULL,
+        "neoBuildCourse"      TEXT,
+        "selectedAcademicLmp" TEXT,
+        "createdAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CourseSettings_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    // Add selectedAcademicLmp column if it was created without it (migration safety)
+    try {
+      await db.$executeRawUnsafe(`
+        ALTER TABLE "CourseSettings" ADD COLUMN IF NOT EXISTS "selectedAcademicLmp" TEXT;
+      `);
+    } catch (_) {}
+    console.log('✅ CourseSettings table ready');
+
+    // CourseAcademicProgress: tracks which lessons have been completed per course cohort
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CourseAcademicProgress" (
+        "id"            TEXT         NOT NULL,
+        "courseCode"    TEXT         NOT NULL,
+        "lessonCode"    TEXT         NOT NULL,
+        "completedDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "completedBy"   TEXT,
+        CONSTRAINT "CourseAcademicProgress_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "CourseAcademicProgress_courseCode_lessonCode_key"
+      ON "CourseAcademicProgress"("courseCode", "lessonCode");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "CourseAcademicProgress_courseCode_idx"
+      ON "CourseAcademicProgress"("courseCode");
+    `);
+    console.log('✅ CourseAcademicProgress table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure CourseSettings tables:', err.message);
   }
 }
 

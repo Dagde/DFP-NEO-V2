@@ -28,6 +28,9 @@ interface AcademicsTabProps {
   // Course-level academic completion: Map<courseCode, Set<lessonCode>>
   courseAcademicProgress?: Map<string, Set<string>>;
   onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
+  // Persisted Academic LMP selection (survives hard reset)
+  persistedAcademicLmp?: string;
+  onUpdatePersistedAcademicLmp?: (lmp: string) => void;
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
 }
@@ -215,6 +218,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   defaultLocality,
   courseAcademicProgress,
   onUpdateCourseAcademicProgress,
+  persistedAcademicLmp,
+  onUpdatePersistedAcademicLmp,
   onSave,
   onClose,
 }) => {
@@ -300,20 +305,17 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic LMP courses (from syllabusDetails where type === 'Academics') ──
+  // ── Academic LMP courses (ONLY type === 'Academics' — Ground School is a flying phase activity) ──
   const academicLmpCourses = useMemo(() => {
-    // Find all unique course codes from syllabus items of type 'Academics' or Ground School (non-CPT)
     const courseCodeSet = new Set<string>();
     syllabusDetails.forEach(s => {
-      if (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) {
+      if (s.type === 'Academics') {
         (s.courses || []).forEach(c => courseCodeSet.add(c));
       }
     });
-    // Build list with display titles: use module field of first matching item as title
     return Array.from(courseCodeSet).map(code => {
       const firstItem = syllabusDetails.find(s =>
-        (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
-        s.courses?.includes(code)
+        s.type === 'Academics' && s.courses?.includes(code)
       );
       // module field holds the full course title (e.g. "PC-21 Ground School")
       const title = firstItem?.module?.trim() || code;
@@ -321,21 +323,30 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     }).sort((a, b) => a.title.localeCompare(b.title));
   }, [syllabusDetails]);
 
-  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>('');
+  // selectedAcademicLmp: initialise from persisted DB value, fall back to first available
+  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>(() => persistedAcademicLmp || '');
 
-  // Auto-select first academic LMP course on load
+  // When persistedAcademicLmp arrives from DB (async), update if we don't have a value yet
+  useEffect(() => {
+    if (persistedAcademicLmp && !selectedAcademicLmp) {
+      setSelectedAcademicLmp(persistedAcademicLmp);
+    }
+  }, [persistedAcademicLmp]);
+
+  // Auto-select first academic LMP course if nothing is persisted yet
   useEffect(() => {
     if (academicLmpCourses.length > 0 && !selectedAcademicLmp) {
-      setSelectedAcademicLmp(academicLmpCourses[0].code);
+      const firstCode = academicLmpCourses[0].code;
+      setSelectedAcademicLmp(firstCode);
+      onUpdatePersistedAcademicLmp?.(firstCode);
     }
-  }, [academicLmpCourses, selectedAcademicLmp]);
+  }, [academicLmpCourses]);
 
-  // ── Academic syllabus filtered by selected Academic LMP course ──
+  // ── Academic syllabus filtered by selected Academic LMP course (Academics type only) ──
   const academicSyllabus = useMemo(() => {
     if (!selectedAcademicLmp) return [];
     return syllabusDetails.filter(s =>
-      (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
-      s.courses?.includes(selectedAcademicLmp)
+      s.type === 'Academics' && s.courses?.includes(selectedAcademicLmp)
     );
   }, [syllabusDetails, selectedAcademicLmp]);
 
@@ -529,6 +540,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             value={selectedAcademicLmp}
             onChange={e => {
               setSelectedAcademicLmp(e.target.value);
+              onUpdatePersistedAcademicLmp?.(e.target.value);
               setSelectedLessons(new Set());
               setTiles(prev => prev.filter(t => t.isStandard));
             }}
