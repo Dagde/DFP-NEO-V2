@@ -8,12 +8,16 @@ export interface NewCourseData {
     raafStart: number;
     navyStart: number;
     armyStart: number;
+    location: string;
+    unit: string;
 }
 
 interface AddCourseFlyoutProps {
   onClose: () => void;
   onSave: (data: NewCourseData) => void;
   existingCourses: { [key: string]: string };
+  locations: string[];
+  units: string[];
 }
 
 const ALL_COLORS = [
@@ -45,7 +49,7 @@ const Dropdown: React.FC<{ label: string; value: string | number; onChange: (e: 
     </div>
 );
 
-const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, existingCourses }) => {
+const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, existingCourses, locations = [], units = [] }) => {
     const [courseType, setCourseType] = useState('ADF');
     const [cseCourseNumber, setCseCourseNumber] = useState('');
     const [manualCourseNumber, setManualCourseNumber] = useState('');
@@ -56,6 +60,8 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
     const [raafStart, setRaafStart] = useState(0);
     const [navyStart, setNavyStart] = useState(0);
     const [armyStart, setArmyStart] = useState(0);
+    const [location, setLocation] = useState(locations[0] || '');
+    const [unit, setUnit] = useState(units[0] || '');
 
     const availableColor = useMemo(() => {
         const usedColors = new Set(Object.values(existingCourses));
@@ -128,6 +134,8 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
             raafStart,
             navyStart,
             armyStart,
+            location: location || (locations[0] || ''),
+            unit: unit || (units[0] || ''),
         });
     };
 
@@ -192,6 +200,55 @@ const AddCourseFlyout: React.FC<AddCourseFlyoutProps> = ({ onClose, onSave, exis
                         <div>
                            <label htmlFor="grad-date" className="block text-sm font-medium text-gray-400">Graduation Date</label>
                            <input type="date" id="grad-date" value={gradDate} onChange={e => setGradDate(e.target.value)} style={{colorScheme: 'dark'}} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" />
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="course-location" className="block text-sm font-medium text-gray-400">Location <span className="text-red-400">*</span></label>
+                            {locations.length > 0 ? (
+                                <select
+                                    id="course-location"
+                                    value={location}
+                                    onChange={e => setLocation(e.target.value)}
+                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                >
+                                    <option value="">— Select Location —</option>
+                                    {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    id="course-location"
+                                    value={location}
+                                    onChange={e => setLocation(e.target.value)}
+                                    placeholder="e.g., East Sale"
+                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                />
+                            )}
+                        </div>
+                        <div>
+                            <label htmlFor="course-unit" className="block text-sm font-medium text-gray-400">Unit <span className="text-red-400">*</span></label>
+                            {units.length > 0 ? (
+                                <select
+                                    id="course-unit"
+                                    value={unit}
+                                    onChange={e => setUnit(e.target.value)}
+                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                >
+                                    <option value="">— Select Unit —</option>
+                                    {units.map(u => <option key={u} value={u}>{u}</option>)}
+                                </select>
+                            ) : (
+                                <input
+                                    type="text"
+                                    id="course-unit"
+                                    value={unit}
+                                    onChange={e => setUnit(e.target.value)}
+                                    placeholder="e.g., 2FTS"
+                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm"
+                                />
+                            )}
                         </div>
                     </div>
                     

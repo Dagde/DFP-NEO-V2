@@ -14,6 +14,8 @@ interface CoursesManagementViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
+    locations?: string[];
+    units?: string[];
 }
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
@@ -24,7 +26,9 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onDeleteCourse,
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
-    onUpdateCourseDates
+    onUpdateCourseDates,
+    locations = [],
+    units = [],
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -273,6 +277,8 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                         setShowAddCourseFlyout(false);
                     }}
                     existingCourses={courseColors}
+                    locations={locations}
+                    units={units}
                 />
             )}
 

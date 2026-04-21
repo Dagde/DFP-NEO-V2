@@ -734,6 +734,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onUpdateExcludedCourses={props.onUpdateExcludedCourses || (() => {})}
                             onShowSuccess={props.onShowSuccess}
                             currentUserPermission={props.currentUserPermission}
+                            courseColors={props.courseColors}
                         />
                     )}
                     {activeSection === 'historical-data' && (

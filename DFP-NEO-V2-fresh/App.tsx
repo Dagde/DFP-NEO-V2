@@ -7429,7 +7429,7 @@ const App: React.FC = () => {
     // Published schedules are cleared in changeSchool() which is the correct behaviour.
 
     // Training Records Handlers
-    const handleAddCourseFromTrainingRecords = async (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number }) => {
+    const handleAddCourseFromTrainingRecords = async (data: { number: string; color: string; startDate: string; gradDate: string; raafStart: number; navyStart: number; armyStart: number; location?: string; unit?: string }) => {
         // Add to courseColors (local state)
         setCourseColors(prev => ({ ...prev, [data.number]: data.color }));
         
@@ -7456,7 +7456,8 @@ const App: React.FC = () => {
                 navyStart: data.navyStart,
                 armyStart: data.armyStart,
                 status: 'ACTIVE',
-                location: school === 'ESL' ? 'East Sale' : 'Pearce'
+                location: data.location || (school === 'ESL' ? 'East Sale' : 'Pearce'),
+                unit: data.unit || ''
             });
             if (!result.success) {
                 console.error('Failed to save course to DB:', result.error);
@@ -12451,6 +12452,8 @@ updates.forEach(update => {
                     syllabusDetails={syllabusDetails}
                     pt051Assessments={pt051Assessments}
                     onSavePT051Assessment={onSavePT051Assessment}
+                    locations={locations}
+                    units={units}
                 />;
             case 'ArchivedCourses':
                 return <ArchivedCoursesView 

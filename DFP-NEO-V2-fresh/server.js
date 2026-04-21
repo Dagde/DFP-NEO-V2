@@ -495,7 +495,7 @@ app.get('/api/courses', async (req, res) => {
 app.post('/api/courses', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, status } = req.body;
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, status } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const course = await db.course.upsert({
       where: { code: name },
@@ -507,6 +507,7 @@ app.post('/api/courses', async (req, res) => {
         navyCount: navyStart || 0,
         armyCount: armyStart || 0,
         location: location || '',
+        unit: unit || '',
         status: status || 'ACTIVE',
         updatedAt: new Date(),
       },
@@ -520,7 +521,7 @@ app.post('/api/courses', async (req, res) => {
         navyCount: navyStart || 0,
         armyCount: armyStart || 0,
         location: location || '',
-        unit: '',
+        unit: unit || '',
         status: status || 'ACTIVE',
       },
     });
