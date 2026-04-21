@@ -13,10 +13,6 @@ const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-eng
 // Cookie parser
 const cookieParser = require('cookie-parser');
 
-// Multer for file uploads (in-memory, no disk storage needed)
-const multer = require('multer');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -252,6 +248,126 @@ app.post('/api/settings', async (req, res) => {
     res.status(500).json({ error: 'Failed to save settings', details: error.message });
   }
 });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Course Settings API Routes
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// GET /api/settings/course-settings - Get course settings (neoBuildCourse)
+app.get('/api/settings/course-settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const settings = await db.courseSettings.findFirst();
+    if (!settings) {
+      return res.json({ neoBuildCourse: null });
+    }
+    return res.json({ neoBuildCourse: settings.neoBuildCourse });
+  } catch (error) {
+    console.error('[CourseSettings] GET error:', error);
+    res.status(500).json({ error: 'Failed to load course settings', details: error.message });
+  }
+});
+
+// PUT /api/settings/course-settings - Update course settings (neoBuildCourse)
+app.put('/api/settings/course-settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { neoBuildCourse, userId } = req.body;
+    if (!neoBuildCourse) {
+      return res.status(400).json({ error: 'Missing neoBuildCourse' });
+    }
+    const settings = await db.courseSettings.upsert({
+      where: { id: 'default' },
+      update: { 
+        neoBuildCourse,
+        updatedAt: new Date()
+      },
+      create: {
+        id: 'default',
+        neoBuildCourse,
+      }
+    });
+    console.log(`[CourseSettings] updated neoBuildCourse to: ${neoBuildCourse}`);
+    res.json({ success: true, neoBuildCourse: settings.neoBuildCourse });
+  } catch (error) {
+    console.error('[CourseSettings] PUT error:', error);
+    res.status(500).json({ error: 'Failed to update course settings', details: error.message });
+  }
+});
+
+// GET /api/settings/course-academic-progress - Get all course academic progress records
+app.get('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const records = await db.courseAcademicProgress.findMany({
+      orderBy: { courseCode: 'asc' }
+    });
+    
+    // Convert array to Map format: { courseCode: Set<lessonCode> }
+    const map = new Map<string, Set<string>>();
+    records.forEach(r => {
+      if (!map.has(r.courseCode)) {
+        map.set(r.courseCode, new Set());
+      }
+      map.get(r.courseCode)!.add(r.lessonCode);
+    });
+    
+    res.json({ success: true, data: map });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] GET error:', error);
+    res.status(500).json({ error: 'Failed to load course academic progress', details: error.message });
+  }
+});
+
+// POST /api/settings/course-academic-progress - Mark a course lesson as complete
+app.post('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, lessonCode, userId } = req.body;
+    if (!courseCode || !lessonCode) {
+      return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
+    }
+    const record = await db.courseAcademicProgress.upsert({
+      where: {
+        courseCode_lessonCode: { courseCode, lessonCode }
+      },
+      update: {},
+      create: {
+        courseCode,
+        lessonCode,
+        completedBy: userId
+      }
+    });
+    console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as complete`);
+    res.json({ success: true, record });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] POST error:', error);
+    res.status(500).json({ error: 'Failed to save course academic progress', details: error.message });
+  }
+});
+
+// DELETE /api/settings/course-academic-progress - Mark a course lesson as incomplete
+app.delete('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, lessonCode } = req.query;
+    if (!courseCode || !lessonCode) {
+      return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
+    }
+    await db.courseAcademicProgress.deleteUnique({
+      where: {
+        courseCode_lessonCode: { courseCode, lessonCode }
+      }
+    });
+    console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as incomplete`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] DELETE error:', error);
+    res.status(500).json({ error: 'Failed to delete course academic progress', details: error.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/currencies - Load currency settings (dedicated endpoint for reliability)
 app.get('/api/currencies', async (req, res) => {
@@ -2845,31 +2961,6 @@ app.post('/api/admin/set-user-password-by-id', async (req, res) => {
 });
 
 // GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
-// POST /api/admin/fix-syllabus-fields - Fix phase/module fields that were incorrectly set during bulk upload
-app.post('/api/admin/fix-syllabus-fields', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { courseCode, phase, module: moduleName } = req.body;
-    if (!courseCode) return res.status(400).json({ error: 'courseCode required' });
-
-    // Update all items in this course that have bad phase/module values (numeric or empty)
-    const result = await db.$executeRawUnsafe(`
-      UPDATE "SyllabusItem"
-      SET
-        "phase"  = CASE WHEN "phase" ~ '^[0-9]+$' OR "phase" = '' THEN $2 ELSE "phase" END,
-        "module" = CASE WHEN "module" ~ '^[0-9]+$' OR "module" = '' THEN $3 ELSE "module" END,
-        "updatedAt" = NOW()
-      WHERE $1 = ANY("courses") AND "isActive" = true
-    `, courseCode, phase || courseCode, moduleName || courseCode);
-
-    console.log(`✅ Fixed phase/module for course ${courseCode}`);
-    res.json({ success: true, message: `Fixed phase/module fields for course ${courseCode}` });
-  } catch (error) {
-    console.error('❌ fix-syllabus-fields error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // DELETE /api/admin/purge-inactive - Hard delete all soft-deleted (isActive=false) syllabus items
 app.delete('/api/admin/purge-inactive', async (req, res) => {
   try {
@@ -2882,209 +2973,6 @@ app.delete('/api/admin/purge-inactive', async (req, res) => {
   } catch (error) {
     console.error('❌ purge-inactive error:', error);
     res.status(500).json({ error: error.message });
-  }
-});
-
-// POST /api/syllabus/bulk-upload - Upload an Excel/CSV file to bulk-create syllabus items
-app.post('/api/syllabus/bulk-upload', upload.single('file'), async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { randomUUID } = await import('crypto');
-
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-
-    const XLSX = require('xlsx');
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
-
-    // Use first sheet named 'Syllabus_LMP' if exists, otherwise first sheet
-    const sheetName = workbook.SheetNames.includes('Syllabus_LMP')
-      ? 'Syllabus_LMP'
-      : workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: null });
-
-    if (!rows || rows.length === 0) {
-      return res.status(400).json({ error: 'Spreadsheet is empty or could not be parsed' });
-    }
-
-    // Column name normalizer - handle case/spacing variations
-    const norm = (val) => (val || '').toString().trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-
-    // Build a header map from the first row keys
-    const sampleKeys = Object.keys(rows[0]);
-    const findCol = (candidates) => {
-      for (const key of sampleKeys) {
-        const n = norm(key);
-        for (const c of candidates) {
-          if (n === norm(c) || n.includes(norm(c))) return key;
-        }
-      }
-      return null;
-    };
-
-    // Map spreadsheet columns to DB fields
-    const COL = {
-      code:                findCol(['code']),
-      course:              findCol(['course']),
-      phase:               findCol(['phase']),
-      module:              findCol(['module']),
-      dayNight:            findCol(['day/night', 'daynight', 'day night']),
-      type:                findCol(['type']),
-      sortieType:          findCol(['dual/solo', 'dualsolo', 'sortie']),
-      eventDescription:    findCol(['event description', 'eventdescription', 'description']),
-      prerequisitesGround: findCol(['ground school', 'prerequisite.*ground', 'prereq.*ground']),
-      prerequisitesFlying: findCol(['sim/flying', 'flying', 'prereq.*sim', 'prerequisite.*sim']),
-      eventDetailsCommon:  findCol(['event details.*common', 'details.*common', 'common']),
-      eventDetailsSortie:  findCol(['event details.*sortie', 'details.*sortie', 'sortie']),
-      totalEventHours:     findCol(['total event hours', 'totaleventhours', 'total hours']),
-      flightOrSimHours:    findCol(['flight or sim', 'flightorsim', 'sim hours']),
-      methodOfDelivery:    findCol(['method.*delivery', 'delivery']),
-      methodOfAssessment:  findCol(['assessment', 'method.*assessment']),
-      resourcesPhysical:   findCol(['physical', 'resources.*physical']),
-      resourcesHuman:      findCol(['human', 'resources.*human']),
-    };
-
-    const toArray = (val) => {
-      if (!val) return [];
-      if (Array.isArray(val)) return val.map(String);
-      return String(val).split(/[,;|]+/).map(s => s.trim()).filter(Boolean);
-    };
-
-    const courseCode = req.body.courseCode || null; // optional override from UI
-
-    let created = 0;
-    let skipped = 0;
-    let errors = [];
-
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      try {
-        // Extract values
-        const rawCode         = COL.code ? row[COL.code] : null;
-        const rawCourse       = COL.course ? row[COL.course] : null;
-        const rawPhase        = COL.phase ? row[COL.phase] : null;
-        const rawModule       = COL.module ? row[COL.module] : null;
-        const rawDayNight     = COL.dayNight ? row[COL.dayNight] : null;
-        const rawType         = COL.type ? row[COL.type] : null;
-        const rawSortieType   = COL.sortieType ? row[COL.sortieType] : null;
-        const rawEventDesc    = COL.eventDescription ? row[COL.eventDescription] : null;
-        const rawDetailSortie = COL.eventDetailsSortie ? row[COL.eventDetailsSortie] : null;
-        const rawTotalHours   = COL.totalEventHours ? row[COL.totalEventHours] : null;
-        const rawSimHours     = COL.flightOrSimHours ? row[COL.flightOrSimHours] : null;
-        const rawDelivery     = COL.methodOfDelivery ? row[COL.methodOfDelivery] : null;
-        const rawAssessment   = COL.methodOfAssessment ? row[COL.methodOfAssessment] : null;
-        const rawPhysical     = COL.resourcesPhysical ? row[COL.resourcesPhysical] : null;
-        const rawHuman        = COL.resourcesHuman ? row[COL.resourcesHuman] : null;
-        const rawPrereqGround = COL.prerequisitesGround ? row[COL.prerequisitesGround] : null;
-        const rawPrereqFlying = COL.prerequisitesFlying ? row[COL.prerequisitesFlying] : null;
-        const rawCommon       = COL.eventDetailsCommon ? row[COL.eventDetailsCommon] : null;
-
-        // Skip empty rows
-        if (!rawCode && !rawEventDesc) { skipped++; continue; }
-
-        // Resolve course code(s) - use override if provided, else derive from course name
-        const courseName = rawCourse ? String(rawCourse).trim() : null;
-        let itemCourseCode = courseCode;
-        if (!itemCourseCode && courseName) {
-          // Generate code from course name (same logic as frontend)
-          const words = courseName.split(/\s+/);
-          itemCourseCode = words.length === 1
-            ? courseName.toUpperCase().slice(0, 8)
-            : words.map(w => w[0]).join('').toUpperCase().slice(0, 8);
-        }
-        if (!itemCourseCode) itemCourseCode = 'UPLOAD';
-
-        // Build the item code - use spreadsheet code or generate
-        let itemCode = rawCode ? String(rawCode).trim() : null;
-        if (!itemCode) {
-          itemCode = `${itemCourseCode}-${String(i + 1).padStart(3, '0')}`;
-        }
-
-        // Check for duplicate code and auto-increment
-        let finalCode = itemCode;
-        let suffix = 2;
-        while (true) {
-          const existing = await db.$queryRawUnsafe(
-            `SELECT "id" FROM "SyllabusItem" WHERE "code" = $1 AND "isActive" = true LIMIT 1`,
-            finalCode
-          );
-          if (existing.length === 0) break;
-          finalCode = `${itemCode}-${suffix}`;
-          suffix++;
-          if (suffix > 99) break;
-        }
-
-        // phase and module: use from sheet ONLY if non-empty string (not a number fallback)
-        // Default to course code for phase, course name for module
-        const phase  = (rawPhase  && isNaN(Number(rawPhase))  && String(rawPhase).trim())
-            ? String(rawPhase).trim()
-            : (itemCourseCode || 'GS');
-        const module = (rawModule && isNaN(Number(rawModule)) && String(rawModule).trim())
-            ? String(rawModule).trim()
-            : (courseName || itemCourseCode || finalCode);
-
-        const eventDescription = rawEventDesc
-          ? String(rawEventDesc).trim()
-          : (rawDetailSortie ? String(rawDetailSortie).trim() : finalCode);
-
-        const type = rawType ? String(rawType).trim() : 'Ground School';
-        const dayNight = rawDayNight ? String(rawDayNight).trim() : 'Day';
-        const totalEventHours = rawTotalHours ? parseFloat(rawTotalHours) : 0;
-        const flightOrSimHours = rawSimHours ? parseFloat(rawSimHours) : 0;
-
-        const courses           = [itemCourseCode];
-        const methodOfDelivery  = toArray(rawDelivery);
-        const methodOfAssessment= toArray(rawAssessment);
-        const resourcesPhysical = toArray(rawPhysical);
-        const resourcesHuman    = toArray(rawHuman);
-        const prerequisitesGround = toArray(rawPrereqGround);
-        const prerequisitesFlying = toArray(rawPrereqFlying);
-        const eventDetailsCommon  = toArray(rawCommon);
-        const eventDetailsSortie  = rawDetailSortie ? [String(rawDetailSortie).trim()] : [];
-
-        const id = randomUUID();
-
-        await db.$executeRawUnsafe(`
-          INSERT INTO "SyllabusItem" (
-            "id","code","eventDescription","phase","module","type","sortieType","dayNight",
-            "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourcesHuman",
-            "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
-            "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
-            "location","sortOrder","lmpType","isRemedial","isActive","version","createdAt","updatedAt"
-          ) VALUES (
-            $1,$2,$3,$4,$5,$6,$7,$8,
-            $9,$10,$11,$12,$13,
-            $14,$15,$16,$17,$18,
-            $19,$20,$21,$22,$23,
-            $24,$25,$26,$27,$28,$29,NOW(),NOW()
-          )`,
-          id, finalCode, eventDescription, phase, module, type,
-          rawSortieType ? String(rawSortieType).trim() : null, dayNight,
-          courses, methodOfDelivery, methodOfAssessment, resourcesPhysical, resourcesHuman,
-          eventDetailsCommon, eventDetailsSortie, flightOrSimHours, totalEventHours, totalEventHours,
-          0, 0, [], prerequisitesGround, prerequisitesFlying,
-          null, i, 'Master LMP', false, true, 1
-        );
-
-        created++;
-      } catch (rowErr) {
-        errors.push({ row: i + 2, error: rowErr.message });
-      }
-    }
-
-    console.log(`✅ Bulk upload: ${created} created, ${skipped} skipped, ${errors.length} errors`);
-    res.json({
-      success: true,
-      created,
-      skipped,
-      errors: errors.slice(0, 20), // return first 20 errors max
-      total: rows.length,
-      message: `Successfully imported ${created} of ${rows.length} events.${errors.length > 0 ? ` ${errors.length} rows had errors.` : ''}`
-    });
-
-  } catch (error) {
-    console.error('❌ Bulk upload error:', error);
-    res.status(500).json({ error: error.message || 'Bulk upload failed' });
   }
 });
 
