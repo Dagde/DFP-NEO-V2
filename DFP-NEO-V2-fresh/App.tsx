@@ -3483,8 +3483,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Filter instructors by location (not unit) - ESL = East Sale, PEA = Pearce
         // Use same fallback-to-unit logic as instructorsData useMemo to handle DB staff with null location
         const locationFullName = config.school === 'ESL' ? 'East Sale' : 'Pearce';
+        const locationShortCode1 = config.school === 'ESL' ? 'ESL' : 'PEA';
         const locationFilteredInstructors = instructors.filter(i => {
-            if (i.location) return i.location === locationFullName;
+            if (i.location) return i.location === locationFullName || i.location === locationShortCode1 || i.location === config.school;
             if (i.unit) {
                 if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                 if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
@@ -4229,12 +4230,13 @@ const App: React.FC = () => {
     const instructorsData = useMemo(() => {
         const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+        const locationShortCode2 = school === 'ESL' ? 'ESL' : 'PEA';
 
         // Location filter: same logic as traineesData
         const locationFiltered = allInstructorsData.filter((i: any) => {
             // If no location and no unit info, include by default (don't exclude unknowns)
             if (!i.location && !i.unit) return true;
-            if (i.location) return i.location === locationFullName;
+            if (i.location) return i.location === locationFullName || i.location === locationShortCode2 || i.location === school;
             if (i.unit) {
                 if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                 if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
@@ -4253,8 +4255,9 @@ const App: React.FC = () => {
 
         // Filter by location (ESL = East Sale, PEA = Pearce)
         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
+        const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
         const locationFilteredTrainees = allTraineesData.filter(t => {
-            if (t.location) return t.location === locationFullName;
+            if (t.location) return t.location === locationFullName || t.location === locationShortCode || t.location === school;
             if (t.unit) {
                 if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                 if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
