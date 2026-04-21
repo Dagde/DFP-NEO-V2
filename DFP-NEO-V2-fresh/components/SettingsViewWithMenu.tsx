@@ -18,6 +18,10 @@ import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, Maste
 interface SettingsViewWithMenuProps {
     locations: string[];
     onUpdateLocations: (locations: string[]) => void;
+    locationAbbreviations?: Record<string, string>;
+    onUpdateLocationAbbreviations?: (abbrevs: Record<string, string>) => void;
+    serviceDefinitions?: Array<{ longName: string; shortName: string }>;
+    onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     units: string[];
     onUpdateUnits: (units: string[]) => void;
     unitLocations: Record<string, string>;

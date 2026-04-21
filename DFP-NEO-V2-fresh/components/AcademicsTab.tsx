@@ -84,7 +84,7 @@ const fmtTime = (dec: number): string => {
 
 const snap = (val: number): number => Math.round(val / SNAP) * SNAP;
 
-// Subject area colour mapping
+// Subject area colour mapping — full name keys
 const subjectColor = (subject: string): string => {
   const map: Record<string, string> = {
     'Aerodynamics':    '#1e40af',
@@ -100,6 +100,88 @@ const subjectColor = (subject: string): string => {
   };
   return map[subject] || '#1f2937';
 };
+
+// Lesson-code prefix → subtle tile colour for the schedule tile insets
+// Covers common RAAF/ADF academic module codes. All colours are desaturated
+// enough to remain readable against white label text at small sizes.
+const LESSON_CODE_COLORS: Record<string, string> = {
+  // Aerodynamics
+  'AERODY':   '#1e3a6e',  // deep navy-blue
+  'AERO':     '#1e3a6e',
+  // Air Traffic Control
+  'ATC':      '#4a1d6e',  // muted purple
+  // Meteorology / Weather
+  'MET':      '#0e4d6e',  // steel teal
+  'METEO':    '#0e4d6e',
+  'WX':       '#0e4d6e',
+  // Navigation
+  'NAV':      '#0a4a30',  // forest green
+  'NAVS':     '#0a4a30',
+  // Performance
+  'PERF':     '#0a3d6e',  // dark slate-blue
+  // Airmanship / Flight Rules
+  'AIR':      '#5a2d0c',  // warm dark-brown
+  'AIRMAN':   '#5a2d0c',
+  // Aircraft Systems
+  'SYS':      '#1f2937',  // near-black slate
+  'ACFT':     '#1f2937',
+  'SYSTEM':   '#1f2937',
+  // Instruments / Instrument Flying
+  'INSTR':    '#1a3a6e',  // blue-grey
+  'IFR':      '#1a3a6e',
+  // Human Factors
+  'HF':       '#5b1a8a',  // dim violet
+  'HUFAC':    '#5b1a8a',
+  'HUMAN':    '#5b1a8a',
+  // Regulations / Rules of the Air
+  'REG':      '#374151',  // dark grey
+  'REGS':     '#374151',
+  'ROA':      '#374151',
+  // Leadership / Command
+  'LEAD':     '#6b2d00',  // dark burnt-orange
+  // Survival
+  'SURV':     '#1a4a1a',  // dark olive
+  // Communications
+  'COMM':     '#1a4a5a',  // dark cyan-slate
+  // Engines / Propulsion
+  'ENG':      '#2a1a3e',  // very dark indigo
+  // Electronic Warfare
+  'EW':       '#2a3a0a',  // dark military-olive
+  // Standard / admin tiles (keep their original colors)
+  'MORNING_BREAK':    '#64748b',
+  'LUNCH':            '#78716c',
+  'AFTERNOON_BREAK':  '#64748b',
+  'SELF_STUDY':       '#475569',
+  'SPORT':            '#15803d',
+  'ADMIN':            '#7c3aed',
+  'FREE_TIME':        '#0f766e',
+  'OTHER':            '#b45309',
+};
+
+/**
+ * Returns a subtle background colour for a lesson tile based on its lesson code.
+ * Tries exact match first, then matches by common prefixes (longest first).
+ * Falls back to a default academic blue.
+ */
+function getLessonTileColor(lessonCode: string, existingColor?: string): string {
+  // Standard event tiles keep their configured colour
+  const isStandardCode = ['MORNING_BREAK','LUNCH','AFTERNOON_BREAK','SELF_STUDY','SPORT','ADMIN','FREE_TIME','OTHER'].includes(lessonCode);
+  if (isStandardCode && existingColor) return existingColor;
+
+  const upper = lessonCode.toUpperCase();
+
+  // 1. Exact match
+  if (LESSON_CODE_COLORS[upper]) return LESSON_CODE_COLORS[upper];
+
+  // 2. Prefix match — longest prefix wins
+  const prefixKeys = Object.keys(LESSON_CODE_COLORS).sort((a, b) => b.length - a.length);
+  for (const prefix of prefixKeys) {
+    if (upper.startsWith(prefix)) return LESSON_CODE_COLORS[prefix];
+  }
+
+  // 3. Fall back to default academic blue
+  return '#1d3461';
+}
 
 // ── Lesson Completion ─────────────────────────────────────────────────────────
 
@@ -386,7 +468,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         label: tileLabel,
         startTime: start,
         duration: dur,
-        color: ACADEMIC_TILE_COLOR,
+        color: getLessonTileColor(key),
       }]);
     }
   }, [selectedLessons, getNextStart]);
@@ -909,11 +991,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
       {/* ── Footer ── */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
-        <button onClick={onClose} className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
+        <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
           Cancel
         </button>
-        <button onClick={handleSave} className="w-[160px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
-          Publish Academic Session
+        <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-400">
+          Publish
         </button>
       </div>
     </div>

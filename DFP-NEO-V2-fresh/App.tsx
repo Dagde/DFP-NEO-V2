@@ -5916,6 +5916,19 @@ const App: React.FC = () => {
 
     // Settings state
     const [locations, setLocations] = useState<string[]>(['East Sale', 'Pearce', 'Williamtown', 'Amberley', 'Tindal', 'Edinburgh']);
+    const [locationAbbreviations, setLocationAbbreviations] = useState<Record<string, string>>({
+        'East Sale': 'ESL',
+        'Pearce': 'PEA',
+        'Williamtown': 'WLM',
+        'Amberley': 'AMB',
+        'Tindal': 'TIN',
+        'Edinburgh': 'EDI',
+    });
+    const [serviceDefinitions, setServiceDefinitions] = useState<Array<{ longName: string; shortName: string }>>([
+        { longName: 'Air Force', shortName: 'RAAF' },
+        { longName: 'Navy',      shortName: 'RAN'  },
+        { longName: 'Army',      shortName: 'ARA'  },
+    ]);
     const [locationOpAreas, setLocationOpAreas] = useState<Record<string, string[]>>({
         'East Sale': ['A','B','C','D','E','F','G','H','S','T','U','V','W','X','Y','Z'],
         'Pearce': [],
@@ -5957,6 +5970,8 @@ const App: React.FC = () => {
 
                 // Apply all saved settings to state
                 if (saved.locations?.length) setLocations(saved.locations);
+                if (saved.locationAbbreviations && Object.keys(saved.locationAbbreviations).length) setLocationAbbreviations(saved.locationAbbreviations);
+                if (saved.serviceDefinitions?.length) setServiceDefinitions(saved.serviceDefinitions);
                 if (saved.units?.length) setUnits(saved.units);
                 if (saved.unitLocations) setUnitLocations(saved.unitLocations);
                 if (saved.locationOpAreas) setLocationOpAreas(saved.locationOpAreas);
@@ -6043,6 +6058,8 @@ const App: React.FC = () => {
 
         const snapshot = buildSettingsSnapshot({
             locations,
+            locationAbbreviations,
+            serviceDefinitions,
             units,
             unitLocations,
             locationOpAreas,
@@ -6084,7 +6101,7 @@ const App: React.FC = () => {
         saveSettingsToDB(snapshot, sessionUser?.userId);
     }, [
         settingsLoaded,
-        locations, units, unitLocations, locationOpAreas,
+        locations, locationAbbreviations, serviceDefinitions, units, unitLocations, locationOpAreas,
         eventLimits,
         preferredDutyPeriod, maxCrewDutyPeriod, maxDispatchPerHour,
         flightTurnaround, ftdTurnaround, cptTurnaround,
@@ -10612,7 +10629,14 @@ updates.forEach(update => {
         // Filter by location (not unit) - ESL = East Sale, PEA = Pearce
         const locationFilteredInstructors = instructorsData.filter(i => {
             const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-            return i.location === locationFullName;
+            const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
+            if (!i.location && !i.unit) return true;
+            if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
+            if (i.unit) {
+                if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+            }
+            return true;
         });
         
         console.log('🔍 [PILOT REMEDIES DEBUG] Location filtered instructors:', locationFilteredInstructors.map(i => ({ id: i.idNumber, name: i.name, role: i.role, unit: i.unit })));
@@ -11827,7 +11851,14 @@ updates.forEach(update => {
                 const locationFilteredInstructorsForSchedule = instructorsData
                     .filter(i => {
                         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                        return i.location === locationFullName;
+                        const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
+                        if (!i.location && !i.unit) return true;
+                        if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
+                        if (i.unit) {
+                            if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                            if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+                        }
+                        return true;
                     })
                     .sort((a, b) => {
                         // First sort by unit (group by unit)
@@ -11889,7 +11920,14 @@ updates.forEach(update => {
                 const sortedNextDayInstructors = instructorsData
                     .filter(i => {
                         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                        return i.location === locationFullName;
+                        const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
+                        if (!i.location && !i.unit) return true;
+                        if (i.location) return i.location === locationFullName || i.location === locationShortCode || i.location === school;
+                        if (i.unit) {
+                            if (i.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
+                            if (i.unit.startsWith('1FTS') || i.unit.startsWith('CFS')) return locationFullName === 'East Sale';
+                        }
+                        return true;
                     })
                     .sort((a, b) => {
                         const unitA = a.unit || 'ZZZ';
@@ -11925,9 +11963,8 @@ updates.forEach(update => {
                     trainees={[...allTraineesData]
                         .filter(t => {
                             const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
-                            if (t.location) {
-                                return t.location === locationFullName;
-                            }
+                            const locationShortCode = school === 'ESL' ? 'ESL' : 'PEA';
+                            if (t.location) return t.location === locationFullName || t.location === locationShortCode || t.location === school;
                             if (t.unit) {
                                 if (t.unit.startsWith('2FTS')) return locationFullName === 'Pearce';
                                 if (t.unit.startsWith('1FTS') || t.unit.startsWith('CFS')) return locationFullName === 'East Sale';
@@ -13083,6 +13120,10 @@ updates.forEach(update => {
                 return <SettingsViewWithMenu 
                     locations={locations}
                     onUpdateLocations={setLocations}
+                    locationAbbreviations={locationAbbreviations}
+                    onUpdateLocationAbbreviations={setLocationAbbreviations}
+                    serviceDefinitions={serviceDefinitions}
+                    onUpdateServiceDefinitions={setServiceDefinitions}
                     units={units}
                     onUpdateUnits={setUnits}
                     unitLocations={unitLocations}

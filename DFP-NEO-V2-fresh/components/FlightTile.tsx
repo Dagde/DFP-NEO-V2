@@ -510,6 +510,42 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
         const dayDuration = effectiveDuration;
         const tileFullWidth = dayDuration * pixelsPerHour;
 
+        // Per-module colour lookup — used for both newly created tiles and DB-loaded tiles
+        // (DB tiles may have the old single ACADEMIC_TILE_COLOR so we re-derive the colour here)
+        const ACAD_LESSON_COLORS: Record<string, string> = {
+            'AERODY': '#1e3a6e', 'AERO': '#1e3a6e',
+            'ATC': '#4a1d6e',
+            'MET': '#0e4d6e', 'METEO': '#0e4d6e', 'WX': '#0e4d6e',
+            'NAV': '#0a4a30', 'NAVS': '#0a4a30',
+            'PERF': '#0a3d6e',
+            'AIR': '#5a2d0c', 'AIRMAN': '#5a2d0c',
+            'SYS': '#1f2937', 'ACFT': '#1f2937', 'SYSTEM': '#1f2937',
+            'INSTR': '#1a3a6e', 'IFR': '#1a3a6e',
+            'HF': '#5b1a8a', 'HUFAC': '#5b1a8a', 'HUMAN': '#5b1a8a',
+            'REG': '#374151', 'REGS': '#374151', 'ROA': '#374151',
+            'LEAD': '#6b2d00',
+            'SURV': '#1a4a1a',
+            'COMM': '#1a4a5a',
+            'ENG': '#2a1a3e',
+            'EW': '#2a3a0a',
+            // Standard tiles keep their own colours
+            'MORNING_BREAK': '#64748b', 'LUNCH': '#78716c', 'AFTERNOON_BREAK': '#64748b',
+            'SELF_STUDY': '#475569', 'SPORT': '#15803d', 'ADMIN': '#7c3aed',
+            'FREE_TIME': '#0f766e', 'OTHER': '#b45309',
+        };
+        const getAcadTileColor = (lessonCode: string, existingColor: string, isStd?: boolean): string => {
+            // Standard event tiles always keep their configured colour
+            if (isStd) return existingColor;
+            const upper = (lessonCode || '').toUpperCase();
+            if (ACAD_LESSON_COLORS[upper]) return ACAD_LESSON_COLORS[upper];
+            // Prefix match — longest first
+            const sorted = Object.keys(ACAD_LESSON_COLORS).sort((a, b) => b.length - a.length);
+            for (const prefix of sorted) {
+                if (upper.startsWith(prefix)) return ACAD_LESSON_COLORS[prefix];
+            }
+            return '#1d3461'; // default academic blue
+        };
+
         return (
             <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
                 {/* Header bar */}
@@ -530,7 +566,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                         const leftPct = (offsetFromStart / dayDuration) * 100;
                         const widthPct = (t.duration / dayDuration) * 100;
                         const isStandard = t.isStandard;
-                        const bgColor = t.color || '#1d4ed8';
+                        const bgColor = getAcadTileColor(t.lessonCode, t.color || '#1d4ed8', t.isStandard);
                         // Shorten label: just use the lessonCode for display in inset tile
                         const shortLabel = t.lessonCode;
                         return (
