@@ -415,7 +415,6 @@ interface DfpConfig {
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
-  excludedCourses: string[]; // Courses excluded from NEO Build (e.g. in Academics phase or on pause)
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -1623,15 +1622,10 @@ function generateDfpInternal(
 
     setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
     
-    const excludedCourses = config.excludedCourses || [];
     const activeTrainees = trainees.filter(t => 
         !t.isPaused && 
-        !excludedCourses.includes(t.course) &&
         !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, 'flight')
     );
-    if (excludedCourses.length > 0) {
-        console.log(`[NEO-Build] Excluding courses from build: ${excludedCourses.join(', ')} (${trainees.filter(t => excludedCourses.includes(t.course)).length} trainees excluded)`);
-    }
     
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 
@@ -5313,136 +5307,13 @@ const App: React.FC = () => {
         return stored ? JSON.parse(stored) : [];
     });
 
-    // Shared API base helper — always use relative /api when served from same origin
-    const getApiBase = () => '/api';
-
-    // NEO Build basis course (People Profile setting) — persisted in DB
-    const [neoBuildCourse, setNeoBuildCourse] = useState<string>('');
-    // Selected Academic LMP — persisted in DB so last selection survives hard reset
-    const [persistedAcademicLmp, setPersistedAcademicLmp] = useState<string>('');
-
-    useEffect(() => {
-        const loadCourseSettings = async () => {
-            try {
-                const res = await fetch(`${getApiBase()}/settings/course-settings`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setNeoBuildCourse(data.neoBuildCourse || '');
-                    setPersistedAcademicLmp(data.selectedAcademicLmp || '');
-                    setExcludedCourses(data.excludedCourses || []);
-                }
-            } catch (error) {
-                console.error('[CourseSettings] Failed to load:', error);
-            }
-        };
-        loadCourseSettings();
-    }, []);
-
-    const handleUpdateNeoBuildCourse = async (course: string) => {
+    // NEO Build basis course (People Profile setting)
+    const [neoBuildCourse, setNeoBuildCourse] = useState<string>(() => {
+        return localStorage.getItem('neoBuildCourse') || '';
+    });
+    const handleUpdateNeoBuildCourse = (course: string) => {
         setNeoBuildCourse(course);
-        try {
-            await fetch(`${getApiBase()}/settings/course-settings`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ neoBuildCourse: course })
-            });
-        } catch (error) {
-            console.error('[NeoBuildCourse] Failed to save:', error);
-        }
-    };
-
-    const handleUpdatePersistedAcademicLmp = async (lmp: string) => {
-        setPersistedAcademicLmp(lmp);
-        try {
-            await fetch(`${getApiBase()}/settings/course-settings`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ selectedAcademicLmp: lmp })
-            });
-        } catch (error) {
-            console.error('[SelectedAcademicLmp] Failed to save:', error);
-        }
-    };
-
-    // Course Academic Progress — persisted in DB: Map<courseCode, Set<lessonCode>>
-    const [courseAcademicProgress, setCourseAcademicProgress] = useState<Map<string, Set<string>>>(new Map());
-    useEffect(() => {
-        const loadCourseAcademicProgress = async () => {
-            try {
-                const res = await fetch(`${getApiBase()}/settings/course-academic-progress`);
-                if (res.ok) {
-                    const json = await res.json();
-                    if (json.success && json.data) {
-                        const map = new Map<string, Set<string>>();
-                        Object.entries(json.data).forEach(([courseCode, lessons]) => {
-                            map.set(courseCode, new Set(lessons as string[]));
-                        });
-                        setCourseAcademicProgress(map);
-                    }
-                }
-            } catch (error) {
-                console.error('[CourseAcademicProgress] Failed to load:', error);
-            }
-        };
-        loadCourseAcademicProgress();
-    }, []);
-    const handleUpdateCourseAcademicProgress = async (courseCode: string, lessonCode: string, completed: boolean) => {
-        // Optimistic UI update
-        setCourseAcademicProgress(prev => {
-            const next = new Map(prev);
-            if (completed) {
-                if (!next.has(courseCode)) next.set(courseCode, new Set());
-                next.get(courseCode)!.add(lessonCode);
-            } else {
-                next.get(courseCode)?.delete(lessonCode);
-            }
-            return next;
-        });
-        // Persist to DB
-        try {
-            if (completed) {
-                await fetch(`${getApiBase()}/settings/course-academic-progress`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ courseCode, lessonCode })
-                });
-            } else {
-                await fetch(`${getApiBase()}/settings/course-academic-progress?courseCode=${encodeURIComponent(courseCode)}&lessonCode=${encodeURIComponent(lessonCode)}`, {
-                    method: 'DELETE'
-                });
-            }
-        } catch (error) {
-            console.error('[CourseAcademicProgress] Failed to save:', error);
-        }
-    };
-
-    // Excluded Courses from NEO Build — persisted in DB
-    const [excludedCourses, setExcludedCourses] = useState<string[]>([]);
-    useEffect(() => {
-        const loadExcludedCourses = async () => {
-            try {
-                const res = await fetch(`${getApiBase()}/settings/course-settings`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setExcludedCourses(data.excludedCourses || []);
-                }
-            } catch (error) {
-                console.error('[ExcludedCourses] Failed to load:', error);
-            }
-        };
-        loadExcludedCourses();
-    }, []);
-    const handleUpdateExcludedCourses = async (courses: string[]) => {
-        setExcludedCourses(courses);
-        try {
-            await fetch(`${getApiBase()}/settings/course-settings`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ excludedCourses: courses })
-            });
-        } catch (error) {
-            console.error('[ExcludedCourses] Failed to save:', error);
-        }
+        localStorage.setItem('neoBuildCourse', course);
     };
 
     // Cancellation Codes State
@@ -9197,7 +9068,7 @@ const App: React.FC = () => {
         console.log(`DEBUG Final preserved events count: ${finalPreservedEvents.length}`);
         
         // Now proceed with normal build process
-        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !excludedCourses.includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
+        const activeTrainees = allTraineesData.filter(t => !t.isPaused && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDfpDate, 'flight'));
         let bnfTraineeCount = 0;
 
         activeTrainees.forEach(trainee => {
@@ -9311,7 +9182,6 @@ const App: React.FC = () => {
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
-            excludedCourses: excludedCourses,
         };
 
         setTimeout(() => {
@@ -10268,30 +10138,32 @@ updates.forEach(update => {
     const handleSaveAcademicEvent = (data: import('./components/AcademicsTab').AcademicSaveData) => {
         if (!data.selectedTrainees.length || !data.timeline.length) return;
 
-        // Build lesson codes summary (non-standard tiles only)
+        // Build a merged description of all selected lessons
         const lessonCodes = data.lessons.map(l => l.code).join(', ');
-        const sessionDuration = data.workEnd - data.workStart;
+        const totalDuration = data.timeline.reduce((sum, t) => sum + t.duration, 0);
+        const firstStart = Math.min(...data.timeline.map(t => t.startTime));
+        const flightNumberLabel = lessonCodes || 'ACAD-SESSION';
 
-        // ONE event per classroom resource — spans full working day (workStart → workEnd)
-        // Contains all timeline tiles as academicTiles for inset rendering
-        const academicDayEvent: ScheduleEvent = {
+        // Create one event per trainee (shared academic session)
+        const newEvents: ScheduleEvent[] = data.selectedTrainees.map(traineeName => ({
             id: uuidv4(),
             date: data.date,
             type: 'ground' as const,
-            flightNumber: 'ACAD',
-            startTime: data.workStart,
-            duration: sessionDuration,
+            flightNumber: flightNumberLabel,
+            startTime: firstStart,
+            duration: totalDuration,
             attendees: data.selectedTrainees,
-            student: data.selectedTrainees[0] || '',
-            resourceId: data.resourceId || 'Ground 1',
-            color: 'bg-blue-800/90',
+            student: traineeName,
+            resourceId: data.resourceId,
+            color: 'bg-blue-700/80',
             flightType: 'Dual' as const,
             locationType: 'Local' as const,
             origin: school,
             destination: school,
             isAcademic: true,
-            isTimeFixed: true,
+            isTimeFixed: true, // NEO Build skips isTimeFixed events
             notes: `Academic session: ${lessonCodes}`,
+            instructor: data.instructor,
             academicTiles: data.timeline.map(t => ({
                 lessonCode: t.lessonCode,
                 label: t.label,
@@ -10300,11 +10172,12 @@ updates.forEach(update => {
                 color: t.color,
                 isStandard: t.isStandard,
             })),
-        };
+        }));
 
-        setEvents((prev: ScheduleEvent[]) => [...prev, academicDayEvent]);
+        // Add to events directly (not nextDayBuildEvents — these are permanent fixed events)
+        setEvents((prev: ScheduleEvent[]) => [...prev, ...newEvents]);
         setShowAddGroundEvent(false);
-        setSuccessMessage(`Academic session published for ${data.date}: ${lessonCodes || 'ACAD-SESSION'}`);
+        setSuccessMessage(`Academic session scheduled for ${data.selectedTrainees.length} trainee(s): ${lessonCodes}`);
     };
 
 
@@ -12974,8 +12847,6 @@ updates.forEach(update => {
                        onUpdateOrganisationSettings={setOrganisationSettings}
                        neoBuildCourse={neoBuildCourse}
                        onUpdateNeoBuildCourse={handleUpdateNeoBuildCourse}
-                       excludedCourses={excludedCourses}
-                       onUpdateExcludedCourses={handleUpdateExcludedCourses}
                        
                 />;
             case 'CurrencyBuilder':
@@ -13760,10 +13631,6 @@ updates.forEach(update => {
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
                     courseColors={courseColors}
                     school={school}
-                    courseAcademicProgress={courseAcademicProgress}
-                    onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
-                    persistedAcademicLmp={persistedAcademicLmp}
-                    onUpdatePersistedAcademicLmp={handleUpdatePersistedAcademicLmp}
                 />
             )}
             {showAuthFlyout && eventForAuth && 

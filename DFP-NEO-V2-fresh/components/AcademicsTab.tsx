@@ -25,14 +25,9 @@ interface AcademicsTabProps {
   date: string;
   courseColors: { [key: string]: string };
   school: 'ESL' | 'PEA';
-  // Course-level academic completion: Map<courseCode, Set<lessonCode>>
-  courseAcademicProgress?: Map<string, Set<string>>;
-  onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
-  // Persisted Academic LMP selection (survives hard reset)
-  persistedAcademicLmp?: string;
-  onUpdatePersistedAcademicLmp?: (lmp: string) => void;
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
+  instructors?: string[];
 }
 
 export interface AcademicSaveData {
@@ -45,6 +40,7 @@ export interface AcademicSaveData {
   workEnd: number;
   resourceId: string;
   isAcademic: true;
+  instructor?: string;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -121,58 +117,15 @@ function getLessonCompletion(
 
 // ── Subject grouping ─────────────────────────────────────────────────────────
 
-// Derive a subject/module key from an event description prefix
-// e.g. "AERODY1" -> "AERODY", "MET Review" -> "MET", "ATC Exam" -> "ATC"
-function getDescriptionPrefix(desc: string): string {
-  if (!desc) return 'General';
-  // Strip trailing numbers and keywords like Review/Exam/Debrief/CBT
-  return desc.replace(/\s*(\d+|Review|Exam|Debrief|CBT|\d+\s*CBT)\s*$/i, '').trim() || desc;
-}
-
-function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label: string; items: SyllabusItemDetail[] }[] {
-  // Determine grouping strategy:
-  // 1. If items have meaningful module field values (numeric or short non-title values), group by module
-  // 2. Otherwise, group by event description prefix (subject area)
+function groupBySubject(items: SyllabusItemDetail[]): Record<string, SyllabusItemDetail[]> {
   const groups: Record<string, SyllabusItemDetail[]> = {};
-
-  // Check if module fields contain meaningful module numbers/names
-  // (not just the course title repeated on every item)
-  const moduleValues = items.map(i => i.module?.trim()).filter(Boolean);
-  const uniqueModules = new Set(moduleValues);
-  // If all items share the same module value (e.g. all = "PC-21 Ground School"),
-  // or module values are missing, fall back to grouping by description prefix
-  const hasMeaningfulModules = uniqueModules.size > 1 ||
-    (uniqueModules.size === 1 && /^\d+$/.test([...uniqueModules][0] || ''));
-
   for (const item of items) {
-    let key: string;
-    if (hasMeaningfulModules) {
-      // Use module field, fallback to phase, then description prefix
-      key = item.module?.trim() || item.phase?.trim() || getDescriptionPrefix(item.eventDescription);
-    } else {
-      // Fall back to event description prefix as the grouping key
-      key = getDescriptionPrefix(item.eventDescription);
-    }
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(item);
+    // Use module as subject area, or phase if module is empty
+    const subject = item.module?.trim() || item.phase?.trim() || 'General';
+    if (!groups[subject]) groups[subject] = [];
+    groups[subject].push(item);
   }
-
-  // Sort keys: numeric keys first (1, 2, 3...), then alphabetical
-  const sortedKeys = Object.keys(groups).sort((a, b) => {
-    const numA = parseFloat(a);
-    const numB = parseFloat(b);
-    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-    if (!isNaN(numA)) return -1;
-    if (!isNaN(numB)) return 1;
-    return a.localeCompare(b);
-  });
-
-  return sortedKeys.map(key => {
-    // Build a nice display label: "Module 1" for numeric keys, else the key itself
-    const num = parseFloat(key);
-    const label = !isNaN(num) ? `Module ${num}` : key;
-    return { moduleKey: key, label, items: groups[key] };
-  });
+  return groups;
 }
 
 // ── Trainee Status ────────────────────────────────────────────────────────────
@@ -216,12 +169,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   courseColors,
   school,
   defaultLocality,
-  courseAcademicProgress,
-  onUpdateCourseAcademicProgress,
-  persistedAcademicLmp,
-  onUpdatePersistedAcademicLmp,
   onSave,
   onClose,
+  instructors = [],
 }) => {
   // ── Control bar state ──
   const localities = useMemo(() => {
@@ -241,6 +191,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [workEnd, setWorkEnd]   = useState(17);
   const [otherText, setOtherText] = useState('');
   const [resourceId, setResourceId] = useState(''); // blank by default
+  const [instructor, setInstructor] = useState('');
 
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
@@ -305,52 +256,15 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic LMP courses (ONLY type === 'Academics' — Ground School is a flying phase activity) ──
-  const academicLmpCourses = useMemo(() => {
-    const courseCodeSet = new Set<string>();
-    syllabusDetails.forEach(s => {
-      if (s.type === 'Academics') {
-        (s.courses || []).forEach(c => courseCodeSet.add(c));
-      }
-    });
-    return Array.from(courseCodeSet).map(code => {
-      const firstItem = syllabusDetails.find(s =>
-        s.type === 'Academics' && s.courses?.includes(code)
-      );
-      // module field holds the full course title (e.g. "PC-21 Ground School")
-      const title = firstItem?.module?.trim() || code;
-      return { code, title };
-    }).sort((a, b) => a.title.localeCompare(b.title));
-  }, [syllabusDetails]);
-
-  // selectedAcademicLmp: initialise from persisted DB value, fall back to first available
-  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>(() => persistedAcademicLmp || '');
-
-  // When persistedAcademicLmp arrives from DB (async), update if we don't have a value yet
-  useEffect(() => {
-    if (persistedAcademicLmp && !selectedAcademicLmp) {
-      setSelectedAcademicLmp(persistedAcademicLmp);
-    }
-  }, [persistedAcademicLmp]);
-
-  // Auto-select first academic LMP course if nothing is persisted yet
-  useEffect(() => {
-    if (academicLmpCourses.length > 0 && !selectedAcademicLmp) {
-      const firstCode = academicLmpCourses[0].code;
-      setSelectedAcademicLmp(firstCode);
-      onUpdatePersistedAcademicLmp?.(firstCode);
-    }
-  }, [academicLmpCourses]);
-
-  // ── Academic syllabus filtered by selected Academic LMP course (Academics type only) ──
+  // ── Academic syllabus (Academics + Ground School types) ──
   const academicSyllabus = useMemo(() => {
-    if (!selectedAcademicLmp) return [];
     return syllabusDetails.filter(s =>
-      s.type === 'Academics' && s.courses?.includes(selectedAcademicLmp)
+      (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
+      (s.courses?.includes(selectedCourse) || s.courses?.length === 0 || !s.courses)
     );
-  }, [syllabusDetails, selectedAcademicLmp]);
+  }, [syllabusDetails, selectedCourse]);
 
-  const moduleGroups = useMemo(() => groupByModule(academicSyllabus), [academicSyllabus]);
+  const subjectGroups = useMemo(() => groupBySubject(academicSyllabus), [academicSyllabus]);
 
   // ── Timeline tiles ──
   const [tiles, setTiles] = useState<TimelineTile[]>([]);
@@ -376,14 +290,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       setSelectedLessons(prev => new Set(prev).add(key));
       const dur = item.duration || 1;
       const start = getNextStart(dur);
-      // Avoid duplicate: if eventDescription already starts with the code, use it directly
-      const tileLabel = item.eventDescription?.startsWith(key)
-        ? item.eventDescription
-        : `${key} ${item.eventDescription}`;
       setTiles(prev => [...prev, {
         id: uuidv4(),
         lessonCode: key,
-        label: tileLabel,
+        label: `${key}: ${item.eventDescription}`,
         startTime: start,
         duration: dur,
         color: ACADEMIC_TILE_COLOR,
@@ -498,6 +408,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       workStart,
       workEnd,
       resourceId,
+      instructor,
       isAcademic: true,
     });
   };
@@ -523,7 +434,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   return (
     <div style={S.container}>
       {/* ── Control Bar ── */}
-      <div style={{ ...S.card, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: 10 }}>
+      <div style={{ ...S.card, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 10 }}>
         <div>
           <div style={S.label}>Locality</div>
           <select style={S.select} value={selectedLocality} onChange={e => setSelectedLocality(e.target.value)}>
@@ -535,22 +446,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           <select style={S.select} value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
             <option value="">-- Select --</option>
             {coursesForLocality.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <div style={{ ...S.label, color: '#93c5fd' }}>Academic LMP</div>
-          <select
-            style={{ ...S.select, borderColor: '#1d4ed8' }}
-            value={selectedAcademicLmp}
-            onChange={e => {
-              setSelectedAcademicLmp(e.target.value);
-              onUpdatePersistedAcademicLmp?.(e.target.value);
-              setSelectedLessons(new Set());
-              setTiles(prev => prev.filter(t => t.isStandard));
-            }}
-          >
-            <option value="">-- Select LMP --</option>
-            {academicLmpCourses.map(c => <option key={c.code} value={c.code}>{c.title}</option>)}
           </select>
         </div>
         <div>
@@ -579,11 +474,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
       </div>
 
-      {/* ── Main 2-Panel Layout (fixed combined width = timeline) ── */}
-      <div style={{ display: 'flex', gap: 10 }}>
+      {/* ── Main 3-Panel Layout ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 10 }}>
 
-        {/* Left Panel: Trainees - fixed width */}
-        <div style={{ ...S.card, width: 200, minWidth: 200, maxWidth: 200, maxHeight: 360, overflowY: 'auto', flexShrink: 0 }}>
+        {/* Left Panel: Trainees */}
+        <div style={{ ...S.card, maxHeight: 360, overflowY: 'auto' }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Attendees
             <span style={{ fontWeight: 400, color: '#6b7280', fontSize: 10, marginLeft: 6 }}>
               {selectedTrainees.length}/{courseTrainees.length}
@@ -611,7 +506,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
 
         {/* Centre Panel: Lesson Selector + Standard Events */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
@@ -634,94 +529,52 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             </div>
           )}
 
-          {/* Lesson columns by module */}
-          <div style={{ ...S.card, maxHeight: 300, overflowY: 'auto', flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <div style={S.label}>LMP Lessons</div>
-              <span style={{ fontSize: 10, color: '#6b7280' }}>
-                ✅ = course complete &nbsp;⬜ = not yet complete &nbsp;
-                <span style={{ color: '#93c5fd' }}>(click ✅/⬜ to toggle course completion)</span>
-              </span>
+          {/* Lesson columns by subject */}
+          <div style={{ ...S.card, maxHeight: 280, overflowY: 'auto' }}>
+            <div style={S.label}>LMP Lessons</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+              {Object.entries(subjectGroups).map(([subject, items]) => (
+                <div key={subject}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: '#e5e7eb',
+                    backgroundColor: subjectColor(subject),
+                    padding: '2px 6px', borderRadius: 4, marginBottom: 4, textTransform: 'uppercase'
+                  }}>{subject}</div>
+                  {items.map(item => {
+                    const completion = getLessonCompletion(item.code, courseTrainees, scores);
+                    const isSelected = selectedLessons.has(item.code);
+                    return (
+                      <div key={item.code}
+                        onClick={() => toggleLesson(item)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 5, padding: '3px 4px',
+                          cursor: 'pointer', borderRadius: 4,
+                          backgroundColor: isSelected ? 'rgba(29,78,216,0.3)' : 'transparent',
+                          border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
+                          marginBottom: 2,
+                        }}>
+                        {/* Completion indicator */}
+                        <span style={{ fontSize: 10, width: 14, textAlign: 'center', flexShrink: 0 }}>
+                          {completion === 'complete' ? '✅' : completion === 'partial' ? '🟡' : '⬜'}
+                        </span>
+                        <span style={{ fontSize: 11, color: isSelected ? '#93c5fd' : '#d1d5db', flex: 1, lineHeight: 1.2 }}>
+                          <span style={{ fontWeight: 600, color: '#f9fafb' }}>{item.code}</span>
+                          {' '}{item.eventDescription}
+                        </span>
+                        <span style={{ fontSize: 10, color: '#6b7280', flexShrink: 0 }}>
+                          {item.duration ? `${item.duration}h` : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {Object.keys(subjectGroups).length === 0 && (
+                <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>
+                  No academic lessons found for this course
+                </div>
+              )}
             </div>
-            {moduleGroups.length === 0 ? (
-              <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>
-                No academic lessons found for this course
-              </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-                {moduleGroups.map(({ moduleKey, label, items: moduleItems }) => (
-                  <div key={moduleKey} style={{
-                    minWidth: 190, flexShrink: 0,
-                    backgroundColor: '#111827', borderRadius: 6, border: '1px solid #1d4ed8',
-                    overflow: 'hidden'
-                  }}>
-                    {/* Module header */}
-                    <div style={{
-                      fontSize: 10, fontWeight: 700, color: '#bfdbfe',
-                      backgroundColor: '#1e3a5f',
-                      padding: '4px 8px', textTransform: 'uppercase', letterSpacing: 1
-                    }}>{label}</div>
-                    {/* Lessons list */}
-                    <div style={{ padding: '4px 2px' }}>
-                      {moduleItems.map(item => {
-                        // Course-level completion: from courseAcademicProgress prop
-                        // This is separate from individual PT-051 scores
-                        const courseProgress = courseAcademicProgress?.get(selectedCourse);
-                        const isCourseDone = courseProgress?.has(item.code) ?? false;
-                        const isSelected = selectedLessons.has(item.code);
-                        return (
-                          <div key={item.code}
-                            style={{
-                              display: 'flex', alignItems: 'flex-start', gap: 5, padding: '3px 6px',
-                              borderRadius: 4,
-                              backgroundColor: isSelected ? 'rgba(29,78,216,0.35)' : 'transparent',
-                              border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
-                              marginBottom: 1,
-                            }}>
-                            {/* Course-level completion toggle button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (onUpdateCourseAcademicProgress && selectedCourse) {
-                                  onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
-                                }
-                              }}
-                              title={isCourseDone ? 'Mark as NOT completed by this course' : 'Mark as completed by this course cohort'}
-                              style={{
-                                background: 'none', border: 'none', cursor: onUpdateCourseAcademicProgress ? 'pointer' : 'default',
-                                fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0, padding: 0, marginTop: 0,
-                                opacity: onUpdateCourseAcademicProgress ? 1 : 0.6,
-                                filter: 'brightness(1.3)',
-                              }}
-                            >
-                              {isCourseDone ? '✅' : '⬜'}
-                            </button>
-                            {/* Lesson label — click to add to timeline */}
-                            <span
-                              onClick={() => toggleLesson(item)}
-                              style={{
-                                fontSize: 11, flex: 1, lineHeight: 1.3, cursor: 'pointer',
-                                color: isCourseDone ? '#9ca3af' : isSelected ? '#93c5fd' : '#e5e7eb',
-                                textDecoration: isCourseDone ? 'line-through' : 'none',
-                              }}>
-                              <span style={{ fontWeight: 700, color: isCourseDone ? '#9ca3af' : '#f9fafb', fontSize: 11 }}>{item.code}</span>
-                              {item.eventDescription && !item.eventDescription.startsWith(item.code)
-                                ? <>{' '}{item.eventDescription}</>
-                                : null}
-                            </span>
-                            {item.duration ? (
-                              <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, marginTop: 1 }}>
-                                {item.duration}h
-                              </span>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Standard Events */}
@@ -774,6 +627,15 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
+            {instructors.length > 0 && (
+              <>
+                <div style={S.label}>Instructor</div>
+                <select style={{ ...S.select, width: 160 }} value={instructor} onChange={e => setInstructor(e.target.value)}>
+                  <option value="">— Unallocated —</option>
+                  {instructors.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </>
+            )}
           </div>
         </div>
 
@@ -876,8 +738,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         <button onClick={onClose} className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
           Cancel
         </button>
-        <button onClick={handleSave} className="w-[160px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
-          Publish Academic Session
+        <button onClick={handleSave} className="w-[120px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
+          Save Academic Session
         </button>
       </div>
     </div>
