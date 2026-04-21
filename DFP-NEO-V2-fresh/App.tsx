@@ -4834,16 +4834,27 @@ const App: React.FC = () => {
                     setTraineeLMPs(prev => {
                         const newLMPs = new Map(prev);
                         dbTrainees.forEach((trainee: any) => {
-                            // Derive lmpType from course name if it's still the default 'BPC+IPC'
-                            // FIC210/FIC211 trainees should get the FIC syllabus
-                            let lmpType = trainee.lmpType || 'BPC+IPC';
-                            if (lmpType === 'BPC+IPC' && trainee.course) {
-                                const courseUpper = (trainee.course as string).toUpperCase();
-                                if (courseUpper.startsWith('FIC')) {
-                                    lmpType = 'FIC';
-                                    console.log(`[LMP Init] Detected FIC course for ${trainee.fullName} (${trainee.course}) — overriding lmpType to 'FIC'`);
+                            // Derive lmpType: trainee.lmpType > course.lmpType > course-name heuristic > fallback BPC+IPC
+                            let lmpType = trainee.lmpType || '';
+                            if (!lmpType || lmpType === 'BPC+IPC') {
+                                // Check if the course definition has an explicit lmpType set
+                                const courseObj = data.courses?.find((c: any) => c.name === trainee.course);
+                                if (courseObj?.lmpType && courseObj.lmpType !== 'BPC+IPC') {
+                                    lmpType = courseObj.lmpType;
+                                    console.log(`[LMP Init] Using course lmpType "${lmpType}" for ${trainee.fullName} (${trainee.course})`);
                                 }
                             }
+                            if (!lmpType || lmpType === 'BPC+IPC') {
+                                // Fallback: derive from course name (FIC heuristic)
+                                if (trainee.course) {
+                                    const courseUpper = (trainee.course as string).toUpperCase();
+                                    if (courseUpper.startsWith('FIC')) {
+                                        lmpType = 'FIC';
+                                        console.log(`[LMP Init] Detected FIC course for ${trainee.fullName} (${trainee.course}) — overriding lmpType to 'FIC'`);
+                                    }
+                                }
+                            }
+                            if (!lmpType) lmpType = 'BPC+IPC';
 
                             // For FIC trainees: always assign correct FIC LMP (overwrite any incorrect BPC+IPC LMP)
                             // For non-FIC trainees: only initialize if not already set
@@ -7263,13 +7274,19 @@ const App: React.FC = () => {
     const handleAddTrainee = useCallback((newTrainee: Trainee) => {
         setTraineesData(prev => [...prev, newTrainee]);
         
-        // Initialize Individual LMP based on trainee's lmpType
-        const lmpType = newTrainee.lmpType || 'BPC+IPC';
+        // Initialize Individual LMP based on trainee's lmpType.
+        // If trainee.lmpType is not set, fall back to the course's lmpType (from courses state).
+        let lmpType = newTrainee.lmpType || '';
+        if (!lmpType || lmpType === 'BPC+IPC') {
+            const courseObj = courses.find(c => c.name === newTrainee.course);
+            if (courseObj?.lmpType) lmpType = courseObj.lmpType;
+        }
+        if (!lmpType) lmpType = 'BPC+IPC';
         const masterLMP = syllabusDetails.filter(item => {
             if (lmpType === 'BPC+IPC') {
                 return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
             }
-            return item.courses.includes(lmpType);
+            return item.courses && item.courses.includes(lmpType);
         });
         
         if (masterLMP.length > 0) {
@@ -7461,7 +7478,10 @@ const App: React.FC = () => {
             gradDate: data.gradDate,
             raafStart: data.raafStart,
             navyStart: data.navyStart,
-            armyStart: data.armyStart
+            armyStart: data.armyStart,
+            location: (data as any).location || '',
+            unit: (data as any).unit || '',
+            lmpType: (data as any).lmpType || 'BPC+IPC',
         };
         setCourses(prev => [...prev, newCourse]);
         
@@ -7582,6 +7602,54 @@ const App: React.FC = () => {
             }
         } catch (error) {
             console.error('Error updating course dates in DB:', error);
+            setErrorMessage('Failed to save changes to database');
+        }
+    };
+
+    const handleUpdateCourseFromTrainingRecords = async (
+        courseName: string,
+        data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }
+    ) => {
+        // Update local state - courses array with all new fields
+        setCourses(prevCourses =>
+            prevCourses.map(course =>
+                course.name === courseName
+                    ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType }
+                    : course
+            )
+        );
+
+        // Update database via API
+        try {
+            const course = courses.find(c => c.name === courseName);
+            if (!course) {
+                console.error('[EditCourse] Course not found:', courseName);
+                return;
+            }
+
+            const result = await saveCourseToDB({
+                name: course.name,
+                color: course.color,
+                startDate: data.startDate,
+                gradDate: data.gradDate,
+                raafStart: course.raafStart,
+                navyStart: course.navyStart,
+                armyStart: course.armyStart,
+                location: data.location,
+                unit: data.unit,
+                lmpType: data.lmpType,
+                status: course.status,
+            });
+
+            if (result.success) {
+                console.log(`[EditCourse] ✅ Course "${courseName}" updated:`, data);
+                setSuccessMessage(`Course ${courseName} updated successfully!`);
+            } else {
+                console.error('[EditCourse] Failed to update course in DB:', result.error);
+                setErrorMessage('Failed to save changes to database');
+            }
+        } catch (error) {
+            console.error('[EditCourse] Error updating course in DB:', error);
             setErrorMessage('Failed to save changes to database');
         }
     };
@@ -12665,6 +12733,7 @@ updates.forEach(update => {
                     onNavigateToCourseRoster={handleNavigateToCourseRosterFromTrainingRecords}
                     onNavigateToArchivedCourses={handleNavigateToArchivedCoursesFromTrainingRecords}
                     onUpdateCourseDates={handleUpdateCourseDatesFromTrainingRecords}
+                    onUpdateCourse={handleUpdateCourseFromTrainingRecords}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
                     archivedTraineesData={archivedTraineesData}

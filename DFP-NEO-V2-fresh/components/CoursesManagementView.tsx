@@ -14,6 +14,7 @@ interface CoursesManagementViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
+    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }) => void;
     locations?: string[];
     units?: string[];
 }
@@ -27,6 +28,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
     onUpdateCourseDates,
+    onUpdateCourse,
     locations = [],
     units = [],
 }) => {
@@ -95,6 +97,17 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const handleUpdateCourseDates = (startDate: string, gradDate: string) => {
         if (courseToEdit) {
             onUpdateCourseDates(courseToEdit.name, startDate, gradDate);
+        }
+    };
+
+    const handleUpdateCourse = (data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }) => {
+        if (courseToEdit) {
+            if (onUpdateCourse) {
+                onUpdateCourse(courseToEdit.name, data);
+            } else {
+                // Fallback: at minimum update dates
+                onUpdateCourseDates(courseToEdit.name, data.startDate, data.gradDate);
+            }
         }
     };
 
@@ -288,11 +301,16 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     courseName={courseToEdit.name}
                     startDate={courseToEdit.startDate}
                     gradDate={courseToEdit.gradDate}
+                    location={courseToEdit.location || ''}
+                    unit={courseToEdit.unit || ''}
+                    lmpType={courseToEdit.lmpType || 'BPC+IPC'}
+                    locations={locations}
+                    units={units}
                     onClose={() => {
                         setShowEditFlyout(false);
                         setCourseToEdit(null);
                     }}
-                    onSave={handleUpdateCourseDates}
+                    onSave={handleUpdateCourse}
                 />
             )}
 

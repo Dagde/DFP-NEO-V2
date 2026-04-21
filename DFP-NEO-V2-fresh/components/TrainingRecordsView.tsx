@@ -14,6 +14,7 @@ interface TrainingRecordsViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
+    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }) => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
     archivedTraineesData: Trainee[];
@@ -39,6 +40,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
     onUpdateCourseDates,
+    onUpdateCourse,
     traineesData,
     instructorsData,
     archivedTraineesData,
@@ -103,6 +105,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onNavigateToCourseRoster={onNavigateToCourseRoster}
                         onNavigateToArchivedCourses={onNavigateToArchivedCourses}
                         onUpdateCourseDates={onUpdateCourseDates}
+                        onUpdateCourse={onUpdateCourse}
                         locations={locations}
                         units={units}
                     />

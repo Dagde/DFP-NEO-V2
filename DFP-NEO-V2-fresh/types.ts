@@ -57,6 +57,10 @@ export interface Course {
   raafStart: number;
   navyStart: number;
   armyStart: number;
+  location?: string;
+  unit?: string;
+  lmpType?: string;  // determines which syllabus events populate the Individual LMP
+  status?: string;
 }
 
 export type InstructorRank = 'WGCDR' | 'SQNLDR' | 'FLTLT' | 'FLGOFF' | 'PLTOFF' | 'Mr';
