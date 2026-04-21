@@ -9839,23 +9839,8 @@ updates.forEach(update => {
         setSuccessMessage('Instructors successfully replaced!');
     }, []);
 
-    const handleBulkUpdateTrainees = useCallback((updatedTrainees: Trainee[]) => {
-        const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
-        
-        setTraineesData(prevTrainees => {
-            const existingIds = new Set(prevTrainees.map(t => t.idNumber));
-            const updatedExisting = prevTrainees.map(t => updatedMap.get(t.idNumber) || t);
-            const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
-            return [...updatedExisting, ...newToAdd];
-        });
-    }, []);
-
-    const handleReplaceTrainees = useCallback((newTrainees: Trainee[]) => {
-        setTraineesData(newTrainees);
-        setSuccessMessage('Trainees successfully replaced!');
-    }, []);
-    
     // Refresh database data (personnel and trainees) - called when database is modified
+    // IMPORTANT: Must be defined BEFORE handleBulkUpdateTrainees and handleReplaceTrainees
     const handleDatabaseDataChanged = useCallback(async () => {
         console.log('🔄 Refreshing database data after database modification...');
         
@@ -9929,6 +9914,57 @@ updates.forEach(update => {
             console.error('❌ Error refreshing database data:', error);
         }
     }, []);
+
+    const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
+        const updatedMap = new Map(updatedTrainees.map(t => [t.idNumber, t]));
+        setTraineesData(prevTrainees => {
+            const existingIds = new Set(prevTrainees.map(t => t.idNumber));
+            const updatedExisting = prevTrainees.map(t => updatedMap.get(t.idNumber) || t);
+            const newToAdd = updatedTrainees.filter(ut => !existingIds.has(ut.idNumber));
+            return [...updatedExisting, ...newToAdd];
+        });
+        try {
+            const response = await fetch('/api/trainees/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ trainees: updatedTrainees, replaceAll: false })
+            });
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`✅ [handleBulkUpdateTrainees] DB save success:`, result);
+                setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
+                await handleDatabaseDataChanged();
+            } else {
+                console.error('❌ [handleBulkUpdateTrainees] DB save failed:', response.status);
+            }
+        } catch (err) {
+            console.error('❌ [handleBulkUpdateTrainees] Error saving to DB:', err);
+        }
+    }, [handleDatabaseDataChanged]);
+
+    const handleReplaceTrainees = useCallback(async (newTrainees: Trainee[]) => {
+        setTraineesData(newTrainees);
+        setSuccessMessage('Trainees successfully replaced!');
+        try {
+            const response = await fetch('/api/trainees/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ trainees: newTrainees, replaceAll: false })
+            });
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`✅ [handleReplaceTrainees] DB save success:`, result);
+                setSuccessMessage(`Trainees saved: ${result.created} added, ${result.updated} updated, ${result.skipped} skipped.`);
+                await handleDatabaseDataChanged();
+            } else {
+                console.error('❌ [handleReplaceTrainees] DB save failed:', response.status);
+            }
+        } catch (err) {
+            console.error('❌ [handleReplaceTrainees] Error saving to DB:', err);
+        }
+    }, [handleDatabaseDataChanged]);
     
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
