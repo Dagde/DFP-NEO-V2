@@ -24,6 +24,7 @@ interface NextDayBuildViewProps {
   zoomLevel: number;
   showValidation: boolean;
   showPrePost: boolean;
+  showDepartureDensityOverlay?: boolean;
   syllabusDetails: SyllabusItemDetail[];
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
   seatConfigs: Map<string, string>;
@@ -90,7 +91,7 @@ const getResourceCategory = (res: string) => {
 
 export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     date, onDateChange, events, resources, instructors, airframeCount, standbyCount, ftdCount, cptCount,
-    onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
+    onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, showDepartureDensityOverlay = false, syllabusDetails,
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, traineesData,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
@@ -115,6 +116,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     const [realtimeConflict, setRealtimeConflict] = useState<{ conflictingEventId: string; conflictedPersonName: string; } | null>(null);
     const [realtimeResourceConflictId, setRealtimeResourceConflictId] = useState<string | null>(null);
     const [draggedCptConflict, setDraggedCptConflict] = useState<Conflict | null>(null);
+    const [validateOverlayTime, setValidateOverlayTime] = useState<number | null>(null);
     const didDragRef = useRef(false);
 
     // Multi-select State
@@ -244,7 +246,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 });
             }
         } else {
-            if (!isMultiSelectMode) return;
+            // Allow rubber-band drag in both multiSelect mode AND pause select mode
+            if (!isMultiSelectMode && !isPauseSelectMode) return;
             if (!scheduleGridRef.current) return;
             
             const gridRect = scheduleGridRef.current.getBoundingClientRect();
@@ -262,6 +265,12 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         const gridRect = scheduleGridRef.current.getBoundingClientRect();
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
+
+        // Update validate overlay position when validation mode OR hourly event rate mode is ON
+        if (showDepartureDensityOverlay) {
+            const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
+            setValidateOverlayTime(mouseTimeInHours);
+        }
 
         if (isOracleMode && oraclePreviewEvent) {
             const startTime = xInGrid / (PIXELS_PER_HOUR * zoomLevel) + START_HOUR;
@@ -301,6 +310,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     newSelectedIds.add(ev.id);
                 }
             });
+            // In both multiSelect and pauseSelect modes, highlight intersected tiles during drag
             setSelectedEventIds(newSelectedIds);
             return;
         }
@@ -397,15 +407,26 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
         setRealtimeConflict(null);
         setRealtimeResourceConflictId(null);
         setDraggedCptConflict(null);
+        
+        // Clear validate overlay when mouse leaves
+        setValidateOverlayTime(null);
 
-        if (selectionStartPoint.current && isMultiSelectMode) {
+        if (selectionStartPoint.current && (isMultiSelectMode || isPauseSelectMode)) {
             selectionStartPoint.current = null;
             setSelectionRect(null);
 
-            if (!didDragRef.current && !e.shiftKey) {
-                const target = e.target as HTMLElement;
-                if (!target.closest('[data-is-flight-tile="true"]')) {
-                    setSelectedEventIds(new Set());
+            if (isPauseSelectMode && didDragRef.current && onPauseToggleCompleted) {
+                // Drag completed in pause select mode — toggle all highlighted events
+                selectedEventIds.forEach(id => {
+                    onPauseToggleCompleted(id);
+                });
+                setSelectedEventIds(new Set());
+            } else if (isMultiSelectMode) {
+                if (!didDragRef.current && !e.shiftKey) {
+                    const target = e.target as HTMLElement;
+                    if (!target.closest('[data-is-flight-tile="true"]')) {
+                        setSelectedEventIds(new Set());
+                    }
                 }
             }
         }
@@ -601,6 +622,70 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         boxShadow:   '0 0 4px rgba(255,255,255,0.3)',
                     }}
                 />
+            </>
+        );
+    };
+
+    // Render hourly event rate overlay (also used for validation)
+    const renderValidateOverlay = () => {
+        // Overlay should show when either validation mode OR hourly event rate mode is active
+        if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
+        
+        // Calculate 1-hour window (30 minutes before and after mouse time)
+        const windowStart = validateOverlayTime - 0.5;
+        const windowEnd = validateOverlayTime + 0.5;
+        
+        // Count flights starting in this window (exclude STBY/BNF-STBY lines)
+        const flightCount = events.filter(event => {
+            // Only count flight events (not FTD, CPT, Ground, Duty Sup, etc.)
+            if (event.type !== 'flight') return false;
+            // Exclude cancelled/STBY line events
+            if (event.resourceId?.startsWith('STBY') || event.resourceId?.startsWith('BNF-STBY')) return false;
+            if (event.isCancelled) return false;
+            // Check if start time falls within the window
+            return event.startTime >= windowStart && event.startTime < windowEnd;
+        }).length;
+        
+        // Calculate pixel positions
+        const leftX = (windowStart - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+        const rightX = (windowEnd - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
+        const width = rightX - leftX;
+        
+        return (
+            <>
+                {/* Translucent overlay area */}
+                <div
+                    className="absolute top-0 h-full bg-white/10 pointer-events-none z-[25]"
+                    style={{
+                        left: `${leftX}px`,
+                        width: `${width}px`
+                    }}
+                />
+                
+                {/* Left vertical line */}
+                <div
+                    className="absolute top-0 h-full w-0.5 bg-white/40 pointer-events-none z-[26]"
+                    style={{ left: `${leftX}px` }}
+                />
+                
+                {/* Right vertical line */}
+                <div
+                    className="absolute top-0 h-full w-0.5 bg-white/40 pointer-events-none z-[26]"
+                    style={{ left: `${rightX}px` }}
+                />
+                
+                {/* Floating label at top */}
+                <div
+                    className="absolute top-2 bg-gray-800/95 border border-white/30 rounded px-3 py-1.5 shadow-lg pointer-events-none z-[27]"
+                    style={{
+                        left: `${leftX + width / 2}px`,
+                        transform: 'translateX(-50%)'
+                    }}
+                >
+                    <div className="text-white text-xs font-semibold whitespace-nowrap">
+                        Flights starting in this hour: <span className="text-sky-400">{flightCount}</span>
+                    </div>
+                </div>
             </>
         );
     };
@@ -813,6 +898,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                     {renderNightShade()}
                     {renderDaylightLines()}
                     {renderPauseWindow()}
+                    {renderValidateOverlay()}
                     {renderCategorySeparators()}
                     {renderEvents()}
                     

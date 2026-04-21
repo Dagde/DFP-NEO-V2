@@ -10,12 +10,16 @@ const require = createRequire(import.meta.url);
 // Training Intelligence Engine
 const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine.cjs');
 
+// Cookie parser
+const cookieParser = require('cookie-parser');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(cookieParser());
 
 // CORS headers for all requests
 app.use((req, res, next) => {
@@ -64,6 +68,8 @@ async function getPrisma() {
     await ensureAppSettingsTable(prisma);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(prisma);
+    // Migrate CPT event durations to 1.0 hour
+    await migrateCptDurations(prisma);
   }
   return prisma;
 }
@@ -136,6 +142,60 @@ async function ensureSyllabusTablesExist(db) {
   }
 }
 
+// Migration: Fix CPT event durations to 1.0 hour (totalEventHours, duration, preFlightTime, postFlightTime)
+async function migrateCptDurations(db) {
+  try {
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "totalEventHours" = 1.0,
+        "flightOrSimHours" = 1.0,
+        "duration" = 1.0,
+        "preFlightTime" = 0,
+        "postFlightTime" = 0,
+        "updatedAt" = NOW()
+      WHERE "code" LIKE '%CPT%'
+        AND ("totalEventHours" != 1.0 OR "duration" != 1.0 OR "preFlightTime" != 0 OR "postFlightTime" != 0)
+    `);
+    console.log(`✅ migrateCptDurations (SyllabusItem): updated ${result} CPT items to 1.0 hr duration`);
+  } catch (err) {
+    console.error('❌ migrateCptDurations (SyllabusItem) failed (non-fatal):', err.message);
+  }
+
+  // Also fix duration in IndividualLMP events JSONB
+  try {
+    // Load all IndividualLMP records
+    const lmps = await db.$queryRawUnsafe(`SELECT "id", "events" FROM "IndividualLMP"`);
+    let updatedCount = 0;
+    for (const lmp of lmps) {
+      let events = lmp.events;
+      if (!Array.isArray(events)) {
+        try { events = JSON.parse(events); } catch { continue; }
+      }
+      let changed = false;
+      const fixedEvents = events.map(evt => {
+        const code = (evt.flightNumber || evt.eventCode || '');
+        if (code.includes('CPT') && evt.duration !== 1.0) {
+          changed = true;
+          return { ...evt, duration: 1.0 };
+        }
+        return evt;
+      });
+      if (changed) {
+        await db.$executeRawUnsafe(
+          `UPDATE "IndividualLMP" SET "events" = $1::jsonb, "updatedAt" = NOW() WHERE "id" = $2`,
+          JSON.stringify(fixedEvents),
+          lmp.id
+        );
+        updatedCount++;
+      }
+    }
+    console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
+  } catch (err) {
+    console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
+  }
+}
+
 // ============================================================
 // API ROUTES
 // ============================================================
@@ -188,6 +248,121 @@ app.post('/api/settings', async (req, res) => {
     res.status(500).json({ error: 'Failed to save settings', details: error.message });
   }
 });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Course Settings API Routes
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// GET /api/settings/course-settings - Get course settings (neoBuildCourse)
+app.get('/api/settings/course-settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(
+      'SELECT "neoBuildCourse" FROM "CourseSettings" LIMIT 1'
+    );
+    const setting = rows && rows.length > 0 ? rows[0] : null;
+    return res.json({ neoBuildCourse: setting ? setting.neoBuildCourse : null });
+  } catch (error) {
+    console.error('[CourseSettings] GET error:', error);
+    res.status(500).json({ error: 'Failed to load course settings', details: error.message });
+  }
+});
+
+// PUT /api/settings/course-settings - Update course settings (neoBuildCourse)
+app.put('/api/settings/course-settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { neoBuildCourse, userId } = req.body;
+    if (!neoBuildCourse) {
+      return res.status(400).json({ error: 'Missing neoBuildCourse' });
+    }
+    const existing = await db.$queryRawUnsafe(
+      'SELECT id FROM "CourseSettings" LIMIT 1'
+    );
+    const now = new Date().toISOString();
+    if (existing && existing.length > 0) {
+      await db.$executeRawUnsafe(
+        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "updatedAt" = $2::timestamp WHERE id = $3',
+        neoBuildCourse, now, existing[0].id
+      );
+    } else {
+      const newId = require('crypto').randomUUID();
+      await db.$executeRawUnsafe(
+        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "createdAt", "updatedAt") VALUES ($1, $2, $3::timestamp, $4::timestamp)',
+        newId, neoBuildCourse, now, now
+      );
+    }
+    console.log(`[CourseSettings] updated neoBuildCourse to: ${neoBuildCourse}`);
+    res.json({ success: true, neoBuildCourse });
+  } catch (error) {
+    console.error('[CourseSettings] PUT error:', error);
+    res.status(500).json({ error: 'Failed to update course settings', details: error.message });
+  }
+});
+
+// GET /api/settings/course-academic-progress - Get all course academic progress records
+app.get('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const records = await db.$queryRawUnsafe(
+      'SELECT "courseCode", "lessonCode" FROM "CourseAcademicProgress" ORDER BY "courseCode" ASC'
+    );
+    const map = {};
+    (records || []).forEach(r => {
+      if (!map[r.courseCode]) map[r.courseCode] = [];
+      map[r.courseCode].push(r.lessonCode);
+    });
+    res.json({ success: true, data: map });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] GET error:', error);
+    res.status(500).json({ error: 'Failed to load course academic progress', details: error.message });
+  }
+});
+
+// POST /api/settings/course-academic-progress - Mark a course lesson as complete
+app.post('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, lessonCode, userId } = req.body;
+    if (!courseCode || !lessonCode) {
+      return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
+    }
+    const newId = require('crypto').randomUUID();
+    const now = new Date().toISOString();
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CourseAcademicProgress" (id, "courseCode", "lessonCode", "completedDate", "completedBy")
+      VALUES ($1, $2, $3, $4::timestamp, $5)
+      ON CONFLICT ("courseCode", "lessonCode") DO NOTHING
+    `, newId, courseCode, lessonCode, now, userId || null);
+    console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as complete`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] POST error:', error);
+    res.status(500).json({ error: 'Failed to save course academic progress', details: error.message });
+  }
+});
+
+// DELETE /api/settings/course-academic-progress - Mark a course lesson as incomplete
+app.delete('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, lessonCode } = req.query;
+    if (!courseCode || !lessonCode) {
+      return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
+    }
+    await db.$executeRawUnsafe(
+      'DELETE FROM "CourseAcademicProgress" WHERE "courseCode" = $1 AND "lessonCode" = $2',
+      courseCode, lessonCode
+    );
+    console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as incomplete`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] DELETE error:', error);
+    res.status(500).json({ error: 'Failed to delete course academic progress', details: error.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/currencies - Load currency settings (dedicated endpoint for reliability)
 app.get('/api/currencies', async (req, res) => {
@@ -1447,14 +1622,47 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 });
 
 // POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
-// Body: { syllabusData: Record<lmpType, SyllabusItemDetail[]> }
+// Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
+// syllabusData is OPTIONAL - server loads syllabus directly from DB for accurate backfill.
+// Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { syllabusData } = req.body;
+    const { syllabusData: clientSyllabusData, pt051Completions } = req.body;
+
+    // --- ALWAYS load syllabus from DB so the server has authoritative data ---
+    // The client may send mockData syllabus (missing FIC GND1/2/3) which would
+    // break the prerequisite backfill. By loading from DB here, we ensure the
+    // full syllabus (including any ground school prerequisites) is available.
+    let dbSyllabusData = {};
+    try {
+      const allItems = await db.$queryRawUnsafe(
+        `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
+      );
+      if (allItems && allItems.length > 0) {
+        // courses is stored as JSON array in DB; parse if needed
+        const parsed = allItems.map(item => ({
+          ...item,
+          courses: Array.isArray(item.courses) ? item.courses :
+            (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
+        }));
+        const ficItems = parsed.filter(item => item.courses.includes('FIC'));
+        const bpcIpcItems = parsed.filter(item => !item.courses.includes('FIC'));
+        dbSyllabusData = {
+          'FIC': ficItems,
+          'BPC+IPC': bpcIpcItems,
+        };
+        console.log(`[LMP Sync] Loaded syllabus from DB: ${ficItems.length} FIC items, ${bpcIpcItems.length} BPC+IPC items`);
+      }
+    } catch (syllabusErr) {
+      console.warn('[LMP Sync] Could not load syllabus from DB, falling back to client syllabusData:', syllabusErr.message);
+    }
+
+    // Use DB syllabus if available; fall back to client-provided syllabusData
+    const syllabusData = (Object.keys(dbSyllabusData).length > 0) ? dbSyllabusData : (clientSyllabusData || {});
 
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
-      return res.status(400).json({ error: 'Missing syllabusData in request body' });
+      return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
     }
 
     // Fetch all active trainees with their scores and existing LMP
@@ -1506,21 +1714,82 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         const normalizedEvent = (s.event || '').replace('*', '');
         scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
       });
+
+      // Merge PT-051 completions from DailySnapshot (passed by frontend)
+      const pt051Map = pt051Completions || {};
+      const pt051Events = pt051Map[trainee.fullName] || [];
+      if (pt051Events.length > 0) {
+        console.log(`[LMP Sync] ${trainee.fullName}: merging ${pt051Events.length} PT-051 completions: ${pt051Events.join(', ')}`);
+        pt051Events.forEach(eventId => {
+          const normalized = (eventId || '').replace('*', '');
+          if (normalized && !scoreMap[normalized]) {
+            scoreMap[normalized] = new Date().toISOString();
+            db.score.findFirst({ where: { traineeId: trainee.id, event: normalized } })
+              .then(existing => {
+                if (!existing) {
+                  return db.score.create({
+                    data: {
+                      traineeId: trainee.id,
+                      event: normalized,
+                      score: 3,
+                      date: new Date(),
+                      instructor: 'DCO',
+                      notes: 'Auto-created from PT-051 assessment during LMP sync',
+                    },
+                  });
+                }
+              })
+              .catch(err => console.warn(`[LMP Sync] Could not persist score for ${trainee.fullName} ${normalized}:`, err.message));
+          }
+        });
+      }
+
       let completedEventIds = Object.keys(scoreMap);
 
-      // Apply BIF FTD dependency rules:
-      // Rule 1: If BIF FTD2 is complete, mark BIF FTD1 complete
-      if (completedEventIds.includes('BIF FTD2') && !completedEventIds.includes('BIF FTD1')) {
-        completedEventIds.push('BIF FTD1');
-        scoreMap['BIF FTD1'] = scoreMap['BIF FTD2']; // use BIF FTD2's date
-        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD1 complete (BIF FTD2 done)`);
+      // --- ENDURING PREREQUISITE BACKFILL ---
+      // If any event N is complete, all syllabus items that appear BEFORE it in the
+      // master syllabus (by sortOrder) must also be complete.
+      // This prevents regressions when new ground-school or prerequisite events are
+      // added to the DB syllabus AFTER trainees have already completed later events.
+      // Example: FIC GND1/2/3 added to DB syllabus after FIC1-FIC5 already completed.
+      {
+        const sorted = [...masterSyllabus].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+        // Find the highest-sortOrder completed item index (high-water mark)
+        let highWatermark = -1;
+        let highWatermarkDate = null;
+        for (let i = 0; i < sorted.length; i++) {
+          const item = sorted[i];
+          const itemKey = (item.id || item.code || '').replace('*', '');
+          const itemCode = (item.code || '').replace('*', '');
+          if (scoreMap[itemKey] || scoreMap[itemCode]) {
+            highWatermark = i;
+            highWatermarkDate = scoreMap[itemKey] || scoreMap[itemCode];
+          }
+        }
+
+        // Backfill every item before the high-water mark
+        if (highWatermark > 0) {
+          const backfilled = [];
+          for (let i = 0; i < highWatermark; i++) {
+            const item = sorted[i];
+            const itemKey = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            const canonicalKey = itemCode || itemKey;
+            if (canonicalKey && !scoreMap[itemKey] && !scoreMap[itemCode]) {
+              scoreMap[canonicalKey] = highWatermarkDate;
+              backfilled.push(canonicalKey);
+            }
+          }
+          if (backfilled.length > 0) {
+            console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} prerequisite(s): ${backfilled.join(', ')}`);
+          }
+        }
+
+        // Rebuild completedEventIds from the augmented scoreMap
+        completedEventIds = Object.keys(scoreMap);
       }
-      // Rule 2: If BIF1 is complete, mark BIF FTD3 complete
-      if (completedEventIds.includes('BIF1') && !completedEventIds.includes('BIF FTD3')) {
-        completedEventIds.push('BIF FTD3');
-        scoreMap['BIF FTD3'] = scoreMap['BIF1']; // use BIF1's date
-        console.log(`[LMP Sync] ${trainee.fullName}: Auto-marking BIF FTD3 complete (BIF1 done)`);
-      }
+      // --- END PREREQUISITE BACKFILL ---
 
       // Build the full LMP events array with completion status
       const lmpEvents = masterSyllabus.map(item => ({
@@ -1741,6 +2010,109 @@ app.get('/api/scores', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/scores error:', error);
     res.status(500).json({ error: 'Failed to fetch scores', details: error.message });
+  }
+});
+
+// POST /api/scores - create/upsert a single score record
+app.post('/api/scores', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = req.body;
+
+    let resolvedTraineeId = traineeId;
+    if (!resolvedTraineeId && traineeFullName) {
+      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
+      if (!trainee) return res.status(404).json({ error: `Trainee not found: ${traineeFullName}` });
+      resolvedTraineeId = trainee.id;
+    }
+    if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
+    if (!event) return res.status(400).json({ error: 'event is required' });
+
+    // Upsert: update if exists, create if not
+    const existing = await db.score.findFirst({ where: { traineeId: resolvedTraineeId, event } });
+    let scoreRecord;
+    if (existing) {
+      scoreRecord = await db.score.update({
+        where: { id: existing.id },
+        data: {
+          score: score !== undefined ? parseInt(score) : existing.score,
+          date: date ? new Date(date) : existing.date,
+          instructor: instructor || existing.instructor,
+          notes: notes || existing.notes,
+          details: details !== undefined ? details : existing.details,
+        },
+      });
+    } else {
+      scoreRecord = await db.score.create({
+        data: {
+          traineeId: resolvedTraineeId,
+          event,
+          score: score !== undefined ? parseInt(score) : 3,
+          date: date ? new Date(date) : new Date(),
+          instructor: instructor || 'DCO',
+          notes: notes || '',
+          details: details || null,
+        },
+      });
+    }
+
+    // Also update IndividualLMP completedEventIds to include this event + backfill prerequisites
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId: resolvedTraineeId } });
+      if (lmp) {
+        const existing_ids = lmp.completedEventIds || [];
+        const updatedSet = new Set(existing_ids);
+        updatedSet.add(event);
+
+        // --- PREREQUISITE BACKFILL (real-time) ---
+        const lmpEvents = Array.isArray(lmp.events) ? lmp.events : [];
+        if (lmpEvents.length > 0) {
+          let highWatermark = -1;
+          const allCompleted = new Set(updatedSet);
+          for (let i = 0; i < lmpEvents.length; i++) {
+            const item = lmpEvents[i];
+            const itemId = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            if (allCompleted.has(itemId) || allCompleted.has(itemCode)) {
+              highWatermark = i;
+            }
+          }
+          if (highWatermark > 0) {
+            const backfilled = [];
+            for (let i = 0; i < highWatermark; i++) {
+              const item = lmpEvents[i];
+              const itemCode = (item.code || '').replace('*', '');
+              const itemId = (item.id || item.code || '').replace('*', '');
+              const canonicalKey = itemCode || itemId;
+              if (canonicalKey && !allCompleted.has(itemCode) && !allCompleted.has(itemId)) {
+                updatedSet.add(canonicalKey);
+                backfilled.push(canonicalKey);
+              }
+            }
+            if (backfilled.length > 0) {
+              console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled prerequisites: ${backfilled.join(', ')}`);
+            }
+          }
+        }
+        // --- END BACKFILL ---
+
+        const updated_ids = [...updatedSet];
+        if (updated_ids.length !== existing_ids.length || !existing_ids.includes(event)) {
+          await db.individualLMP.update({
+            where: { id: lmp.id },
+            data: { completedEventIds: updated_ids, updatedAt: new Date() },
+          });
+          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event} (total: ${updated_ids.length})`);
+        }
+      }
+    } catch (lmpErr) {
+      console.warn(`[POST /api/scores] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
+    res.json({ success: true, score: scoreRecord });
+  } catch (error) {
+    console.error('❌ POST /api/scores error:', error);
+    res.status(500).json({ error: 'Failed to create score', details: error.message });
   }
 });
 
@@ -2118,6 +2490,40 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
   }
 });
 
+// GET /api/debug/solo-syllabus - Show solo syllabus items from DB (BGF11, BGF18 + sortieType='Solo')
+app.get('/api/debug/solo-syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, "eventDescription", "sortieType", "type", "isActive"
+      FROM "SyllabusItem"
+      WHERE "sortieType" = 'Solo'
+         OR code IN ('BGF11', 'BGF18')
+         OR "eventDescription" ILIKE '%solo%'
+      ORDER BY code
+    `);
+    res.json({ count: rows.length, items: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/snapshots - Show all saved DailySnapshot records (id, date, event count, savedAt)
+app.get('/api/debug/snapshots', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, date, "savedAt", "savedBy",
+             jsonb_array_length("scheduleEvents") AS "eventCount"
+      FROM "DailySnapshot"
+      ORDER BY date DESC
+    `);
+    res.json({ count: rows.length, snapshots: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================================
 // SYLLABUS API
 // ============================================================
@@ -2182,6 +2588,19 @@ app.get('/api/syllabus/:id', async (req, res) => {
   }
 });
 
+// GET /api/syllabus/codes - Get all existing active course codes (for duplicate checking)
+app.get('/api/syllabus/codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`SELECT DISTINCT "code" FROM "SyllabusItem" WHERE "isActive" = true OR "isActive" IS NULL`);
+    const codes = rows.map(r => r.code);
+    res.json({ success: true, codes });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus/codes error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // POST /api/syllabus - Create a new syllabus item
 app.post('/api/syllabus', async (req, res) => {
   try {
@@ -2189,6 +2608,24 @@ app.post('/api/syllabus', async (req, res) => {
     const body = req.body;
     const { randomUUID } = await import('crypto');
     const id = randomUUID();
+
+    // Auto-resolve duplicate codes: if code already exists (active items only), append a number suffix
+    let baseCode = body.code;
+    let finalCode = baseCode;
+    let suffix = 2;
+    while (true) {
+      const existing = await db.$queryRawUnsafe(
+        `SELECT "id" FROM "SyllabusItem" WHERE "code" = $1 AND "isActive" = true LIMIT 1`,
+        finalCode
+      );
+      if (existing.length === 0) break; // code is available
+      finalCode = `${baseCode}${suffix}`;
+      suffix++;
+      if (suffix > 99) break; // safety valve
+    }
+
+    // Also update the courses array to use the final code
+    let finalCourses = (body.courses || []).map(c => c === baseCode ? finalCode : c);
 
     await db.$executeRawUnsafe(`
       INSERT INTO "SyllabusItem" (
@@ -2206,9 +2643,9 @@ app.post('/api/syllabus', async (req, res) => {
         $24,$25,$26,$27,$28,$29,$30,$31,
         $32,$33,NOW(),NOW()
       )`,
-      id, body.code, body.eventDescription, body.phase, body.module, body.type,
+      id, finalCode, body.eventDescription, body.phase, body.module, body.type,
       body.sortieType || null, body.dayNight || 'Day',
-      body.courses || [], body.methodOfDelivery || [], body.methodOfAssessment || [],
+      finalCourses, body.methodOfDelivery || [], body.methodOfAssessment || [],
       body.resourcesPhysical || [], body.resourcesHuman || [],
       body.eventDetailsCommon || [], body.eventDetailsSortie || [],
       body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
@@ -2221,11 +2658,16 @@ app.post('/api/syllabus', async (req, res) => {
     );
 
     const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
-    console.log(`✅ POST /api/syllabus - created: ${body.code}`);
-    res.json({ success: true, item: rows[0] });
+    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
+    if (finalCode !== baseCode) {
+      console.log(`✅ POST /api/syllabus - created: ${finalCode} (requested: ${baseCode}, was duplicate)`);
+    } else {
+      console.log(`✅ POST /api/syllabus - created: ${finalCode}`);
+    }
+    res.json({ success: true, syllabusItem, item: rows[0] });
   } catch (error) {
     console.error('❌ POST /api/syllabus error:', error);
-    res.status(500).json({ error: 'Failed to create syllabus item', details: error.message });
+    res.status(500).json({ error: error.message || 'Failed to create syllabus item', details: error.message });
   }
 });
 
@@ -2236,38 +2678,52 @@ app.put('/api/syllabus/:id', async (req, res) => {
     const { id } = req.params;
     const body = req.body;
 
-    const fields = Object.keys(body).filter(k => !['id','createdAt','createdBy'].includes(k));
+    // Exclude server-managed fields, timestamps, and non-column metadata fields sent from frontend
+    const EXCLUDED_FIELDS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'version', 'changeReason'];
+    const fields = Object.keys(body).filter(k => !EXCLUDED_FIELDS.includes(k));
     if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
 
-    const setClauses = fields.map((f, i) => `"${f}" = $${i + 2}`).join(', ');
+    // Build SET clauses, casting array fields and boolean fields properly
+    const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','resourcesHuman',
+                          'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
+    const BOOL_FIELDS = ['isActive','isRemedial','cctOnly','twrDiReqd'];
+
+    const setClauses = fields.map((f, i) => {
+      if (ARRAY_FIELDS.includes(f)) return `"${f}" = $${i + 2}::text[]`;
+      if (BOOL_FIELDS.includes(f)) return `"${f}" = $${i + 2}::boolean`;
+      return `"${f}" = $${i + 2}`;
+    }).join(', ');
     const values = fields.map(f => body[f]);
 
     await db.$executeRawUnsafe(
-      `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1`,
+      `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,
       id, ...values
     );
 
-    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`, id);
+    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
     console.log(`✅ PUT /api/syllabus/${id}`);
-    res.json({ success: true, item: rows[0] });
+    res.json({ success: true, syllabusItem, item: rows[0] });
   } catch (error) {
     console.error('❌ PUT /api/syllabus/:id error:', error);
-    res.status(500).json({ error: 'Failed to update syllabus item', details: error.message });
+    res.status(500).json({ error: error.message || 'Failed to update syllabus item', details: error.message });
   }
 });
 
-// DELETE /api/syllabus/:id - Soft delete a syllabus item
+// DELETE /api/syllabus/:id - Hard delete a syllabus item (permanently removes from DB)
 app.delete('/api/syllabus/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
+    const { hardDelete } = req.body || {};
 
+    // Always hard delete - permanently remove from DB so codes can be reused
     await db.$executeRawUnsafe(
-      `UPDATE "SyllabusItem" SET "isActive" = false, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,
+      `DELETE FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`,
       id
     );
 
-    console.log(`✅ DELETE /api/syllabus/${id} (soft delete)`);
+    console.log(`✅ DELETE /api/syllabus/${id} (hard delete)`);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ DELETE /api/syllabus/:id error:', error);
@@ -2275,7 +2731,246 @@ app.delete('/api/syllabus/:id', async (req, res) => {
   }
 });
 
+// POST /api/auth/verify-password - Verify current user's password for destructive action confirmations
+app.post('/api/auth/verify-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ valid: false, error: 'Password required' });
+    }
+
+    // Get session token from Authorization header (Bearer token)
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+    const sessionToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (!sessionToken) {
+      return res.status(401).json({ valid: false, error: 'Not authenticated - no session token' });
+    }
+
+    // Look up the session in the Session table to get userId
+    const sessions = await db.$queryRawUnsafe(
+      `SELECT "userId", "expires" FROM "Session" WHERE "sessionToken" = $1`,
+      sessionToken
+    );
+
+    if (!sessions || sessions.length === 0) {
+      return res.status(401).json({ valid: false, error: 'Invalid or expired session' });
+    }
+
+    const session = sessions[0];
+
+    // Check session has not expired
+    if (new Date(session.expires) < new Date()) {
+      return res.status(401).json({ valid: false, error: 'Session expired' });
+    }
+
+    const userDbId = session.userId;
+
+    // Fetch user with password from database using the id from Session table
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", "firstName", "lastName", password FROM "User" WHERE id = $1`,
+      userDbId
+    );
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ valid: false, error: 'User not found' });
+    }
+
+    const userData = users[0];
+    const displayName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+
+    // Check if user has a password set
+    if (!userData.password) {
+      console.warn(`⚠️ User ${displayName} has no password set`);
+      return res.status(400).json({ 
+        valid: false, 
+        error: 'No password set for this account. Run the set-password curl command first.',
+        reason: 'no_password'
+      });
+    }
+
+    // Use bcryptjs to verify password
+    const bcrypt = require('bcryptjs');
+    const valid = await bcrypt.compare(password, userData.password);
+
+    if (valid) {
+      console.log(`✅ Password verified for ${displayName}`);
+    } else {
+      console.log(`❌ Password verification failed for ${displayName}`);
+    }
+
+    res.json({ valid });
+  } catch (error) {
+    console.error('❌ POST /api/auth/verify-password error:', error);
+    res.status(500).json({ valid: false, error: error.message || 'Server error' });
+  }
+});
+
+// POST /api/admin/set-user-password - Set or update a user's password (for initial setup/reset)
+app.post('/api/admin/set-user-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { fullName, password, userId, email } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Password must be at least 8 characters' 
+      });
+    }
+
+    // Find user by fullName (firstName + lastName), userId, or email
+    let user;
+    let sql, params;
+    
+    if (fullName) {
+      // fullName might be like "SQNLDR Alexander Burns" - parse for first/last name
+      // Split by space, take last word as lastName, first word as firstName (skip title like SQNLDR)
+      const parts = fullName.trim().split(/\s+/);
+      const lastName = parts.pop(); // Last word is lastName
+      const firstName = parts.pop() || ''; // Second-to-last is firstName (skip title)
+      
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" 
+             WHERE (firstName ILIKE $1 AND lastName ILIKE $2)
+             OR (firstName || ' ' || COALESCE(lastName, '')) ILIKE $3`;
+      params = [`%${firstName}%`, lastName, `%${fullName}%`];
+    } else if (userId) {
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" WHERE id = $1 OR userId = $1`;
+      params = [userId];
+    } else {
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" WHERE email = $1`;
+      params = [email];
+    }
+    
+    const userRows = await db.$queryRawUnsafe(sql, ...params);
+
+    if (!userRows || userRows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'User not found',
+        searchBy: fullName ? 'fullName' : userId ? 'userId' : 'email',
+        searchValue: fullName || userId || email,
+        note: 'Searching by firstName + lastName combined, userId, or email'
+      });
+    }
+
+    user = userRows[0];
+    // Handle both id and userId columns (User table has both)
+    const userIdFromDb = user.id; // Use the primary id column as it's what UPDATE uses
+
+    // Hash the password using bcryptjs
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update the user's password
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "password" = $1, "updatedAt" = NOW() WHERE "id" = $2`,
+      hashedPassword,
+      userIdFromDb
+    );
+
+    console.log(`✅ Password set for user: ${user.firstName} ${user.lastName} (${userIdFromDb})`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password set successfully for ${user.firstName} ${user.lastName}`,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/set-user-password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to set password',
+      details: error.toString()
+    });
+  }
+});
+
+// GET /api/admin/list-users - List all users (for debugging/user ID lookup)
+app.get('/api/admin/list-users', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const users = await db.$queryRawUnsafe(`
+      SELECT id, userId, username, email, firstName, lastName, isActive, role 
+      FROM "User" 
+      WHERE isActive = true 
+      ORDER BY firstName, lastName
+    `);
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ GET /api/admin/list-users error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error.toString()
+    });
+  }
+});
+
+// POST /api/admin/set-user-password-by-id - Set password using direct userId
+app.post('/api/admin/set-user-password-by-id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { userId, password } = req.body;
+
+    if (!userId || !password || password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'userId (password >= 8 chars)' 
+      });
+    }
+
+    // Use bcryptjs to hash the password
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update by userId (the unique userId field, not id)
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "password" = $1, "updatedAt" = NOW() WHERE "userId" = $2`,
+      hashedPassword,
+      userId
+    );
+
+    console.log(`✅ Password set for userId: ${userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password set successfully for userId ${userId}`
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/set-user-password-by-id error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to set password',
+      details: error.toString()
+    });
+  }
+});
+
 // GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
+// DELETE /api/admin/purge-inactive - Hard delete all soft-deleted (isActive=false) syllabus items
+app.delete('/api/admin/purge-inactive', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await db.$executeRawUnsafe(
+      `DELETE FROM "SyllabusItem" WHERE "isActive" = false`
+    );
+    console.log(`✅ Purged inactive syllabus items`);
+    res.json({ success: true, message: 'Purged all inactive (soft-deleted) syllabus items' });
+  } catch (error) {
+    console.error('❌ purge-inactive error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/admin/seed-syllabus', async (req, res) => {
   const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
   const { secret, force } = req.query;
@@ -2656,10 +3351,10 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     if (!date || availableCount === undefined || !totalFleet) {
       return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
     }
-    const ts = timestamp ? new Date(timestamp) : new Date();
+    const ts = timestamp ? new Date(timestamp).toISOString() : new Date().toISOString();
     await db.$executeRawUnsafe(
       `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
-       VALUES ($1::text, $2::text, $3::int, $4::int, $5::text)`,
+       VALUES ($1::text, $2::text::timestamp, $3::int, $4::int, $5::text)`,
       date, ts, availableCount, totalFleet, notes || null
     );
     const inserted = await db.$queryRawUnsafe(
@@ -3156,7 +3851,7 @@ app.post('/api/historical-data/seed', async (req, res) => {
 
     const getEventDuration = (code, lmpType) => {
       if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('NAVPT')) return 2.0;
-      if (code.includes('CPT')) return 1.5;
+      if (code.includes('CPT')) return 1.0;
       // FTD events: 2.0hrs for BPC+IPC and FIC courses
       if (code.includes('FTD')) {
         if (lmpType === 'BPC+IPC' || lmpType === 'FIC') return 2.0;
@@ -4522,6 +5217,67 @@ app.post('/api/scores/bulk', async (req, res) => {
   } catch (error) {
     console.error('❌ POST /api/scores/bulk error:', error);
     res.status(500).json({ error: 'Failed to bulk insert scores', details: error.message });
+  }
+});
+
+// DELETE /api/scores/trainee/:traineeId - delete scores for a trainee (optionally filtered by event prefix)
+app.delete('/api/scores/trainee/:traineeId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { eventPrefix } = req.query;
+
+    const where = { traineeId };
+    if (eventPrefix) {
+      where.event = { startsWith: eventPrefix };
+    }
+
+    const result = await db.score.deleteMany({ where });
+    res.json({ success: true, deleted: result.count });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
+  }
+});
+
+// DELETE /api/scores/trainee/:traineeId/events - delete specific event scores for a trainee
+// Body: { events: string[] } - array of event codes to delete
+// Also removes those events from IndividualLMP.completedEventIds
+app.delete('/api/scores/trainee/:traineeId/events', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { events } = req.body;
+
+    if (!events || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ error: 'events array is required in request body' });
+    }
+
+    // Delete score records for the specified events
+    const result = await db.score.deleteMany({
+      where: { traineeId, event: { in: events } },
+    });
+
+    // Also remove from IndividualLMP.completedEventIds
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId } });
+      if (lmp) {
+        const updated = (lmp.completedEventIds || []).filter(id => !events.includes(id));
+        await db.individualLMP.update({
+          where: { id: lmp.id },
+          data: { completedEventIds: updated, updatedAt: new Date() },
+        });
+        console.log(`[DELETE /api/scores/events] Updated IndividualLMP for ${traineeId}: removed ${events.length} events`);
+      }
+    } catch (lmpErr) {
+      console.warn(`[DELETE /api/scores/events] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
+    console.log(`✅ DELETE /api/scores/trainee/${traineeId}/events - deleted ${result.count} score records`);
+    res.json({ success: true, deleted: result.count, events });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee/events error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
   }
 });
 

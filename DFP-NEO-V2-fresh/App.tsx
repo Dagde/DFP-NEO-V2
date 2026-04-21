@@ -118,12 +118,10 @@ import NextDayInstructorScheduleView from './components/NextDayInstructorSchedul
 import { NextDayTraineeScheduleView } from './components/NextDayTraineeScheduleView';
 import AircraftAvailabilitySettings from './components/AircraftAvailabilitySettings';
 import { DailyAvailabilityRecord } from './types/AircraftAvailability';
-import PauseFlightOpsModal, { PauseBuildConfig } from './components/PauseFlightOpsModal';
-import PauseFlightOpsPanel, { PausePhase } from './components/PauseFlightOpsPanel';
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
+import { ESL_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
 import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
@@ -417,7 +415,6 @@ interface DfpConfig {
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
-  completedEventIds?: Set<string>;
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -1511,10 +1508,8 @@ function generateDfpInternal(
     console.log('🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active');
 
     // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
-    // Filter out cancelled events so that trainees whose flights were cancelled during
-    // a pause are NOT seen as "already scheduled" and can be re-scheduled after the pause.
-    const activeDfpEvents = (publishedSchedules[buildDate] || []).filter(e => !e.isCancelled);
-    console.log(`🔵 Active DFP has ${activeDfpEvents.length} non-cancelled events for ${buildDate}`);
+    const activeDfpEvents = publishedSchedules[buildDate] || [];
+    console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
     
     // Convert Active DFP events to the format needed (remove date field)
     const activeDfpEventsWithoutDate: Omit<ScheduleEvent, 'date'>[] = activeDfpEvents.map(e => {
@@ -1641,35 +1636,10 @@ function generateDfpInternal(
 
     const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
     const nextPlusOneLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[] };
-
-    // --- Pause Flight Ops: resolve completed event IDs to trainee names ---
-    // If completedEventIds is provided (Pause Build mode), find which trainees had those
-    // events marked as completed. Those trainees are skipped when building nextEventLists
-    // so they are not re-scheduled (their completed event already flew before the pause).
-    const completedTraineeNames = new Set<string>();
-    if (config.completedEventIds && config.completedEventIds.size > 0) {
-        const allKnownEvents: ScheduleEvent[] = Object.values(publishedSchedules).flat();
-        config.completedEventIds.forEach(evId => {
-            const ev = allKnownEvents.find(e => e.id === evId);
-            if (ev) {
-                if (ev.student) completedTraineeNames.add(ev.student);
-                if (ev.pilot) completedTraineeNames.add(ev.pilot);
-                if (ev.attendees) ev.attendees.forEach(a => completedTraineeNames.add(a));
-            }
-        });
-        console.log(`[PauseBuild] completedEventIds=${config.completedEventIds.size}, skipping trainees: [${Array.from(completedTraineeNames).join(', ')}]`);
-    }
     
     activeTrainees.forEach(trainee => {
         const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
         if (next) {
-            // --- Pause Flight Ops skip ---
-            // If this trainee's next event was marked as completed before the pause,
-            // skip them entirely — their slot has already been flown.
-            if (completedTraineeNames.has(trainee.fullName)) {
-                console.log(`[PauseBuild] Skipping ${trainee.fullName} — event already completed before pause`);
-                return; // do not add to any nextEventList
-            }
 
             if (next.code.startsWith('BNF') && next.type === 'Flight') {
                 // CRITICAL: Check if trainee already has day events (including Active DFP)
@@ -2718,7 +2688,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         
         // CRITICAL FIX: Skip instructor assignment for solo flights
-        const isSoloFlight = syllabusItem.sortieType === 'Solo';
+        // BGF11 and BGF18 are solo flights even if sortieType is not explicitly 'Solo'
+        const isSoloFlight = syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id);
         
         let instructor: Instructor | null = null;
         // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
@@ -2803,9 +2774,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
-        // Debug logging removed to reduce console noise
+        // SOLO RESOURCE PLACEMENT FIX:
+        // Solo flights must be placed on the PC-21 row that matches their chronological
+        // position in the day, not the lowest-numbered free aircraft.
+        // Solo flights compete for resources using the same sequential search as dual flights.
+        // No special row offset — solos find the first free aircraft starting from row 1.
+        let resourceSearchStart = 1;
         
-        for (let i = 1; i <= resourceCount; i++) {
+        for (let i = resourceSearchStart; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
@@ -2855,6 +2831,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
             
+            // SOLO DEPARTURE WINDOW: Solo flights may only depart between 09:00 and 15:00.
+            // This is checked here, inside scheduleEvent, so the slot search loop in scheduleList
+            // will naturally skip all times outside this window (returning null → next slot tried).
+            const SOLO_WINDOW_START = 9;   // 09:00
+            const SOLO_WINDOW_END   = 15;  // 15:00 (latest departure)
+            if (isSoloFlight) {
+                if (startTime < SOLO_WINDOW_START - 0.001 || startTime > SOLO_WINDOW_END + 0.001) {
+                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
+                    return null;
+                }
+            }
+
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
@@ -2866,42 +2854,46 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 !e.resourceId.startsWith('BNF-STBY')
             );
             
+            // All flights (including solo) count toward the rolling 60-min dispatch cap of 8.
+            // Solo flights use the runway and must comply with the same capacity limit as duals.
             const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
             if (takeoffsInLastHour >= 8) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
             }
             
+            // All flights (including solo) must respect the 5-minute takeoff separation rule.
+            // Solo flights depart the same runway and must observe the same spacing as dual flights.
             const takeoffConflict = nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
                 const diffHours = Math.abs(e.startTime - startTime);
                 const diffMinutes = Math.round(diffHours * 60);
-                
                 const isNightCheck = isNightPass && e.flightNumber.startsWith('BNF');
-                const minSeparation = isNightCheck ? 5 : 5; // Currently 5 for both, can be adjusted.
-                
+                const minSeparation = isNightCheck ? 5 : 5;
                 return diffMinutes < minSeparation;
             });
-            if(takeoffConflict) {
+            if (takeoffConflict) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TAKEOFF_SEPARATION_VIOLATION');
                 return null;
             }
         }
-        
-           // Debug: Log syllabusItem for BGF11 and BGF18
-           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
-               console.log('🔍 SOLO FLIGHT DEBUG:', syllabusItem.id);
-               console.log('  - sortieType:', syllabusItem.sortieType);
-               console.log('  - type:', syllabusItem.type);
-               console.log('  - code:', syllabusItem.code);
-               console.log('  - Full syllabusItem:', JSON.stringify(syllabusItem, null, 2));
-           }
-           // Debug solo flight logic
-           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
-               console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
-           }
+
+        // Ground/FTD/CPT end-of-window boundary check:
+        // Ground school and CPT events must finish by the end of the flying window.
+        // FTD events must finish by the end of the FTD window.
+        // This mirrors the same end-of-window rule applied to flight events above.
+        if (type === 'ground' || type === 'cpt') {
+            if (startTime + syllabusItem.duration > flyingEndTime) {
+                return null; // TIME_BOUNDARY_VIOLATION – event would run past flying window end
+            }
+        } else if (type === 'ftd') {
+            if (startTime + syllabusItem.duration > ftdEndTime) {
+                return null; // TIME_BOUNDARY_VIOLATION – FTD event would run past FTD window end
+            }
+        }
+
         const result = {
-            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+            id: uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
@@ -3134,11 +3126,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Highest Priority Flight Events are already added at the start
     
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
-    const _flightListForScheduling = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
-    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. List size: ${_flightListForScheduling.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
-    (window as any).__fbFlightListSize = _flightListForScheduling.length;
+
+    // SOLO SCHEDULING:
+    // Solo flights (BGF11/BGF18 or sortieType='Solo') are scheduled AFTER all dual flights.
+    // They use the same slot-search logic as duals (5-min increments, 8-per-hour cap,
+    // 5-min separation) but are additionally constrained to a 09:00-15:00 departure window
+    // and are grouped into batches of up to 4 to keep solos together in the schedule.
+    const _isSoloTrainee = (trainee: Trainee): boolean => {
+        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
+    };
+    const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+    const _dualFlightList = _allFlightList.filter(t => !_isSoloTrainee(t));
+    const _soloFlightList = _allFlightList.filter(t => _isSoloTrainee(t));
+
+    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    (window as any).__fbFlightListSize = _allFlightList.length;
+
+    // Step 3a: Schedule DUAL flights first
     scheduleList(
-        _flightListForScheduling,
+        _dualFlightList,
         'flight', 
         false, 
         flyingStartTime, 
@@ -3146,6 +3153,102 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         null, 
         false
     );
+
+    // Step 3b: Schedule SOLO flights using grouped dispatch logic.
+    //
+    // Rules:
+    //  - Solo departures must be between 09:00 and 15:00 (enforced inside scheduleEvent)
+    //  - Solos use the SAME slot search as duals: 5-min increments, hourly cap, separation rules
+    //  - Solos are grouped into batches of up to MAX_SOLO_GROUP_SIZE (4)
+    //  - Each group is scheduled as a contiguous block starting from the next valid slot
+    //  - After a full group is placed, the next group starts searching from after the last placed event
+    //  - Unplaced solos fall back to STBY (same as duals)
+    if (_soloFlightList.length > 0) {
+        const MAX_SOLO_GROUP_SIZE = 4;
+        const SOLO_WINDOW_START = 9;    // 09:00 — matches check inside scheduleEvent
+        const SOLO_WINDOW_END   = 15;   // 15:00
+
+        // Split solo list into groups of up to MAX_SOLO_GROUP_SIZE
+        const soloGroups: Trainee[][] = [];
+        for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
+            soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
+        }
+
+        console.log(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
+
+        // Track where to start searching for the next group.
+        // Begin at the solo window start (09:00), but never before flyingStartTime.
+        let groupSearchStart = Math.max(flyingStartTime, SOLO_WINDOW_START);
+
+        for (let gi = 0; gi < soloGroups.length; gi++) {
+            const group = soloGroups[gi];
+            console.log(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
+
+            // For each trainee in this group, try to place them starting from groupSearchStart.
+            // scheduleEvent enforces all normal rules (cap, separation, window, aircraft, area).
+            // We use the same 5-min increment as scheduleList does for flights.
+            const TIME_INCREMENT = 5 / 60;
+            let lastPlacedTime = groupSearchStart;
+
+            for (const trainee of group) {
+                const { next } = traineeNextEventMap.get(trainee.fullName)!;
+                const syllabusItem = next;
+                if (!syllabusItem) continue;
+
+                let placed = false;
+
+                // Two-pass search matching scheduleList priority logic
+                const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup)
+                    ? [true, false]
+                    : [false];
+
+                for (const primaryOnly of passModes) {
+                    if (placed) break;
+                    for (let time = groupSearchStart;
+                         time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 0.001;
+                         time += TIME_INCREMENT) {
+                        const result = scheduleEvent(trainee, syllabusItem, time, 'flight', false, false, primaryOnly);
+                        if (result && typeof result === 'object' && 'id' in result) {
+                            generatedEvents.push({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
+                            const tCounts = eventCounts.get(trainee.fullName)!;
+                            tCounts.flightFtd++;
+                            lastPlacedTime = Math.max(lastPlacedTime, time);
+                            placed = true;
+                            console.log(`[SOLO]   ✅ Placed ${trainee.fullName} at ${_fmtT(time)} on ${result.resourceId}`);
+                            break;
+                        }
+                    }
+                }
+
+                if (!placed) {
+                    // Fall back to STBY — same logic as scheduleList STBY pass
+                    console.log(`[SOLO]   ⚠️  ${trainee.fullName} unplaced → STBY`);
+                    // Unplaced solos will be caught by the STBY pass below
+                }
+            }
+
+            // After placing this group, advance groupSearchStart past the last placed event
+            // so the next group starts after the current group (with at least a 5-min gap).
+            // This prevents group 2 from overlapping group 1 in time.
+            groupSearchStart = lastPlacedTime + TIME_INCREMENT;
+        }
+
+        // STBY pass for any solos that couldn't be placed in the main window
+        // (uses the existing STBY fallback mechanism)
+        scheduleList(
+            _soloFlightList.filter(t => !generatedEvents.some(e => {
+                const personnel = getPersonnel(e);
+                return personnel.includes(t.fullName) && e.type === 'flight' && !e.resourceId.startsWith('STBY');
+            })),
+            'flight',
+            false,
+            flyingStartTime,
+            flyingEndTime,
+            'STBY',
+            false
+        );
+    }
+
     _fbPrintSummary();
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
@@ -3557,20 +3660,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 if (flightEndTime > flyingEndTime) continue;
                 if (wouldViolate8PerHourRule(time, generatedEvents)) continue;
 
-                const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents);
+                const isSoloStby = next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id);
+                // Solo flights on STBY: no instructor (solo PIC), correct flightType
+                const stbyInstructor = isSoloStby ? '' : (findBestInstructorForStby(trainee, next, time, next.duration, 'flight', generatedEvents) || 'TBA');
                 const stbyLine = findAvailableStbyLine(time, next.duration, generatedEvents, 'STBY');
 
                 generatedEvents.push({
                     id: uuidv4(),
                     type: 'flight',
-                    instructor: instructor || 'TBA',
+                    instructor: stbyInstructor,
                     student: trainee.fullName,
+                    pilot: isSoloStby ? trainee.fullName : (stbyInstructor || 'TBA'),
                     flightNumber: next.id,
                     duration: next.duration,
                     startTime: time,
                     resourceId: `STBY ${stbyLine}`,
                     color: courseColors[trainee.course] || 'bg-gray-500',
-                    flightType: 'Dual',
+                    flightType: isSoloStby ? 'Solo' : 'Dual',
                     locationType: 'Local',
                     origin: school,
                     destination: school,
@@ -4035,7 +4141,20 @@ const App: React.FC = () => {
 
     const [activeView, setActiveView] = useState<string>('Program Schedule');
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
-    const [date, setDate] = useState<string>(() => getLocalDateString());
+    const [date, setDate] = useState<string>(() => {
+        // Restore last viewed date from localStorage (persists across hard refresh)
+        try {
+            const saved = localStorage.getItem('dfp_last_viewed_date');
+            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+                // Only restore if within 7 days of today (avoid stale dates)
+                const savedDate = new Date(saved + 'T00:00:00Z');
+                const today = new Date();
+                const diffDays = (savedDate.getTime() - today.getTime()) / (1000 * 3600 * 24);
+                if (diffDays >= -7 && diffDays <= 7) return saved;
+            }
+        } catch (e) { /* ignore */ }
+        return getLocalDateString();
+    });
     const [events, setEvents] = useState<ScheduleEvent[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
     const [isEditingDefault, setIsEditingDefault] = useState(false);
@@ -4544,7 +4663,7 @@ const App: React.FC = () => {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
                         const bpcIpcSyllabus = syllabusDetails.filter(
-                            (item: any) => !item.lmpType || item.lmpType === 'Master LMP'
+                            (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
                         );
                         const ficSyllabus = syllabusDetails.filter(
                             (item: any) => item.courses && item.courses.includes('FIC')
@@ -4558,10 +4677,28 @@ const App: React.FC = () => {
                             ? '/api'
                             : 'https://dfp-neo-v2-production.up.railway.app/api';
 
+                        // Build pt051Completions map: traineeFullName → [completedFlightNumbers]
+                        // This covers PT-051 assessments saved in DailySnapshot that may not yet
+                        // have Score DB records (e.g. Carter, Chris FIC3/4/5).
+                        const pt051Completions: Record<string, string[]> = {};
+                        pt051Assessments.forEach((assessment: any, _key: string) => {
+                            if (assessment.isCompleted && assessment.flightNumber && assessment.traineeFullName) {
+                                const name = assessment.traineeFullName;
+                                if (!pt051Completions[name]) pt051Completions[name] = [];
+                                if (!pt051Completions[name].includes(assessment.flightNumber)) {
+                                    pt051Completions[name].push(assessment.flightNumber);
+                                }
+                            }
+                        });
+                        const pt051CompletionCount = Object.values(pt051Completions).reduce((sum, arr) => sum + arr.length, 0);
+                        if (pt051CompletionCount > 0) {
+                            console.log(`[LMP Sync] Including ${pt051CompletionCount} PT-051 completions from snapshots for ${Object.keys(pt051Completions).length} trainees`);
+                        }
+
                         const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ syllabusData }),
+                            body: JSON.stringify({ syllabusData, pt051Completions }),
                         });
 
                         if (syncRes.ok) {
@@ -4711,7 +4848,7 @@ const App: React.FC = () => {
                             if (!alreadySet || isFicTrainee) {
                                 const masterLMP = syllabusDetails.filter(item => {
                                     if (lmpType === 'BPC+IPC') {
-                                        return !item.lmpType || item.lmpType === 'Master LMP';
+                                        return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                                     }
                                     return item.courses && item.courses.includes(lmpType);
                                 });
@@ -4799,7 +4936,7 @@ const App: React.FC = () => {
                 if (!alreadySet || isFicTrainee) {
                     const masterLMP = syllabusDetails.filter(item => {
                         if (lmpType === 'BPC+IPC') {
-                            return !item.lmpType || item.lmpType === 'Master LMP';
+                            return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                         }
                         return item.courses && item.courses.includes(lmpType);
                     });
@@ -4873,19 +5010,21 @@ const App: React.FC = () => {
                 const data = await res.json();
 
                 if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
-                    const schedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
-                    const eventCount = Object.values(schedules).flat().length;
-                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates (legacy/seed)`);
+                    const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
+                    const eventCount = Object.values(seedSchedules).flat().length;
+                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
                     setPublishedSchedules(prev => {
-                        // Merge historical/seed data — real snapshot data takes priority
-                        const merged = { ...schedules };
-                        Object.entries(prev).forEach(([date, events]) => {
-                            if (events.some(e => !(e as any).isHistoricalSeed)) {
-                                // Keep existing non-seed events for this date (snapshot data wins)
-                                const existing = merged[date] || [];
-                                const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
-                                merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
+                        // FIX: Use prev as the base (not seed schedules) so real snapshots already
+                        // loaded in the PRIMARY pass above are never overwritten by seed data.
+                        // Seed data fills in dates that have NO real snapshot events yet.
+                        const merged = { ...prev };
+                        Object.entries(seedSchedules).forEach(([dateKey, seedEvents]) => {
+                            const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
+                            if (existingNonSeed.length === 0) {
+                                // No real snapshot for this date — use seed data
+                                merged[dateKey] = seedEvents;
                             }
+                            // If real snapshot data already exists for this date, do NOT overwrite it
                         });
                         return merged;
                     });
@@ -5103,9 +5242,19 @@ const App: React.FC = () => {
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
     const [buildDfpDate, setBuildDfpDate] = useState<string>(() => {
+        // Restore build date from localStorage if it's in the future (persists across hard refresh)
+        try {
+            const saved = localStorage.getItem('dfp_build_date');
+            if (saved && /^\d{4}-\d{2}-\d{2}$/.test(saved)) {
+                const today = new Date();
+                const todayStr = today.toISOString().split('T')[0];
+                // Only restore if saved date is tomorrow or later (don't restore past dates)
+                if (saved > todayStr) return saved;
+            }
+        } catch (e) { /* ignore */ }
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        return getLocalDateString(tomorrow);
+        return tomorrow.toISOString().split('T')[0];
     });
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
@@ -5157,7 +5306,92 @@ const App: React.FC = () => {
         const stored = localStorage.getItem('cancellationRecords');
         return stored ? JSON.parse(stored) : [];
     });
-    
+
+    // NEO Build basis course (People Profile setting) — persisted in DB
+    const [neoBuildCourse, setNeoBuildCourse] = useState<string>('');
+    useEffect(() => {
+        const loadNeoBuildCourse = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/settings/course-settings`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setNeoBuildCourse(data.neoBuildCourse || '');
+                }
+            } catch (error) {
+                console.error('[NeoBuildCourse] Failed to load:', error);
+            }
+        };
+        loadNeoBuildCourse();
+    }, []);
+    const handleUpdateNeoBuildCourse = async (course: string) => {
+        setNeoBuildCourse(course);
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            await fetch(`${apiBase}/settings/course-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ neoBuildCourse: course })
+            });
+        } catch (error) {
+            console.error('[NeoBuildCourse] Failed to save:', error);
+        }
+    };
+
+    // Course Academic Progress — persisted in DB: Map<courseCode, Set<lessonCode>>
+    const [courseAcademicProgress, setCourseAcademicProgress] = useState<Map<string, Set<string>>>(new Map());
+    useEffect(() => {
+        const loadCourseAcademicProgress = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/settings/course-academic-progress`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.data) {
+                        const map = new Map<string, Set<string>>();
+                        Object.entries(json.data).forEach(([courseCode, lessons]) => {
+                            map.set(courseCode, new Set(lessons as string[]));
+                        });
+                        setCourseAcademicProgress(map);
+                    }
+                }
+            } catch (error) {
+                console.error('[CourseAcademicProgress] Failed to load:', error);
+            }
+        };
+        loadCourseAcademicProgress();
+    }, []);
+    const handleUpdateCourseAcademicProgress = async (courseCode: string, lessonCode: string, completed: boolean) => {
+        // Optimistic UI update
+        setCourseAcademicProgress(prev => {
+            const next = new Map(prev);
+            if (completed) {
+                if (!next.has(courseCode)) next.set(courseCode, new Set());
+                next.get(courseCode)!.add(lessonCode);
+            } else {
+                next.get(courseCode)?.delete(lessonCode);
+            }
+            return next;
+        });
+        // Persist to DB
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            if (completed) {
+                await fetch(`${apiBase}/settings/course-academic-progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseCode, lessonCode })
+                });
+            } else {
+                await fetch(`${apiBase}/settings/course-academic-progress?courseCode=${encodeURIComponent(courseCode)}&lessonCode=${encodeURIComponent(lessonCode)}`, {
+                    method: 'DELETE'
+                });
+            }
+        } catch (error) {
+            console.error('[CourseAcademicProgress] Failed to save:', error);
+        }
+    };
+
     // Cancellation Codes State
     const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>(() => {
         const stored = localStorage.getItem('cancellationCodes');
@@ -5603,20 +5837,6 @@ const App: React.FC = () => {
     // Aircraft Availability State
     const [showAircraftAvailability, setShowAircraftAvailability] = useState(true);
     const [currentAircraftAvailability, setCurrentAircraftAvailability] = useState<number>(availableAircraftCount);
-    const [showPauseFlightOps, setShowPauseFlightOps] = useState(false);
-    // Pause Flight Ops Panel state (new sidebar panel)
-    const [showPausePanel, setShowPausePanel] = useState(false);
-    const [pausePanelPhase, setPausePanelPhase] = useState<PausePhase>('configure');
-    const [pauseCompletedEventIds, setPauseCompletedEventIds] = useState<Set<string>>(new Set());
-    const [pauseIsSelectingCompleted, setPauseIsSelectingCompleted] = useState(false);
-    const [pauseStagedEvents, setPauseStagedEvents] = useState<ScheduleEvent[]>([]);
-    // Snapshot of the original active DFP events when the Pause panel was opened —
-    // used by "Revert to Original Daily Schedule" to discard all pause changes.
-    const [pauseOriginalEvents, setPauseOriginalEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
-    // Pause window times (decimal hours) for the overlay on the NEO Build schedule.
-    // Set when the user runs the pause build; cleared on revert/close.
-    const [pauseOverlayStart, setPauseOverlayStart] = useState<number | null>(null);
-    const [pauseOverlayEnd,   setPauseOverlayEnd]   = useState<number | null>(null);
 
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
@@ -6038,6 +6258,11 @@ const App: React.FC = () => {
         localStorage.setItem('timezoneOffset', timezoneOffset.toString());
     }, [timezoneOffset]);
 
+    // Save last viewed date to localStorage (restores after hard refresh)
+    useEffect(() => {
+        try { localStorage.setItem('dfp_last_viewed_date', date); } catch (e) { /* ignore */ }
+    }, [date]);
+
     // Update current date when timezone changes
     useEffect(() => {
         const currentDateStr = getLocalDateString();
@@ -6050,16 +6275,25 @@ const App: React.FC = () => {
     // FTD available count is now managed by user input in PrioritiesView
     // Default initialization is handled in useState declaration
 
+    // Save buildDfpDate to localStorage whenever it changes (restores after hard refresh)
+    useEffect(() => {
+        try { localStorage.setItem('dfp_build_date', buildDfpDate); } catch (e) { /* ignore */ }
+    }, [buildDfpDate]);
+
     // Auto-update buildDfpDate to tomorrow's date on mount and daily
+    // GUARD: Only advance to tomorrow if buildDfpDate is today or in the past.
+    // If the user has set a future build date (e.g. day after tomorrow), preserve it.
     useEffect(() => {
         const updateBuildDate = () => {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowStr = getLocalDateString(tomorrow);
+            const todayStr = getLocalDateString();
             
-            // Only update if the date has actually changed
-            if (buildDfpDate !== tomorrowStr) {
-                console.log('📅 Updating build DFP date from', buildDfpDate, 'to', tomorrowStr);
+            // Only reset to tomorrow if buildDfpDate is today or PAST today
+            // (i.e., don't override a future build date the user intentionally set)
+            if (buildDfpDate <= todayStr) {
+                console.log('Advancing build DFP date from', buildDfpDate, 'to', tomorrowStr, '(was past/today)');
                 setBuildDfpDate(tomorrowStr);
             }
         };
@@ -6449,10 +6683,17 @@ const App: React.FC = () => {
         for (const event of validEvents) {
             // Ground events (mass briefs) do not create personnel conflicts with flight/ftd/cpt events.
             // Trainees can attend a ground brief AND fly on the same day — these are not double-bookings.
-            const targetIsGround = targetEvent.type === 'ground';
-            const eventIsGround = event.type === 'ground';
+            // EXCEPTION: Duty Sup and TWR DI events are treated as flight events for conflict purposes.
+            const isDutySup = (e: { flightNumber?: string; resourceId?: string }) =>
+                e.flightNumber === 'Duty Sup' || e.flightNumber === 'Night Duty Sup' || e.resourceId === 'Duty Sup';
+            const isTwrDi = (e: { eventCategory?: string; resourceId?: string }) =>
+                (e as any).eventCategory === 'twr_di' || e.resourceId === 'TWR DI';
+            const targetEffectivelyFlight = targetEvent.type === 'flight' || targetEvent.type === 'ftd' || targetEvent.type === 'cpt' || isDutySup(targetEvent) || isTwrDi(targetEvent as any);
+            const eventEffectivelyFlight = event.type === 'flight' || event.type === 'ftd' || event.type === 'cpt' || isDutySup(event) || isTwrDi(event as any);
+            const targetIsGround = !targetEffectivelyFlight;
+            const eventIsGround = !eventEffectivelyFlight;
             if (targetIsGround !== eventIsGround) {
-                // One is ground, other is flight/ftd/cpt — skip personnel conflict for this pair
+                // One is pure ground (mass brief), other is flight/ftd/cpt/dutysup/twrdi — skip personnel conflict
                 continue;
             }
 
@@ -6971,7 +7212,7 @@ const App: React.FC = () => {
         const lmpType = newTrainee.lmpType || 'BPC+IPC';
         const masterLMP = syllabusDetails.filter(item => {
             if (lmpType === 'BPC+IPC') {
-                return !item.lmpType || item.lmpType === 'Master LMP';
+                return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
             }
             return item.courses.includes(lmpType);
         });
@@ -7718,291 +7959,6 @@ const App: React.FC = () => {
             console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
         });
     };
-
-    // ── Pause Flight Ops: handlePauseBuild ────────────────────────────────────
-    const handlePauseBuild = async (config: PauseBuildConfig): Promise<ScheduleEvent[]> => {
-        const {
-            date: pauseDate,
-            pauseStart,
-            pauseEnd,
-            pauseRule,
-            affectedTypes,
-            completedEventIds,
-            flyingStartTime: dayStart,
-            flyingEndTime: dayEnd,
-            ftdStartTime: pFtdStart,
-            ftdEndTime: pFtdEnd,
-        } = config;
-
-        // IMPORTANT: Always use the FULL raw publishedSchedules[date] — not the filtered
-        // display subset passed as existingEvents. The full schedule includes all events
-        // (ground school per-student, deployment, etc.) that must be preserved on publish.
-        const fullRawEvents: ScheduleEvent[] = publishedSchedules[pauseDate] || [];
-        console.log('[PauseBuild] Starting pause build for', pauseDate,
-            'pauseEnd:', pauseEnd, 'dayEnd:', dayEnd,
-            'fullRawEvents:', fullRawEvents.length);
-
-        // 1. Determine which events are impacted by the pause
-        const isImpacted = (e: ScheduleEvent): boolean => {
-            if (e.isCancelled) return false;
-            if (completedEventIds.has(e.id)) return false;
-            const typeKey = e.type === 'ground' ? 'ground' : e.type;
-            if (!(affectedTypes as string[]).includes(typeKey)) return false;
-            const end = e.startTime + e.duration;
-            if (pauseRule === 'no_start_during') {
-                return e.startTime >= pauseStart && e.startTime < pauseEnd;
-            } else {
-                // conclude_by_start: any event overlapping pause start is impacted
-                return e.startTime < pauseEnd && end > pauseStart;
-            }
-        };
-
-        // 2. Build the set of cancelled events using the FULL raw schedule
-        const cancelledIds = new Set<string>();
-        const eventsAfterCancel: ScheduleEvent[] = fullRawEvents.map(e => {
-            if (isImpacted(e)) {
-                cancelledIds.add(e.id);
-                return {
-                    ...e,
-                    isCancelled: true,
-                    cancellationCode: 'OPS_PAUSE' as any,
-                    cancelledBy: authUser?.displayName || 'Ops',
-                    cancelledAt: new Date().toISOString(),
-                };
-            }
-            return e;
-        });
-
-        console.log('[PauseBuild] Impacted/cancelled:', cancelledIds.size,
-            'out of', fullRawEvents.length, 'total events');
-
-        // 3. For the NEO Build, lock ALL non-cancelled events as time-fixed
-        //    so the algorithm preserves the entire pre-pause schedule.
-        //    Only pass unique events (deduplicated by ID) to the build algorithm.
-        const seenLocked = new Set<string>();
-        const lockedEvents: ScheduleEvent[] = eventsAfterCancel
-            .filter(e => !e.isCancelled && !seenLocked.has(e.id) && (() => { seenLocked.add(e.id); return true; })())
-            .map(e => ({ ...e, isTimeFixed: true }));
-
-        console.log('[PauseBuild] Locked pre-pause events:', lockedEvents.length);
-
-        const activeTraineesForPause = allTraineesData.filter((t: any) =>
-            !t.isPaused &&
-            !isPersonStaticallyUnavailable(t, pauseEnd, ceaseNightFlying, pauseDate, 'flight')
-        );
-
-        const pauseBuildConfig = {
-            instructors: instructorsData,
-            trainees: activeTraineesForPause,
-            syllabus: syllabusDetails,
-            scores,
-            coursePriorities,
-            coursePercentages,
-            availableAircraftCount,
-            ftdCount: availableFtdCount,
-            cptCount: availableCptCount,
-            courseColors,
-            school,
-            dayStart: pauseEnd,      // Build only fills from pause end onward
-            dayEnd,
-            ftdStart: pFtdStart,
-            ftdEnd: pFtdEnd,
-            allowNightFlying,
-            commenceNightFlying,
-            ceaseNightFlying,
-            buildDate: pauseDate,
-            highestPriorityEvents: lockedEvents,
-            instructorPriority,
-            traineeLMPs,
-            flightTurnaround,
-            ftdTurnaround,
-            cptTurnaround,
-            preferredDutyPeriod,
-            maxCrewDutyPeriod,
-            eventLimits,
-            sctFtds,
-            sctFlights,
-            remedialRequests,
-            sctEvents,
-            getEventDayNightClassification,
-            staffSharingEnabled: organisationSettings.staffSharingEnabled,
-            staffSharingUnits: organisationSettings.staffSharingUnits,
-            completedEventIds,  // Pass through so generateDfpInternal skips completed trainees
-        };
-
-        // Build a modified publishedSchedules where the pause date is EMPTY.
-        // This is critical: generateDfpInternal initialises generatedEvents from
-        // publishedSchedules[buildDate]. If we pass the raw schedule, the algorithm sees
-        // ALL original events (including ones cancelled during the pause) and marks those
-        // trainees as "already scheduled", preventing re-scheduling after the pause.
-        // Instead we set pauseDate to empty so activeDfpEvents = [] and let
-        // highestPriorityEvents (= lockedEvents = non-cancelled pre-pause events) be the
-        // sole source of already-scheduled events fed into generatedEvents.
-        // For OTHER dates we keep the real publishedSchedules so ELCE/scoring still works.
-        const pausePublishedSchedules = {
-            ...publishedSchedules,
-            [pauseDate]: [],   // cleared — pre-pause events come via highestPriorityEvents
-        };
-
-        // Record the pause window for the NEO Build schedule overlay
-        setPauseOverlayStart(pauseStart);
-        setPauseOverlayEnd(pauseEnd);
-
-        return new Promise<ScheduleEvent[]>((resolve) => {
-            setTimeout(() => {
-                try {
-                    const generated = generateDfpInternal(
-                        pauseBuildConfig,
-                        (progress: { message: string; percentage: number }) => {
-                            console.log('[PauseBuild]', progress.message);
-                        },
-                        pausePublishedSchedules   // Use modified schedules with cancellations applied
-                    );
-
-                    console.log('[PauseBuild] generateDfpInternal returned', generated.length, 'events');
-
-                    // Add date field and filter out algo-generated STBY lines
-                    // Filter out algo-generated STBY lines (we place cancelled events
-                    // on STBY explicitly below) AND remove any event whose ID is in
-                    // cancelledIds — those must only appear on STBY with their red X,
-                    // not also at their original PC-21 slot (which causes ghost tiles).
-                    const generatedWithDate: ScheduleEvent[] = generated
-                        .filter((e: any) => {
-                            const resId = ((e as any).resourceId || '').toLowerCase();
-                            if (resId.includes('stby') || resId.includes('standby')) return false;
-                            // Remove ghost: if this event was cancelled it must not stay on PC-21
-                            if (cancelledIds.has((e as any).id)) return false;
-                            return true;
-                        })
-                        .map((e: any) => ({ ...e, date: pauseDate } as ScheduleEvent));
-
-                    // The build output already includes all locked pre-pause events.
-                    // Now add back OPS_PAUSE cancelled events — moved to STBY lines so
-                    // they're visible with their red X on the standby row (not their
-                    // original PC-21 slot, which would be re-used by the rebuild).
-                    const builtIds = new Set(generatedWithDate.map(e => e.id));
-                    const opsPauseCancelledEvents = eventsAfterCancel
-                        .filter(e =>
-                            e.isCancelled &&
-                            cancelledIds.has(e.id) &&
-                            !builtIds.has(e.id) &&
-                            // Never move completed events to STBY — they stay at their
-                            // original slot with green ring (shouldn't be cancelled, but
-                            // guard here too in case of ID mismatch)
-                            !completedEventIds.has(e.id)
-                        );
-
-                    // Assign each cancelled event to an available STBY line.
-                    // Track which STBY slots are already occupied (time-based collision).
-                    let nextStbyLine = 1;
-                    const stbyOccupied: { resourceId: string; start: number; end: number }[] = [];
-
-                    const opsPauseCancelledOnStby: ScheduleEvent[] = opsPauseCancelledEvents.map(e => {
-                        const evStart = e.startTime;
-                        const evEnd   = e.startTime + e.duration;
-
-                        // Find a STBY line with no time overlap
-                        let stbyLine = 1;
-                        while (true) {
-                            const stbyId = `STBY ${stbyLine}`;
-                            const hasOverlap = stbyOccupied.some(
-                                o => o.resourceId === stbyId && o.start < evEnd && o.end > evStart
-                            );
-                            if (!hasOverlap) break;
-                            stbyLine++;
-                        }
-
-                        stbyOccupied.push({ resourceId: `STBY ${stbyLine}`, start: evStart, end: evEnd });
-                        if (stbyLine > nextStbyLine) nextStbyLine = stbyLine;
-
-                        return {
-                            ...e,
-                            date: pauseDate,
-                            resourceId: `STBY ${stbyLine}`,
-                            // Keep isCancelled: true so red X still renders
-                        };
-                    });
-
-                    const final = [...generatedWithDate, ...opsPauseCancelledOnStby];
-
-                    console.log('[PauseBuild] Final staged events:', final.length,
-                        '(built:', generatedWithDate.length,
-                        'OPS_PAUSE cancelled on STBY:', opsPauseCancelledOnStby.length, ')');
-
-                    resolve(final);
-                } catch (err) {
-                    console.error('[PauseBuild] generateDfpInternal error:', err);
-                    // Fallback: just return the cancelled version with no rebuild
-                    resolve(eventsAfterCancel);
-                }
-            }, 100);
-        });
-    };
-
-    // ── Pause Flight Ops: handlePausePublish ──────────────────────────────────────────────
-    const handlePausePublish = (stagedEvents: ScheduleEvent[]) => {
-        const targetDate = date;
-
-        // stagedEvents comes from handlePauseBuild which used the FULL raw publishedSchedules[date].
-        // It already contains all events (including group/deployment events).
-        // We just deduplicate by ID and ensure date fields are correct.
-
-        const seenIds = new Set<string>();
-        const dedupedEvents = stagedEvents.filter(e => {
-            if (seenIds.has(e.id)) return false;
-            seenIds.add(e.id);
-            return true;
-        });
-
-        // Ensure every event has the correct date field
-        const finalEvents: ScheduleEvent[] = dedupedEvents.map(e => ({ ...e, date: targetDate }));
-
-        console.log('[PausePublish] Publishing', finalEvents.length, 'events for', targetDate,
-            '(was:', (publishedSchedules[targetDate] || []).length, 'before)');
-
-        // 1. Update publishedSchedules (triggers re-render of Program Schedule view)
-        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => ({
-            ...prev,
-            [targetDate]: finalEvents,
-        }));
-
-        // 2. Snapshot as new baseline (for change-detection highlighting)
-        setBaselineSchedules((prev) => ({
-            ...prev,
-            [targetDate]: JSON.parse(JSON.stringify(finalEvents)),
-        }));
-
-        // 3. Sync PT-051s with the updated schedule (delayed to let state settle)
-        setTimeout(() => {
-            setPublishedSchedules(currentSchedules => {
-                setPt051Assessments(currentAssessments => {
-                    syncPt051WithActiveDfp(currentSchedules, currentAssessments);
-                    return currentAssessments;
-                });
-                return currentSchedules;
-            });
-        }, 500);
-
-        // 4. Persist to database
-        persistScheduleForDate(targetDate, finalEvents);
-
-        // 5. Audit log
-        const cancelledCount = finalEvents.filter(e =>
-            e.isCancelled && (e as any).cancellationCode === 'OPS_PAUSE'
-        ).length;
-        const activeCount = finalEvents.filter(e => !e.isCancelled).length;
-
-        logAudit(
-            'Program Schedule',
-            'Edit',
-            `Pause Flight Ops committed for ${targetDate}`,
-            `Cancelled: ${cancelledCount} (OPS PAUSE) | Active post-rebuild: ${activeCount} | By: ${authUser?.displayName || 'Unknown'}`
-        );
-
-        console.log('[PausePublish] Done. Total:', finalEvents.length,
-            'Active:', activeCount, 'Cancelled (OPS_PAUSE):', cancelledCount);
-    };
-
     // ────────────────────────────────────────────────────────────────────────────
 
     const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
@@ -8541,6 +8497,55 @@ const App: React.FC = () => {
 
         setSelectedEvent(null);
     };
+    const handleRestoreEvent = async (eventId: string) => {
+        // System freeze check
+        const _freezeRaw = localStorage.getItem('systemFreezeState');
+        if (_freezeRaw) {
+            const _freeze = JSON.parse(_freezeRaw);
+            if (_freeze.isFrozen) {
+                showDarkAlert('System is currently frozen. No modifications are allowed during a system freeze.', 'System Frozen', 'error');
+                return;
+            }
+        }
+        if (!selectedEvent || selectedEvent.id !== eventId) return;
+
+        const eventDate = selectedEvent.date;
+
+        // Build the restored event — strip all cancellation fields
+        const { isCancelled, cancellationCode, cancellationManualEntry, cancelledBy, cancelledAt, ...rest } = selectedEvent as any;
+        const restoredEvent: ScheduleEvent = { ...rest };
+
+        const isNextDay = eventDate === buildDfpDate && (activeView === 'NextDayBuild' || activeView === 'Priorities' || activeView === 'ProgramData');
+
+        if (isNextDay) {
+            setNextDayBuildEvents(prev =>
+                prev.map(e => e.id === eventId ? restoredEvent : e)
+            );
+        } else {
+            setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
+                const scheduleForDate = prev[eventDate] || [];
+                const updated = scheduleForDate.map(e => e.id === eventId ? restoredEvent : e);
+                return { ...prev, [eventDate]: updated };
+            });
+            // Persist immediately
+            setPublishedSchedules(prev => {
+                const _updated = (prev[eventDate] || []).map((e: ScheduleEvent) => e.id === eventId ? restoredEvent : e);
+                persistScheduleForDate(eventDate, _updated);
+                return prev;
+            });
+        }
+
+        // Log to audit trail
+        const pageName = isNextDay ? 'Next Day Build' : 'Program Schedule';
+        const eventType = selectedEvent.type || 'event';
+        const personName = selectedEvent.student || selectedEvent.pilot || selectedEvent.instructor || 'Unknown';
+        const description = `Restored ${eventType} event for ${personName} (was cancelled with code: ${(selectedEvent as any).cancellationCode || 'N/A'})`;
+        const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Restored to active`;
+        logAudit(pageName, 'Restore', description, changes);
+
+        setSelectedEvent(null);
+    };
+
     
     // Visual Adjust handlers
     const handleVisualAdjustStart = async (event: ScheduleEvent) => {
@@ -9508,6 +9513,8 @@ const App: React.FC = () => {
             .then(result => {
                 if (result.success) {
                     console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                    // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
+                    loadedSnapshotDates.current.add(buildDfpDate);
                 } else {
                     console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
                 }
@@ -10133,6 +10140,15 @@ updates.forEach(update => {
         setSyllabusDetails(prev => prev.map(item => item.id === updatedItem.id ? updatedItem : item));
     };
 
+    const handleAddSyllabusItem = (newItem: SyllabusItemDetail) => {
+        // Add the new blank item to the syllabus list so it appears in the left panel
+        setSyllabusDetails(prev => {
+            // Avoid duplicates if called multiple times
+            if (prev.some(i => i.id === newItem.id)) return prev;
+            return [...prev, newItem];
+        });
+    };
+
     const handleUpdateGradDate = (courseName: string, newGradDate: string) => {
         setCourses(prevCourses => 
             prevCourses.map(course => 
@@ -10191,6 +10207,44 @@ updates.forEach(update => {
         setNextDayBuildEvents(prev => [...prev, newEvent]);
         setShowAddGroundEvent(false);
         setSuccessMessage('Ground event added to the build.');
+    };
+
+    // Academic session save — creates one grouped ground event per trainee, flagged isAcademic=true
+    // so NEO Build never touches it
+    const handleSaveAcademicEvent = (data: import('./components/AcademicsTab').AcademicSaveData) => {
+        if (!data.selectedTrainees.length || !data.timeline.length) return;
+
+        // Build a merged description of all selected lessons
+        const lessonCodes = data.lessons.map(l => l.code).join(', ');
+        const totalDuration = data.timeline.reduce((sum, t) => sum + t.duration, 0);
+        const firstStart = Math.min(...data.timeline.map(t => t.startTime));
+        const flightNumberLabel = lessonCodes || 'ACAD-SESSION';
+
+        // Create one event per trainee (shared academic session)
+        const newEvents: ScheduleEvent[] = data.selectedTrainees.map(traineeName => ({
+            id: uuidv4(),
+            date: data.date,
+            type: 'ground' as const,
+            flightNumber: flightNumberLabel,
+            startTime: firstStart,
+            duration: totalDuration,
+            attendees: data.selectedTrainees,
+            student: traineeName,
+            resourceId: data.resourceId,
+            color: 'bg-blue-700/80',
+            flightType: 'Dual' as const,
+            locationType: 'Local' as const,
+            origin: school,
+            destination: school,
+            isAcademic: true,
+            isTimeFixed: true, // NEO Build skips isTimeFixed events
+            notes: `Academic session: ${lessonCodes}`,
+        }));
+
+        // Add to events directly (not nextDayBuildEvents — these are permanent fixed events)
+        setEvents((prev: ScheduleEvent[]) => [...prev, ...newEvents]);
+        setShowAddGroundEvent(false);
+        setSuccessMessage(`Academic session scheduled for ${data.selectedTrainees.length} trainee(s): ${lessonCodes}`);
     };
 
 
@@ -11495,16 +11549,6 @@ updates.forEach(update => {
                                    });
                                }
                            }}
-                           isPauseSelectMode={pauseIsSelectingCompleted && showPausePanel}
-                           pauseCompletedEventIds={pauseCompletedEventIds}
-                           onPauseToggleCompleted={(eventId: string) => {
-                               setPauseCompletedEventIds(prev => {
-                                   const next = new Set(prev);
-                                   if (next.has(eventId)) next.delete(eventId);
-                                   else next.add(eventId);
-                                   return next;
-                               });
-                           }}
                         />;
             case 'TraineeSchedule':
                 return <TraineeScheduleView
@@ -12144,18 +12188,6 @@ updates.forEach(update => {
                                     );
                                 }
                             }}
-                            isPauseSelectMode={showPausePanel && pauseIsSelectingCompleted}
-                            pauseCompletedEventIds={pauseCompletedEventIds}
-                            onPauseToggleCompleted={(eventId: string) => {
-                                setPauseCompletedEventIds(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(eventId)) next.delete(eventId);
-                                    else next.add(eventId);
-                                    return next;
-                                });
-                            }}
-                            pauseWindowStart={showPausePanel ? pauseOverlayStart : null}
-                            pauseWindowEnd={showPausePanel ? pauseOverlayEnd : null}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu 
@@ -12758,7 +12790,8 @@ updates.forEach(update => {
                                setInitialSyllabusId(null); 
                            }}
                            initialSelectedId={initialSyllabusId || undefined}
-                           onUpdateItem={handleUpdateSyllabusItem} // Pass the handler
+                           onUpdateItem={handleUpdateSyllabusItem}
+                           onAddItem={handleAddSyllabusItem}
                        />;
             case 'TraineeLMP':
                 if (selectedTraineeForLMP) {
@@ -12879,6 +12912,8 @@ updates.forEach(update => {
                        settingsLoaded={settingsLoaded}
                        organisationSettings={organisationSettings}
                        onUpdateOrganisationSettings={setOrganisationSettings}
+                       neoBuildCourse={neoBuildCourse}
+                       onUpdateNeoBuildCourse={handleUpdateNeoBuildCourse}
                        
                 />;
             case 'CurrencyBuilder':
@@ -12975,6 +13010,57 @@ updates.forEach(update => {
                                 ].filter(Boolean).join(', ');
                                 
                                 logAudit('Performance History', 'Edit', `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+
+                                // PT-051 COMPLETION -> SCORE DB SYNC
+                                // When a PT-051 is saved (not auto-save), persist a Score record to the DB
+                                // so that IndividualLMP.completedEventIds is kept in sync and Course Progress
+                                // / NEO Build scheduling reflect the correct trainee progress.
+                                const eventId = assessment.flightNumber;
+                                if (eventId) {
+                                    const traineeObj = traineesData.find((t: any) => t.fullName === assessment.traineeFullName);
+                                    const overallScore = typeof assessment.overallGrade === 'number' ? assessment.overallGrade : 3;
+                                    fetch('/api/scores', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            traineeId: traineeObj?.id,
+                                            traineeFullName: assessment.traineeFullName,
+                                            event: eventId,
+                                            score: overallScore,
+                                            date: assessment.date || new Date().toISOString().split('T')[0],
+                                            instructor: assessment.instructorName || assessment.dcoResult || 'DCO',
+                                            notes: assessment.overallComments || '',
+                                        }),
+                                    })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                                            // Update in-memory scores state so Course Progress and NEO Build
+                                            // scheduling immediately reflect the completed event.
+                                            setScores(prev => {
+                                                const existing = prev.get(assessment.traineeFullName) || [];
+                                                const alreadyHas = existing.some(s => s.event === eventId);
+                                                if (alreadyHas) return prev;
+                                                const newScore: Score = {
+                                                    event: eventId,
+                                                    score: overallScore as 0 | 1 | 2 | 3 | 4 | 5,
+                                                    date: assessment.date || '',
+                                                    instructor: assessment.instructorName || 'DCO',
+                                                    notes: '',
+                                                    details: [],
+                                                };
+                                                const updated = new Map(prev);
+                                                updated.set(assessment.traineeFullName, [...existing, newScore]);
+                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
+                                                return updated;
+                                            });
+                                        } else {
+                                            console.warn(`[PT051->Score] Failed to persist score:`, data);
+                                        }
+                                    })
+                                    .catch(err => console.warn(`[PT051->Score] Error persisting score:`, err));
+                                }
                             }
                         }}
                         instructors={instructorsData}
@@ -13288,106 +13374,13 @@ updates.forEach(update => {
                     
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
-                       onPauseFlightOps={activeView === 'Program Schedule' ? () => {
-                           // Pause Flight Ops: navigate to NEO Build for the active DFP date,
-                           // load the active DFP events as the starting schedule, then open panel.
-                           const pauseDate = date; // active DFP date
-                           setBuildDfpDate(pauseDate);
-                           // Load the active DFP events into the NEO Build schedule
-                           const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map(
-                               (e: ScheduleEvent) => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; }
-                           );
-                           setNextDayBuildEvents(activeDfpEventsForPause);
-                           // Snapshot the originals so "Revert to Original" can restore them
-                           setPauseOriginalEvents(activeDfpEventsForPause);
-                           // Reset pause state
-                           setPauseCompletedEventIds(new Set());
-                           setPauseIsSelectingCompleted(false);
-                           setPausePanelPhase('configure');
-                           setPauseStagedEvents([]);
-                           // Navigate to NEO Build view and open the panel
-                           handleNavigation('NextDayBuild');
-                           setShowPausePanel(true);
-                       } : undefined}
                        authUser={authUser}
                        onLogout={handleLogout}
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
                 />}
-                <div className="flex-1 overflow-hidden flex flex-row min-h-0">
-                    <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                        {renderActiveView()}
-                    </div>
-                    {showPausePanel && (
-                        <PauseFlightOpsPanel
-                            isOpen={showPausePanel}
-                            onClose={() => {
-                                setShowPausePanel(false);
-                                setPauseIsSelectingCompleted(false);
-                                setPauseCompletedEventIds(new Set());
-                                setPausePanelPhase('configure');
-                                setPauseStagedEvents([]);
-                                setPauseOverlayStart(null);
-                                setPauseOverlayEnd(null);
-                            }}
-                            date={date}
-                            eventsForDate={(() => {
-                                const seenIds = new Set<string>();
-                                const seenSlots = new Set<string>();
-                                return (publishedSchedules[date] || []).filter((e: ScheduleEvent) => {
-                                    if (seenIds.has(e.id)) return false;
-                                    if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
-                                    if (e.resourceId && (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY'))) return false;
-                                    const slotKey = `${e.flightNumber}__${e.startTime}__${e.type}`;
-                                    if (seenSlots.has(slotKey)) return false;
-                                    seenIds.add(e.id);
-                                    seenSlots.add(slotKey);
-                                    return true;
-                                });
-                            })()}
-                            flyingStartTime={flyingStartTime}
-                            flyingEndTime={flyingEndTime}
-                            ftdStartTime={ftdStartTime}
-                            ftdEndTime={ftdEndTime}
-                            onBuildPause={handlePauseBuild}
-                            onPublish={handlePausePublish}
-                            authUser={authUser}
-                            onSelectModeChange={(active) => setPauseIsSelectingCompleted(active)}
-                            completedEventIds={pauseCompletedEventIds}
-                            onCompletedEventIdsChange={setPauseCompletedEventIds}
-                            onStagedEventsReady={(events) => {
-                                if (events !== null) {
-                                    // Live preview: update nextDayBuildEvents so the NEO Build
-                                    // schedule shows the post-pause rebuild result.
-                                    const seenIds = new Set<string>();
-                                    const deduped = events
-                                        .filter(e => {
-                                            if (seenIds.has(e.id)) return false;
-                                            seenIds.add(e.id);
-                                            return true;
-                                        })
-                                        .map(e => { const { date: _d, ...rest } = e as any; return rest as Omit<ScheduleEvent, 'date'>; });
-                                    setNextDayBuildEvents(deduped);
-                                } else {
-                                    // null = revert signal: restore original active DFP events
-                                    setNextDayBuildEvents(pauseOriginalEvents);
-                                }
-                            }}
-                            onRevert={() => {
-                                // Restore the NEO Build schedule to the original active DFP snapshot
-                                setNextDayBuildEvents(pauseOriginalEvents);
-                                // Clear completed event highlights and pause overlay
-                                setPauseCompletedEventIds(new Set());
-                                setPauseIsSelectingCompleted(false);
-                                setPauseOverlayStart(null);
-                                setPauseOverlayEnd(null);
-                            }}
-                            phase={pausePanelPhase}
-                            onPhaseChange={setPausePanelPhase}
-                            stagedEvents={pauseStagedEvents}
-                            onStagedEventsChange={setPauseStagedEvents}
-                        />
-                    )}
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                {renderActiveView()}
                 </div>
             </div>
             <RightSidebar
@@ -13514,7 +13507,7 @@ updates.forEach(update => {
                                 }
 
                                 const masterSyllabus = syllabusDetails.filter((item: any) => {
-                                    if (lmpType === 'BPC+IPC') return !item.lmpType || item.lmpType === 'Master LMP';
+                                    if (lmpType === 'BPC+IPC') return (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics';
                                     return item.courses && item.courses.includes(lmpType);
                                 });
 
@@ -13567,6 +13560,7 @@ updates.forEach(update => {
                     onSavePT051Assessment={onSavePT051Assessment}
                     cancellationCodes={cancellationCodes}
                     onCancelEvent={handleCancelEvent}
+                    onRestoreEvent={handleRestoreEvent}
                 />
             )}
             
@@ -13687,48 +13681,25 @@ updates.forEach(update => {
                     onCancel={handleUnsavedCancel}
                 />
             }
-             {/* Pause Flight Ops Modal */}
-            <PauseFlightOpsModal
-                isOpen={showPauseFlightOps}
-                onClose={() => setShowPauseFlightOps(false)}
-                date={date}
-                eventsForDate={(() => {
-                    // Deduplicate + validate date field, same as eventSegmentsForDate.
-                    // Also collapse group events (e.g. ground school) that generate one event
-                    // object per attendee - we only need one representative tile per unique
-                    // flightNumber+startTime combination for display in the modal.
-                    const seenIds = new Set<string>();
-                    const seenSlots = new Set<string>();
-                    return (publishedSchedules[date] || []).filter((e: ScheduleEvent) => {
-                        if (seenIds.has(e.id)) return false;
-                        if (!e.date || typeof e.date !== 'string' || !e.date.match(/^\d{4}-\d{2}-\d{2}$/)) return false;
-                        if (e.resourceId && (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY'))) return false;
-                        // Collapse group events: deduplicate by flightNumber+startTime+type
-                        const slotKey = `${e.flightNumber}__${e.startTime}__${e.type}`;
-                        if (seenSlots.has(slotKey)) return false;
-                        seenIds.add(e.id);
-                        seenSlots.add(slotKey);
-                        return true;
-                    });
-                })()}
-                flyingStartTime={flyingStartTime}
-                flyingEndTime={flyingEndTime}
-                ftdStartTime={ftdStartTime}
-                ftdEndTime={ftdEndTime}
-                onBuildPause={handlePauseBuild}
-                onPublish={handlePausePublish}
-                authUser={authUser}
-            />
-
              {showAddGroundEvent && (
                 <AddGroundEventFlyout
                     onClose={() => setShowAddGroundEvent(false)}
                     onSave={handleSaveGroundEvent}
+                    onSaveAcademic={handleSaveAcademicEvent}
                     groundSyllabus={syllabusDetails.filter(s => s.type === 'Ground School')}
                     activeCourses={courseColors}
                     allTraineesByCourse={allTraineesByCourse}
                     instructors={instructorsData.map(i => i.name)}
                     traineesData={traineesData}
+                    syllabusDetails={syllabusDetails}
+                    scores={scores}
+                    traineeLMPs={traineeLMPs}
+                    events={events}
+                    date={buildDfpDate || new Date().toISOString().split('T')[0]}
+                    courseColors={courseColors}
+                    school={school}
+                    courseAcademicProgress={courseAcademicProgress}
+                    onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
                 />
             )}
             {showAuthFlyout && eventForAuth && 

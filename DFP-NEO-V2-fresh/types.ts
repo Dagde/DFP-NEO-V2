@@ -198,6 +198,7 @@ export interface ScheduleEvent {
       dateCreated?: string;
       notes?: string;
       isSctRequest?: boolean;
+  isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
       sctRequestId?: string;
       sctRequestType?: 'flight' | 'ftd';
       isRemedialForceSchedule?: boolean;
@@ -235,7 +236,7 @@ export interface SyllabusItemDetail {
   duration: number;
   preFlightTime: number;
   postFlightTime: number;
-  type: 'Flight' | 'FTD' | 'Ground School';
+  type: 'Flight' | 'FTD' | 'Ground School' | 'Academics';
   sortieType?: 'Dual' | 'Solo';
      twrDiReqd?: 'YES' | 'NO'; // NEW: TWR DI Required field
      cctOnly?: 'YES' | 'NO'; // NEW: CCT Only field

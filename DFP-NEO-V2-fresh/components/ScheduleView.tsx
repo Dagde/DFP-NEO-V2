@@ -265,18 +265,22 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
 
     const findConflict = useCallback((eventsToCheck: ScheduleEvent[], existingEvents: ScheduleEvent[]): { conflictingEvent: ScheduleEvent, personName: string } | null => {
         for (const eventToCheck of eventsToCheck) {
-            const s1 = syllabusDetails.find(d => d.id === eventToCheck.flightNumber);
-            if (!s1) continue;
+            // Skip STBY and deployment events
+            if (eventToCheck.resourceId?.startsWith('STBY') || eventToCheck.type === 'deployment') continue;
 
-            const e1StartWithPre = eventToCheck.startTime - (s1.preFlightTime || 0);
-            const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1.postFlightTime || 0);
+            const s1 = syllabusDetails.find(d => d.id === eventToCheck.flightNumber);
+            // Use syllabus pre/post times if available, otherwise treat as flight event (Duty Sup, TWR DI etc.)
+            const e1StartWithPre = eventToCheck.startTime - (s1?.preFlightTime || 0);
+            const e1EndWithPost = eventToCheck.startTime + eventToCheck.duration + (s1?.postFlightTime || 0);
 
             for (const existingEvent of existingEvents) {
-                const s2 = syllabusDetails.find(d => d.id === existingEvent.flightNumber);
-                if (!s2) continue;
+                // Skip STBY and deployment events
+                if (existingEvent.resourceId?.startsWith('STBY') || existingEvent.type === 'deployment') continue;
 
-                const e2StartWithPre = existingEvent.startTime - (s2.preFlightTime || 0);
-                const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2.postFlightTime || 0);
+                const s2 = syllabusDetails.find(d => d.id === existingEvent.flightNumber);
+                // Use syllabus pre/post times if available, otherwise use raw start/end
+                const e2StartWithPre = existingEvent.startTime - (s2?.preFlightTime || 0);
+                const e2EndWithPost = existingEvent.startTime + existingEvent.duration + (s2?.postFlightTime || 0);
                 
                 if (e1StartWithPre < e2EndWithPost && e1EndWithPost > e2StartWithPre) {
                     const personnelToCheck = getPersonnel(eventToCheck);
@@ -386,8 +390,8 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const xInGrid = e.clientX - gridRect.left;
         const yInGrid = e.clientY - gridRect.top;
         
-        // Update validate overlay position when validate mode is ON
-        if (showValidation) {
+        // Update validate overlay position when hourly event rate mode is ON
+        if (showDepartureDensityOverlay) {
             const mouseTimeInHours = (xInGrid / (PIXELS_PER_HOUR * zoomLevel)) + START_HOUR;
             setValidateOverlayTime(mouseTimeInHours);
         }
@@ -762,20 +766,23 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         );
     };
 
-    // Render validate mode overlay
+    // Render validate mode overlay (also used for hourly event rate display)
     const renderValidateOverlay = () => {
         
-        if (!showValidation || validateOverlayTime === null || !showDepartureDensityOverlay) return null;
+        // Overlay should show only when hourly event rate mode is active (independent of validation mode)
+        if (validateOverlayTime === null || !showDepartureDensityOverlay) return null;
         
         // Calculate 1-hour window (30 minutes before and after mouse time)
         const windowStart = validateOverlayTime - 0.5;
         const windowEnd = validateOverlayTime + 0.5;
         
-        // Count flights starting in this window
+        // Count flights starting in this window (exclude STBY/BNF-STBY lines)
         const flightCount = events.filter(event => {
             // Only count flight events (not FTD, CPT, Ground, Duty Sup, etc.)
             if (event.type !== 'flight') return false;
-            
+            // Exclude cancelled/STBY line events
+            if (event.resourceId?.startsWith('STBY') || event.resourceId?.startsWith('BNF-STBY')) return false;
+            if (event.isCancelled) return false;
             // Check if start time falls within the window
             return event.startTime >= windowStart && event.startTime < windowEnd;
         }).length;

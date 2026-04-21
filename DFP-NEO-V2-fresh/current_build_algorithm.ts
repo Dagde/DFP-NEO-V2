@@ -15,8 +15,33 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
         highestPriorityEvents, programWithPrimaries, traineeLMPs, flightTurnaround,
         ftdTurnaround, cptTurnaround, preferredDutyPeriod, maxCrewDutyPeriod,
         eventLimits, sctFtds, sctFlights, remedialRequests, sctEvents,
-        getEventDayNightClassification
+        getEventDayNightClassification,
+        staffSharingEnabled, staffSharingUnits
     } = config;
+
+    // Helper: normalise unit string by stripping flight-suffix (e.g. "CFS/D" → "CFS")
+    const normalizeUnit = (unit: string): string => {
+        if (!unit) return '';
+        const slashIdx = unit.indexOf('/');
+        return slashIdx !== -1 ? unit.substring(0, slashIdx) : unit;
+    };
+
+    // Helper: check if an instructor is eligible to teach a trainee based on staff sharing rules
+    const isInstructorEligibleByUnit = (instructor: Instructor, trainee: Trainee): boolean => {
+        const traineeUnit = normalizeUnit(trainee.unit || '');
+        const instructorUnit = normalizeUnit(instructor.unit || '');
+        if (!staffSharingEnabled) {
+            // Staff sharing OFF: instructor must be from the same unit as the trainee
+            return instructorUnit === traineeUnit;
+        }
+        // Staff sharing ON: if trainee's unit is in the sharing group, any instructor in the group is eligible
+        const traineeInGroup = staffSharingUnits.map(u => normalizeUnit(u)).includes(traineeUnit);
+        if (!traineeInGroup) {
+            return instructorUnit === traineeUnit;
+        }
+        const instructorInGroup = staffSharingUnits.map(u => normalizeUnit(u)).includes(instructorUnit);
+        return instructorInGroup;
+    };
 
     // --- HELPER FUNCTIONS ---
     
@@ -57,7 +82,7 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
         traineeNextEventMap.set(trainee.fullName, nextEvents);
     });
 
-    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[] };
+    const nextEventLists = { flight: [] as Trainee[], ftd: [] as Trainee[], cpt: [] as Trainee[], ground: [] as Trainee[], bnf: [] as Trainee[], solo: [] as Trainee[] };
 
     // Check if a person (staff or trainee) is scheduled for ANY day events
     const isPersonScheduledForDayEvents = (personName: string): boolean => {
@@ -191,7 +216,10 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
         if (next) {
             console.log(`🎯   Processing trainee: ${trainee.fullName}, next event: ${next.code} (${next.type})`);
 
-            if (next.code.startsWith('BNF') && next.type === 'Flight') {
+            if (next.code === 'BNF3' && next.type === 'Flight') {
+                // BNF3 is never scheduled by the build algorithm - skip entirely
+                console.log(`🎯     BNF3 detected for ${trainee.fullName} - skipping (BNF3 never auto-scheduled)`);
+            } else if (next.code.startsWith('BNF') && next.type === 'Flight') {
                 console.log(`🎯     BNF event detected for ${trainee.fullName}`);
                 // Only add to BNF list if trainee doesn't have day events scheduled
                 const hasDayEvents = isPersonScheduledForDayEvents(trainee.fullName);
@@ -202,6 +230,9 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
                 } else {
                     console.log(`🎯     ❌ NOT adding ${trainee.fullName} to BNF list (has day events)`);
                 }
+            } else if (next.type === 'Flight' && next.sortieType === 'Solo') {
+                console.log(`🎯     Solo flight detected for ${trainee.fullName} - adding to solo list`);
+                nextEventLists.solo.push(trainee);
             } else if (next.type === 'Flight') {
                 console.log(`🎯     Adding ${trainee.fullName} to flight list`);
                 nextEventLists.flight.push(trainee);
@@ -229,10 +260,12 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
     console.log(`🎯 [BUILD ALGORITHM] Finished populating nextEventLists`);
     console.log(`🎯   nextEventLists.bnf.length: ${nextEventLists.bnf.length}`);
     console.log(`🎯   nextEventLists.flight.length: ${nextEventLists.flight.length}`);
+    console.log(`🎯   nextEventLists.solo.length: ${nextEventLists.solo.length}`);
     console.log(`🎯   nextEventLists.ftd.length: ${nextEventLists.ftd.length}`);
     console.log(`🎯   nextEventLists.cpt.length: ${nextEventLists.cpt.length}`);
     console.log(`🎯   nextEventLists.ground.length: ${nextEventLists.ground.length}`);
     console.log(`🎯   BNF trainees:`, nextEventLists.bnf.map(t => t.fullName));
+    console.log(`🎯   Solo trainees:`, nextEventLists.solo.map(t => t.fullName));
     
     const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
 
@@ -449,6 +482,8 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
             unplacedTrainees.forEach((trainee, index) => {
                 const traineeCounts = eventCounts.get(trainee.fullName)!;
                 if (traineeCounts.flightFtd > 0 || traineeCounts.isStby) return;
+                // Never put night-flying trainees on daytime STBY
+                if (!isNightPass && bnfTraineeNames.has(trainee.fullName)) return;
 
                 const { next, plusOne } = traineeNextEventMap.get(trainee.fullName)!;
                 const syllabusItem = isPlusOne ? plusOne : next;
@@ -598,14 +633,16 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
                 const simIps = instructors
                     .filter(i => 
                         i.role === 'SIM IP' && 
-                        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name)) &&
+                        isInstructorEligibleByUnit(i, traineeForCheck)
                     )
                     .sort((a, b) => (eventCounts.get(a.name)?.flightFtd || 0) - (eventCounts.get(b.name)?.flightFtd || 0));
                 
                 // NEW RULE: COMPLETE separation - NO day events for instructors with night events
                 const availableQfis = instructors.filter(i => 
                     i.role === 'QFI' && 
-                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name)) &&
+                    isInstructorEligibleByUnit(i, traineeForCheck)
                 );
                 let orderedQfis: Instructor[] = [];
                 
@@ -627,6 +664,8 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
                 const qualified = instructors.filter(ip => {
                     const isQFI = ip.role === 'QFI';
                     if (type === 'flight' && !isQFI) return false;
+                    // Staff sharing rule: instructor must be eligible by unit
+                    if (!isInstructorEligibleByUnit(ip, traineeForCheck)) return false;
                     if (type === 'ground' || type === 'cpt') return true; 
                     // NEW RULE: COMPLETE separation - NO day events for instructors with night events
                     if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
@@ -976,7 +1015,141 @@ function generateDfpInternal(config: DfpConfig, setProgress: (progress: { messag
     buildOrder.forEach(item => {
         scheduleList(item.list, item.type, item.isPlusOne, flyingStartTime, flyingEndTime, 'STBY', false);
     });
-    
+
+    // SOLO GROUPING: Schedule solo flights in groups of max 4, with a second group if >4 solos
+    setProgress({ message: 'Scheduling Solo Flights...', percentage: 55 });
+    if (nextEventLists.solo.length > 0) {
+        const soloTrainees = applyCoursePriority(filterOutBnfTrainees(nextEventLists.solo));
+        const MAX_SOLO_GROUP = 4;
+        const soloGroups: Trainee[][] = [];
+        for (let i = 0; i < soloTrainees.length; i += MAX_SOLO_GROUP) {
+            soloGroups.push(soloTrainees.slice(i, i + MAX_SOLO_GROUP));
+        }
+
+        console.log(`🎯 [SOLO SCHEDULING] ${soloTrainees.length} solo trainees → ${soloGroups.length} group(s)`);
+
+        // For each solo group, find the earliest time slot where all trainees in the group can fly together
+        soloGroups.forEach((group, groupIndex) => {
+            const timeIncrement = 5 / 60; // 5-minute increments
+            let groupStartTime: number | null = null;
+
+            // Search for the earliest time where enough aircraft slots are free for the entire group simultaneously
+            for (let time = flyingStartTime; time <= flyingEndTime - (group[0] ? (traineeNextEventMap.get(group[0].fullName)?.next?.duration || 1) : 1); time += timeIncrement) {
+                // Check all trainees in the group can fly at this time
+                const allAvailable = group.every(trainee => {
+                    const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+                    if (!next) return false;
+                    const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.id, duration: next.duration }, syllabusDetails);
+                    if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'flight')) return false;
+                    const traineeCounts = eventCounts.get(trainee.fullName)!;
+                    if (traineeCounts.flightFtd >= eventLimits.trainee.maxFlightFtd) return false;
+                    if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= eventLimits.trainee.maxTotal) return false;
+                    return true;
+                });
+
+                if (!allAvailable) continue;
+
+                // Check there are enough free aircraft slots for the group at this time
+                let freeSlots = 0;
+                for (let acNum = 1; acNum <= availableAircraftCount; acNum++) {
+                    const acId = `PC-21 ${acNum}`;
+                    const occupied = generatedEvents.some(e => {
+                        if (e.resourceId !== acId) return false;
+                        const syl = syllabusDetails.find(s => s.id === e.flightNumber);
+                        const turnaround = e.type === 'flight' ? flightTurnaround : 0;
+                        const existEnd = e.startTime + e.duration + turnaround;
+                        return time < existEnd && (time + (traineeNextEventMap.get(group[0].fullName)?.next?.duration || 1)) > e.startTime;
+                    });
+                    if (!occupied) freeSlots++;
+                    if (freeSlots >= group.length) break;
+                }
+
+                if (freeSlots >= group.length) {
+                    groupStartTime = time;
+                    break;
+                }
+            }
+
+            if (groupStartTime === null) {
+                console.log(`🎯 [SOLO SCHEDULING] Group ${groupIndex + 1}: no available slot found, placing on STBY`);
+                // Place all in group on STBY
+                group.forEach((trainee, idx) => {
+                    const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+                    if (!next) return;
+                    const traineeCounts = eventCounts.get(trainee.fullName)!;
+                    if (traineeCounts.isStby) return;
+                    const stbyResourceId = `STBY ${generatedEvents.filter(e => e.resourceId.startsWith('STBY')).length + 1}`;
+                    generatedEvents.push({
+                        id: uuidv4(), type: 'flight', instructor: '', student: trainee.fullName,
+                        flightNumber: next.id, duration: next.duration, startTime: flyingStartTime,
+                        resourceId: stbyResourceId, color: 'bg-yellow-500/50',
+                        flightType: 'Solo', locationType: 'Local', origin: school, destination: school,
+                        authNotes: `Solo Gp${groupIndex + 1} P${idx + 1}`
+                    });
+                    traineeCounts.isStby = true;
+                });
+                return;
+            }
+
+            console.log(`🎯 [SOLO SCHEDULING] Group ${groupIndex + 1}: scheduling ${group.length} solos at ${groupStartTime.toFixed(2)}`);
+
+            // Assign aircraft slots to each trainee in the group
+            let nextAcNum = 1;
+            group.forEach((trainee, idx) => {
+                const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+                if (!next) return;
+
+                // Find a free aircraft slot
+                let resourceId: string | null = null;
+                for (let acNum = nextAcNum; acNum <= availableAircraftCount; acNum++) {
+                    const acId = `PC-21 ${acNum}`;
+                    const occupied = generatedEvents.some(e => {
+                        if (e.resourceId !== acId) return false;
+                        const turnaround = e.type === 'flight' ? flightTurnaround : 0;
+                        const existEnd = e.startTime + e.duration + turnaround;
+                        return groupStartTime! < existEnd && (groupStartTime! + next.duration) > e.startTime;
+                    });
+                    if (!occupied) {
+                        resourceId = acId;
+                        nextAcNum = acNum + 1;
+                        break;
+                    }
+                }
+
+                if (!resourceId) {
+                    console.log(`🎯 [SOLO SCHEDULING] No aircraft for ${trainee.fullName} in group ${groupIndex + 1}, placing STBY`);
+                    const traineeCounts = eventCounts.get(trainee.fullName)!;
+                    if (!traineeCounts.isStby) {
+                        const stbyResourceId = `STBY ${generatedEvents.filter(e => e.resourceId.startsWith('STBY')).length + 1}`;
+                        generatedEvents.push({
+                            id: uuidv4(), type: 'flight', instructor: '', student: trainee.fullName,
+                            flightNumber: next.id, duration: next.duration, startTime: groupStartTime!,
+                            resourceId: stbyResourceId, color: 'bg-yellow-500/50',
+                            flightType: 'Solo', locationType: 'Local', origin: school, destination: school,
+                            authNotes: `Solo Gp${groupIndex + 1} P${idx + 1}`
+                        });
+                        traineeCounts.isStby = true;
+                    }
+                    return;
+                }
+
+                const area = findAvailableArea(groupStartTime!, next.duration, generatedEvents);
+                const traineeCounts = eventCounts.get(trainee.fullName)!;
+                generatedEvents.push({
+                    id: uuidv4(), type: 'flight', instructor: '', student: trainee.fullName, pilot: trainee.fullName,
+                    flightNumber: next.id, duration: next.duration, startTime: groupStartTime!,
+                    resourceId: resourceId, color: courseColors[trainee.course] || 'bg-gray-500',
+                    flightType: 'Solo', locationType: 'Local', origin: school, destination: school,
+                    area: area || undefined,
+                    preStart: next.preFlightTime, postEnd: next.postFlightTime,
+                    authNotes: `Solo Gp${groupIndex + 1}`
+                });
+                traineeCounts.flightFtd++;
+                console.log(`🎯 [SOLO SCHEDULING] Scheduled ${trainee.fullName} on ${resourceId} at ${groupStartTime!.toFixed(2)}`);
+            });
+        });
+    }
+
     setProgress({ message: 'Scheduling Ground and CPT Events...', percentage: 60 });
     // Schedule CPT and Ground events (these are in buildOrder but might need separate handling)
     // Note: buildOrder already includes CPT and Ground events

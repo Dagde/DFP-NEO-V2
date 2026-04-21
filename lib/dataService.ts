@@ -2,7 +2,7 @@
 // Returns plain objects for React compatibility
 
 import { fetchInstructors, fetchTrainees, fetchAircraft, fetchScores, fetchSchedule, fetchCourses } from './api';
-import { ESL_DATA, PEA_DATA } from '../mockData';
+import { ESL_DATA } from '../mockData';
 import { assignTraineesToInstructors } from './traineeAssignmentService';
 
 

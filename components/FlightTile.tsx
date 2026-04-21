@@ -25,6 +25,7 @@ interface FlightTileProps {
   isSelected?: boolean;
   isChanged?: boolean;
   isPreview?: boolean;
+  isPauseCompleted?: boolean;
 }
 
 const formatTime = (time: number): string => {
@@ -92,7 +93,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -273,6 +274,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
 
   // For SCT events, pilot field contains PIC, student field contains crew (for Dual)
   const isSctEvent = event.eventCategory === 'sct';
+  const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   
   
@@ -508,7 +510,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                     <div className="overflow-hidden text-center">
                         <div className={picClasses}>{picName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                         <div className="font-mono text-white/80 truncate">
-                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : event.flightNumber}
                         </div>
                     </div>
                 </div>
@@ -519,12 +521,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             <div className="flex justify-between items-center h-full w-full px-2" style={textStyle}>
                 <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
                     <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
                         <div className="font-mono text-white/80 text-right whitespace-nowrap">
-                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : event.flightNumber}
                         </div>
                     </div>
                     <div/> 
@@ -538,13 +540,13 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             <div className="flex items-center justify-between h-full w-full px-2" style={textStyle}>
                 <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
                     <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
-                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
+                    <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>
 
                 <div className="flex flex-col items-end justify-between h-full pl-1 flex-shrink-0" style={{ minWidth: 'fit-content' }}>
                     <div>
                         <div className="font-mono text-white/80 text-right whitespace-nowrap">
-                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {event.flightNumber}
+                            <span style={{ fontSize: `${scaledFontSize - 2}px` }}>[{(event.duration || 0).toFixed(1)}]</span> {isTwrDiEvent ? 'TWR DI' : event.flightNumber}
                         </div>
                     </div>
                 </div>
@@ -611,6 +613,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const ringClass = getDynamicRingClass();
   const dutySupBorderClass = isDutySup ? 'border border-black' : '';
   const multiSelectRingClass = isSelected ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-gray-900' : '';
+  const pauseCompletedRingClass = isPauseCompleted ? 'ring-2 ring-green-400 ring-offset-1 ring-offset-gray-900' : '';
   
   const finalClasses = [commonClasses];
 
@@ -623,6 +626,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       finalClasses.push(`ring-[0.92px] ${ringClass}`);
       finalClasses.push(dutySupBorderClass);
       finalClasses.push(multiSelectRingClass);
+      if (isPauseCompleted) finalClasses.push(pauseCompletedRingClass);
   }
   // Ensure we don't clip the flyout which sits outside
   // We can't use overflow-hidden on the tile itself if we want the flyout to potentially pop out,
@@ -685,6 +689,13 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     >
         {isChanged && !isPreview && (
             <div className="absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" />
+        )}
+        {isPauseCompleted && !isPreview && (
+            <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center pointer-events-none z-30">
+                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
         )}
         {isStbyEvent && !isPreview && (
             <div 

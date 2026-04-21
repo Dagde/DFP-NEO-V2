@@ -52,7 +52,10 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
             if (completedCount < totalSyllabusEvents) {
                 nextEvent = 'N/A'; // Default if no next event is found (e.g., prereqs not met)
                 for (const item of individualLMP) {
-                    if (!completedEventIds.has(item.id) && !item.code.includes(' MB')) {
+                    // Check both item.id AND item.code: DB syllabus items have CUID ids,
+                    // but completedEventIds stores event codes (e.g. "FIC GND1").
+                    const isCompleted = completedEventIds.has(item.id) || completedEventIds.has(item.code);
+                    if (!isCompleted && !item.code.includes(' MB')) {
                         const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p));
                         if (prereqsMet) {
                             nextEvent = item.code;

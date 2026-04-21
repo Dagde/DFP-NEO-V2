@@ -329,6 +329,31 @@ model DailySnapshot {
   @@index([savedAt])
 }
 
+// CourseSettings: Global course-related settings
+// Currently stores the neoBuildCourse - which Master LMP to use for Individual LMP generation
+model CourseSettings {
+  id              String   @id @default(cuid())
+  neoBuildCourse  String?  // The course code whose Master LMP is used for Individual LMP generation (e.g., "BPC+IPC", "FIC")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([neoBuildCourse])
+}
+
+// CourseAcademicProgress: Tracks course-level academic event completion
+// Used when entire course cohort marks an academic event as complete (✅ in AcademicsTab)
+model CourseAcademicProgress {
+  id             String   @id @default(cuid())
+  courseCode     String   // Course code (e.g., "ADF301", "BPC", "FIC210")
+  lessonCode     String   // Syllabus item code for the academic event
+  completedDate  DateTime @default(now())
+  completedBy    String?  // userId who marked it complete
+
+  @@unique([courseCode, lessonCode])
+  @@index([courseCode])
+  @@index([lessonCode])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

@@ -163,7 +163,7 @@ interface PersonDropdownProps {
 const PersonDropdown: React.FC<PersonDropdownProps> = ({
   value, displayValue, onChange, allUnits, getLayer2, getNames,
   placeholder, fontSize, color, bold = false, allowSolo, onSoloSelect,
-  dropdownZIndex = 9000,
+  dropdownZIndex = 10000,
   dropdownId = 'person-dropdown-portal',
 }) => {
   const [open, setOpen] = useState(false);
@@ -386,7 +386,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
         position: 'fixed',
         top: dropdownPos.top,
         right: dropdownPos.right,
-        zIndex: 9000,
+        zIndex: 10000,
         display: 'flex',
         width: 400,
         maxHeight: 320,
@@ -726,8 +726,11 @@ const FlightTile: React.FC<TileProps> = ({
       dropdownId="pic-dropdown-portal" />
   );
 
-  const coPilotContent = () => (
-    flightType === 'Dual' ? (
+  const coPilotContent = () => {
+    if (eventCategory === 'twr_di') {
+      return <span style={{ fontSize: 22, color: WHITE_DIM, lineHeight: 1.25 }}>TWR DI</span>;
+    }
+    return flightType === 'Dual' ? (
       <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
         placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
         dropdownId="copilot-dropdown-portal" />
@@ -735,8 +738,8 @@ const FlightTile: React.FC<TileProps> = ({
       <span onClick={() => onFlightTypeChange('Dual')}
         style={{ display: 'inline-block', fontSize: 18, fontWeight: 800, letterSpacing: 1, color: 'rgba(255,220,60,0.95)', background: 'rgba(255,200,0,0.20)', padding: '3px 10px', borderRadius: 4, lineHeight: 1.25, cursor: 'pointer' }}
         title="Click to switch to Dual">SOLO</span>
-    )
-  );
+    );
+  };
 
   const durationContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
@@ -750,14 +753,34 @@ const FlightTile: React.FC<TileProps> = ({
     </div>
   );
 
-  const eventContent = () => (
-    <div style={{ position: 'relative' }}>
-      <Oval px={10} py={5} minW={58}>
-        <EventDropdown value={flightNumber} onChange={onFlightNumberChange} courseOptions={courseOptions} getEventsForCourse={getEventsForCourse}
-          nextLMPEvent={nextLMPEvent} fontSize={18} color={flightNumber ? WHITE_FULL : WHITE_GHOST} disabled={eventCategory === 'lmp_currency'} />
-      </Oval>
-    </div>
-  );
+  const eventContent = () => {
+    if (eventCategory === 'twr_di') {
+      return (
+        <div style={{ position: 'relative' }}>
+          <Oval px={10} py={5} minW={58}>
+            <span style={{ fontSize: 18, color: WHITE_FULL, lineHeight: 1 }}>
+              TWR DI
+            </span>
+          </Oval>
+        </div>
+      );
+    }
+    return (
+      <div style={{ position: 'relative' }}>
+        <Oval px={10} py={5} minW={58}>
+          <EventDropdown
+            value={flightNumber}
+            onChange={onFlightNumberChange}
+            courseOptions={courseOptions}
+            getEventsForCourse={getEventsForCourse}
+            nextLMPEvent={nextLMPEvent}
+            fontSize={18}
+            color={flightNumber ? WHITE_FULL : WHITE_GHOST}
+          />
+        </Oval>
+      </div>
+    );
+  };
 
   const areaContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
@@ -1334,7 +1357,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       if (!deploymentStartDate || !deploymentStartTime || !deploymentEndDate || !deploymentEndTime)
         errs.push('Deployment start/end date and time are required.');
     } else {
-      if (!flightNumber) errs.push('Syllabus event is required.');
+      if (!flightNumber && eventCategory !== 'twr_di') errs.push('Syllabus event is required.');
       if (flightType === 'Dual' && !picName) errs.push('Instructor / PIC is required for Dual flights.');
       if (flightType === 'Dual' && !studentName) errs.push('Co-Pilot / Student is required for Dual flights.');
       if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
@@ -1351,7 +1374,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         type: 'flight',
         eventCategory,
         flightType,
-        flightNumber,
+        flightNumber: eventCategory === 'twr_di' ? 'TWR DI' : flightNumber,
         instructor: flightType === 'Dual' ? picName : '',
         student: flightType === 'Dual' ? studentName : '',
         pilot: picName,
@@ -1410,25 +1433,55 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.70)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: 24,
+        paddingBottom: 24,
+        overflowY: 'auto',
+      }}
       onClick={onClose}
     >
       <div
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 flex flex-col"
-        style={{ width: '90vw', maxWidth: 720, maxHeight: '92vh' }}
+        style={{
+          width: '90vw',
+          maxWidth: 720,
+          maxHeight: 'calc(100vh - 48px)',
+          backgroundColor: '#111827',
+          borderRadius: 12,
+          border: '1px solid #374151',
+          boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700 flex-shrink-0">
-          <h2 className="text-xl font-bold text-white">Add Flight Tile</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Header — always visible at top, never clipped */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px 24px',
+          borderBottom: '1px solid #374151',
+          flexShrink: 0,
+          backgroundColor: '#1f2937',
+        }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#ffffff', margin: 0 }}>Add Flight Tile</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4 }}>
+            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div className="p-6 space-y-5" style={{ overflowY: 'auto', flex: 1 }}>
 
           {/* Event Category */}
           {!isDeploy && (

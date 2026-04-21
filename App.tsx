@@ -121,7 +121,7 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 
 
 // --- MOCK DATA ---
-import { ESL_DATA, PEA_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
+import { ESL_DATA, INITIAL_SYLLABUS_DETAILS } from './mockData';
 import { initializeData } from './lib/dataService';
 // --- SYLLABUS SERVICE (loads from DB at startup) ---
 import { loadSyllabusFromDB, clearSyllabusCache } from './lib/syllabusService';
@@ -2688,7 +2688,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         
         // CRITICAL FIX: Skip instructor assignment for solo flights
-        const isSoloFlight = syllabusItem.sortieType === 'Solo';
+        // BGF11 and BGF18 are solo flights even if sortieType is not explicitly 'Solo'
+        const isSoloFlight = syllabusItem.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(syllabusItem.id);
         
         let instructor: Instructor | null = null;
         // HARD MODE flag: flight/FTD events that can't be matched to a hard group will be placed on STBY
@@ -2773,9 +2774,32 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
         
-        // Debug logging removed to reduce console noise
+        // SOLO RESOURCE PLACEMENT FIX:
+        // Solo flights must be placed on the PC-21 row that matches their chronological
+        // position in the day, not the lowest-numbered free aircraft.
+        // Example: if 8 dual flights at 08:xx are on PC-21 3-10, a solo at 09:00 should
+        // start searching from PC-21 9 (not PC-21 1 which is free but too early in the sequence).
+        //
+        // Algorithm: count how many distinct PC-21 lines have at least one flight event
+        // with a start time EARLIER than the solo's start time. Start the search from
+        // (that count + 1) so the solo slots into the next available chronological position.
+        let resourceSearchStart = 1;
+        if (isSoloFlight && type === 'flight') {
+            // Count distinct PC-21 lines that have an event starting before this solo's start time
+            const linesWithEarlierFlight = new Set(
+                generatedEvents
+                    .filter(e =>
+                        e.type === 'flight' &&
+                        e.resourceId.startsWith('PC-21 ') &&
+                        !e.resourceId.startsWith('PC-21 STBY') &&
+                        e.startTime < startTime - 0.001 // strictly earlier (> ~0.06 min tolerance)
+                    )
+                    .map(e => e.resourceId)
+            ).size;
+            resourceSearchStart = linesWithEarlierFlight + 1;
+        }
         
-        for (let i = 1; i <= resourceCount; i++) {
+        for (let i = resourceSearchStart; i <= resourceCount; i++) {
             const id = `${resourcePrefix}${i}`;
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
@@ -2825,6 +2849,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
             
+            // SOLO TIME WINDOW: Solo flights (including BGF11/BGF18) must start between 09:00 and 15:00
+            // This is enforced here (after resource assignment) so the search loop skips out-of-window slots
+            if (isSoloFlight) {
+                const SOLO_WINDOW_START = 9;   // 09:00
+                const SOLO_WINDOW_END   = 15;  // 15:00 (latest start; flight may run past 15:00)
+                if (startTime < SOLO_WINDOW_START || startTime > SOLO_WINDOW_END) {
+                    _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'SOLO_TIME_WINDOW_VIOLATION');
+                    return null;
+                }
+            }
+            
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
@@ -2836,14 +2871,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 !e.resourceId.startsWith('BNF-STBY')
             );
             
-            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
-            if (takeoffsInLastHour >= 8) {
+            // Solo flights are exempt from the hourly dispatch limit check —
+            // they are on a dedicated aircraft row and don't contribute to runway congestion.
+            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && !e.flightType?.includes('Solo') && e.startTime > startTime - 1 && e.startTime <= startTime).length;
+            if (!isSoloFlight && takeoffsInLastHour >= 8) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return null;
             }
             
-            const takeoffConflict = nonStbyFlights.some(e => {
+            // Solo flights are exempt from the takeoff separation check.
+            // They are scheduled after all duals and placed on a dedicated aircraft row.
+            // Applying the 5-min gap rule against dual flights would block every available slot.
+            const takeoffConflict = !isSoloFlight && nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
+                // Solo flights already on the board don't count against separation either
+                if (e.flightType === 'Solo') return false;
                 const diffHours = Math.abs(e.startTime - startTime);
                 const diffMinutes = Math.round(diffHours * 60);
                 
@@ -2857,21 +2899,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return null;
             }
         }
-        
-           // Debug: Log syllabusItem for BGF11 and BGF18
-           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
-               console.log('🔍 SOLO FLIGHT DEBUG:', syllabusItem.id);
-               console.log('  - sortieType:', syllabusItem.sortieType);
-               console.log('  - type:', syllabusItem.type);
-               console.log('  - code:', syllabusItem.code);
-               console.log('  - Full syllabusItem:', JSON.stringify(syllabusItem, null, 2));
-           }
-           // Debug solo flight logic
-           if (syllabusItem.id === 'BGF18' || syllabusItem.id === 'BGF11') {
-               console.log('SOLO DEBUG: ' + syllabusItem.id + ' sortieType: ' + syllabusItem.sortieType);
-           }
+
+        // Ground/FTD/CPT end-of-window boundary check:
+        // Ground school and CPT events must finish by the end of the flying window.
+        // FTD events must finish by the end of the FTD window.
+        // This mirrors the same end-of-window rule applied to flight events above.
+        if (type === 'ground' || type === 'cpt') {
+            if (startTime + syllabusItem.duration > flyingEndTime) {
+                return null; // TIME_BOUNDARY_VIOLATION – event would run past flying window end
+            }
+        } else if (type === 'ftd') {
+            if (startTime + syllabusItem.duration > ftdEndTime) {
+                return null; // TIME_BOUNDARY_VIOLATION – FTD event would run past FTD window end
+            }
+        }
+
         const result = {
-            id: uuidv4(), type: type, instructor: (syllabusItem.sortieType === 'Solo' ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (syllabusItem.sortieType === 'Solo' ? trainee.fullName : instructor?.name || ''),
+            id: uuidv4(), type: type, instructor: (isSoloFlight ? '' : instructor?.name || ''), student: trainee.fullName, pilot: (isSoloFlight ? trainee.fullName : instructor?.name || ''),
             flightNumber: syllabusItem.id, duration: syllabusItem.duration, startTime, resourceId,
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school, 
@@ -3104,11 +3148,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Highest Priority Flight Events are already added at the start
     
     setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
-    const _flightListForScheduling = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
-    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. List size: ${_flightListForScheduling.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
-    (window as any).__fbFlightListSize = _flightListForScheduling.length;
+
+    // SOLO SEQUENCING FIX:
+    // Solo flights (BGF11/BGF18 or sortieType='Solo') must be scheduled AFTER all dual flights.
+    // This ensures that when the resource assignment loop runs for solos, all dual aircraft
+    // lines are already populated — so linesWithEarlierFlight gives the correct count and
+    // solos are placed on the right sequential PC-21 row, not the lowest free one.
+    const _isSoloTrainee = (trainee: Trainee): boolean => {
+        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
+    };
+    const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+    const _dualFlightList = _allFlightList.filter(t => !_isSoloTrainee(t));
+    const _soloFlightList = _allFlightList.filter(t => _isSoloTrainee(t));
+
+    console.log(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    (window as any).__fbFlightListSize = _allFlightList.length;
+
+    // Step 3a: Schedule DUAL flights first
     scheduleList(
-        _flightListForScheduling,
+        _dualFlightList,
         'flight', 
         false, 
         flyingStartTime, 
@@ -3116,6 +3175,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         null, 
         false
     );
+
+    // Step 3b: Schedule SOLO flights after all duals are placed
+    // At this point generatedEvents has all dual flights, so linesWithEarlierFlight
+    // correctly counts how many PC-21 rows are occupied before the solo's start time
+    scheduleList(
+        _soloFlightList,
+        'flight', 
+        false, 
+        flyingStartTime, 
+        flyingEndTime, 
+        null, 
+        false
+    );
+
     _fbPrintSummary();
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
@@ -4528,10 +4601,28 @@ const App: React.FC = () => {
                             ? '/api'
                             : 'https://dfp-neo-v2-production.up.railway.app/api';
 
+                        // Build pt051Completions map: traineeFullName → [completedFlightNumbers]
+                        // This covers PT-051 assessments saved in DailySnapshot that may not yet
+                        // have Score DB records (e.g. Carter, Chris FIC3/4/5).
+                        const pt051Completions: Record<string, string[]> = {};
+                        pt051Assessments.forEach((assessment: any, _key: string) => {
+                            if (assessment.isCompleted && assessment.flightNumber && assessment.traineeFullName) {
+                                const name = assessment.traineeFullName;
+                                if (!pt051Completions[name]) pt051Completions[name] = [];
+                                if (!pt051Completions[name].includes(assessment.flightNumber)) {
+                                    pt051Completions[name].push(assessment.flightNumber);
+                                }
+                            }
+                        });
+                        const pt051CompletionCount = Object.values(pt051Completions).reduce((sum, arr) => sum + arr.length, 0);
+                        if (pt051CompletionCount > 0) {
+                            console.log(`[LMP Sync] Including ${pt051CompletionCount} PT-051 completions from snapshots for ${Object.keys(pt051Completions).length} trainees`);
+                        }
+
                         const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ syllabusData }),
+                            body: JSON.stringify({ syllabusData, pt051Completions }),
                         });
 
                         if (syncRes.ok) {
@@ -4843,19 +4934,21 @@ const App: React.FC = () => {
                 const data = await res.json();
 
                 if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
-                    const schedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
-                    const eventCount = Object.values(schedules).flat().length;
-                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(schedules).length} dates (legacy/seed)`);
+                    const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
+                    const eventCount = Object.values(seedSchedules).flat().length;
+                    console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
                     setPublishedSchedules(prev => {
-                        // Merge historical/seed data — real snapshot data takes priority
-                        const merged = { ...schedules };
-                        Object.entries(prev).forEach(([date, events]) => {
-                            if (events.some(e => !(e as any).isHistoricalSeed)) {
-                                // Keep existing non-seed events for this date (snapshot data wins)
-                                const existing = merged[date] || [];
-                                const nonSeed = events.filter(e => !(e as any).isHistoricalSeed);
-                                merged[date] = [...existing.filter((e: any) => e.isHistoricalSeed), ...nonSeed];
+                        // FIX: Use prev as the base (not seed schedules) so real snapshots already
+                        // loaded in the PRIMARY pass above are never overwritten by seed data.
+                        // Seed data fills in dates that have NO real snapshot events yet.
+                        const merged = { ...prev };
+                        Object.entries(seedSchedules).forEach(([dateKey, seedEvents]) => {
+                            const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
+                            if (existingNonSeed.length === 0) {
+                                // No real snapshot for this date — use seed data
+                                merged[dateKey] = seedEvents;
                             }
+                            // If real snapshot data already exists for this date, do NOT overwrite it
                         });
                         return merged;
                     });
@@ -9228,6 +9321,8 @@ const App: React.FC = () => {
             .then(result => {
                 if (result.success) {
                     console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                    // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
+                    loadedSnapshotDates.current.add(buildDfpDate);
                 } else {
                     console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
                 }
@@ -12673,6 +12768,57 @@ updates.forEach(update => {
                                 ].filter(Boolean).join(', ');
                                 
                                 logAudit('Performance History', 'Edit', `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+
+                                // PT-051 COMPLETION -> SCORE DB SYNC
+                                // When a PT-051 is saved (not auto-save), persist a Score record to the DB
+                                // so that IndividualLMP.completedEventIds is kept in sync and Course Progress
+                                // / NEO Build scheduling reflect the correct trainee progress.
+                                const eventId = assessment.flightNumber;
+                                if (eventId) {
+                                    const traineeObj = traineesData.find((t: any) => t.fullName === assessment.traineeFullName);
+                                    const overallScore = typeof assessment.overallGrade === 'number' ? assessment.overallGrade : 3;
+                                    fetch('/api/scores', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            traineeId: traineeObj?.id,
+                                            traineeFullName: assessment.traineeFullName,
+                                            event: eventId,
+                                            score: overallScore,
+                                            date: assessment.date || new Date().toISOString().split('T')[0],
+                                            instructor: assessment.instructorName || assessment.dcoResult || 'DCO',
+                                            notes: assessment.overallComments || '',
+                                        }),
+                                    })
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.success) {
+                                            console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
+                                            // Update in-memory scores state so Course Progress and NEO Build
+                                            // scheduling immediately reflect the completed event.
+                                            setScores(prev => {
+                                                const existing = prev.get(assessment.traineeFullName) || [];
+                                                const alreadyHas = existing.some(s => s.event === eventId);
+                                                if (alreadyHas) return prev;
+                                                const newScore: Score = {
+                                                    event: eventId,
+                                                    score: overallScore as 0 | 1 | 2 | 3 | 4 | 5,
+                                                    date: assessment.date || '',
+                                                    instructor: assessment.instructorName || 'DCO',
+                                                    notes: '',
+                                                    details: [],
+                                                };
+                                                const updated = new Map(prev);
+                                                updated.set(assessment.traineeFullName, [...existing, newScore]);
+                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
+                                                return updated;
+                                            });
+                                        } else {
+                                            console.warn(`[PT051->Score] Failed to persist score:`, data);
+                                        }
+                                    })
+                                    .catch(err => console.warn(`[PT051->Score] Error persisting score:`, err));
+                                }
                             }
                         }}
                         instructors={instructorsData}

@@ -12,6 +12,7 @@ import AuditButton from './AuditButton';
 import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
 import { HistoricalDataSeeder } from './HistoricalDataSeeder';
+import PeopleProfilePage from './PeopleProfilePage';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 
 interface SettingsViewWithMenuProps {
@@ -94,12 +95,15 @@ interface SettingsViewWithMenuProps {
         traineeDb: boolean;
     }) => void;
     onDatabaseDataChanged?: () => void;  // Called when staff/trainee database is modified
+    neoBuildCourse?: string;
+    onUpdateNeoBuildCourse?: (course: string) => void;
     }
 
 type SettingsSection =
     | 'scoring-matrix'
     | 'currencies'
     | 'sct-events'
+    | 'people-profile'
     | 'event-limits'
     | 'duty-turnaround'
     | 'business-rules'
@@ -125,6 +129,7 @@ const sectionLabels: Record<SettingsSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
     'currencies': 'Currencies',
     'sct-events': 'SCT Events',
+    'people-profile': 'People Profile',
     'event-limits': 'Event Limits',
     'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
@@ -152,6 +157,7 @@ const allSections: SettingsSection[] = [
     'scoring-matrix',
     'currencies',
     'sct-events',
+    'people-profile',
     'event-limits',
     'duty-turnaround',
     'business-rules',
@@ -195,6 +201,14 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
   'sct-events': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  ),
+  'people-profile': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/>
+      <path d="M16 3.13a4 4 0 010 7.75"/>
+      <path d="M20 15c1.333 1 2 2.333 2 4"/>
     </svg>
   ),
   'event-limits': (
@@ -348,6 +362,7 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'scoring-matrix': 'Configure scoring logic and weighting',
   'currencies': 'Manage qualification expiry dates',
   'sct-events': 'Event scoring rules and triggers',
+  'people-profile': 'Set NEO Build basis course',
   'event-limits': 'Define operational thresholds',
   'duty-turnaround': 'Crew duty limits & rest times',
   'business-rules': 'System logic and automation',
@@ -382,6 +397,7 @@ const sectionColors: Record<SettingsSection, string> = {
   'scoring-matrix':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'currencies':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'sct-events':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
+  'people-profile':    'from-teal-500/20 to-teal-600/10 border-teal-500/30 text-teal-400',
   // OPERATIONS RULES - amber icons
   'event-limits':      'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'duty-turnaround':   'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
@@ -414,7 +430,7 @@ const sectionColors: Record<SettingsSection, string> = {
 const sectionGroups: { label: string; sections: SettingsSection[] }[] = [
   {
     label: 'SYSTEM CONFIGURATION',
-    sections: ['scoring-matrix', 'currencies', 'sct-events'],
+    sections: ['scoring-matrix', 'currencies', 'sct-events', 'people-profile'],
   },
   {
     label: 'OPERATIONS RULES',
@@ -637,7 +653,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'trainee-mockdata' &&
                      activeSection !== 'data-sources' &&
                      activeSection !== 'organisation' &&
-                     activeSection !== 'appearance' && (
+                     activeSection !== 'appearance' &&
+                     activeSection !== 'people-profile' && (
                         <SettingsView {...props} hideHeader={true} activeSection={activeSection as SettingsSection} />
                     )}
 
@@ -703,6 +720,17 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         <div className="bg-gray-800 rounded-lg border border-gray-700 p-6">
                             <AppearanceSettings />
                         </div>
+                    )}
+                    {activeSection === 'people-profile' && (
+                        <PeopleProfilePage
+                            traineesData={props.traineesData}
+                            syllabusDetails={props.syllabusDetails}
+                            locations={props.locations}
+                            neoBuildCourse={props.neoBuildCourse || ''}
+                            onUpdateNeoBuildCourse={props.onUpdateNeoBuildCourse || (() => {})}
+                            onShowSuccess={props.onShowSuccess}
+                            currentUserPermission={props.currentUserPermission}
+                        />
                     )}
                     {activeSection === 'historical-data' && (
                         <HistoricalDataSeeder

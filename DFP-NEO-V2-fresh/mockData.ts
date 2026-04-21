@@ -51,7 +51,7 @@ const createSyllabusItem = (
 
     if (code.includes('FTD')) {
         methodOfDelivery = ['FTD', 'Brief', 'Debrief'];
-        flightOrSimHours = 2.0;  // BPC+IPC FTD events: 2.0hrs
+        flightOrSimHours = 1.5;  // All FTD events: 1.5hrs
         totalEventHours = 2.5;
         type = 'FTD';
         preFlightTime = 40 / 60; // 40 minutes
@@ -60,10 +60,10 @@ const createSyllabusItem = (
     } else if (code.includes('CPT')) {
         methodOfDelivery = ['CPT', 'Brief'];
         flightOrSimHours = 1.0;
-        totalEventHours = 1.5;
+        totalEventHours = 1.0;
         type = 'Ground School';
-        preFlightTime = 15 / 60; // 15 minutes
-        postFlightTime = 15 / 60; // 15 minutes
+        preFlightTime = 0;
+        postFlightTime = 0;
         location = 'CPT Rooms';
     } else if (code.includes('MB') || code.includes('TUT') || code.includes('QUIZ') || code.includes('Lec')) {
         methodOfDelivery = ['Classroom', 'Brief'];
@@ -343,8 +343,8 @@ const syllabusItems: SyllabusItemDetail[] = [
             'Practice handing over and taking control',
         ],
         totalEventHours: 2.5,
-        flightOrSimHours: 2.0,
-        duration: 2.0,
+        flightOrSimHours: 1.5,
+        duration: 1.5,
         preFlightTime: 0.67,
         postFlightTime: 0.5,
         type: 'FTD',
@@ -382,8 +382,8 @@ const syllabusItems: SyllabusItemDetail[] = [
             'Practice controlled patter interruption and reinstatement',
         ],
         totalEventHours: 2.5,
-        flightOrSimHours: 2.0,
-        duration: 2.0,
+        flightOrSimHours: 1.5,
+        duration: 1.5,
         preFlightTime: 0.67,
         postFlightTime: 0.5,
         type: 'FTD',
@@ -538,8 +538,8 @@ const syllabusItems: SyllabusItemDetail[] = [
             'Deliver emergency drill patter for two separate emergency types',
         ],
         totalEventHours: 2.5,
-        flightOrSimHours: 2.0,
-        duration: 2.0,
+        flightOrSimHours: 1.5,
+        duration: 1.5,
         preFlightTime: 0.67,
         postFlightTime: 0.5,
         type: 'FTD',
@@ -694,8 +694,8 @@ const syllabusItems: SyllabusItemDetail[] = [
             'Demonstrate management of student near-departure from controlled flight',
         ],
         totalEventHours: 2.5,
-        flightOrSimHours: 2.0,
-        duration: 2.0,
+        flightOrSimHours: 1.5,
+        duration: 1.5,
         preFlightTime: 0.67,
         postFlightTime: 0.5,
         type: 'FTD',
@@ -733,8 +733,8 @@ const syllabusItems: SyllabusItemDetail[] = [
             'Demonstrate transition brief from visual to instrument flight',
         ],
         totalEventHours: 2.5,
-        flightOrSimHours: 2.0,
-        duration: 2.0,
+        flightOrSimHours: 1.5,
+        duration: 1.5,
         preFlightTime: 0.67,
         postFlightTime: 0.5,
         type: 'FTD',
@@ -930,8 +930,8 @@ const syllabusItems: SyllabusItemDetail[] = [
             'Deliver multi-approach IFR instructional profile',
         ],
         totalEventHours: 3.0,
-        flightOrSimHours: 2.0,
-        duration: 2.0,
+        flightOrSimHours: 1.5,
+        duration: 1.5,
         preFlightTime: 0.67,
         postFlightTime: 0.5,
         type: 'FTD',
