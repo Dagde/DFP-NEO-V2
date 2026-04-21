@@ -257,11 +257,11 @@ app.post('/api/settings', async (req, res) => {
 app.get('/api/settings/course-settings', async (req, res) => {
   try {
     const db = await getPrisma();
-    const settings = await db.courseSettings.findFirst();
-    if (!settings) {
-      return res.json({ neoBuildCourse: null });
-    }
-    return res.json({ neoBuildCourse: settings.neoBuildCourse });
+    const rows = await db.$queryRawUnsafe(
+      'SELECT "neoBuildCourse" FROM "CourseSettings" LIMIT 1'
+    );
+    const setting = rows && rows.length > 0 ? rows[0] : null;
+    return res.json({ neoBuildCourse: setting ? setting.neoBuildCourse : null });
   } catch (error) {
     console.error('[CourseSettings] GET error:', error);
     res.status(500).json({ error: 'Failed to load course settings', details: error.message });
@@ -276,19 +276,24 @@ app.put('/api/settings/course-settings', async (req, res) => {
     if (!neoBuildCourse) {
       return res.status(400).json({ error: 'Missing neoBuildCourse' });
     }
-    const settings = await db.courseSettings.upsert({
-      where: { id: 'default' },
-      update: { 
-        neoBuildCourse,
-        updatedAt: new Date()
-      },
-      create: {
-        id: 'default',
-        neoBuildCourse,
-      }
-    });
+    const existing = await db.$queryRawUnsafe(
+      'SELECT id FROM "CourseSettings" LIMIT 1'
+    );
+    const now = new Date().toISOString();
+    if (existing && existing.length > 0) {
+      await db.$executeRawUnsafe(
+        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "updatedAt" = $2::timestamp WHERE id = $3',
+        neoBuildCourse, now, existing[0].id
+      );
+    } else {
+      const newId = require('crypto').randomUUID();
+      await db.$executeRawUnsafe(
+        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "createdAt", "updatedAt") VALUES ($1, $2, $3::timestamp, $4::timestamp)',
+        newId, neoBuildCourse, now, now
+      );
+    }
     console.log(`[CourseSettings] updated neoBuildCourse to: ${neoBuildCourse}`);
-    res.json({ success: true, neoBuildCourse: settings.neoBuildCourse });
+    res.json({ success: true, neoBuildCourse });
   } catch (error) {
     console.error('[CourseSettings] PUT error:', error);
     res.status(500).json({ error: 'Failed to update course settings', details: error.message });
@@ -299,19 +304,14 @@ app.put('/api/settings/course-settings', async (req, res) => {
 app.get('/api/settings/course-academic-progress', async (req, res) => {
   try {
     const db = await getPrisma();
-    const records = await db.courseAcademicProgress.findMany({
-      orderBy: { courseCode: 'asc' }
+    const records = await db.$queryRawUnsafe(
+      'SELECT "courseCode", "lessonCode" FROM "CourseAcademicProgress" ORDER BY "courseCode" ASC'
+    );
+    const map = {};
+    (records || []).forEach(r => {
+      if (!map[r.courseCode]) map[r.courseCode] = [];
+      map[r.courseCode].push(r.lessonCode);
     });
-    
-    // Convert array to Map format: { courseCode: Set<lessonCode> }
-    const map = new Map<string, Set<string>>();
-    records.forEach(r => {
-      if (!map.has(r.courseCode)) {
-        map.set(r.courseCode, new Set());
-      }
-      map.get(r.courseCode)!.add(r.lessonCode);
-    });
-    
     res.json({ success: true, data: map });
   } catch (error) {
     console.error('[CourseAcademicProgress] GET error:', error);
@@ -327,19 +327,15 @@ app.post('/api/settings/course-academic-progress', async (req, res) => {
     if (!courseCode || !lessonCode) {
       return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
     }
-    const record = await db.courseAcademicProgress.upsert({
-      where: {
-        courseCode_lessonCode: { courseCode, lessonCode }
-      },
-      update: {},
-      create: {
-        courseCode,
-        lessonCode,
-        completedBy: userId
-      }
-    });
+    const newId = require('crypto').randomUUID();
+    const now = new Date().toISOString();
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CourseAcademicProgress" (id, "courseCode", "lessonCode", "completedDate", "completedBy")
+      VALUES ($1, $2, $3, $4::timestamp, $5)
+      ON CONFLICT ("courseCode", "lessonCode") DO NOTHING
+    `, newId, courseCode, lessonCode, now, userId || null);
     console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as complete`);
-    res.json({ success: true, record });
+    res.json({ success: true });
   } catch (error) {
     console.error('[CourseAcademicProgress] POST error:', error);
     res.status(500).json({ error: 'Failed to save course academic progress', details: error.message });
@@ -354,11 +350,10 @@ app.delete('/api/settings/course-academic-progress', async (req, res) => {
     if (!courseCode || !lessonCode) {
       return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
     }
-    await db.courseAcademicProgress.deleteUnique({
-      where: {
-        courseCode_lessonCode: { courseCode, lessonCode }
-      }
-    });
+    await db.$executeRawUnsafe(
+      'DELETE FROM "CourseAcademicProgress" WHERE "courseCode" = $1 AND "lessonCode" = $2',
+      courseCode, lessonCode
+    );
     console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as incomplete`);
     res.json({ success: true });
   } catch (error) {

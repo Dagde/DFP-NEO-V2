@@ -5307,13 +5307,89 @@ const App: React.FC = () => {
         return stored ? JSON.parse(stored) : [];
     });
 
-    // NEO Build basis course (People Profile setting)
-    const [neoBuildCourse, setNeoBuildCourse] = useState<string>(() => {
-        return localStorage.getItem('neoBuildCourse') || '';
-    });
-    const handleUpdateNeoBuildCourse = (course: string) => {
+    // NEO Build basis course (People Profile setting) — persisted in DB
+    const [neoBuildCourse, setNeoBuildCourse] = useState<string>('');
+    useEffect(() => {
+        const loadNeoBuildCourse = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/settings/course-settings`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setNeoBuildCourse(data.neoBuildCourse || '');
+                }
+            } catch (error) {
+                console.error('[NeoBuildCourse] Failed to load:', error);
+            }
+        };
+        loadNeoBuildCourse();
+    }, []);
+    const handleUpdateNeoBuildCourse = async (course: string) => {
         setNeoBuildCourse(course);
-        localStorage.setItem('neoBuildCourse', course);
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            await fetch(`${apiBase}/settings/course-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ neoBuildCourse: course })
+            });
+        } catch (error) {
+            console.error('[NeoBuildCourse] Failed to save:', error);
+        }
+    };
+
+    // Course Academic Progress — persisted in DB: Map<courseCode, Set<lessonCode>>
+    const [courseAcademicProgress, setCourseAcademicProgress] = useState<Map<string, Set<string>>>(new Map());
+    useEffect(() => {
+        const loadCourseAcademicProgress = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/settings/course-academic-progress`);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json.success && json.data) {
+                        const map = new Map<string, Set<string>>();
+                        Object.entries(json.data).forEach(([courseCode, lessons]) => {
+                            map.set(courseCode, new Set(lessons as string[]));
+                        });
+                        setCourseAcademicProgress(map);
+                    }
+                }
+            } catch (error) {
+                console.error('[CourseAcademicProgress] Failed to load:', error);
+            }
+        };
+        loadCourseAcademicProgress();
+    }, []);
+    const handleUpdateCourseAcademicProgress = async (courseCode: string, lessonCode: string, completed: boolean) => {
+        // Optimistic UI update
+        setCourseAcademicProgress(prev => {
+            const next = new Map(prev);
+            if (completed) {
+                if (!next.has(courseCode)) next.set(courseCode, new Set());
+                next.get(courseCode)!.add(lessonCode);
+            } else {
+                next.get(courseCode)?.delete(lessonCode);
+            }
+            return next;
+        });
+        // Persist to DB
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            if (completed) {
+                await fetch(`${apiBase}/settings/course-academic-progress`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ courseCode, lessonCode })
+                });
+            } else {
+                await fetch(`${apiBase}/settings/course-academic-progress?courseCode=${encodeURIComponent(courseCode)}&lessonCode=${encodeURIComponent(lessonCode)}`, {
+                    method: 'DELETE'
+                });
+            }
+        } catch (error) {
+            console.error('[CourseAcademicProgress] Failed to save:', error);
+        }
     };
 
     // Cancellation Codes State
@@ -13622,6 +13698,8 @@ updates.forEach(update => {
                     date={buildDfpDate || new Date().toISOString().split('T')[0]}
                     courseColors={courseColors}
                     school={school}
+                    courseAcademicProgress={courseAcademicProgress}
+                    onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
                 />
             )}
             {showAuthFlyout && eventForAuth && 
