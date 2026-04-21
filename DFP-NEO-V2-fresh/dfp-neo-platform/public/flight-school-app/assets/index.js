@@ -11206,7 +11206,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                 ) : null;
                 const barsForThisRow = [];
                 if (showValidation) {
-                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee).sort((a, b) => a.startTime - b.startTime);
+                  const traineeEventsForBars = events.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee || e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)).sort((a, b) => a.startTime - b.startTime);
                   for (let i = 0; i < traineeEventsForBars.length; i++) {
                     const currentEvent = traineeEventsForBars[i];
                     const prevEvent = traineeEventsForBars[i - 1];
@@ -11260,7 +11260,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                   }
                 }
                 const traineeEvents = eventsWithUnavailability.filter(
-                  (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee
+                  (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee || event.isAcademic && Array.isArray(event.attendees) && event.attendees.includes(trainee)
                 ).sort((a, b) => a.startTime - b.startTime);
                 const eventTiles = traineeEvents.map((event) => {
                   const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
@@ -11305,7 +11305,7 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                     false,
                     {
                       fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/TraineeScheduleView.tsx",
-                      lineNumber: 630,
+                      lineNumber: 631,
                       columnNumber: 19
                     },
                     void 0
@@ -97541,7 +97541,7 @@ const NextDayTraineeScheduleView = ({
                   ) : null;
                   const barsForThisRow = [];
                   if (showValidation) {
-                    const traineeEventsForBars = uniqueEvents.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee).sort((a, b) => a.startTime - b.startTime);
+                    const traineeEventsForBars = uniqueEvents.filter((e) => e.student === trainee || e.flightType === "Solo" && e.pilot === trainee || e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)).sort((a, b) => a.startTime - b.startTime);
                     for (let i = 0; i < traineeEventsForBars.length; i++) {
                       const currentEvent = traineeEventsForBars[i];
                       const prevEvent = traineeEventsForBars[i - 1];
@@ -97595,7 +97595,7 @@ const NextDayTraineeScheduleView = ({
                     }
                   }
                   const traineeEvents = uniqueEvents.filter(
-                    (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee
+                    (event) => event.student === trainee || event.flightType === "Solo" && event.pilot === trainee || event.isAcademic && Array.isArray(event.attendees) && event.attendees.includes(trainee)
                   ).sort((a, b) => a.startTime - b.startTime);
                   const eventTiles = traineeEvents.map((event) => {
                     const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
@@ -97639,7 +97639,7 @@ const NextDayTraineeScheduleView = ({
                       false,
                       {
                         fileName: "/workspace/dfp-repo/DFP-NEO-V2-fresh/components/NextDayTraineeScheduleView.tsx",
-                        lineNumber: 564,
+                        lineNumber: 565,
                         columnNumber: 19
                       },
                       void 0

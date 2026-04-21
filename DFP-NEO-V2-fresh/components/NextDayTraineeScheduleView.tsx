@@ -472,7 +472,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
               
               if (showValidation) {
                 const traineeEventsForBars = uniqueEvents
-                  .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee))
+                  .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee) || (e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)))
                   .sort((a, b) => a.startTime - b.startTime);
                 
                 for (let i = 0; i < traineeEventsForBars.length; i++) {
@@ -537,7 +537,8 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
               
               const traineeEvents = uniqueEvents.filter(event => 
                 event.student === trainee || 
-                (event.flightType === 'Solo' && event.pilot === trainee)
+                (event.flightType === 'Solo' && event.pilot === trainee) ||
+                (event.isAcademic && Array.isArray(event.attendees) && event.attendees.includes(trainee))
               ).sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = traineeEvents.map(event => {
