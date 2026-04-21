@@ -255,17 +255,22 @@ app.post('/api/settings', async (req, res) => {
 // Course Settings API Routes
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// GET /api/settings/course-settings - Get course settings (neoBuildCourse + selectedAcademicLmp)
+// GET /api/settings/course-settings - Get course settings (neoBuildCourse + selectedAcademicLmp + excludedCourses)
 app.get('/api/settings/course-settings', async (req, res) => {
   try {
     const db = await getPrisma();
     const rows = await db.$queryRawUnsafe(
-      'SELECT "neoBuildCourse", "selectedAcademicLmp" FROM "CourseSettings" LIMIT 1'
+      'SELECT "neoBuildCourse", "selectedAcademicLmp", "excludedCourses" FROM "CourseSettings" LIMIT 1'
     );
     const setting = rows && rows.length > 0 ? rows[0] : null;
+    let excludedCourses = [];
+    if (setting && setting.excludedCourses) {
+      try { excludedCourses = JSON.parse(setting.excludedCourses); } catch (_) {}
+    }
     return res.json({
       neoBuildCourse: setting ? (setting.neoBuildCourse || null) : null,
       selectedAcademicLmp: setting ? (setting.selectedAcademicLmp || null) : null,
+      excludedCourses,
     });
   } catch (error) {
     console.error('[CourseSettings] GET error:', error);
@@ -273,36 +278,38 @@ app.get('/api/settings/course-settings', async (req, res) => {
   }
 });
 
-// PUT /api/settings/course-settings - Update course settings (neoBuildCourse and/or selectedAcademicLmp)
+// PUT /api/settings/course-settings - Update course settings (neoBuildCourse and/or selectedAcademicLmp and/or excludedCourses)
 app.put('/api/settings/course-settings', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { neoBuildCourse, selectedAcademicLmp } = req.body;
-    // At least one field must be present (allow empty string to clear a value)
-    if (neoBuildCourse === undefined && selectedAcademicLmp === undefined) {
+    const { neoBuildCourse, selectedAcademicLmp, excludedCourses } = req.body;
+    // At least one field must be present (allow empty string/array to clear a value)
+    if (neoBuildCourse === undefined && selectedAcademicLmp === undefined && excludedCourses === undefined) {
       return res.status(400).json({ error: 'No settings fields provided' });
     }
     const existing = await db.$queryRawUnsafe(
-      'SELECT id, "neoBuildCourse", "selectedAcademicLmp" FROM "CourseSettings" LIMIT 1'
+      'SELECT id, "neoBuildCourse", "selectedAcademicLmp", "excludedCourses" FROM "CourseSettings" LIMIT 1'
     );
     const now = new Date().toISOString();
     if (existing && existing.length > 0) {
       const row = existing[0];
       const newNeoBuildCourse = neoBuildCourse !== undefined ? neoBuildCourse : row.neoBuildCourse;
       const newSelectedAcademicLmp = selectedAcademicLmp !== undefined ? selectedAcademicLmp : row.selectedAcademicLmp;
+      const newExcludedCourses = excludedCourses !== undefined ? JSON.stringify(excludedCourses) : (row.excludedCourses || '[]');
       await db.$executeRawUnsafe(
-        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "selectedAcademicLmp" = $2, "updatedAt" = $3::timestamp WHERE id = $4',
-        newNeoBuildCourse || null, newSelectedAcademicLmp || null, now, row.id
+        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "selectedAcademicLmp" = $2, "excludedCourses" = $3, "updatedAt" = $4::timestamp WHERE id = $5',
+        newNeoBuildCourse || null, newSelectedAcademicLmp || null, newExcludedCourses, now, row.id
       );
     } else {
       const newId = require('crypto').randomUUID();
+      const newExcludedCourses = excludedCourses !== undefined ? JSON.stringify(excludedCourses) : '[]';
       await db.$executeRawUnsafe(
-        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "selectedAcademicLmp", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4::timestamp, $5::timestamp)',
-        newId, neoBuildCourse || null, selectedAcademicLmp || null, now, now
+        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "selectedAcademicLmp", "excludedCourses", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5::timestamp, $6::timestamp)',
+        newId, neoBuildCourse || null, selectedAcademicLmp || null, newExcludedCourses, now, now
       );
     }
-    console.log(`[CourseSettings] updated: neoBuildCourse=${neoBuildCourse}, selectedAcademicLmp=${selectedAcademicLmp}`);
-    res.json({ success: true, neoBuildCourse, selectedAcademicLmp });
+    console.log(`[CourseSettings] updated: neoBuildCourse=${neoBuildCourse}, selectedAcademicLmp=${selectedAcademicLmp}, excludedCourses=${JSON.stringify(excludedCourses)}`);
+    res.json({ success: true, neoBuildCourse, selectedAcademicLmp, excludedCourses });
   } catch (error) {
     console.error('[CourseSettings] PUT error:', error);
     res.status(500).json({ error: 'Failed to update course settings', details: error.message });
@@ -3195,21 +3202,27 @@ async function ensureAppSettingsTable(db) {
 
 async function ensureCourseSettingsTables(db) {
   try {
-    // CourseSettings: stores neoBuildCourse + selectedAcademicLmp
+    // CourseSettings: stores neoBuildCourse + selectedAcademicLmp + excludedCourses
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "CourseSettings" (
         "id"                  TEXT         NOT NULL,
         "neoBuildCourse"      TEXT,
         "selectedAcademicLmp" TEXT,
+        "excludedCourses"     TEXT         NOT NULL DEFAULT '[]',
         "createdAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updatedAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         CONSTRAINT "CourseSettings_pkey" PRIMARY KEY ("id")
       );
     `);
-    // Add selectedAcademicLmp column if it was created without it (migration safety)
+    // Migration safety: add columns if table was created without them
     try {
       await db.$executeRawUnsafe(`
         ALTER TABLE "CourseSettings" ADD COLUMN IF NOT EXISTS "selectedAcademicLmp" TEXT;
+      `);
+    } catch (_) {}
+    try {
+      await db.$executeRawUnsafe(`
+        ALTER TABLE "CourseSettings" ADD COLUMN IF NOT EXISTS "excludedCourses" TEXT NOT NULL DEFAULT '[]';
       `);
     } catch (_) {}
     console.log('✅ CourseSettings table ready');

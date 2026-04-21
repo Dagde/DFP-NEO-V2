@@ -12937,6 +12937,8 @@ updates.forEach(update => {
                        onUpdateOrganisationSettings={setOrganisationSettings}
                        neoBuildCourse={neoBuildCourse}
                        onUpdateNeoBuildCourse={handleUpdateNeoBuildCourse}
+                       excludedCourses={excludedCourses}
+                       onUpdateExcludedCourses={handleUpdateExcludedCourses}
                        
                 />;
             case 'CurrencyBuilder':
