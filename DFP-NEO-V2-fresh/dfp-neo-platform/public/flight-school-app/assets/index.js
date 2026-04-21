@@ -24921,7 +24921,6 @@ const AcademicsTab = ({
   const [resourceId, setResourceId] = reactExports.useState("");
   const [instructor, setInstructor] = reactExports.useState("");
   const [editTileId, setEditTileId] = reactExports.useState(null);
-  const editTile = editTileId ? tiles.find((t) => t.id === editTileId) || null : null;
   const [editStartTime, setEditStartTime] = reactExports.useState("");
   const [editDuration, setEditDuration] = reactExports.useState("");
   const coursesForLocality = reactExports.useMemo(() => {
@@ -25008,6 +25007,7 @@ Do you still want to include them in this academic session?`
   }, [syllabusDetails, selectedAcademicLmp]);
   const moduleGroups = reactExports.useMemo(() => groupByModule(academicSyllabus), [academicSyllabus]);
   const [tiles, setTiles] = reactExports.useState([]);
+  const editTile = editTileId ? tiles.find((t) => t.id === editTileId) ?? null : null;
   const [selectedLessons, setSelectedLessons] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedStandard, setSelectedStandard] = reactExports.useState(/* @__PURE__ */ new Set());
   const getNextStart = reactExports.useCallback((newDuration) => {
@@ -25182,54 +25182,54 @@ Do you still want to include them in this academic session?`
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Locality" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 667,
+          lineNumber: 668,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: S.select, value: selectedLocality, onChange: (e) => setSelectedLocality(e.target.value), children: localities.map((l) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: l, children: l }, l, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 669,
+          lineNumber: 670,
           columnNumber: 34
         }, void 0)) }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 668,
+          lineNumber: 669,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 666,
+        lineNumber: 667,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Course" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 673,
+          lineNumber: 674,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: S.select, value: selectedCourse2, onChange: (e) => setSelectedCourse(e.target.value), children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "-- Select --" }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 675,
+            lineNumber: 676,
             columnNumber: 13
           }, void 0),
           coursesForLocality.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c, children: c }, c, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 676,
+            lineNumber: 677,
             columnNumber: 42
           }, void 0))
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 674,
+          lineNumber: 675,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 672,
+        lineNumber: 673,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.label, color: "#93c5fd" }, children: "Academic LMP" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 680,
+          lineNumber: 681,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25246,12 +25246,12 @@ Do you still want to include them in this academic session?`
             children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "-- Select LMP --" }, void 0, false, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 691,
+                lineNumber: 692,
                 columnNumber: 13
               }, void 0),
               academicLmpCourses.map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c.code, children: c.title }, c.code, false, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 692,
+                lineNumber: 693,
                 columnNumber: 42
               }, void 0))
             ]
@@ -25260,36 +25260,36 @@ Do you still want to include them in this academic session?`
           true,
           {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 681,
+            lineNumber: 682,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 679,
+        lineNumber: 680,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Date" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 696,
+          lineNumber: 697,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "date", style: S.input, value: selectedDate2, onChange: (e) => setSelectedDate(e.target.value) }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 697,
+          lineNumber: 698,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 695,
+        lineNumber: 696,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Work Start" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 700,
+          lineNumber: 701,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25307,20 +25307,20 @@ Do you still want to include them in this academic session?`
           false,
           {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 701,
+            lineNumber: 702,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 699,
+        lineNumber: 700,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Work End" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 710,
+          lineNumber: 711,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25338,19 +25338,19 @@ Do you still want to include them in this academic session?`
           false,
           {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 711,
+            lineNumber: 712,
             columnNumber: 11
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 709,
+        lineNumber: 710,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 665,
+      lineNumber: 666,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", gap: 10 }, children: [
@@ -25363,17 +25363,17 @@ Do you still want to include them in this academic session?`
             courseTrainees.length
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 727,
+            lineNumber: 728,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 726,
+          lineNumber: 727,
           columnNumber: 11
         }, void 0),
         courseTrainees.length === 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { color: "#6b7280", fontSize: 12, fontStyle: "italic" }, children: "Select a course" }, void 0, false, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 732,
+          lineNumber: 733,
           columnNumber: 13
         }, void 0),
         courseTrainees.map((t) => {
@@ -25390,7 +25390,7 @@ Do you still want to include them in this academic session?`
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked, onChange: () => {
                 }, style: { accentColor: "#38bdf8", width: 14, height: 14 } }, void 0, false, {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 741,
+                  lineNumber: 742,
                   columnNumber: 17
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: {
@@ -25402,12 +25402,12 @@ Do you still want to include them in this academic session?`
                   display: "inline-block"
                 } }, void 0, false, {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 742,
+                  lineNumber: 743,
                   columnNumber: 17
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 12, color: checked ? "#f9fafb" : "#9ca3af", flex: 1 }, children: stripCourse(t.fullName) }, void 0, false, {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 746,
+                  lineNumber: 747,
                   columnNumber: 17
                 }, void 0)
               ]
@@ -25416,7 +25416,7 @@ Do you still want to include them in this academic session?`
             true,
             {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 739,
+              lineNumber: 740,
               columnNumber: 15
             },
             void 0
@@ -25424,14 +25424,14 @@ Do you still want to include them in this academic session?`
         })
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 725,
+        lineNumber: 726,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexDirection: "column", gap: 10, flex: 1, minWidth: 0 }, children: [
         suggestions.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.card, backgroundColor: "#1e3a5f", border: "1px solid #1d4ed8" }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.label, color: "#93c5fd" }, children: "💡 Suggested Next Lessons" }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 758,
+            lineNumber: 759,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: suggestions.map((s) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25454,47 +25454,47 @@ Do you still want to include them in this academic session?`
             false,
             {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 761,
+              lineNumber: 762,
               columnNumber: 19
             },
             void 0
           )) }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 759,
+            lineNumber: 760,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 757,
+          lineNumber: 758,
           columnNumber: 13
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { ...S.card, maxHeight: 300, overflowY: "auto", flex: 1, minWidth: 0 }, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, flexWrap: "wrap" }, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "LMP Lessons" }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 779,
+              lineNumber: 780,
               columnNumber: 15
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 10, color: "#6b7280" }, children: [
               "✅ = course complete  ⬜ = not yet complete  ",
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { color: "#93c5fd" }, children: "(click ✅/⬜ to toggle course completion)" }, void 0, false, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 782,
+                lineNumber: 783,
                 columnNumber: 17
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 780,
+              lineNumber: 781,
               columnNumber: 15
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 778,
+            lineNumber: 779,
             columnNumber: 13
           }, void 0),
           moduleGroups.length === 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { color: "#6b7280", fontSize: 12, fontStyle: "italic" }, children: "No academic lessons found for this course" }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 786,
+            lineNumber: 787,
             columnNumber: 15
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }, children: moduleGroups.map(({ moduleKey, label, items: moduleItems }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
             minWidth: 190,
@@ -25514,7 +25514,7 @@ Do you still want to include them in this academic session?`
               letterSpacing: 1
             }, children: label }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 798,
+              lineNumber: 799,
               columnNumber: 21
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { padding: "4px 2px" }, children: moduleItems.map((item) => {
@@ -25564,7 +25564,7 @@ Do you still want to include them in this academic session?`
                       false,
                       {
                         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                        lineNumber: 821,
+                        lineNumber: 822,
                         columnNumber: 29
                       },
                       void 0
@@ -25584,7 +25584,7 @@ Do you still want to include them in this academic session?`
                         children: [
                           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontWeight: 700, color: isCourseDone ? "#9ca3af" : "#f9fafb", fontSize: 11 }, children: item.code }, void 0, false, {
                             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                            lineNumber: 846,
+                            lineNumber: 847,
                             columnNumber: 31
                           }, void 0),
                           item.eventDescription && !item.eventDescription.startsWith(item.code) ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -25592,7 +25592,7 @@ Do you still want to include them in this academic session?`
                             item.eventDescription
                           ] }, void 0, true, {
                             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                            lineNumber: 848,
+                            lineNumber: 849,
                             columnNumber: 35
                           }, void 0) : null
                         ]
@@ -25601,7 +25601,7 @@ Do you still want to include them in this academic session?`
                       true,
                       {
                         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                        lineNumber: 839,
+                        lineNumber: 840,
                         columnNumber: 29
                       },
                       void 0
@@ -25611,7 +25611,7 @@ Do you still want to include them in this academic session?`
                       "h"
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 852,
+                      lineNumber: 853,
                       columnNumber: 31
                     }, void 0) : null
                   ]
@@ -25620,34 +25620,34 @@ Do you still want to include them in this academic session?`
                 true,
                 {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 812,
+                  lineNumber: 813,
                   columnNumber: 27
                 },
                 void 0
               );
             }) }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 804,
+              lineNumber: 805,
               columnNumber: 21
             }, void 0)
           ] }, moduleKey, true, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 792,
+            lineNumber: 793,
             columnNumber: 19
           }, void 0)) }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 790,
+            lineNumber: 791,
             columnNumber: 15
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 777,
+          lineNumber: 778,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.card, children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Standard Events" }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 868,
+            lineNumber: 869,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexWrap: "wrap", gap: 6 }, children: STANDARD_EVENTS.map((ev) => {
@@ -25677,7 +25677,7 @@ Do you still want to include them in this academic session?`
                 false,
                 {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 874,
+                  lineNumber: 875,
                   columnNumber: 21
                 },
                 void 0
@@ -25695,34 +25695,34 @@ Do you still want to include them in this academic session?`
                 false,
                 {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 888,
+                  lineNumber: 889,
                   columnNumber: 23
                 },
                 void 0
               )
             ] }, ev.code, true, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 873,
+              lineNumber: 874,
               columnNumber: 19
             }, void 0);
           }) }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 869,
+            lineNumber: 870,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 867,
+          lineNumber: 868,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 753,
+        lineNumber: 754,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 722,
+      lineNumber: 723,
       columnNumber: 7
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.card, children: [
@@ -25734,66 +25734,66 @@ Do you still want to include them in this academic session?`
           fmtTime(workEnd)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 907,
+          lineNumber: 908,
           columnNumber: 11
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }, children: [
           instructors.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Instructor" }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 912,
+              lineNumber: 913,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: { ...S.select, width: 160 }, value: instructor, onChange: (e) => setInstructor(e.target.value), children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— Unallocated —" }, void 0, false, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 914,
+                lineNumber: 915,
                 columnNumber: 19
               }, void 0),
               instructors.map((i) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: i, children: i }, i, false, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 916,
+                lineNumber: 917,
                 columnNumber: 21
               }, void 0))
             ] }, void 0, true, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 913,
+              lineNumber: 914,
               columnNumber: 17
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 911,
+            lineNumber: 912,
             columnNumber: 15
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: S.label, children: "Classroom" }, void 0, false, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 921,
+            lineNumber: 922,
             columnNumber: 13
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("select", { style: { ...S.select, width: 120 }, value: resourceId, onChange: (e) => setResourceId(e.target.value), children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— Select —" }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 923,
+              lineNumber: 924,
               columnNumber: 15
             }, void 0),
             Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: g, children: g }, g, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 925,
+              lineNumber: 926,
               columnNumber: 17
             }, void 0))
           ] }, void 0, true, {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 922,
+            lineNumber: 923,
             columnNumber: 13
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 908,
+          lineNumber: 909,
           columnNumber: 11
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 906,
+        lineNumber: 907,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25813,7 +25813,7 @@ Do you still want to include them in this academic session?`
               borderRight: "1px dashed #374151"
             } }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 937,
+              lineNumber: 938,
               columnNumber: 11
             }, void 0),
             hourMarkers.map((h) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: {
@@ -25824,11 +25824,11 @@ Do you still want to include them in this academic session?`
               borderLeft: "1px solid #1f2937"
             }, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, color: "#4b5563", paddingLeft: 2, paddingTop: 2, display: "block" }, children: String(h).padStart(2, "0") }, void 0, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 952,
+              lineNumber: 953,
               columnNumber: 15
             }, void 0) }, h, false, {
               fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-              lineNumber: 947,
+              lineNumber: 948,
               columnNumber: 13
             }, void 0)),
             tiles.map((tile) => {
@@ -25868,7 +25868,7 @@ Do you still want to include them in this academic session?`
                   children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 10, fontWeight: 700, color: "#fff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, children: tile.label }, void 0, false, {
                       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 994,
+                      lineNumber: 995,
                       columnNumber: 17
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { style: { fontSize: 9, color: "rgba(255,255,255,0.7)" }, children: [
@@ -25877,7 +25877,7 @@ Do you still want to include them in this academic session?`
                       fmtTime(tile.startTime + tile.duration)
                     ] }, void 0, true, {
                       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 997,
+                      lineNumber: 998,
                       columnNumber: 17
                     }, void 0)
                   ]
@@ -25886,7 +25886,7 @@ Do you still want to include them in this academic session?`
                 true,
                 {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 965,
+                  lineNumber: 966,
                   columnNumber: 15
                 },
                 void 0
@@ -25898,7 +25898,7 @@ Do you still want to include them in this academic session?`
         true,
         {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 932,
+          lineNumber: 933,
           columnNumber: 9
         },
         void 0
@@ -25919,7 +25919,7 @@ Do you still want to include them in this academic session?`
           tile.lessonCode
         ] }, void 0, true, {
           fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-          lineNumber: 1013,
+          lineNumber: 1014,
           columnNumber: 17
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25948,23 +25948,23 @@ Do you still want to include them in this academic session?`
           false,
           {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 1014,
+            lineNumber: 1015,
             columnNumber: 17
           },
           void 0
         )
       ] }, tile.id, true, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 1009,
+        lineNumber: 1010,
         columnNumber: 15
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 1007,
+        lineNumber: 1008,
         columnNumber: 11
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 905,
+      lineNumber: 906,
       columnNumber: 7
     }, void 0),
     editTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -25998,7 +25998,7 @@ Do you still want to include them in this academic session?`
                 editTile.lessonCode
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 1048,
+                lineNumber: 1049,
                 columnNumber: 13
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", flexDirection: "column", gap: 10 }, children: [
@@ -26027,14 +26027,14 @@ Do you still want to include them in this academic session?`
                     false,
                     {
                       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 1054,
+                      lineNumber: 1055,
                       columnNumber: 17
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 1052,
+                  lineNumber: 1053,
                   columnNumber: 15
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { style: { color: "#94a3b8", fontSize: 12 }, children: [
@@ -26064,19 +26064,19 @@ Do you still want to include them in this academic session?`
                     false,
                     {
                       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                      lineNumber: 1068,
+                      lineNumber: 1069,
                       columnNumber: 17
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                  lineNumber: 1066,
+                  lineNumber: 1067,
                   columnNumber: 15
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 1051,
+                lineNumber: 1052,
                 columnNumber: 13
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }, children: [
@@ -26099,7 +26099,7 @@ Do you still want to include them in this academic session?`
                   false,
                   {
                     fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                    lineNumber: 1084,
+                    lineNumber: 1085,
                     columnNumber: 15
                   },
                   void 0
@@ -26134,14 +26134,14 @@ Do you still want to include them in this academic session?`
                   false,
                   {
                     fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                    lineNumber: 1094,
+                    lineNumber: 1095,
                     columnNumber: 15
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-                lineNumber: 1083,
+                lineNumber: 1084,
                 columnNumber: 13
               }, void 0)
             ]
@@ -26150,7 +26150,7 @@ Do you still want to include them in this academic session?`
           true,
           {
             fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-            lineNumber: 1041,
+            lineNumber: 1042,
             columnNumber: 11
           },
           void 0
@@ -26160,7 +26160,7 @@ Do you still want to include them in this academic session?`
       false,
       {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 1034,
+        lineNumber: 1035,
         columnNumber: 9
       },
       void 0
@@ -26168,22 +26168,22 @@ Do you still want to include them in this academic session?`
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { style: { display: "flex", justifyContent: "flex-end", gap: 6, paddingTop: 4 }, children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }, void 0, false, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 1122,
+        lineNumber: 1123,
         columnNumber: 9
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500", children: "Publish" }, void 0, false, {
         fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-        lineNumber: 1125,
+        lineNumber: 1126,
         columnNumber: 9
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-      lineNumber: 1121,
+      lineNumber: 1122,
       columnNumber: 7
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/dfp-repo-fresh/DFP-NEO-V2-fresh/components/AcademicsTab.tsx",
-    lineNumber: 663,
+    lineNumber: 664,
     columnNumber: 5
   }, void 0);
 };

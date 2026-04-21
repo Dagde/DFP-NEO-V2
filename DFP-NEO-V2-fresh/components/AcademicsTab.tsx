@@ -343,7 +343,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   // Edit-tile modal state
   const [editTileId, setEditTileId] = useState<string | null>(null);
-  const editTile = editTileId ? tiles.find(t => t.id === editTileId) || null : null;
   const [editStartTime, setEditStartTime] = useState('');
   const [editDuration, setEditDuration] = useState('');
 
@@ -456,6 +455,8 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   // ── Timeline tiles ──
   const [tiles, setTiles] = useState<TimelineTile[]>([]);
+  // Derived: the tile currently being edited (must be after tiles declaration)
+  const editTile = editTileId ? tiles.find(t => t.id === editTileId) ?? null : null;
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
   const [selectedStandard, setSelectedStandard] = useState<Set<string>>(new Set());
 
