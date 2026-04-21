@@ -5307,28 +5307,34 @@ const App: React.FC = () => {
         return stored ? JSON.parse(stored) : [];
     });
 
+    // Shared API base helper — always use relative /api when served from same origin
+    const getApiBase = () => '/api';
+
     // NEO Build basis course (People Profile setting) — persisted in DB
     const [neoBuildCourse, setNeoBuildCourse] = useState<string>('');
+    // Selected Academic LMP — persisted in DB so last selection survives hard reset
+    const [persistedAcademicLmp, setPersistedAcademicLmp] = useState<string>('');
+
     useEffect(() => {
-        const loadNeoBuildCourse = async () => {
+        const loadCourseSettings = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-                const res = await fetch(`${apiBase}/settings/course-settings`);
+                const res = await fetch(`${getApiBase()}/settings/course-settings`);
                 if (res.ok) {
                     const data = await res.json();
                     setNeoBuildCourse(data.neoBuildCourse || '');
+                    setPersistedAcademicLmp(data.selectedAcademicLmp || '');
                 }
             } catch (error) {
-                console.error('[NeoBuildCourse] Failed to load:', error);
+                console.error('[CourseSettings] Failed to load:', error);
             }
         };
-        loadNeoBuildCourse();
+        loadCourseSettings();
     }, []);
+
     const handleUpdateNeoBuildCourse = async (course: string) => {
         setNeoBuildCourse(course);
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-            await fetch(`${apiBase}/settings/course-settings`, {
+            await fetch(`${getApiBase()}/settings/course-settings`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ neoBuildCourse: course })
@@ -5338,13 +5344,25 @@ const App: React.FC = () => {
         }
     };
 
+    const handleUpdatePersistedAcademicLmp = async (lmp: string) => {
+        setPersistedAcademicLmp(lmp);
+        try {
+            await fetch(`${getApiBase()}/settings/course-settings`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ selectedAcademicLmp: lmp })
+            });
+        } catch (error) {
+            console.error('[SelectedAcademicLmp] Failed to save:', error);
+        }
+    };
+
     // Course Academic Progress — persisted in DB: Map<courseCode, Set<lessonCode>>
     const [courseAcademicProgress, setCourseAcademicProgress] = useState<Map<string, Set<string>>>(new Map());
     useEffect(() => {
         const loadCourseAcademicProgress = async () => {
             try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-                const res = await fetch(`${apiBase}/settings/course-academic-progress`);
+                const res = await fetch(`${getApiBase()}/settings/course-academic-progress`);
                 if (res.ok) {
                     const json = await res.json();
                     if (json.success && json.data) {
@@ -5375,15 +5393,14 @@ const App: React.FC = () => {
         });
         // Persist to DB
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
             if (completed) {
-                await fetch(`${apiBase}/settings/course-academic-progress`, {
+                await fetch(`${getApiBase()}/settings/course-academic-progress`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ courseCode, lessonCode })
                 });
             } else {
-                await fetch(`${apiBase}/settings/course-academic-progress?courseCode=${encodeURIComponent(courseCode)}&lessonCode=${encodeURIComponent(lessonCode)}`, {
+                await fetch(`${getApiBase()}/settings/course-academic-progress?courseCode=${encodeURIComponent(courseCode)}&lessonCode=${encodeURIComponent(lessonCode)}`, {
                     method: 'DELETE'
                 });
             }
@@ -13700,6 +13717,8 @@ updates.forEach(update => {
                     school={school}
                     courseAcademicProgress={courseAcademicProgress}
                     onUpdateCourseAcademicProgress={handleUpdateCourseAcademicProgress}
+                    persistedAcademicLmp={persistedAcademicLmp}
+                    onUpdatePersistedAcademicLmp={handleUpdatePersistedAcademicLmp}
                 />
             )}
             {showAuthFlyout && eventForAuth && 
