@@ -546,29 +546,32 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
             return '#1d3461'; // default academic blue
         };
 
+        // Build lesson-only tiles (exclude standard breaks/lunch) for the flyout
+        const lessonTiles = tiles.filter(t => !t.isStandard);
+        const instructor = (event as any).instructor || '';
+        const classroom = (event as any).resourceId || '';
+
         return (
-            <div style={{
-                position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
-                background: 'rgba(186,230,253,0.07)',
-                border: '2px solid rgba(147,197,253,0.40)',
-                borderRadius: 5,
-                boxSizing: 'border-box',
-            }}>
-                {/* Inset lesson tiles — no header text, just the coloured lesson blocks */}
+            <div
+                className="academic-outer-tile"
+                style={{
+                    position: 'relative', width: '100%', height: '100%', overflow: 'visible',
+                    background: 'rgba(186,230,253,0.07)',
+                    border: '2px solid rgba(147,197,253,0.40)',
+                    borderRadius: 5,
+                    boxSizing: 'border-box',
+                }}
+            >
+                {/* Inset lesson tiles — lesson code only, no times */}
                 <div style={{ position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, overflow: 'hidden' }}>
                     {tiles.map((t, i) => {
-                        // Position each inset tile proportionally within the outer tile
                         const offsetFromStart = t.startTime - dayStart;
                         const leftPct = (offsetFromStart / dayDuration) * 100;
                         const widthPct = (t.duration / dayDuration) * 100;
-                        const isStandard = t.isStandard;
                         const bgColor = getAcadTileColor(t.lessonCode, t.color || '#1d4ed8', t.isStandard);
-                        // Display the lesson code as the primary label
-                        const shortLabel = t.lessonCode;
                         return (
                             <div
                                 key={i}
-                                className="academic-inset-tile"
                                 style={{
                                     position: 'absolute',
                                     top: 0,
@@ -581,66 +584,104 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                                     overflow: 'hidden',
                                     cursor: 'default',
                                     display: 'flex',
-                                    flexDirection: 'column',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     zIndex: 3,
                                     padding: '0 4px',
                                 }}
                             >
-                                {/* Tooltip on hover */}
-                                <div className="academic-tile-tooltip" style={{
-                                    position: 'absolute',
-                                    bottom: '100%',
-                                    left: '50%',
-                                    transform: 'translateX(-50%)',
-                                    marginBottom: 4,
-                                    backgroundColor: '#0f172a',
-                                    border: '1px solid #3b82f6',
-                                    borderRadius: 5,
-                                    padding: '4px 8px',
-                                    whiteSpace: 'nowrap',
-                                    fontSize: 11,
-                                    color: '#e2e8f0',
-                                    fontWeight: 600,
-                                    pointerEvents: 'none',
-                                    opacity: 0,
-                                    transition: 'opacity 0.15s',
-                                    zIndex: 100,
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                                }}>
-                                    <span style={{ color: '#93c5fd' }}>{t.lessonCode}</span>
-                                    {t.label && t.label !== t.lessonCode && !t.label.startsWith(t.lessonCode + ' ')
-                                        ? ` — ${t.label}`
-                                        : t.label !== t.lessonCode
-                                            ? ` — ${t.label.slice(t.lessonCode.length).replace(/^[\s:—-]+/, '')}`
-                                            : ''}
-                                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
-                                        {formatTime(t.startTime)} – {formatTime(t.startTime + t.duration)} ({t.duration}h)
-                                    </div>
-                                </div>
-                                {/* Lesson code label — larger and more readable */}
+                                {/* Lesson code only — no times, no instructors */}
                                 <span style={{
                                     fontSize: 11, fontWeight: 700, color: '#fff',
                                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                     lineHeight: 1.2, textAlign: 'center',
                                 }}>
-                                    {shortLabel}
-                                </span>
-                                {/* Start time sub-label */}
-                                <span style={{
-                                    fontSize: 9, color: 'rgba(255,255,255,0.65)',
-                                    whiteSpace: 'nowrap', lineHeight: 1.1, textAlign: 'center',
-                                }}>
-                                    {formatTime(t.startTime)}
+                                    {t.lessonCode}
                                 </span>
                             </div>
                         );
                     })}
                 </div>
-                {/* CSS for tooltip hover */}
+
+                {/* Hover flyout on the outer academic tile — shows all event details */}
+                <div className="academic-outer-flyout" style={{
+                    position: 'absolute',
+                    bottom: 'calc(100% + 6px)',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#0f172a',
+                    border: '1px solid rgba(147,197,253,0.6)',
+                    borderRadius: 7,
+                    padding: '8px 12px',
+                    minWidth: 220,
+                    maxWidth: 320,
+                    pointerEvents: 'none',
+                    opacity: 0,
+                    transition: 'opacity 0.15s',
+                    zIndex: 200,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+                    whiteSpace: 'nowrap',
+                }}>
+                    {/* Header */}
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#93c5fd', marginBottom: 6, borderBottom: '1px solid rgba(147,197,253,0.3)', paddingBottom: 4 }}>
+                        Academic Session
+                        {classroom && classroom !== 'Ground 1' && (
+                            <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: 6 }}>— {classroom}</span>
+                        )}
+                    </div>
+                    {/* Instructor row */}
+                    {instructor && (
+                        <div style={{ fontSize: 10, color: '#cbd5e1', marginBottom: 5 }}>
+                            <span style={{ color: '#64748b', marginRight: 4 }}>▶</span>
+                            <span style={{ color: '#94a3b8', marginRight: 4 }}>Instructor:</span>
+                            <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{instructor}</span>
+                        </div>
+                    )}
+                    {/* Event rows — lesson tiles only (skip standard breaks) */}
+                    {lessonTiles.map((t, i) => {
+                        const endTime = t.startTime + t.duration;
+                        const durationMins = Math.round(t.duration * 60);
+                        const durationStr = durationMins >= 60
+                            ? `${Math.floor(durationMins/60)}h${durationMins%60 > 0 ? ` ${durationMins%60}m` : ''}`
+                            : `${durationMins}m`;
+                        const bgColor = getAcadTileColor(t.lessonCode, t.color || '#1d4ed8', false);
+                        // Get description from label if different from code
+                        const desc = t.label && t.label !== t.lessonCode
+                            ? t.label.replace(new RegExp('^' + t.lessonCode + '[\s:\u2014-]*'), '').trim()
+                            : '';
+                        return (
+                            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
+                                <div style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: bgColor, flexShrink: 0, marginTop: 2 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: '#e2e8f0' }}>
+                                        {t.lessonCode}
+                                        {desc && <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: 4 }}>{desc}</span>}
+                                    </div>
+                                    <div style={{ fontSize: 10, color: '#64748b' }}>
+                                        {formatTime(t.startTime)} – {formatTime(endTime)}
+                                        <span style={{ color: '#475569', marginLeft: 6 }}>({durationStr})</span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {/* Session total */}
+                    <div style={{ borderTop: '1px solid rgba(147,197,253,0.2)', marginTop: 4, paddingTop: 4, fontSize: 10, color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Session: {formatTime(dayStart)} – {formatTime(dayStart + dayDuration)}</span>
+                        <span style={{ color: '#475569' }}>
+                            {(() => {
+                                const totalMins = Math.round(dayDuration * 60);
+                                return totalMins >= 60
+                                    ? `${Math.floor(totalMins/60)}h${totalMins%60 > 0 ? ` ${totalMins%60}m` : ''}`
+                                    : `${totalMins}m`;
+                            })()}
+                        </span>
+                    </div>
+                </div>
+
+                {/* CSS for outer tile hover flyout */}
                 <style>{`
-                    .academic-inset-tile:hover .academic-tile-tooltip { opacity: 1 !important; }
+                    .academic-outer-tile:hover .academic-outer-flyout { opacity: 1 !important; }
                 `}</style>
             </div>
         );
