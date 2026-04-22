@@ -10,6 +10,10 @@ const API_BASE = '/api';
 const CACHE_KEY = 'dfp-syllabus-cache';
 const CACHE_TIMESTAMP_KEY = 'dfp-syllabus-cache-timestamp';
 const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+// Increment this version when DB schema/data migrations change the syllabus structure.
+// Old caches with a different version are automatically invalidated on next load.
+const CACHE_VERSION = '2'; // v2: Academics items now have courses[] = [moduleName]
+const CACHE_VERSION_KEY = 'dfp-syllabus-cache-version';
 
 // ============================================================================
 // CACHE HELPERS
@@ -20,7 +24,17 @@ function getCachedSyllabus(): { data: SyllabusItemDetail[]; expired: boolean } |
     if (typeof window === 'undefined') return null;
     const raw = localStorage.getItem(CACHE_KEY);
     const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+    const version = localStorage.getItem(CACHE_VERSION_KEY);
     if (!raw || !timestamp) return null;
+
+    // Invalidate cache if version doesn't match (DB migration changed data structure)
+    if (version !== CACHE_VERSION) {
+      console.log(`[Syllabus Cache] Version mismatch (cached: ${version}, current: ${CACHE_VERSION}) — invalidating cache`);
+      localStorage.removeItem(CACHE_KEY);
+      localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+      localStorage.removeItem(CACHE_VERSION_KEY);
+      return null;
+    }
 
     const data = JSON.parse(raw) as SyllabusItemDetail[];
     const age = Date.now() - parseInt(timestamp, 10);
@@ -37,6 +51,7 @@ function setCachedSyllabus(syllabus: SyllabusItemDetail[]): void {
     if (typeof window === 'undefined') return;
     localStorage.setItem(CACHE_KEY, JSON.stringify(syllabus));
     localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+    localStorage.setItem(CACHE_VERSION_KEY, CACHE_VERSION);
   } catch (e) {
     console.warn('⚠️ Could not cache syllabus in localStorage:', e);
   }
@@ -47,6 +62,7 @@ export function clearSyllabusCache(): void {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(CACHE_TIMESTAMP_KEY);
+    localStorage.removeItem(CACHE_VERSION_KEY);
   } catch {}
 }
 

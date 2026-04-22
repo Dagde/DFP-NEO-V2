@@ -15,15 +15,7 @@ const COURSE_MASTER_LMPS = [
 ];
 
 // Academic LMP types — these are 'Academics' type syllabus courses (Ground School phase)
-// ACADEMIC_LMP_COURSES fallback — used when no Academics items exist in the syllabus yet
-const ACADEMIC_LMP_COURSES_FALLBACK = [
-    'PC-21 Ground School',
-    'ADF Ground School',
-    'BPC Academic',
-    'IPC Academic',
-    'FIC Academic',
-    'WSO Academic',
-];
+// Academic LMP courses are derived dynamically from syllabusDetails (DB only)
 
 const LMP_DESCRIPTIONS: Record<string, string> = {
     'BPC+IPC': 'Basic Pilot Course & Initial Pilot Course',
@@ -81,7 +73,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     const [lmpType, setLmpType] = useState(initialLmpType || 'BPC+IPC');
     const [academicLmpType, setAcademicLmpType] = useState(initialAcademicLmpType || '');
 
-    // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items
+    // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items (DB only)
     const academicLmpCourses = useMemo(() => {
         const courseCodes = new Set<string>();
         syllabusDetails.forEach(s => {
@@ -89,7 +81,6 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                 s.courses.forEach(c => courseCodes.add(c));
             }
         });
-        if (courseCodes.size === 0) return ACADEMIC_LMP_COURSES_FALLBACK;
         return Array.from(courseCodes).sort();
     }, [syllabusDetails]);
 

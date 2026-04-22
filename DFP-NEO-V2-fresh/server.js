@@ -75,6 +75,8 @@ async function getPrisma() {
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
     await migrateCptDurations(prisma);
+    // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
+    await migrateAcademicsCoursesField(prisma);
   }
   return prisma;
 }
@@ -198,6 +200,51 @@ async function migrateCptDurations(db) {
     console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
   } catch (err) {
     console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
+  }
+}
+
+// Fix Academics syllabus items that have courses[] pointing to their own code
+// instead of the parent course name (e.g. ['AERODY1'] → ['PC-21 Ground School'])
+// This runs at startup and corrects any items created before the fix was deployed.
+async function migrateAcademicsCoursesField(db) {
+  try {
+    // Find all Academics-type items where courses[] does NOT contain the module name
+    // (i.e. the courses[] field has the item's own code, not the course name)
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, courses
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics'
+        AND "isActive" = true
+    `);
+
+    let updatedCount = 0;
+    for (const row of rows) {
+      const courses = Array.isArray(row.courses)
+        ? row.courses
+        : (typeof row.courses === 'string' ? JSON.parse(row.courses) : []);
+      const moduleName = row.module || '';
+      
+      // Only fix if:
+      // 1. module is set (non-empty)
+      // 2. courses[] does NOT already contain the module name
+      if (moduleName && !courses.includes(moduleName)) {
+        // Replace courses with [moduleName] — the module IS the Academic LMP course name
+        await db.$executeRawUnsafe(
+          `UPDATE "SyllabusItem" SET "courses" = $1, "updatedAt" = NOW() WHERE "id" = $2`,
+          [moduleName],
+          row.id
+        );
+        updatedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`✅ migrateAcademicsCoursesField: fixed ${updatedCount} Academics items (set courses[] to module name)`);
+    } else {
+      console.log(`✅ migrateAcademicsCoursesField: all Academics items already have correct courses[] field`);
+    }
+  } catch (err) {
+    console.error('❌ migrateAcademicsCoursesField failed (non-fatal):', err.message);
   }
 }
 
