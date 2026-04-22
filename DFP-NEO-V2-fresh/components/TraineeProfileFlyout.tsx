@@ -1107,6 +1107,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
                               >{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{(trainee as any).academicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>

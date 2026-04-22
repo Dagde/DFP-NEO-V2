@@ -70,6 +70,7 @@ async function getPrisma() {
     await ensureCourseSettingsTables(prisma);
     // Ensure Course.lmpType column exists (migration for existing DBs)
     await ensureCourseLmpTypeColumn(prisma);
+    await ensureAcademicLmpTypeColumns(prisma);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
@@ -486,6 +487,7 @@ app.get('/api/courses', async (req, res) => {
       location: c.location || '',
       unit: c.unit || '',
       lmpType: c.lmpType || '',
+      academicLmpType: c.academicLmpType || '',
       code: c.code || c.name,
     }));
     res.json({ courses: mapped });
@@ -499,7 +501,7 @@ app.get('/api/courses', async (req, res) => {
 app.post('/api/courses', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, status } = req.body;
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, status } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const course = await db.course.upsert({
       where: { code: name },
@@ -513,6 +515,7 @@ app.post('/api/courses', async (req, res) => {
         location: location || '',
         unit: unit || '',
         lmpType: lmpType || '',
+        academicLmpType: academicLmpType || '',
         status: status || 'ACTIVE',
         updatedAt: new Date(),
       },
@@ -528,6 +531,7 @@ app.post('/api/courses', async (req, res) => {
         location: location || '',
         unit: unit || '',
         lmpType: lmpType || '',
+        academicLmpType: academicLmpType || '',
         status: status || 'ACTIVE',
       },
     });
@@ -3461,6 +3465,27 @@ async function ensureCourseLmpTypeColumn(db) {
     console.log('✅ Course.lmpType column ready');
   } catch (err) {
     console.error('❌ Failed to ensure Course.lmpType column:', err.message);
+  }
+}
+
+async function ensureAcademicLmpTypeColumns(db) {
+  try {
+    // Add academicLmpType column to Trainee table if it doesn't exist
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Trainee.academicLmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Trainee.academicLmpType column:', err.message);
+  }
+  try {
+    // Add academicLmpType column to Course table if it doesn't exist
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Course.academicLmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course.academicLmpType column:', err.message);
   }
 }
 
