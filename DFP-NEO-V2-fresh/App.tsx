@@ -7320,6 +7320,7 @@ const App: React.FC = () => {
                         rank: data.rank,
                         course: data.course,
                         lmpType: data.lmpType,
+                        academicLmpType: (data as any).academicLmpType || '',
                         unit: data.unit,
                         flight: data.flight,
                         location: data.location,
@@ -7608,13 +7609,13 @@ const App: React.FC = () => {
 
     const handleUpdateCourseFromTrainingRecords = async (
         courseName: string,
-        data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }
+        data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }
     ) => {
         // Update local state - courses array with all new fields
         setCourses(prevCourses =>
             prevCourses.map(course =>
                 course.name === courseName
-                    ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType }
+                    ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType, academicLmpType: data.academicLmpType }
                     : course
             )
         );
@@ -7638,6 +7639,7 @@ const App: React.FC = () => {
                 location: data.location,
                 unit: data.unit,
                 lmpType: data.lmpType,
+                academicLmpType: data.academicLmpType,
                 status: course.status,
             });
 
@@ -13166,8 +13168,14 @@ updates.forEach(update => {
                     }
                     
                     if (individualLMP) {
+                        // Inherit academicLmpType from course if not set on trainee
+                        const courseForLmp = courses.find(c => c.name === selectedTraineeForLMP.course);
+                        const traineeWithAcademicLmp = selectedTraineeForLMP.academicLmpType
+                            ? selectedTraineeForLMP
+                            : { ...selectedTraineeForLMP, academicLmpType: (courseForLmp as any)?.academicLmpType || '' };
+
                         return <TraineeLmpView
-                            trainee={selectedTraineeForLMP}
+                            trainee={traineeWithAcademicLmp}
                             traineeLmp={individualLMP}
                             scores={traineeScores}
                             onBack={() => {

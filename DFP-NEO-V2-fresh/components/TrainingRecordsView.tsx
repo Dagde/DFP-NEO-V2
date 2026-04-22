@@ -14,7 +14,7 @@ interface TrainingRecordsViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
-    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }) => void;
+    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
     archivedTraineesData: Trainee[];

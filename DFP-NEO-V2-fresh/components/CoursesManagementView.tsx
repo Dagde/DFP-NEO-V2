@@ -14,7 +14,7 @@ interface CoursesManagementViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
-    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }) => void;
+    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
     locations?: string[];
     units?: string[];
 }
@@ -100,7 +100,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
         }
     };
 
-    const handleUpdateCourse = (data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string }) => {
+    const handleUpdateCourse = (data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => {
         if (courseToEdit) {
             if (onUpdateCourse) {
                 onUpdateCourse(courseToEdit.name, data);
@@ -304,6 +304,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     location={courseToEdit.location || ''}
                     unit={courseToEdit.unit || ''}
                     lmpType={courseToEdit.lmpType || 'BPC+IPC'}
+                    academicLmpType={(courseToEdit as any).academicLmpType || ''}
                     locations={locations}
                     units={units}
                     onClose={() => {

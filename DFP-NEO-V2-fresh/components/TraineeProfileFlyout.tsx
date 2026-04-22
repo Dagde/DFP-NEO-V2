@@ -13,6 +13,7 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
+const ACADEMIC_LMP_COURSES = ['PC-21 Ground School', 'ADF Ground School', 'BPC Academic', 'IPC Academic', 'FIC Academic', 'WSO Academic'];
 
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
@@ -302,6 +303,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
+  const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -420,6 +422,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setService(trainee.service || '');
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || 'BPC+IPC');
+        setAcademicLmpType((trainee as any).academicLmpType || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -571,6 +574,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             fullName,
             course,
             lmpType,
+            academicLmpType,
             rank,
             seatConfig,
             isPaused,
@@ -1028,6 +1032,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </Dropdown>
                             <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
                               {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                            </Dropdown>
+                            <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
+                              <option value="">— None —</option>
+                              {ACADEMIC_LMP_COURSES.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                             </Dropdown>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

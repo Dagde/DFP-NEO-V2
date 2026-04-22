@@ -13264,10 +13264,11 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
   }, void 0);
 };
 const COURSE_MASTER_LMPS$1 = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
+const ACADEMIC_LMP_COURSES$1 = ["PC-21 Ground School", "ADF Ground School", "BPC Academic", "IPC Academic", "FIC Academic", "WSO Academic"];
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-    lineNumber: 56,
+    lineNumber: 57,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -13283,20 +13284,20 @@ const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ j
     false,
     {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 57,
+      lineNumber: 58,
       columnNumber: 9
     },
     void 0
   )
 ] }, void 0, true, {
   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-  lineNumber: 55,
+  lineNumber: 56,
   columnNumber: 6
 }, void 0);
 const Dropdown$1 = ({ label, value, onChange, children }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-sm font-medium text-gray-400", children: label }, void 0, false, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-    lineNumber: 69,
+    lineNumber: 70,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -13311,20 +13312,20 @@ const Dropdown$1 = ({ label, value, onChange, children }) => /* @__PURE__ */ jsx
     false,
     {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 70,
+      lineNumber: 71,
       columnNumber: 9
     },
     void 0
   )
 ] }, void 0, true, {
   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-  lineNumber: 68,
+  lineNumber: 69,
   columnNumber: 5
 }, void 0);
 const ExperienceInput$1 = ({ label, value, onChange }) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center", children: [
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "text-xs text-gray-400 mb-1", children: label }, void 0, false, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-    lineNumber: 83,
+    lineNumber: 84,
     columnNumber: 9
   }, void 0),
   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -13342,14 +13343,14 @@ const ExperienceInput$1 = ({ label, value, onChange }) => /* @__PURE__ */ jsxDev
     false,
     {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 84,
+      lineNumber: 85,
       columnNumber: 9
     },
     void 0
   )
 ] }, void 0, true, {
   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-  lineNumber: 82,
+  lineNumber: 83,
   columnNumber: 5
 }, void 0);
 const formatDate$4 = (dateString) => {
@@ -13423,6 +13424,7 @@ const TraineeProfileFlyout = ({
   const [service, setService] = reactExports.useState(trainee.service || "");
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
   const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "BPC+IPC");
+  const [academicLmpType, setAcademicLmpType] = reactExports.useState(trainee.academicLmpType || "");
   const [seatConfig, setSeatConfig] = reactExports.useState(trainee.seatConfig);
   const [isPaused, setIsPaused] = reactExports.useState(trainee.isPaused);
   const [unavailability, setUnavailability] = reactExports.useState(trainee.unavailability || []);
@@ -13521,6 +13523,7 @@ const TraineeProfileFlyout = ({
     setService(trainee.service || "");
     setCourse(trainee.course || activeCourses[0] || "");
     setLmpType(trainee.lmpType || "BPC+IPC");
+    setAcademicLmpType(trainee.academicLmpType || "");
     setSeatConfig(trainee.seatConfig);
     setIsPaused(trainee.isPaused);
     setUnavailability(trainee.unavailability || []);
@@ -13605,6 +13608,7 @@ const TraineeProfileFlyout = ({
       fullName,
       course,
       lmpType,
+      academicLmpType,
       rank,
       seatConfig,
       isPaused,
@@ -13784,7 +13788,7 @@ const TraineeProfileFlyout = ({
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Permissions" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 788,
+        lineNumber: 792,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 min-h-[10rem] p-2", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-3 gap-y-2", children: allPermissions.map((perm) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
@@ -13800,50 +13804,50 @@ const TraineeProfileFlyout = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 794,
+            lineNumber: 798,
             columnNumber: 37
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[11px]", children: perm }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 800,
+          lineNumber: 804,
           columnNumber: 37
         }, void 0)
       ] }, perm, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 793,
+        lineNumber: 797,
         columnNumber: 33
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 791,
+        lineNumber: 795,
         columnNumber: 25
       }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2 text-white list-disc list-inside", children: trainee.permissions && trainee.permissions.length > 0 ? trainee.permissions.map((perm) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { children: perm }, perm, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 807,
+        lineNumber: 811,
         columnNumber: 65
       }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "list-none italic text-gray-500", children: "No permissions assigned." }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 809,
+        lineNumber: 813,
         columnNumber: 33
       }, void 0) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 805,
+        lineNumber: 809,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 789,
+        lineNumber: 793,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 787,
+      lineNumber: 791,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Roles" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 816,
+        lineNumber: 820,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-1 min-h-[10rem] p-2", children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-3 gap-y-2", children: allRoles.map((role) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
@@ -13858,45 +13862,45 @@ const TraineeProfileFlyout = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 822,
+            lineNumber: 826,
             columnNumber: 37
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[11px]", children: role }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 827,
+          lineNumber: 831,
           columnNumber: 37
         }, void 0)
       ] }, role, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 821,
+        lineNumber: 825,
         columnNumber: 33
       }, void 0)) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 819,
+        lineNumber: 823,
         columnNumber: 25
       }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "space-y-2 text-white list-disc list-inside", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("li", { className: "list-none italic text-gray-500", children: "No roles assigned." }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 833,
+        lineNumber: 837,
         columnNumber: 29
       }, void 0) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 832,
+        lineNumber: 836,
         columnNumber: 25
       }, void 0) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 817,
+        lineNumber: 821,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 815,
+      lineNumber: 819,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-    lineNumber: 786,
+    lineNumber: 790,
     columnNumber: 9
   }, void 0);
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -13904,24 +13908,24 @@ const TraineeProfileFlyout = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-5 py-3 border-b border-gray-600 flex justify-between items-center bg-[#0f1824] flex-shrink-0", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-lg font-bold text-white", children: isCreating ? "New Trainee" : "Trainee Profile" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 848,
+          lineNumber: 852,
           columnNumber: 19
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "text-gray-400 hover:text-white text-xl font-bold leading-none", children: "✕" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 849,
+          lineNumber: 853,
           columnNumber: 19
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 847,
+        lineNumber: 851,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-1 overflow-hidden", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { ref: contentScrollRef, className: "flex-1 overflow-y-auto p-4 space-y-3 relative", children: [
           isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 857,
+            lineNumber: 861,
             columnNumber: 23
           }, void 0),
           activeTab === "currency" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
@@ -13931,7 +13935,7 @@ const TraineeProfileFlyout = ({
                 trainee.name
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 864,
+                lineNumber: 868,
                 columnNumber: 27
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-[1px]", children: [
@@ -13947,7 +13951,7 @@ const TraineeProfileFlyout = ({
                   false,
                   {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 867,
+                    lineNumber: 871,
                     columnNumber: 31
                   },
                   void 0
@@ -13966,7 +13970,7 @@ const TraineeProfileFlyout = ({
                     false,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 877,
+                      lineNumber: 881,
                       columnNumber: 33
                     },
                     void 0
@@ -13984,14 +13988,14 @@ const TraineeProfileFlyout = ({
                     false,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 885,
+                      lineNumber: 889,
                       columnNumber: 33
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 876,
+                  lineNumber: 880,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14006,7 +14010,7 @@ const TraineeProfileFlyout = ({
                   false,
                   {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 895,
+                    lineNumber: 899,
                     columnNumber: 29
                   },
                   void 0
@@ -14023,19 +14027,19 @@ const TraineeProfileFlyout = ({
                   false,
                   {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 902,
+                    lineNumber: 906,
                     columnNumber: 29
                   },
                   void 0
                 )
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 865,
+                lineNumber: 869,
                 columnNumber: 27
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 863,
+              lineNumber: 867,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14060,14 +14064,14 @@ const TraineeProfileFlyout = ({
               false,
               {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 911,
+                lineNumber: 915,
                 columnNumber: 25
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 862,
+            lineNumber: 866,
             columnNumber: 23
           }, void 0),
           showCurrencyAudit && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14081,7 +14085,7 @@ const TraineeProfileFlyout = ({
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 932,
+              lineNumber: 936,
               columnNumber: 23
             },
             void 0
@@ -14093,17 +14097,17 @@ const TraineeProfileFlyout = ({
                 trainee.name
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 942,
+                lineNumber: 946,
                 columnNumber: 27
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 943,
+                lineNumber: 947,
                 columnNumber: 27
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 941,
+              lineNumber: 945,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-2", children: (trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map((p) => {
@@ -14120,26 +14124,26 @@ const TraineeProfileFlyout = ({
               return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: p.reason }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 959,
+                  lineNumber: 963,
                   columnNumber: 33
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-300 font-mono", children: periodDisplay }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 960,
+                  lineNumber: 964,
                   columnNumber: 33
                 }, void 0)
               ] }, p.id, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 958,
+                lineNumber: 962,
                 columnNumber: 31
               }, void 0);
             }) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 text-xs italic text-center py-4", children: "No unavailability periods scheduled." }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 963,
+              lineNumber: 967,
               columnNumber: 32
             }, void 0) }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 945,
+              lineNumber: 949,
               columnNumber: 25
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => {
@@ -14147,12 +14151,12 @@ const TraineeProfileFlyout = ({
               setActiveTab(null);
             }, className: "mt-3 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-xs rounded", children: "+ Add Unavailability" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 965,
+              lineNumber: 969,
               columnNumber: 25
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 940,
+            lineNumber: 944,
             columnNumber: 23
           }, void 0),
           activeTab === "logbook" && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-4", style: card3dStyle2, children: [
@@ -14162,178 +14166,12 @@ const TraineeProfileFlyout = ({
                 trainee.name
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 972,
+                lineNumber: 976,
                 columnNumber: 27
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 973,
-                columnNumber: 27
-              }, void 0)
-            ] }, void 0, true, {
-              fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 971,
-              columnNumber: 25
-            }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Day Flying" }, void 0, false, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 976,
-                  columnNumber: 32
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P1", value: exp.day.p1, onChange: (v) => handleExperienceChange("day", "p1", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 978,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P2", value: exp.day.p2, onChange: (v) => handleExperienceChange("day", "p2", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 979,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Dual", value: exp.day.dual, onChange: (v) => handleExperienceChange("day", "dual", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 980,
-                    columnNumber: 31
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 977,
-                  columnNumber: 29
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 976,
-                columnNumber: 27
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Night Flying" }, void 0, false, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 983,
-                  columnNumber: 32
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P1", value: exp.night.p1, onChange: (v) => handleExperienceChange("night", "p1", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 985,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P2", value: exp.night.p2, onChange: (v) => handleExperienceChange("night", "p2", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 986,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Dual", value: exp.night.dual, onChange: (v) => handleExperienceChange("night", "dual", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 987,
-                    columnNumber: 31
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 984,
-                  columnNumber: 29
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 983,
-                columnNumber: 27
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Totals" }, void 0, false, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 990,
-                  columnNumber: 32
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "TOTAL", value: exp.total, onChange: (v) => handleExperienceChange("total", null, v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 992,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Captain", value: exp.captain, onChange: (v) => handleExperienceChange("captain", null, v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 993,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Instructor", value: exp.instructor, onChange: (v) => handleExperienceChange("instructor", null, v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 994,
-                    columnNumber: 31
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 991,
-                  columnNumber: 29
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 990,
-                columnNumber: 27
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Instrument" }, void 0, false, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 997,
-                  columnNumber: 32
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Sim", value: exp.instrument.sim, onChange: (v) => handleExperienceChange("instrument", "sim", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 999,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Actual", value: exp.instrument.actual, onChange: (v) => handleExperienceChange("instrument", "actual", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1e3,
-                    columnNumber: 31
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 998,
-                  columnNumber: 29
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 997,
-                columnNumber: 27
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Simulator" }, void 0, false, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1003,
-                  columnNumber: 32
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1005,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1006,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Dual", value: exp.simulator.dual, onChange: (v) => handleExperienceChange("simulator", "dual", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1007,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Total", value: exp.simulator.total, onChange: (v) => handleExperienceChange("simulator", "total", v) }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1008,
-                    columnNumber: 31
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1004,
-                  columnNumber: 29
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1003,
+                lineNumber: 977,
                 columnNumber: 27
               }, void 0)
             ] }, void 0, true, {
@@ -14341,285 +14179,467 @@ const TraineeProfileFlyout = ({
               lineNumber: 975,
               columnNumber: 25
             }, void 0),
-            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-2 pt-4", children: [
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "Save Logbook" }, void 0, false, {
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Day Flying" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 980,
+                  columnNumber: 32
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P1", value: exp.day.p1, onChange: (v) => handleExperienceChange("day", "p1", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 982,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P2", value: exp.day.p2, onChange: (v) => handleExperienceChange("day", "p2", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 983,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Dual", value: exp.day.dual, onChange: (v) => handleExperienceChange("day", "dual", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 984,
+                    columnNumber: 31
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 981,
+                  columnNumber: 29
+                }, void 0)
+              ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1013,
+                lineNumber: 980,
                 columnNumber: 27
               }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setActiveTab(null), className: "px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded", children: "Cancel" }, void 0, false, {
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Night Flying" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 987,
+                  columnNumber: 32
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P1", value: exp.night.p1, onChange: (v) => handleExperienceChange("night", "p1", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 989,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P2", value: exp.night.p2, onChange: (v) => handleExperienceChange("night", "p2", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 990,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Dual", value: exp.night.dual, onChange: (v) => handleExperienceChange("night", "dual", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 991,
+                    columnNumber: 31
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 988,
+                  columnNumber: 29
+                }, void 0)
+              ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1014,
+                lineNumber: 987,
+                columnNumber: 27
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Totals" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 994,
+                  columnNumber: 32
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "TOTAL", value: exp.total, onChange: (v) => handleExperienceChange("total", null, v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 996,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Captain", value: exp.captain, onChange: (v) => handleExperienceChange("captain", null, v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 997,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Instructor", value: exp.instructor, onChange: (v) => handleExperienceChange("instructor", null, v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 998,
+                    columnNumber: 31
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 995,
+                  columnNumber: 29
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 994,
+                columnNumber: 27
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Instrument" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1001,
+                  columnNumber: 32
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Sim", value: exp.instrument.sim, onChange: (v) => handleExperienceChange("instrument", "sim", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1003,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Actual", value: exp.instrument.actual, onChange: (v) => handleExperienceChange("instrument", "actual", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1004,
+                    columnNumber: 31
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1002,
+                  columnNumber: 29
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 1001,
+                columnNumber: 27
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Simulator" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1007,
+                  columnNumber: 32
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1009,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1010,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Dual", value: exp.simulator.dual, onChange: (v) => handleExperienceChange("simulator", "dual", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1011,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ExperienceInput$1, { label: "Total", value: exp.simulator.total, onChange: (v) => handleExperienceChange("simulator", "total", v) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1012,
+                    columnNumber: 31
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1008,
+                  columnNumber: 29
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 1007,
                 columnNumber: 27
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1012,
+              lineNumber: 979,
+              columnNumber: 25
+            }, void 0),
+            /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-end gap-2 pt-4", children: [
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: "px-4 py-1.5 bg-sky-700 hover:bg-sky-600 text-white text-xs rounded", children: "Save Logbook" }, void 0, false, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 1017,
+                columnNumber: 27
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setActiveTab(null), className: "px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded", children: "Cancel" }, void 0, false, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 1018,
+                columnNumber: 27
+              }, void 0)
+            ] }, void 0, true, {
+              fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+              lineNumber: 1016,
               columnNumber: 25
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 970,
+            lineNumber: 974,
             columnNumber: 23
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-3", style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1024,
+                lineNumber: 1028,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1025,
+                lineNumber: 1029,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Course", value: course, onChange: (e) => handleCourseChange(e.target.value), children: (activeCourses || []).length > 0 ? (activeCourses || []).map((c) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: c, children: c }, c, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1027,
+                lineNumber: 1031,
                 columnNumber: 98
               }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { disabled: true, children: "No courses" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1027,
+                lineNumber: 1031,
                 columnNumber: 140
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1026,
+                lineNumber: 1030,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: COURSE_MASTER_LMPS$1.map((lmp) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: lmp, children: lmp }, lmp, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1030,
+                lineNumber: 1034,
                 columnNumber: 62
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1029,
+                lineNumber: 1033,
+                columnNumber: 29
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Academic LMP", value: academicLmpType, onChange: (e) => setAcademicLmpType(e.target.value), children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— None —" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1037,
+                  columnNumber: 31
+                }, void 0),
+                ACADEMIC_LMP_COURSES$1.map((lmp) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: lmp, children: lmp }, lmp, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1038,
+                  columnNumber: 64
+                }, void 0))
+              ] }, void 0, true, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 1036,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1023,
+              lineNumber: 1027,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: ["FLTLT", "FLGOFF", "PLTOFF", "WOFF", "FSGT", "SGT", "CPL", "LAC", "AC", "OCdt", "CDT"].map((r) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: r, children: r }, r, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1035,
+                lineNumber: 1043,
                 columnNumber: 138
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1034,
+                lineNumber: 1042,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "RAAF", children: "RAAF" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1038,
+                  lineNumber: 1046,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "RAN", children: "RAN" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1038,
+                  lineNumber: 1046,
                   columnNumber: 65
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "ARA", children: "ARA" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1038,
+                  lineNumber: 1046,
                   columnNumber: 97
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1037,
+                lineNumber: 1045,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Unit", value: unit, onChange: (e) => setUnit(e.target.value), children: (units || []).map((u) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: u, children: u }, u, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1041,
+                lineNumber: 1049,
                 columnNumber: 55
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1040,
+                lineNumber: 1048,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Location", value: location, onChange: (e) => setLocation(e.target.value), children: (locations || []).map((loc) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: loc, children: loc }, loc, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1044,
+                lineNumber: 1052,
                 columnNumber: 61
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1043,
+                lineNumber: 1051,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1033,
+              lineNumber: 1041,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Dropdown$1, { label: "Seat Config", value: seatConfig, onChange: (e) => setSeatConfig(e.target.value), children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "Normal", children: "Normal" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1049,
+                lineNumber: 1057,
                 columnNumber: 31
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "FWD/SHORT", children: "FWD/SHORT" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1049,
+                lineNumber: 1057,
                 columnNumber: 69
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "REAR/SHORT", children: "REAR/SHORT" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1049,
+                lineNumber: 1057,
                 columnNumber: 113
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "FWD/LONG", children: "FWD/LONG" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1049,
+                lineNumber: 1057,
                 columnNumber: 159
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1048,
+              lineNumber: 1056,
               columnNumber: 29
             }, void 0) }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1047,
+              lineNumber: 1055,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Flight", value: flight, onChange: (e) => setFlight(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1053,
+                lineNumber: 1061,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1054,
+                lineNumber: 1062,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1055,
+                lineNumber: 1063,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1052,
+              lineNumber: 1060,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Callsign", value: traineeCallsign, onChange: (e) => setTraineeCallsign(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1058,
+                lineNumber: 1066,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Secondary Callsign", value: secondaryCallsign, onChange: (e) => setSecondaryCallsign(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1059,
+                lineNumber: 1067,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InputField$1, { label: "Crew", value: crew, onChange: (e) => setCrew(e.target.value) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1060,
+                lineNumber: 1068,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1057,
+              lineNumber: 1065,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-700/30 rounded p-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Permissions" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1063,
+                lineNumber: 1071,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-4 gap-2", children: allPermissions.map((perm) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("input", { type: "checkbox", checked: permissions.includes(perm), onChange: (e) => handlePermissionChange(perm, e.target.checked), className: "h-3 w-3 accent-sky-500" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1067,
+                  lineNumber: 1075,
                   columnNumber: 35
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-xs", children: perm }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1068,
+                  lineNumber: 1076,
                   columnNumber: 35
                 }, void 0)
               ] }, perm, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1066,
+                lineNumber: 1074,
                 columnNumber: 33
               }, void 0)) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1064,
+                lineNumber: 1072,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1062,
+              lineNumber: 1070,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1022,
+            lineNumber: 1026,
             columnNumber: 25
           }, void 0) : (
             /* VIEW MODE: avatar + data grid + permissions panel */
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-4", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-20 h-24 bg-gray-600 rounded border border-gray-500 flex items-center justify-center overflow-hidden", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-10 h-10 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1081,
+                lineNumber: 1089,
                 columnNumber: 33
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1080,
+                lineNumber: 1088,
                 columnNumber: 31
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1079,
+                lineNumber: 1087,
                 columnNumber: 29
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1078,
+                lineNumber: 1086,
                 columnNumber: 27
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 min-w-0", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2 mb-2 flex-wrap", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-bold text-white", children: trainee.name }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1089,
+                    lineNumber: 1097,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: `px-2 py-0.5 rounded text-xs font-bold ${trainee.isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: trainee.isPaused ? "Paused" : "Active" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1090,
+                    lineNumber: 1098,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1088,
+                  lineNumber: 1096,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "ID Number" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1096,
+                      lineNumber: 1104,
                       columnNumber: 36
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.idNumber }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1096,
+                      lineNumber: 1104,
                       columnNumber: 102
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1096,
+                    lineNumber: 1104,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Course" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1097,
+                      lineNumber: 1105,
                       columnNumber: 36
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14633,138 +14653,26 @@ const TraineeProfileFlyout = ({
                       false,
                       {
                         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                        lineNumber: 1097,
+                        lineNumber: 1105,
                         columnNumber: 99
                       },
                       void 0
                     )
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1097,
+                    lineNumber: 1105,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "LMP" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1101,
+                      lineNumber: 1109,
                       columnNumber: 36
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-300 font-medium", children: trainee.lmpType || "BPC+IPC" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1101,
+                      lineNumber: 1109,
                       columnNumber: 96
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1101,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1102,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1102,
-                      columnNumber: 101
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1102,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1103,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.secondaryCallsign || "-" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1103,
-                      columnNumber: 111
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1103,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Seat Config" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1104,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.seatConfig }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1104,
-                      columnNumber: 104
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1104,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Rank" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1106,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.rank }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1106,
-                      columnNumber: 97
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1106,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Service" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1107,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.service || "RAAF" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1107,
-                      columnNumber: 100
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1107,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1108,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.unit }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1108,
-                      columnNumber: 97
-                    }, void 0)
-                  ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1108,
-                    columnNumber: 31
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Crew" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1109,
-                      columnNumber: 36
-                    }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.crew || "N/A" }, void 0, false, {
-                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1109,
-                      columnNumber: 97
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14772,12 +14680,12 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Location" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1110,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.location }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.traineeCallsign || `${callsignData?.callsignPrefix || ""}${callsignData?.callsignNumber || ""}` }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1110,
                       columnNumber: 101
@@ -14788,15 +14696,15 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Flight" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1111,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.flight || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.secondaryCallsign || "-" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1111,
-                      columnNumber: 99
+                      columnNumber: 111
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
@@ -14804,72 +14712,184 @@ const TraineeProfileFlyout = ({
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Phone Number" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Seat Config" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1113,
+                      lineNumber: 1112,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.phoneNumber || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.seatConfig }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1113,
-                      columnNumber: 105
+                      lineNumber: 1112,
+                      columnNumber: 104
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1113,
+                    lineNumber: 1112,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Email" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Rank" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1114,
                       columnNumber: 36
                     }, void 0),
-                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.email || "N/A" }, void 0, false, {
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.rank }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                       lineNumber: 1114,
-                      columnNumber: 98
+                      columnNumber: 97
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1114,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Service" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1115,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.service || "RAAF" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1115,
+                      columnNumber: 100
+                    }, void 0)
+                  ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1115,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Unit" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1116,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.unit }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1116,
+                      columnNumber: 97
+                    }, void 0)
+                  ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1116,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Crew" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1117,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.crew || "N/A" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1117,
+                      columnNumber: 97
+                    }, void 0)
+                  ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1117,
                     columnNumber: 31
                   }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Location" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1118,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.location }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1118,
+                      columnNumber: 101
+                    }, void 0)
+                  ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1118,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Flight" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1119,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.flight || "N/A" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1119,
+                      columnNumber: 99
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1119,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Phone Number" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1121,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.phoneNumber || "N/A" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1121,
+                      columnNumber: 105
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1121,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 block text-[10px]", children: "Email" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1122,
+                      columnNumber: 36
+                    }, void 0),
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: trainee.email || "N/A" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                      lineNumber: 1122,
+                      columnNumber: 98
+                    }, void 0)
+                  ] }, void 0, true, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1122,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1123,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1124,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1125,
+                    columnNumber: 31
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", {}, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1126,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1094,
+                  lineNumber: 1102,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1087,
+                lineNumber: 1095,
                 columnNumber: 27
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 w-40 flex flex-col gap-2", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2 flex-1", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[10px] text-gray-400 font-semibold mb-1", children: "Permissions" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1126,
+                    lineNumber: 1134,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: (trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-white text-[10px]", children: [
@@ -14877,68 +14897,68 @@ const TraineeProfileFlyout = ({
                     p
                   ] }, p, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1130,
+                    lineNumber: 1138,
                     columnNumber: 39
                   }, void 0)) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-[10px] italic col-span-3", children: "None" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1132,
+                    lineNumber: 1140,
                     columnNumber: 37
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1127,
+                    lineNumber: 1135,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1125,
+                  lineNumber: 1133,
                   columnNumber: 29
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2 flex-1", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[10px] text-gray-400 font-semibold mb-1", children: "Roles" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1138,
+                    lineNumber: 1146,
                     columnNumber: 31
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-gray-500 text-[10px] italic col-span-3", children: "None" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1140,
+                    lineNumber: 1148,
                     columnNumber: 33
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1139,
+                    lineNumber: 1147,
                     columnNumber: 31
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1137,
+                  lineNumber: 1145,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1123,
+                lineNumber: 1131,
                 columnNumber: 27
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1076,
+              lineNumber: 1084,
               columnNumber: 25
             }, void 0)
           ) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1020,
+            lineNumber: 1024,
             columnNumber: 21
           }, void 0),
           !isEditing && !isCreating && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Instructors" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1152,
+              lineNumber: 1160,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-3", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[9px] text-sky-400 font-semibold mb-1.5", children: "Primary" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1156,
+                  lineNumber: 1164,
                   columnNumber: 31
                 }, void 0),
                 (() => {
@@ -14946,19 +14966,19 @@ const TraineeProfileFlyout = ({
                   return primaries.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-1.5", children: primaries.map((name2, idx) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1167,
+                      lineNumber: 1175,
                       columnNumber: 45
                     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1169,
+                      lineNumber: 1177,
                       columnNumber: 124
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1169,
+                      lineNumber: 1177,
                       columnNumber: 45
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1165,
+                      lineNumber: 1173,
                       columnNumber: 41
                     }, void 0),
                     onOpenInstructorProfile ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -14975,57 +14995,57 @@ const TraineeProfileFlyout = ({
                       false,
                       {
                         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                        lineNumber: 1173,
+                        lineNumber: 1181,
                         columnNumber: 43
                       },
                       void 0
                     ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: name2 }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1178,
+                      lineNumber: 1186,
                       columnNumber: 43
                     }, void 0)
                   ] }, idx, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1164,
+                    lineNumber: 1172,
                     columnNumber: 39
                   }, void 0)) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1162,
+                    lineNumber: 1170,
                     columnNumber: 35
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-600", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1186,
+                      lineNumber: 1194,
                       columnNumber: 118
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1186,
+                      lineNumber: 1194,
                       columnNumber: 39
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1185,
+                      lineNumber: 1193,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1188,
+                      lineNumber: 1196,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1184,
+                    lineNumber: 1192,
                     columnNumber: 35
                   }, void 0);
                 })()
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1155,
+                lineNumber: 1163,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[9px] text-amber-400 font-semibold mb-1.5", children: "Secondary" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1195,
+                  lineNumber: 1203,
                   columnNumber: 31
                 }, void 0),
                 (() => {
@@ -15033,19 +15053,19 @@ const TraineeProfileFlyout = ({
                   return secondaries.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col gap-1.5", children: secondaries.map((name2, idx) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden", children: name2.toLowerCase().includes("burns") ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("img", { src: "https://dfp-neo.com/burns-profile.png", alt: name2, className: "w-full h-full object-cover object-top" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1206,
+                      lineNumber: 1214,
                       columnNumber: 45
                     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-400", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1208,
+                      lineNumber: 1216,
                       columnNumber: 124
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1208,
+                      lineNumber: 1216,
                       columnNumber: 45
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1204,
+                      lineNumber: 1212,
                       columnNumber: 41
                     }, void 0),
                     onOpenInstructorProfile ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -15062,534 +15082,534 @@ const TraineeProfileFlyout = ({
                       false,
                       {
                         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                        lineNumber: 1212,
+                        lineNumber: 1220,
                         columnNumber: 43
                       },
                       void 0
                     ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white text-[10px] font-medium leading-tight", children: name2 }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1217,
+                      lineNumber: 1225,
                       columnNumber: 43
                     }, void 0)
                   ] }, idx, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1203,
+                    lineNumber: 1211,
                     columnNumber: 39
                   }, void 0)) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1201,
+                    lineNumber: 1209,
                     columnNumber: 35
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-7 h-7 bg-gray-700/50 rounded-full flex items-center justify-center flex-shrink-0", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { className: "w-4 h-4 text-gray-600", fill: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { d: "M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1225,
+                      lineNumber: 1233,
                       columnNumber: 118
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1225,
+                      lineNumber: 1233,
                       columnNumber: 39
                     }, void 0) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1224,
+                      lineNumber: 1232,
                       columnNumber: 37
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-600 text-[10px] italic", children: "Not assigned" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1227,
+                      lineNumber: 1235,
                       columnNumber: 37
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1223,
+                    lineNumber: 1231,
                     columnNumber: 35
                   }, void 0);
                 })()
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1194,
+                lineNumber: 1202,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1153,
+              lineNumber: 1161,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1151,
+            lineNumber: 1159,
             columnNumber: 25
           }, void 0),
           !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Logbook – Prior Experience (PC-21 only)" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1239,
+              lineNumber: 1247,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-2", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Day Flying" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1243,
+                  lineNumber: 1251,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: (exp.day.p1 + exp.day.p2 + exp.day.dual).toFixed(1) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1245,
+                  lineNumber: 1253,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1244,
+                  lineNumber: 1252,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P1" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1248,
+                      lineNumber: 1256,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.day.p1.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1248,
+                      lineNumber: 1256,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1248,
+                    lineNumber: 1256,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1249,
+                      lineNumber: 1257,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.day.p2.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1249,
+                      lineNumber: 1257,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1249,
+                    lineNumber: 1257,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1250,
+                      lineNumber: 1258,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.day.dual.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1250,
+                      lineNumber: 1258,
                       columnNumber: 126
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1250,
+                    lineNumber: 1258,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1247,
+                  lineNumber: 1255,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1242,
+                lineNumber: 1250,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Night Flying" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1255,
+                  lineNumber: 1263,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: (exp.night.p1 + exp.night.p2 + exp.night.dual).toFixed(1) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1257,
+                  lineNumber: 1265,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1256,
+                  lineNumber: 1264,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P1" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1260,
+                      lineNumber: 1268,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.night.p1.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1260,
+                      lineNumber: 1268,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1260,
+                    lineNumber: 1268,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1261,
+                      lineNumber: 1269,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.night.p2.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1261,
+                      lineNumber: 1269,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1261,
+                    lineNumber: 1269,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1262,
+                      lineNumber: 1270,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.night.dual.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1262,
+                      lineNumber: 1270,
                       columnNumber: 126
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1262,
+                    lineNumber: 1270,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1259,
+                  lineNumber: 1267,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1254,
+                lineNumber: 1262,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Totals" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1267,
+                  lineNumber: 1275,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.total.toFixed(1) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1269,
+                  lineNumber: 1277,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1268,
+                  lineNumber: 1276,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "TOTAL" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1272,
+                      lineNumber: 1280,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.total.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1272,
+                      lineNumber: 1280,
                       columnNumber: 127
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1272,
+                    lineNumber: 1280,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Captain" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1273,
+                      lineNumber: 1281,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.captain.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1273,
+                      lineNumber: 1281,
                       columnNumber: 129
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1273,
+                    lineNumber: 1281,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Instructor" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1274,
+                      lineNumber: 1282,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.instructor.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1274,
+                      lineNumber: 1282,
                       columnNumber: 132
                     }, void 0)
                   ] }, void 0, true, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1274,
-                    columnNumber: 33
-                  }, void 0)
-                ] }, void 0, true, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1271,
-                  columnNumber: 31
-                }, void 0)
-              ] }, void 0, true, {
-                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1266,
-                columnNumber: 29
-              }, void 0),
-              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Instrument" }, void 0, false, {
-                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1279,
-                  columnNumber: 31
-                }, void 0),
-                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2", children: [
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-[9px] leading-none", children: "Sim" }, void 0, false, {
-                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1281,
-                    columnNumber: 33
-                  }, void 0),
-                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.instrument.sim.toFixed(1) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
                     lineNumber: 1282,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1280,
+                  lineNumber: 1279,
+                  columnNumber: 31
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                lineNumber: 1274,
+                columnNumber: 29
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Instrument" }, void 0, false, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1287,
+                  columnNumber: 31
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2", children: [
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-[9px] leading-none", children: "Sim" }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1289,
+                    columnNumber: 33
+                  }, void 0),
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.instrument.sim.toFixed(1) }, void 0, false, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                    lineNumber: 1290,
+                    columnNumber: 33
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
+                  lineNumber: 1288,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Actual" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1285,
+                    lineNumber: 1293,
                     columnNumber: 83
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.instrument.actual.toFixed(1) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1285,
+                    lineNumber: 1293,
                     columnNumber: 128
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1285,
+                  lineNumber: 1293,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1284,
+                  lineNumber: 1292,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1278,
+                lineNumber: 1286,
                 columnNumber: 29
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Simulator" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1290,
+                  lineNumber: 1298,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-bold text-sm", children: exp.simulator.total.toFixed(1) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1292,
+                  lineNumber: 1300,
                   columnNumber: 33
                 }, void 0) }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1291,
+                  lineNumber: 1299,
                   columnNumber: 31
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P1" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1295,
+                      lineNumber: 1303,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.p1.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1295,
+                      lineNumber: 1303,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1295,
+                    lineNumber: 1303,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "P2" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1296,
+                      lineNumber: 1304,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.p2.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1296,
+                      lineNumber: 1304,
                       columnNumber: 124
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1296,
+                    lineNumber: 1304,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Dual" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1297,
+                      lineNumber: 1305,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.dual.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1297,
+                      lineNumber: 1305,
                       columnNumber: 126
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1297,
+                    lineNumber: 1305,
                     columnNumber: 33
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between text-[10px]", children: [
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400", children: "Total" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1298,
+                      lineNumber: 1306,
                       columnNumber: 83
                     }, void 0),
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-medium", children: exp.simulator.total.toFixed(1) }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                      lineNumber: 1298,
+                      lineNumber: 1306,
                       columnNumber: 127
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                    lineNumber: 1298,
+                    lineNumber: 1306,
                     columnNumber: 33
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                  lineNumber: 1294,
+                  lineNumber: 1302,
                   columnNumber: 31
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-                lineNumber: 1289,
+                lineNumber: 1297,
                 columnNumber: 29
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1240,
+              lineNumber: 1248,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1238,
+            lineNumber: 1246,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 854,
+          lineNumber: 858,
           columnNumber: 19
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-[95px] flex-shrink-0 border-l border-gray-700 bg-[#0f1824] px-[10px] py-3 flex flex-col space-y-[1px]", children: [
           !isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1311,
+              lineNumber: 1319,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1312,
+              lineNumber: 1320,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleHateSheetClick, className: btnClass, children: "PT-051" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1313,
+              lineNumber: 1321,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleIndividualLMPClick, className: btnClass, children: "View Individual LMP" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1314,
+              lineNumber: 1322,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1315,
+              lineNumber: 1323,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1316,
+              lineNumber: 1324,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-[1px]" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1317,
+              lineNumber: 1325,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1318,
+              lineNumber: 1326,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: btnClass, children: "Close" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1319,
+              lineNumber: 1327,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1310,
+            lineNumber: 1318,
             columnNumber: 25
           }, void 0),
           isEditing && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSave, className: btnClass, children: "Save" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1324,
+              lineNumber: 1332,
               columnNumber: 27
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancel, className: btnClass, children: "Cancel" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-              lineNumber: 1325,
+              lineNumber: 1333,
               columnNumber: 27
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-            lineNumber: 1323,
+            lineNumber: 1331,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-          lineNumber: 1308,
+          lineNumber: 1316,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-        lineNumber: 852,
+        lineNumber: 856,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 844,
+      lineNumber: 848,
       columnNumber: 15
     }, void 0) }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 843,
+      lineNumber: 847,
       columnNumber: 13
     }, void 0),
     showAddUnavailability && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AddUnavailabilityFlyout, { onClose: () => setShowAddUnavailability(false), onTodayOnly: handleAddTodayOnlyUnavailability, onSave: handleSaveCustomUnavailability, unavailabilityPeriods: trainee.unavailability || [], onRemove: handleRemoveUnavailabilityFromFlyout }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 1332,
+      lineNumber: 1340,
       columnNumber: 40
     }, void 0),
     showScheduleWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ScheduleWarningFlyout, { traineeName: trainee.name, onAcknowledge: () => {
@@ -15597,17 +15617,17 @@ const TraineeProfileFlyout = ({
       setShowPauseConfirm(true);
     } }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 1333,
+      lineNumber: 1341,
       columnNumber: 37
     }, void 0),
     showPauseConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PauseConfirmationFlyout, { onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-      lineNumber: 1334,
+      lineNumber: 1342,
       columnNumber: 34
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeProfileFlyout.tsx",
-    lineNumber: 842,
+    lineNumber: 846,
     columnNumber: 9
   }, void 0);
 };
@@ -89955,17 +89975,16 @@ const AcademicLmpTab = ({
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
   const academicSyllabus = reactExports.useMemo(() => {
+    const academicLmpType2 = trainee.academicLmpType;
+    if (!academicLmpType2) return [];
     return syllabusDetails.filter(
-      (s) => (s.type === "Academics" || s.type === "Ground School") && !s.methodOfDelivery?.includes("CPT") && (!s.courses || s.courses.length === 0 || s.courses.some(
-        (c) => c === trainee.course || c === trainee.lmpType || // Also match lmpType like "PC-21 Ground School"
-        trainee.lmpType?.includes(c) || c.includes(trainee.course || "")
-      ))
+      (s) => s.type === "Academics" && s.courses?.includes(academicLmpType2)
     ).sort((a, b) => {
       if (a.phase !== b.phase) return (a.phase || "").localeCompare(b.phase || "");
       if (a.module !== b.module) return (a.module || "").localeCompare(b.module || "");
       return (a.code || "").localeCompare(b.code || "");
     });
-  }, [syllabusDetails, trainee.course, trainee.lmpType]);
+  }, [syllabusDetails, trainee.academicLmpType]);
   const completedLessonCodes = reactExports.useMemo(() => {
     const codes = /* @__PURE__ */ new Set();
     scores.forEach((s) => {
@@ -90000,51 +90019,110 @@ const AcademicLmpTab = ({
       onOpenPt051ForLesson(trainee, lesson.code);
     }
   };
+  const academicLmpType = trainee.academicLmpType;
+  if (!academicLmpType) {
+    return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-col items-center justify-center p-8 text-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-amber-900/20 border border-amber-700/40 rounded-lg p-6 max-w-md", children: [
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-amber-300 font-semibold text-lg mb-2", children: "No Academic LMP Assigned" }, void 0, false, {
+        fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+        lineNumber: 240,
+        columnNumber: 21
+      }, void 0),
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm leading-relaxed", children: [
+        "This trainee does not have an Academic LMP assigned.",
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 242,
+          columnNumber: 77
+        }, void 0),
+        "Go to ",
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400 font-medium", children: "Course Roster → Edit Trainee" }, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 243,
+          columnNumber: 31
+        }, void 0),
+        " and set the ",
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400 font-medium", children: "Academic LMP" }, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 243,
+          columnNumber: 122
+        }, void 0),
+        " field,",
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("br", {}, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 243,
+          columnNumber: 191
+        }, void 0),
+        "or set it at the course level via ",
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400 font-medium", children: "Training Records → Edit Course" }, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 244,
+          columnNumber: 59
+        }, void 0),
+        "."
+      ] }, void 0, true, {
+        fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+        lineNumber: 241,
+        columnNumber: 21
+      }, void 0)
+    ] }, void 0, true, {
+      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+      lineNumber: 239,
+      columnNumber: 17
+    }, void 0) }, void 0, false, {
+      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+      lineNumber: 238,
+      columnNumber: 13
+    }, void 0);
+  }
   if (academicSyllabus.length === 0) {
     return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center justify-center h-full text-center p-8", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl mb-4", children: "📚" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 244,
+        lineNumber: 254,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-lg font-medium", children: "No Academic Syllabus Found" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 245,
+        lineNumber: 255,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 text-sm mt-2", children: [
         "No academic lessons found for course ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: trainee.course }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 247,
+          lineNumber: 257,
           columnNumber: 58
         }, void 0),
         trainee.lmpType ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
           " / LMP type ",
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sky-400", children: trainee.lmpType }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 248,
+            lineNumber: 258,
             columnNumber: 54
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 248,
+          lineNumber: 258,
           columnNumber: 40
         }, void 0) : null,
         "."
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 246,
+        lineNumber: 256,
         columnNumber: 17
       }, void 0),
-      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-600 text-xs mt-2", children: 'Ensure the Master LMP has events of type "Academics" or "Ground School" assigned to this course.' }, void 0, false, {
+      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-600 text-xs mt-2", children: [
+        'Ensure the Master LMP (Syllabus) has events of type "Academics" with courses assigned to the Academic LMP type: ',
+        academicLmpType,
+        "."
+      ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 250,
+        lineNumber: 260,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 243,
+      lineNumber: 253,
       columnNumber: 13
     }, void 0);
   }
@@ -90054,7 +90132,7 @@ const AcademicLmpTab = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-between mb-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Individual Progress" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 264,
+            lineNumber: 274,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-bold text-white", children: [
@@ -90063,12 +90141,12 @@ const AcademicLmpTab = ({
             totalCount
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 265,
+            lineNumber: 275,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 263,
+          lineNumber: 273,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-full bg-gray-700 rounded-full h-2 overflow-hidden", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90081,19 +90159,19 @@ const AcademicLmpTab = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 269,
+            lineNumber: 279,
             columnNumber: 25
           },
           void 0
         ) }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 268,
+          lineNumber: 278,
           columnNumber: 21
         }, void 0),
         lastCompletedIndex > individualCount && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2 flex items-center gap-1 text-xs text-amber-400", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: "⚠" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 276,
+            lineNumber: 286,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: [
@@ -90102,59 +90180,59 @@ const AcademicLmpTab = ({
             " lesson(s) missed"
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 277,
+            lineNumber: 287,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 275,
+          lineNumber: 285,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 262,
+        lineNumber: 272,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-3 py-2 border-b border-gray-700/50 flex items-center gap-4 text-xs text-gray-400", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-green-400", children: "✓" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 284,
+            lineNumber: 294,
             columnNumber: 63
           }, void 0),
           " Attended"
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 284,
+          lineNumber: 294,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400", children: "✗" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 285,
+            lineNumber: 295,
             columnNumber: 63
           }, void 0),
           " Missed"
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 285,
+          lineNumber: 295,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-1", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-500", children: "○" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 286,
+            lineNumber: 296,
             columnNumber: 63
           }, void 0),
           " Pending"
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 286,
+          lineNumber: 296,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 283,
+        lineNumber: 293,
         columnNumber: 17
       }, void 0),
       Object.entries(groupedByModule).map(([moduleName, items]) => {
@@ -90163,7 +90241,7 @@ const AcademicLmpTab = ({
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-3 py-1.5 bg-gray-800/40 border-b border-gray-700/50 flex items-center justify-between", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs font-bold text-sky-400 uppercase tracking-wider truncate", children: moduleName }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 295,
+              lineNumber: 305,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-500 flex-shrink-0 ml-2", children: [
@@ -90172,12 +90250,12 @@ const AcademicLmpTab = ({
               items.length
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 296,
+              lineNumber: 306,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 294,
+            lineNumber: 304,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("ul", { className: "p-1 space-y-0.5", children: items.map((item, idx) => {
@@ -90193,34 +90271,34 @@ const AcademicLmpTab = ({
                 children: [
                   isCompleted ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckIcon, {}, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 320,
+                    lineNumber: 330,
                     columnNumber: 53
                   }, void 0) : isMissed ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(MissedIcon, {}, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 322,
+                    lineNumber: 332,
                     columnNumber: 53
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-4 h-4 flex-shrink-0 flex items-center justify-center", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2 h-2 rounded-full border border-gray-600" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 325,
+                    lineNumber: 335,
                     columnNumber: 57
                   }, void 0) }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 324,
+                    lineNumber: 334,
                     columnNumber: 53
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-mono font-bold", children: item.code }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 328,
+                    lineNumber: 338,
                     columnNumber: 49
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "truncate text-gray-400 text-xs", children: item.eventDescription }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 329,
+                    lineNumber: 339,
                     columnNumber: 49
                   }, void 0),
                   isMissed && !isSelected && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-auto flex-shrink-0 text-xs bg-red-900/50 text-red-300 px-1 rounded", children: "MISSED" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 331,
+                    lineNumber: 341,
                     columnNumber: 53
                   }, void 0)
                 ]
@@ -90229,29 +90307,29 @@ const AcademicLmpTab = ({
               true,
               {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                lineNumber: 307,
+                lineNumber: 317,
                 columnNumber: 45
               },
               void 0
             ) }, item.code, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 306,
+              lineNumber: 316,
               columnNumber: 41
             }, void 0);
           }) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 298,
+            lineNumber: 308,
             columnNumber: 29
           }, void 0)
         ] }, moduleName, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 293,
+          lineNumber: 303,
           columnNumber: 25
         }, void 0);
       })
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 260,
+      lineNumber: 270,
       columnNumber: 13
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-2/3 overflow-y-auto", children: selectedLesson ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 max-w-3xl mx-auto space-y-4", children: [
@@ -90259,23 +90337,23 @@ const AcademicLmpTab = ({
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-white", children: selectedLesson.code }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 350,
+            lineNumber: 360,
             columnNumber: 33
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 mt-0.5", children: selectedLesson.eventDescription }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 351,
+            lineNumber: 361,
             columnNumber: 33
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-3 mt-2 text-xs text-gray-500", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: selectedLesson.module || selectedLesson.phase }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 353,
+              lineNumber: 363,
               columnNumber: 37
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: selectedLesson.type }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 354,
+              lineNumber: 364,
               columnNumber: 37
             }, void 0),
             selectedLesson.duration ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: [
@@ -90283,52 +90361,52 @@ const AcademicLmpTab = ({
               "h"
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 356,
+              lineNumber: 366,
               columnNumber: 41
             }, void 0) : null
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 352,
+            lineNumber: 362,
             columnNumber: 33
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 349,
+          lineNumber: 359,
           columnNumber: 29
         }, void 0),
         completedLessonCodes.has(selectedLesson.code) ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-1.5 bg-green-900/40 text-green-300 px-3 py-1.5 rounded-lg text-sm font-semibold border border-green-700/50", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckIcon, {}, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 363,
+            lineNumber: 373,
             columnNumber: 37
           }, void 0),
           " Attended"
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 362,
+          lineNumber: 372,
           columnNumber: 33
         }, void 0) : (() => {
           const lessonIdx = academicSyllabus.findIndex((a) => a.code === selectedLesson.code);
           return lessonIdx < lastCompletedIndex ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "flex items-center gap-1.5 bg-red-900/40 text-red-300 px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-700/50", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(MissedIcon, {}, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 369,
+              lineNumber: 379,
               columnNumber: 41
             }, void 0),
             " Missed"
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 368,
+            lineNumber: 378,
             columnNumber: 37
           }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "bg-gray-700/50 text-gray-400 px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-600/50", children: "Not Yet Attended" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 372,
+            lineNumber: 382,
             columnNumber: 37
           }, void 0);
         })()
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 348,
+        lineNumber: 358,
         columnNumber: 25
       }, void 0),
       (() => {
@@ -90337,50 +90415,50 @@ const AcademicLmpTab = ({
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-green-700/50 rounded-lg bg-green-900/10", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-green-300", children: "Attendance Record" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 385,
+            lineNumber: 395,
             columnNumber: 37
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-3 gap-4 mt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Date", value: lessonScore.date }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 387,
+              lineNumber: 397,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Instructor", value: lessonScore.instructor || "—" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 388,
+              lineNumber: 398,
               columnNumber: 41
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Result", value: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-green-300 font-bold", children: "DCO ✓" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 390,
+              lineNumber: 400,
               columnNumber: 45
             }, void 0) }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 389,
+              lineNumber: 399,
               columnNumber: 41
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 386,
+            lineNumber: 396,
             columnNumber: 37
           }, void 0),
           lessonScore.notes && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-3", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Notes", value: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "whitespace-pre-wrap text-sm", children: lessonScore.notes }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 395,
+            lineNumber: 405,
             columnNumber: 78
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 395,
+            lineNumber: 405,
             columnNumber: 45
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 394,
+            lineNumber: 404,
             columnNumber: 41
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 384,
+          lineNumber: 394,
           columnNumber: 33
         }, void 0);
       })(),
@@ -90396,36 +90474,36 @@ const AcademicLmpTab = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 405,
+            lineNumber: 415,
             columnNumber: 33
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-xs text-gray-500 italic", children: completedLessonCodes.has(selectedLesson.code) ? "View or edit the attendance record for this lesson" : "Mark this lesson as attended via PT-051" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 411,
+          lineNumber: 421,
           columnNumber: 33
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 404,
+        lineNumber: 414,
         columnNumber: 29
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Lesson Details" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 421,
+          lineNumber: 431,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4 mt-2", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Phase", value: selectedLesson.phase || "—" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 423,
+            lineNumber: 433,
             columnNumber: 33
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Module", value: selectedLesson.module || "—" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 424,
+            lineNumber: 434,
             columnNumber: 33
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailCard, { label: "Duration", value: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
@@ -90433,55 +90511,35 @@ const AcademicLmpTab = ({
             " ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-sm font-normal", children: "hrs" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 426,
+              lineNumber: 436,
               columnNumber: 84
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 426,
+            lineNumber: 436,
             columnNumber: 37
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 425,
+            lineNumber: 435,
             columnNumber: 33
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 422,
+          lineNumber: 432,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 420,
+        lineNumber: 430,
         columnNumber: 25
       }, void 0),
       selectedLesson.methodOfDelivery?.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Delivery" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 434,
-          columnNumber: 33
-        }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailList, { title: "", items: selectedLesson.methodOfDelivery }, void 0, false, {
-          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 436,
-          columnNumber: 37
-        }, void 0) }, void 0, false, {
-          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 435,
-          columnNumber: 33
-        }, void 0)
-      ] }, void 0, true, {
-        fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 433,
-        columnNumber: 29
-      }, void 0),
-      selectedLesson.methodOfAssessment?.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Assessment" }, void 0, false, {
-          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
           lineNumber: 444,
           columnNumber: 33
         }, void 0),
-        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailList, { title: "", items: selectedLesson.methodOfAssessment }, void 0, false, {
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailList, { title: "", items: selectedLesson.methodOfDelivery }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
           lineNumber: 446,
           columnNumber: 37
@@ -90494,34 +90552,54 @@ const AcademicLmpTab = ({
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
         lineNumber: 443,
         columnNumber: 29
+      }, void 0),
+      selectedLesson.methodOfAssessment?.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Assessment" }, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 454,
+          columnNumber: 33
+        }, void 0),
+        /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "mt-2", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(DetailList, { title: "", items: selectedLesson.methodOfAssessment }, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 456,
+          columnNumber: 37
+        }, void 0) }, void 0, false, {
+          fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+          lineNumber: 455,
+          columnNumber: 33
+        }, void 0)
+      ] }, void 0, true, {
+        fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
+        lineNumber: 453,
+        columnNumber: 29
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 346,
+      lineNumber: 356,
       columnNumber: 21
     }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex flex-col items-center justify-center h-full text-center p-8", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl mb-4", children: "📖" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 453,
+        lineNumber: 463,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 italic", children: "Select a lesson from the list to view its details and attendance record." }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 454,
+        lineNumber: 464,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 452,
+      lineNumber: 462,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 344,
+      lineNumber: 354,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-    lineNumber: 258,
+    lineNumber: 268,
     columnNumber: 9
   }, void 0);
 };
@@ -90539,12 +90617,12 @@ const TraineeLmpView = ({
   const [activeTab, setActiveTab] = reactExports.useState("neo");
   const hasAcademicSyllabus = reactExports.useMemo(() => {
     if (!syllabusDetails || syllabusDetails.length === 0) return false;
+    const academicLmpType = trainee.academicLmpType;
+    if (!academicLmpType || syllabusDetails.length === 0) return false;
     return syllabusDetails.some(
-      (s) => (s.type === "Academics" || s.type === "Ground School") && !s.methodOfDelivery?.includes("CPT") && (!s.courses || s.courses.length === 0 || s.courses.some(
-        (c) => c === trainee.course || c === trainee.lmpType || trainee.lmpType?.includes(c) || c.includes(trainee.course || "")
-      ))
+      (s) => s.type === "Academics" && s.courses?.includes(academicLmpType)
     );
-  }, [syllabusDetails, trainee.course, trainee.lmpType]);
+  }, [syllabusDetails, trainee.academicLmpType]);
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
     traineeLmp.forEach((item) => {
@@ -90565,7 +90643,7 @@ const TraineeLmpView = ({
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h1", { className: "text-2xl font-bold text-white", children: "Individual LMP" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 526,
+          lineNumber: 529,
           columnNumber: 21
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-sm text-gray-400", children: [
@@ -90576,12 +90654,12 @@ const TraineeLmpView = ({
           trainee.course
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 527,
+          lineNumber: 530,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 525,
+        lineNumber: 528,
         columnNumber: 17
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center gap-2", children: [
@@ -90596,46 +90674,46 @@ const TraineeLmpView = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 530,
+            lineNumber: 533,
             columnNumber: 21
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuditButton, { pageName: "Individual LMP" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 536,
+          lineNumber: 539,
           columnNumber: 21
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 529,
+        lineNumber: 532,
         columnNumber: 17
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 524,
+      lineNumber: 527,
       columnNumber: 13
     }, void 0),
     hasAcademicSyllabus && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-shrink-0 bg-gray-800 px-4 pt-2 flex gap-1 border-b border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { className: tabClass("neo"), onClick: () => setActiveTab("neo"), children: "NEO Build LMP" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 543,
+        lineNumber: 546,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { className: tabClass("academic"), onClick: () => setActiveTab("academic"), children: "Academic LMP" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 546,
+        lineNumber: 549,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 542,
+      lineNumber: 545,
       columnNumber: 17
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 flex flex-row overflow-hidden relative", children: [
       isFrozen && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-        lineNumber: 556,
+        lineNumber: 559,
         columnNumber: 21
       }, void 0),
       activeTab === "academic" && syllabusDetails && allTraineesData ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90651,7 +90729,7 @@ const TraineeLmpView = ({
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 561,
+          lineNumber: 564,
           columnNumber: 21
         },
         void 0
@@ -90668,16 +90746,16 @@ const TraineeLmpView = ({
                 children: [
                   isCompleted ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(CheckIcon, {}, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 582,
+                    lineNumber: 585,
                     columnNumber: 64
                   }, void 0) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-4 h-4 flex-shrink-0" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 582,
+                    lineNumber: 585,
                     columnNumber: 80
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { children: item.code }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                    lineNumber: 583,
+                    lineNumber: 586,
                     columnNumber: 49
                   }, void 0)
                 ]
@@ -90686,22 +90764,22 @@ const TraineeLmpView = ({
               true,
               {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-                lineNumber: 578,
+                lineNumber: 581,
                 columnNumber: 45
               },
               void 0
             ) }, item.code, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 577,
+              lineNumber: 580,
               columnNumber: 41
             }, void 0);
           }) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 573,
+            lineNumber: 576,
             columnNumber: 29
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 572,
+            lineNumber: 575,
             columnNumber: 25
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 max-w-5xl mx-auto", children: selectedItem ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -90714,41 +90792,41 @@ const TraineeLmpView = ({
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-              lineNumber: 595,
+              lineNumber: 598,
               columnNumber: 37
             },
             void 0
           ) : /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 601,
+            lineNumber: 604,
             columnNumber: 41
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 600,
+            lineNumber: 603,
             columnNumber: 37
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 593,
+            lineNumber: 596,
             columnNumber: 29
           }, void 0) }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-            lineNumber: 592,
+            lineNumber: 595,
             columnNumber: 25
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-          lineNumber: 570,
+          lineNumber: 573,
           columnNumber: 21
         }, void 0)
       )
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-      lineNumber: 553,
+      lineNumber: 556,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/TraineeLmpView.tsx",
-    lineNumber: 522,
+    lineNumber: 525,
     columnNumber: 9
   }, void 0);
 };
@@ -92568,6 +92646,14 @@ const COURSE_MASTER_LMPS = [
   "PLT Refresh",
   "Staff CAT"
 ];
+const ACADEMIC_LMP_COURSES = [
+  "PC-21 Ground School",
+  "ADF Ground School",
+  "BPC Academic",
+  "IPC Academic",
+  "FIC Academic",
+  "WSO Academic"
+];
 const LMP_DESCRIPTIONS = {
   "BPC+IPC": "Basic Pilot Course & Initial Pilot Course",
   "PC-21 Ground School": "PC-21 Ground School (academic phase)",
@@ -92587,6 +92673,7 @@ const EditCourseFlyout = ({
   location: initialLocation = "",
   unit: initialUnit = "",
   lmpType: initialLmpType = "BPC+IPC",
+  academicLmpType: initialAcademicLmpType = "",
   locations = [],
   units = [],
   onClose,
@@ -92597,19 +92684,21 @@ const EditCourseFlyout = ({
   const [location, setLocation] = reactExports.useState(initialLocation);
   const [unit, setUnit] = reactExports.useState(initialUnit);
   const [lmpType, setLmpType] = reactExports.useState(initialLmpType || "BPC+IPC");
+  const [academicLmpType, setAcademicLmpType] = reactExports.useState(initialAcademicLmpType || "");
   reactExports.useEffect(() => {
     setStartDate(initialStartDate);
     setGradDate(initialGradDate);
     setLocation(initialLocation || "");
     setUnit(initialUnit || "");
     setLmpType(initialLmpType || "BPC+IPC");
-  }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType]);
+    setAcademicLmpType(initialAcademicLmpType || "");
+  }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType, initialAcademicLmpType]);
   const handleSave = () => {
     if (!startDate || !gradDate) {
       alert("Please fill in both Start Date and Graduation Date.");
       return;
     }
-    onSave({ startDate, gradDate, location, unit, lmpType });
+    onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });
     onClose();
   };
   const fieldClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm";
@@ -92629,59 +92718,59 @@ const EditCourseFlyout = ({
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Edit Course" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 99,
+                  lineNumber: 114,
                   columnNumber: 25
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-gray-500 mt-0.5", children: "Modify course details, dates, and LMP type" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 100,
+                  lineNumber: 115,
                   columnNumber: 25
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 98,
+                lineNumber: 113,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: onClose, className: "text-white hover:text-gray-300", "aria-label": "Close", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 104,
+                lineNumber: 119,
                 columnNumber: 29
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 103,
+                lineNumber: 118,
                 columnNumber: 25
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 102,
+                lineNumber: 117,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-              lineNumber: 97,
+              lineNumber: 112,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-5 max-h-[75vh] overflow-y-auto", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { className: labelClass, children: "Course" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 113,
+                  lineNumber: 128,
                   columnNumber: 25
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-md text-white font-semibold text-sm tracking-wide", children: courseName }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 114,
+                  lineNumber: 129,
                   columnNumber: 25
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 112,
+                lineNumber: 127,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "edit-location", className: labelClass, children: "Location" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                    lineNumber: 122,
+                    lineNumber: 137,
                     columnNumber: 29
                   }, void 0),
                   locations.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -92694,12 +92783,12 @@ const EditCourseFlyout = ({
                       children: [
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— Select Location —" }, void 0, false, {
                           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                          lineNumber: 132,
+                          lineNumber: 147,
                           columnNumber: 37
                         }, void 0),
                         locations.map((loc) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: loc, children: loc }, loc, false, {
                           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                          lineNumber: 134,
+                          lineNumber: 149,
                           columnNumber: 41
                         }, void 0))
                       ]
@@ -92708,7 +92797,7 @@ const EditCourseFlyout = ({
                     true,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 126,
+                      lineNumber: 141,
                       columnNumber: 33
                     },
                     void 0
@@ -92726,20 +92815,20 @@ const EditCourseFlyout = ({
                     false,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 138,
+                      lineNumber: 153,
                       columnNumber: 33
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 121,
+                  lineNumber: 136,
                   columnNumber: 25
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "edit-unit", className: labelClass, children: "Unit" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                    lineNumber: 149,
+                    lineNumber: 164,
                     columnNumber: 29
                   }, void 0),
                   units.length > 0 ? /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -92752,12 +92841,12 @@ const EditCourseFlyout = ({
                       children: [
                         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— Select Unit —" }, void 0, false, {
                           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                          lineNumber: 159,
+                          lineNumber: 174,
                           columnNumber: 37
                         }, void 0),
                         units.map((u) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: u, children: u }, u, false, {
                           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                          lineNumber: 161,
+                          lineNumber: 176,
                           columnNumber: 41
                         }, void 0))
                       ]
@@ -92766,7 +92855,7 @@ const EditCourseFlyout = ({
                     true,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 153,
+                      lineNumber: 168,
                       columnNumber: 33
                     },
                     void 0
@@ -92784,19 +92873,19 @@ const EditCourseFlyout = ({
                     false,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 165,
+                      lineNumber: 180,
                       columnNumber: 33
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 148,
+                  lineNumber: 163,
                   columnNumber: 25
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 120,
+                lineNumber: 135,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
@@ -92804,12 +92893,12 @@ const EditCourseFlyout = ({
                   "Course / LMP Type",
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: "— determines which syllabus events populate each trainee's Individual LMP" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                    lineNumber: 181,
+                    lineNumber: 196,
                     columnNumber: 29
                   }, void 0)
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 179,
+                  lineNumber: 194,
                   columnNumber: 25
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -92821,7 +92910,7 @@ const EditCourseFlyout = ({
                     className: fieldClass,
                     children: COURSE_MASTER_LMPS.map((lmp) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: lmp, children: lmp }, lmp, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 190,
+                      lineNumber: 205,
                       columnNumber: 33
                     }, void 0))
                   },
@@ -92829,19 +92918,83 @@ const EditCourseFlyout = ({
                   false,
                   {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                    lineNumber: 183,
+                    lineNumber: 198,
                     columnNumber: 25
                   },
                   void 0
                 ),
                 lmpType && LMP_DESCRIPTIONS[lmpType] && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: LMP_DESCRIPTIONS[lmpType] }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 194,
+                  lineNumber: 209,
                   columnNumber: 29
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 178,
+                lineNumber: 193,
+                columnNumber: 21
+              }, void 0),
+              /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("label", { htmlFor: "edit-academic-lmp-type", className: labelClass, children: [
+                  "Academic LMP Type",
+                  /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: [
+                    "— determines which ",
+                    /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("strong", { children: "Academics" }, void 0, false, {
+                      fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                      lineNumber: 217,
+                      columnNumber: 105
+                    }, void 0),
+                    " lessons appear in the Academic LMP tab"
+                  ] }, void 0, true, {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                    lineNumber: 217,
+                    columnNumber: 29
+                  }, void 0)
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                  lineNumber: 215,
+                  columnNumber: 25
+                }, void 0),
+                /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
+                  "select",
+                  {
+                    id: "edit-academic-lmp-type",
+                    value: academicLmpType,
+                    onChange: (e) => setAcademicLmpType(e.target.value),
+                    className: fieldClass,
+                    children: [
+                      /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: "", children: "— None (Academic LMP tab hidden) —" }, void 0, false, {
+                        fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                        lineNumber: 225,
+                        columnNumber: 29
+                      }, void 0),
+                      ACADEMIC_LMP_COURSES.map((lmp) => /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("option", { value: lmp, children: lmp }, lmp, false, {
+                        fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                        lineNumber: 227,
+                        columnNumber: 33
+                      }, void 0))
+                    ]
+                  },
+                  void 0,
+                  true,
+                  {
+                    fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                    lineNumber: 219,
+                    columnNumber: 25
+                  },
+                  void 0
+                ),
+                academicLmpType && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: [
+                  'Academic lessons from the "',
+                  academicLmpType,
+                  `" course in the Syllabus will appear in each trainee's Academic LMP tab.`
+                ] }, void 0, true, {
+                  fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                  lineNumber: 231,
+                  columnNumber: 29
+                }, void 0)
+              ] }, void 0, true, {
+                fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
+                lineNumber: 214,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "grid grid-cols-2 gap-4", children: [
@@ -92850,12 +93003,12 @@ const EditCourseFlyout = ({
                     "Start Date ",
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400", children: "*" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 202,
+                      lineNumber: 239,
                       columnNumber: 44
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                    lineNumber: 201,
+                    lineNumber: 238,
                     columnNumber: 29
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -92872,14 +93025,14 @@ const EditCourseFlyout = ({
                     false,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 204,
+                      lineNumber: 241,
                       columnNumber: 29
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 200,
+                  lineNumber: 237,
                   columnNumber: 25
                 }, void 0),
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: [
@@ -92887,12 +93040,12 @@ const EditCourseFlyout = ({
                     "Graduation Date ",
                     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400", children: "*" }, void 0, false, {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 215,
+                      lineNumber: 252,
                       columnNumber: 49
                     }, void 0)
                   ] }, void 0, true, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                    lineNumber: 214,
+                    lineNumber: 251,
                     columnNumber: 29
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -92909,40 +93062,40 @@ const EditCourseFlyout = ({
                     false,
                     {
                       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                      lineNumber: 217,
+                      lineNumber: 254,
                       columnNumber: 29
                     },
                     void 0
                   )
                 ] }, void 0, true, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 213,
+                  lineNumber: 250,
                   columnNumber: 25
                 }, void 0)
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 199,
+                lineNumber: 236,
                 columnNumber: 21
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-3 bg-sky-900/20 border border-sky-700/30 rounded-md", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-xs text-sky-300/80 leading-relaxed", children: [
                 /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-300", children: "Note:" }, void 0, false, {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 231,
+                  lineNumber: 268,
                   columnNumber: 29
                 }, void 0),
                 " Changing the LMP Type will update the syllabus events available for all trainees in this course. Location and Unit are used for filtering trainees in schedule views."
               ] }, void 0, true, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 230,
+                lineNumber: 267,
                 columnNumber: 25
               }, void 0) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                lineNumber: 229,
+                lineNumber: 266,
                 columnNumber: 21
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-              lineNumber: 109,
+              lineNumber: 124,
               columnNumber: 17
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
@@ -92957,7 +93110,7 @@ const EditCourseFlyout = ({
                 false,
                 {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 238,
+                  lineNumber: 275,
                   columnNumber: 21
                 },
                 void 0
@@ -92973,14 +93126,14 @@ const EditCourseFlyout = ({
                 false,
                 {
                   fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-                  lineNumber: 244,
+                  lineNumber: 281,
                   columnNumber: 21
                 },
                 void 0
               )
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-              lineNumber: 237,
+              lineNumber: 274,
               columnNumber: 17
             }, void 0)
           ]
@@ -92989,7 +93142,7 @@ const EditCourseFlyout = ({
         true,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-          lineNumber: 92,
+          lineNumber: 107,
           columnNumber: 13
         },
         void 0
@@ -92999,7 +93152,7 @@ const EditCourseFlyout = ({
     false,
     {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/EditCourseFlyout.tsx",
-      lineNumber: 88,
+      lineNumber: 103,
       columnNumber: 9
     },
     void 0
@@ -93500,6 +93653,7 @@ const CoursesManagementView = ({
         location: courseToEdit.location || "",
         unit: courseToEdit.unit || "",
         lmpType: courseToEdit.lmpType || "BPC+IPC",
+        academicLmpType: courseToEdit.academicLmpType || "",
         locations,
         units,
         onClose: () => {
@@ -93520,19 +93674,19 @@ const CoursesManagementView = ({
     showPinDialog && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-white mb-4", children: "Enter PIN to Delete Course" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 321,
+        lineNumber: 322,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-4", children: [
         "You are about to delete ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 323,
+          lineNumber: 324,
           columnNumber: 53
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 322,
+        lineNumber: 323,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -93550,7 +93704,7 @@ const CoursesManagementView = ({
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 325,
+          lineNumber: 326,
           columnNumber: 25
         },
         void 0
@@ -93567,7 +93721,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 335,
+            lineNumber: 336,
             columnNumber: 29
           },
           void 0
@@ -93583,72 +93737,72 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 341,
+            lineNumber: 342,
             columnNumber: 29
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 334,
+        lineNumber: 335,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 320,
+      lineNumber: 321,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 319,
+      lineNumber: 320,
       columnNumber: 17
     }, void 0),
     showChoiceDialog && courseToDelete && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 flex items-center justify-center z-50", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-yellow-600/50", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h3", { className: "text-xl font-semibold text-yellow-400 mb-2", children: "Archive or Delete Course?" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 356,
+        lineNumber: 357,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-6", children: [
         "What would you like to do with ",
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-semibold text-sky-400", children: courseToDelete }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 358,
+          lineNumber: 359,
           columnNumber: 60
         }, void 0),
         "?"
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 357,
+        lineNumber: 358,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-sm text-gray-400 mb-6 space-y-2", children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 font-medium", children: "Archive" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 361,
+            lineNumber: 362,
             columnNumber: 32
           }, void 0),
           " — hides the course but keeps all data. Can be restored later."
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 361,
+          lineNumber: 362,
           columnNumber: 29
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-red-400 font-medium", children: "Delete" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 362,
+            lineNumber: 363,
             columnNumber: 32
           }, void 0),
           " — permanently removes the course. This cannot be undone."
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-          lineNumber: 362,
+          lineNumber: 363,
           columnNumber: 29
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 360,
+        lineNumber: 361,
         columnNumber: 25
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex gap-3 justify-end", children: [
@@ -93663,7 +93817,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 365,
+            lineNumber: 366,
             columnNumber: 29
           },
           void 0
@@ -93679,7 +93833,7 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 371,
+            lineNumber: 372,
             columnNumber: 29
           },
           void 0
@@ -93695,23 +93849,23 @@ const CoursesManagementView = ({
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-            lineNumber: 377,
+            lineNumber: 378,
             columnNumber: 29
           },
           void 0
         )
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-        lineNumber: 364,
+        lineNumber: 365,
         columnNumber: 25
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 355,
+      lineNumber: 356,
       columnNumber: 21
     }, void 0) }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/components/CoursesManagementView.tsx",
-      lineNumber: 354,
+      lineNumber: 355,
       columnNumber: 17
     }, void 0)
   ] }, void 0, true, {
@@ -105064,6 +105218,7 @@ ${"=".repeat(60)}`);
             rank: data.rank,
             course: data.course,
             lmpType: data.lmpType,
+            academicLmpType: data.academicLmpType || "",
             unit: data.unit,
             flight: data.flight,
             location: data.location,
@@ -105309,7 +105464,7 @@ ${"=".repeat(60)}`);
   const handleUpdateCourseFromTrainingRecords = async (courseName, data) => {
     setCourses(
       (prevCourses) => prevCourses.map(
-        (course) => course.name === courseName ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType } : course
+        (course) => course.name === courseName ? { ...course, startDate: data.startDate, gradDate: data.gradDate, location: data.location, unit: data.unit, lmpType: data.lmpType, academicLmpType: data.academicLmpType } : course
       )
     );
     try {
@@ -105329,6 +105484,7 @@ ${"=".repeat(60)}`);
         location: data.location,
         unit: data.unit,
         lmpType: data.lmpType,
+        academicLmpType: data.academicLmpType,
         status: course.status
       });
       if (result.success) {
@@ -108614,7 +108770,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11724,
+            lineNumber: 11726,
             columnNumber: 24
           },
           void 0
@@ -108652,7 +108808,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 11880,
+            lineNumber: 11882,
             columnNumber: 24
           },
           void 0
@@ -108719,7 +108875,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 11956,
+              lineNumber: 11958,
               columnNumber: 28
             },
             void 0
@@ -108781,7 +108937,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12016,
+            lineNumber: 12018,
             columnNumber: 24
           },
           void 0
@@ -108825,7 +108981,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12034,
+            lineNumber: 12036,
             columnNumber: 24
           },
           void 0
@@ -108958,7 +109114,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12073,
+            lineNumber: 12075,
             columnNumber: 24
           },
           void 0
@@ -109077,7 +109233,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12207,
+            lineNumber: 12209,
             columnNumber: 24
           },
           void 0
@@ -109195,7 +109351,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12340,
+              lineNumber: 12342,
               columnNumber: 28
             },
             void 0
@@ -109215,7 +109371,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 12468,
+              lineNumber: 12470,
               columnNumber: 28
             },
             void 0
@@ -109281,7 +109437,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12476,
+            lineNumber: 12478,
             columnNumber: 24
           },
           void 0
@@ -109474,7 +109630,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12532,
+            lineNumber: 12534,
             columnNumber: 24
           },
           void 0
@@ -109495,7 +109651,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12722,
+            lineNumber: 12724,
             columnNumber: 24
           },
           void 0
@@ -109530,7 +109686,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12732,
+            lineNumber: 12734,
             columnNumber: 24
           },
           void 0
@@ -109548,7 +109704,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12756,
+            lineNumber: 12758,
             columnNumber: 24
           },
           void 0
@@ -109580,7 +109736,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12763,
+            lineNumber: 12765,
             columnNumber: 25
           },
           void 0
@@ -109711,7 +109867,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12790,
+            lineNumber: 12792,
             columnNumber: 24
           },
           void 0
@@ -109735,7 +109891,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12931,
+            lineNumber: 12933,
             columnNumber: 24
           },
           void 0
@@ -109814,7 +109970,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 12946,
+            lineNumber: 12948,
             columnNumber: 24
           },
           void 0
@@ -109897,7 +110053,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13021,
+            lineNumber: 13023,
             columnNumber: 24
           },
           void 0
@@ -109935,7 +110091,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13101,
+            lineNumber: 13103,
             columnNumber: 28
           },
           void 0
@@ -109957,7 +110113,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13128,
+            lineNumber: 13130,
             columnNumber: 24
           },
           void 0
@@ -109984,10 +110140,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             }
           }
           if (individualLMP) {
+            const courseForLmp = courses.find((c) => c.name === selectedTraineeForLMP.course);
+            const traineeWithAcademicLmp = selectedTraineeForLMP.academicLmpType ? selectedTraineeForLMP : { ...selectedTraineeForLMP, academicLmpType: courseForLmp?.academicLmpType || "" };
             return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
               TraineeLmpView,
               {
-                trainee: selectedTraineeForLMP,
+                trainee: traineeWithAcademicLmp,
                 traineeLmp: individualLMP,
                 scores: traineeScores,
                 onBack: () => {
@@ -110021,7 +110179,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               false,
               {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13169,
+                lineNumber: 13177,
                 columnNumber: 32
               },
               void 0
@@ -110030,7 +110188,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "Error: Could not load trainee LMP." }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13202,
+          lineNumber: 13210,
           columnNumber: 24
         }, void 0);
       case "Currency":
@@ -110049,7 +110207,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13205,
+              lineNumber: 13213,
               columnNumber: 28
             },
             void 0
@@ -110133,7 +110291,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13216,
+            lineNumber: 13224,
             columnNumber: 24
           },
           void 0
@@ -110152,7 +110310,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13290,
+            lineNumber: 13298,
             columnNumber: 24
           },
           void 0
@@ -110282,7 +110440,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13318,
+              lineNumber: 13326,
               columnNumber: 28
             },
             void 0
@@ -110296,7 +110454,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-8 bg-gray-900 text-white", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-2xl font-bold text-red-500 mb-4", children: "Error: PT-051 View Context Missing" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13452,
+            lineNumber: 13460,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -110304,7 +110462,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedTraineeForHateSheet ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13453,
+            lineNumber: 13461,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "mb-2", children: [
@@ -110312,7 +110470,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             eventForPt051 ? "✅ Set" : "❌ Not Set"
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13454,
+            lineNumber: 13462,
             columnNumber: 21
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -110326,14 +110484,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13455,
+              lineNumber: 13463,
               columnNumber: 21
             },
             void 0
           )
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13451,
+          lineNumber: 13459,
           columnNumber: 24
         }, void 0);
       case "PostFlight":
@@ -110462,7 +110620,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13464,
+              lineNumber: 13472,
               columnNumber: 28
             },
             void 0
@@ -110490,7 +110648,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             false,
             {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13611,
+              lineNumber: 13619,
               columnNumber: 28
             },
             void 0
@@ -110500,13 +110658,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       case "AUTH":
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(AuthorisationView, {}, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13628,
+          lineNumber: 13636,
           columnNumber: 24
         }, void 0);
       default:
         return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { children: "View not found" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13630,
+          lineNumber: 13638,
           columnNumber: 24
         }, void 0);
     }
@@ -110548,7 +110706,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   return /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(jsxDevRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SystemFreezeBanner, {}, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13684,
+      lineNumber: 13692,
       columnNumber: 9
     }, void 0),
     /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -110562,7 +110720,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       false,
       {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13685,
+        lineNumber: 13693,
         columnNumber: 9
       },
       void 0
@@ -110606,7 +110764,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13691,
+          lineNumber: 13699,
           columnNumber: 13
         },
         void 0
@@ -110644,19 +110802,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           false,
           {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13724,
+            lineNumber: 13732,
             columnNumber: 49
           },
           void 0
         ),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex-1 overflow-hidden flex flex-col min-h-0", children: renderActiveView() }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13752,
+          lineNumber: 13760,
           columnNumber: 17
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13723,
+        lineNumber: 13731,
         columnNumber: 13
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -110677,14 +110835,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13756,
+          lineNumber: 13764,
           columnNumber: 13
         },
         void 0
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(Magnifier, { isEnabled: isMagnifierEnabled }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13768,
+        lineNumber: 13776,
         columnNumber: 36
       }, void 0),
       selectedEvent && isAddingTile && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -110717,7 +110875,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13771,
+          lineNumber: 13779,
           columnNumber: 17
         },
         void 0
@@ -110847,7 +111005,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13797,
+          lineNumber: 13805,
           columnNumber: 17
         },
         void 0
@@ -110855,7 +111013,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       conflict && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(ConflictModal, { conflict, onResolve: () => {
       }, onCancel: () => setConflict(null) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13937,
+        lineNumber: 13945,
         columnNumber: 26
       }, void 0),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -110870,7 +111028,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13939,
+          lineNumber: 13947,
           columnNumber: 17
         },
         void 0
@@ -110878,11 +111036,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       showNeoChoiceModal && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowNeoChoiceModal(false), children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Resolution Options" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13950,
+          lineNumber: 13958,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13949,
+          lineNumber: 13957,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4 text-center", children: [
@@ -110890,13 +111048,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             "NEO has found multiple ways to resolve the conflict for ",
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "font-bold text-white", children: neoProblemTileForFlyout?.event.flightNumber }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13953,
+              lineNumber: 13961,
               columnNumber: 114
             }, void 0),
             ". Please choose an option:"
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13953,
+            lineNumber: 13961,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-center space-x-4 pt-4", children: [
@@ -110908,12 +111066,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Time Shift" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13959,
+                    lineNumber: 13967,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-sky-200", children: "Keep crew, change time" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13960,
+                    lineNumber: 13968,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -110922,7 +111080,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13955,
+                lineNumber: 13963,
                 columnNumber: 33
               },
               void 0
@@ -110935,12 +111093,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 children: [
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-lg", children: "Change Crew" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13966,
+                    lineNumber: 13974,
                     columnNumber: 37
                   }, void 0),
                   /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "block text-xs text-amber-200", children: "Keep time, change instructor" }, void 0, false, {
                     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                    lineNumber: 13967,
+                    lineNumber: 13975,
                     columnNumber: 37
                   }, void 0)
                 ]
@@ -110949,38 +111107,38 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               true,
               {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13962,
+                lineNumber: 13970,
                 columnNumber: 33
               },
               void 0
             )
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13954,
+            lineNumber: 13962,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13952,
+          lineNumber: 13960,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13948,
+        lineNumber: 13956,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13947,
+        lineNumber: 13955,
         columnNumber: 17
       }, void 0),
       showTimeOnlyRemedyConfirm && timeOnlyRemedyForConfirmation && neoProblemTileForFlyout && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: handleCancelTimeOnlyRemedy, children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (e) => e.stopPropagation(), children: [
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("h2", { className: "text-xl font-bold text-sky-400", children: "Confirm Time Change" }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13978,
+          lineNumber: 13986,
           columnNumber: 29
         }, void 0) }, void 0, false, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13977,
+          lineNumber: 13985,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "p-6 space-y-4", children: [
@@ -110988,89 +111146,89 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Current Start Time:" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13983,
+                lineNumber: 13991,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-white font-mono font-bold", children: formatDecimalHourToString(neoProblemTileForFlyout.event.startTime) }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13984,
+                lineNumber: 13992,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13982,
+              lineNumber: 13990,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "flex justify-between items-center", children: [
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-gray-400 text-sm", children: "Conflict Cause:" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13987,
+                lineNumber: 13995,
                 columnNumber: 37
               }, void 0),
               /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("span", { className: "text-amber-400 text-sm font-medium text-right", children: neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("previous")) ? "Prior event turnaround" : neoProblemTileForFlyout.errors.some((e) => e.toLowerCase().includes("next")) ? "Next event turnaround" : "Scheduling conflict" }, void 0, false, {
                 fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-                lineNumber: 13988,
+                lineNumber: 13996,
                 columnNumber: 37
               }, void 0)
             ] }, void 0, true, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13986,
+              lineNumber: 13994,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13981,
+            lineNumber: 13989,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center pt-2", children: [
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-300 mb-2 text-sm", children: "Proposed New Start Time" }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 13999,
+              lineNumber: 14007,
               columnNumber: 33
             }, void 0),
             /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-4xl font-bold text-green-400 font-mono tracking-wider", children: formatDecimalHourToString(timeOnlyRemedyForConfirmation.newStartTime) }, void 0, false, {
               fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-              lineNumber: 14e3,
+              lineNumber: 14008,
               columnNumber: 33
             }, void 0)
           ] }, void 0, true, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 13998,
+            lineNumber: 14006,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 13980,
+          lineNumber: 13988,
           columnNumber: 25
         }, void 0),
         /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleCancelTimeOnlyRemedy, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Cancel" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 14006,
+            lineNumber: 14014,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleSwitchToCrewChange, className: "px-4 py-2 bg-transparent border border-gray-500 text-gray-300 hover:bg-gray-700 hover:text-white rounded-md transition-colors text-sm font-semibold", children: "Change Crew Instead" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 14007,
+            lineNumber: 14015,
             columnNumber: 29
           }, void 0),
           /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("button", { onClick: handleConfirmTimeOnlyRemedy, className: "px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700 transition-colors text-sm font-semibold", children: "Accept Time Change" }, void 0, false, {
             fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-            lineNumber: 14008,
+            lineNumber: 14016,
             columnNumber: 29
           }, void 0)
         ] }, void 0, true, {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14005,
+          lineNumber: 14013,
           columnNumber: 25
         }, void 0)
       ] }, void 0, true, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13976,
+        lineNumber: 13984,
         columnNumber: 21
       }, void 0) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 13975,
+        lineNumber: 13983,
         columnNumber: 18
       }, void 0),
       showDutyWarning && dutyWarningRemedy && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -111085,49 +111243,49 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14014,
+          lineNumber: 14022,
           columnNumber: 17
         },
         void 0
       ),
       showInfoNotification && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(InfoNotification, { message: showInfoNotification, onClose: () => setShowInfoNotification(null) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14023,
+        lineNumber: 14031,
         columnNumber: 38
       }, void 0),
       showNightFlyingInfo && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(NightFlyingInfoFlyout, { traineeCount: nightFlyingTraineeCount }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14024,
+        lineNumber: 14032,
         columnNumber: 37
       }, void 0),
       isBuildingDfp && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDfpLoadingFlyout, { progress: dfpBuildProgress }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14025,
+        lineNumber: 14033,
         columnNumber: 31
       }, void 0),
       showDateWarning && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(BuildDateWarningFlyout, { onConfirm: handleConfirmDateAndBuild, onCancel: () => setShowDateWarning(false), date: buildDfpDate }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14026,
+        lineNumber: 14034,
         columnNumber: 33
       }, void 0),
       unavailabilityNotifications.length > 0 && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(UnavailabilityConflictFlyout, { notifications: unavailabilityNotifications, onDismiss: () => setUnavailabilityNotifications([]) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14027,
+        lineNumber: 14035,
         columnNumber: 56
       }, void 0),
       showPublishConfirm && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(PublishConfirmationFlyout, { date: buildDfpDate, onConfirm: handleConfirmPublish, onCancel: () => setShowPublishConfirm(false) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14028,
+        lineNumber: 14036,
         columnNumber: 36
       }, void 0),
       isLocalityChangeVisible && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LocalityChangeFlyout, { locality: school }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14029,
+        lineNumber: 14037,
         columnNumber: 41
       }, void 0),
       successMessage && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(SuccessNotification, { message: successMessage, onClose: () => setSuccessMessage(null) }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14030,
+        lineNumber: 14038,
         columnNumber: 32
       }, void 0),
       showCurrencySetup && selectedPersonForCurrency && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(
@@ -111148,7 +111306,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14032,
+          lineNumber: 14040,
           columnNumber: 17
         },
         void 0
@@ -111164,7 +111322,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14048,
+          lineNumber: 14056,
           columnNumber: 17
         },
         void 0
@@ -111197,7 +111355,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14055,
+          lineNumber: 14063,
           columnNumber: 17
         },
         void 0
@@ -111244,7 +111402,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14079,
+          lineNumber: 14087,
           columnNumber: 17
         },
         void 0
@@ -111263,7 +111421,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14117,
+          lineNumber: 14125,
           columnNumber: 17
         },
         void 0
@@ -111282,7 +111440,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14127,
+          lineNumber: 14135,
           columnNumber: 17
         },
         void 0
@@ -111338,7 +111496,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14137,
+          lineNumber: 14145,
           columnNumber: 17
         },
         void 0
@@ -111360,7 +111518,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14190,
+          lineNumber: 14198,
           columnNumber: 17
         },
         void 0
@@ -111383,7 +111541,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14205,
+          lineNumber: 14213,
           columnNumber: 17
         },
         void 0
@@ -111399,44 +111557,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         false,
         {
           fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-          lineNumber: 14221,
+          lineNumber: 14229,
           columnNumber: 17
         },
         void 0
       )
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 13690,
+      lineNumber: 13698,
       columnNumber: 9
     }, void 0),
     !authLoading && !isAuthenticated && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV(LoginModal, { onLoginSuccess: handleLoginSuccess }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 14231,
+      lineNumber: 14239,
       columnNumber: 13
     }, void 0),
     authLoading && /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "fixed inset-0 z-[9999] flex items-center justify-center bg-gray-900", children: /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "text-center", children: [
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14238,
+        lineNumber: 14246,
         columnNumber: 21
       }, void 0),
       /* @__PURE__ */ jsxDevRuntimeExports.jsxDEV("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." }, void 0, false, {
         fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-        lineNumber: 14239,
+        lineNumber: 14247,
         columnNumber: 21
       }, void 0)
     ] }, void 0, true, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 14237,
+      lineNumber: 14245,
       columnNumber: 17
     }, void 0) }, void 0, false, {
       fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-      lineNumber: 14236,
+      lineNumber: 14244,
       columnNumber: 13
     }, void 0)
   ] }, void 0, true, {
     fileName: "/workspace/repo-impl/DFP-NEO-V2-fresh/App.tsx",
-    lineNumber: 13683,
+    lineNumber: 13691,
     columnNumber: 5
   }, void 0);
 };

@@ -13,6 +13,16 @@ const COURSE_MASTER_LMPS = [
     'Staff CAT',
 ];
 
+// Academic LMP types — these are 'Academics' type syllabus courses (Ground School phase)
+const ACADEMIC_LMP_COURSES = [
+    'PC-21 Ground School',
+    'ADF Ground School',
+    'BPC Academic',
+    'IPC Academic',
+    'FIC Academic',
+    'WSO Academic',
+];
+
 const LMP_DESCRIPTIONS: Record<string, string> = {
     'BPC+IPC': 'Basic Pilot Course & Initial Pilot Course',
     'PC-21 Ground School': 'PC-21 Ground School (academic phase)',
@@ -33,6 +43,7 @@ interface EditCourseFlyoutProps {
     location?: string;
     unit?: string;
     lmpType?: string;
+    academicLmpType?: string;
     locations: string[];
     units: string[];
     onClose: () => void;
@@ -42,6 +53,7 @@ interface EditCourseFlyoutProps {
         location: string;
         unit: string;
         lmpType: string;
+        academicLmpType: string;
     }) => void;
 }
 
@@ -52,6 +64,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     location: initialLocation = '',
     unit: initialUnit = '',
     lmpType: initialLmpType = 'BPC+IPC',
+    academicLmpType: initialAcademicLmpType = '',
     locations = [],
     units = [],
     onClose,
@@ -62,6 +75,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     const [location, setLocation] = useState(initialLocation);
     const [unit, setUnit] = useState(initialUnit);
     const [lmpType, setLmpType] = useState(initialLmpType || 'BPC+IPC');
+    const [academicLmpType, setAcademicLmpType] = useState(initialAcademicLmpType || '');
 
     // Sync if props change
     useEffect(() => {
@@ -70,14 +84,15 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
         setLocation(initialLocation || '');
         setUnit(initialUnit || '');
         setLmpType(initialLmpType || 'BPC+IPC');
-    }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType]);
+        setAcademicLmpType(initialAcademicLmpType || '');
+    }, [initialStartDate, initialGradDate, initialLocation, initialUnit, initialLmpType, initialAcademicLmpType]);
 
     const handleSave = () => {
         if (!startDate || !gradDate) {
             alert('Please fill in both Start Date and Graduation Date.');
             return;
         }
-        onSave({ startDate, gradDate, location, unit, lmpType });
+        onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });
         onClose();
     };
 
@@ -192,6 +207,28 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                         </select>
                         {lmpType && LMP_DESCRIPTIONS[lmpType] && (
                             <p className="mt-1 text-xs text-sky-400/70 italic">{LMP_DESCRIPTIONS[lmpType]}</p>
+                        )}
+                    </div>
+
+                    {/* Academic LMP Type */}
+                    <div>
+                        <label htmlFor="edit-academic-lmp-type" className={labelClass}>
+                            Academic LMP Type
+                            <span className="ml-1 text-xs text-gray-500 font-normal">— determines which <strong>Academics</strong> lessons appear in the Academic LMP tab</span>
+                        </label>
+                        <select
+                            id="edit-academic-lmp-type"
+                            value={academicLmpType}
+                            onChange={(e) => setAcademicLmpType(e.target.value)}
+                            className={fieldClass}
+                        >
+                            <option value="">— None (Academic LMP tab hidden) —</option>
+                            {ACADEMIC_LMP_COURSES.map(lmp => (
+                                <option key={lmp} value={lmp}>{lmp}</option>
+                            ))}
+                        </select>
+                        {academicLmpType && (
+                            <p className="mt-1 text-xs text-sky-400/70 italic">Academic lessons from the "{academicLmpType}" course in the Syllabus will appear in each trainee's Academic LMP tab.</p>
                         )}
                     </div>
 

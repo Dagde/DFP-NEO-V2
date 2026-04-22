@@ -164,28 +164,22 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
 }) => {
     const [selectedLesson, setSelectedLesson] = useState<SyllabusItemDetail | null>(null);
 
-    // Build academic syllabus for this trainee's course
+    // Build academic syllabus for this trainee
+    // Only type === 'Academics' (Ground School = flying phase ground events, not academic lessons)
+    // Filtered by trainee.academicLmpType (set per-trainee or inherited from course)
     const academicSyllabus = useMemo(() => {
+        const academicLmpType = (trainee as any).academicLmpType;
+        if (!academicLmpType) return []; // No academic LMP assigned — show prompt
         return syllabusDetails.filter(s =>
-            (s.type === 'Academics' || s.type === 'Ground School') &&
-            !s.methodOfDelivery?.includes('CPT') &&
-            (
-                !s.courses || s.courses.length === 0 ||
-                s.courses.some(c =>
-                    c === trainee.course ||
-                    c === trainee.lmpType ||
-                    // Also match lmpType like "PC-21 Ground School"
-                    trainee.lmpType?.includes(c) ||
-                    c.includes(trainee.course || '')
-                )
-            )
+            s.type === 'Academics' &&
+            s.courses?.includes(academicLmpType)
         ).sort((a, b) => {
             // Sort by phase then module then code
             if (a.phase !== b.phase) return (a.phase || '').localeCompare(b.phase || '');
             if (a.module !== b.module) return (a.module || '').localeCompare(b.module || '');
             return (a.code || '').localeCompare(b.code || '');
         });
-    }, [syllabusDetails, trainee.course, trainee.lmpType]);
+    }, [syllabusDetails, (trainee as any).academicLmpType]);
 
     // Set of lesson codes this trainee has completed (has a Score record)
     const completedLessonCodes = useMemo(() => {
@@ -238,6 +232,22 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
         }
     };
 
+    const academicLmpType = (trainee as any).academicLmpType;
+    if (!academicLmpType) {
+        return (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div className="bg-amber-900/20 border border-amber-700/40 rounded-lg p-6 max-w-md">
+                    <p className="text-amber-300 font-semibold text-lg mb-2">No Academic LMP Assigned</p>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                        This trainee does not have an Academic LMP assigned.<br/>
+                        Go to <span className="text-sky-400 font-medium">Course Roster → Edit Trainee</span> and set the <span className="text-sky-400 font-medium">Academic LMP</span> field,<br/>
+                        or set it at the course level via <span className="text-sky-400 font-medium">Training Records → Edit Course</span>.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (academicSyllabus.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -248,7 +258,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                     {trainee.lmpType ? <> / LMP type <span className="text-sky-400">{trainee.lmpType}</span></> : null}.
                 </p>
                 <p className="text-gray-600 text-xs mt-2">
-                    Ensure the Master LMP has events of type "Academics" or "Ground School" assigned to this course.
+                    Ensure the Master LMP (Syllabus) has events of type "Academics" with courses assigned to the Academic LMP type: {academicLmpType}.
                 </p>
             </div>
         );
@@ -477,20 +487,13 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     // Determine whether to show Academic tab
     const hasAcademicSyllabus = useMemo(() => {
         if (!syllabusDetails || syllabusDetails.length === 0) return false;
+        const academicLmpType = (trainee as any).academicLmpType;
+        if (!academicLmpType || syllabusDetails.length === 0) return false;
         return syllabusDetails.some(s =>
-            (s.type === 'Academics' || s.type === 'Ground School') &&
-            !s.methodOfDelivery?.includes('CPT') &&
-            (
-                !s.courses || s.courses.length === 0 ||
-                s.courses.some(c =>
-                    c === trainee.course ||
-                    c === trainee.lmpType ||
-                    trainee.lmpType?.includes(c) ||
-                    c.includes(trainee.course || '')
-                )
-            )
+            s.type === 'Academics' &&
+            s.courses?.includes(academicLmpType)
         );
-    }, [syllabusDetails, trainee.course, trainee.lmpType]);
+    }, [syllabusDetails, (trainee as any).academicLmpType]);
 
     // ── NEO Build LMP: dual-source completion check ──
     const completedEventIds = useMemo(() => {
