@@ -254,11 +254,15 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                 <div className="text-4xl mb-4">📚</div>
                 <p className="text-gray-400 text-lg font-medium">No Academic Syllabus Found</p>
                 <p className="text-gray-500 text-sm mt-2">
-                    No academic lessons found for course <span className="text-sky-400">{trainee.course}</span>
-                    {trainee.lmpType ? <> / LMP type <span className="text-sky-400">{trainee.lmpType}</span></> : null}.
+                    No <span className="text-sky-400">Academics</span> type lessons found with course assignment: <span className="text-purple-400">"{academicLmpType}"</span>
                 </p>
-                <p className="text-gray-600 text-xs mt-2">
-                    Ensure the Master LMP (Syllabus) has events of type "Academics" with courses assigned to the Academic LMP type: {academicLmpType}.
+                <p className="text-gray-600 text-xs mt-2 max-w-md">
+                    In the <span className="text-sky-400">Syllabus view</span>, ensure at least one event has type <strong className="text-white">Academics</strong> and has <span className="text-purple-400">"{academicLmpType}"</span> in its <strong className="text-white">Courses</strong> field.
+                </p>
+                <p className="text-gray-700 text-xs mt-1">
+                    Total syllabus items loaded: {syllabusDetails.length} | 
+                    Academics type items: {syllabusDetails.filter(s => s.type === 'Academics').length} |
+                    Matching course: {syllabusDetails.filter(s => s.type === 'Academics' && s.courses?.includes(academicLmpType)).length}
                 </p>
             </div>
         );

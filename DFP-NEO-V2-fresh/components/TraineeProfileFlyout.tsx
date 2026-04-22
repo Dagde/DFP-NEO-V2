@@ -13,7 +13,9 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
-const ACADEMIC_LMP_COURSES = ['PC-21 Ground School', 'ADF Ground School', 'BPC Academic', 'IPC Academic', 'FIC Academic', 'WSO Academic'];
+// ACADEMIC_LMP_COURSES is now derived dynamically from syllabusDetails in the component
+// This fallback list is used when no Academics items exist in the syllabus yet
+const ACADEMIC_LMP_COURSES_FALLBACK = ['PC-21 Ground School', 'ADF Ground School', 'BPC Academic', 'IPC Academic', 'FIC Academic', 'WSO Academic'];
 
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
@@ -264,6 +266,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
+
+    // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items
+    // Falls back to hardcoded list if no Academics items exist yet
+    const academicLmpCourses = useMemo(() => {
+        const courseCodes = new Set<string>();
+        syllabusDetails.forEach(s => {
+            if (s.type === 'Academics' && s.courses) {
+                s.courses.forEach(c => courseCodes.add(c));
+            }
+        });
+        if (courseCodes.size === 0) return ACADEMIC_LMP_COURSES_FALLBACK;
+        return Array.from(courseCodes).sort();
+    }, [syllabusDetails]);
 
     // Shared 3D card style (matches Staff Profile)
     const card3d = "rounded-lg border border-gray-500/60 shadow-md";
@@ -1035,7 +1050,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </Dropdown>
                             <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
                               <option value="">— None —</option>
-                              {ACADEMIC_LMP_COURSES.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                              {academicLmpCourses.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                             </Dropdown>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

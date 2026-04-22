@@ -108,6 +108,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onUpdateCourse={onUpdateCourse}
                         locations={locations}
                         units={units}
+                        syllabusDetails={syllabusDetails}
                     />
                 )}
                 {activeTab === 'export' && (

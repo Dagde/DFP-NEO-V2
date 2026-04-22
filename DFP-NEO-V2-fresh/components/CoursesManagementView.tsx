@@ -1,6 +1,6 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
-import { Course } from '../types';
+import { Course, SyllabusItemDetail } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
@@ -17,6 +17,7 @@ interface CoursesManagementViewProps {
     onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
     locations?: string[];
     units?: string[];
+    syllabusDetails?: SyllabusItemDetail[];
 }
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
@@ -31,6 +32,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onUpdateCourse,
     locations = [],
     units = [],
+    syllabusDetails = [],
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -307,6 +309,7 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     academicLmpType={(courseToEdit as any).academicLmpType || ''}
                     locations={locations}
                     units={units}
+                    syllabusDetails={syllabusDetails}
                     onClose={() => {
                         setShowEditFlyout(false);
                         setCourseToEdit(null);

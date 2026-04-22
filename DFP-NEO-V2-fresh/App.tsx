@@ -4554,19 +4554,15 @@ const App: React.FC = () => {
                         clearSyllabusCache(); // Clear bad cache so next load re-fetches from DB
                         setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
                     } else {
-                        // Validate items have courses field; fall back to INITIAL if missing
-                        const hasValidCourses = result.syllabus.every(item => item.courses && item.courses.length > 0);
-                        if (hasValidCourses) {
-                            setSyllabusDetails(result.syllabus);
-                            if (result.source === 'expired-cache') {
-                                console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
-                                setSyllabusError(result.error || null);
-                            } else {
-                                console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
-                            }
+                        // Use DB syllabus directly — don't fall back just because some items lack courses.
+                        // Academics-type items may have courses assigned differently; falling back to mock
+                        // would wipe out any user-created Academics syllabus items.
+                        setSyllabusDetails(result.syllabus);
+                        if (result.source === 'expired-cache') {
+                            console.warn('⚠️ [Syllabus] Using expired cache:', result.error);
+                            setSyllabusError(result.error || null);
                         } else {
-                            console.warn(`⚠️ [Syllabus] DB syllabus items missing courses field. Falling back to built-in syllabus.`);
-                            setSyllabusDetails(INITIAL_SYLLABUS_DETAILS);
+                            console.log(`✅ [Syllabus] Loaded ${result.syllabus.length} items from ${result.source}`);
                         }
                     }
                 } else {

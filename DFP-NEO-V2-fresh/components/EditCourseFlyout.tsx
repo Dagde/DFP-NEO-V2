@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { SyllabusItemDetail } from '../types';
 
 const COURSE_MASTER_LMPS = [
     'BPC+IPC',
@@ -14,7 +15,8 @@ const COURSE_MASTER_LMPS = [
 ];
 
 // Academic LMP types — these are 'Academics' type syllabus courses (Ground School phase)
-const ACADEMIC_LMP_COURSES = [
+// ACADEMIC_LMP_COURSES fallback — used when no Academics items exist in the syllabus yet
+const ACADEMIC_LMP_COURSES_FALLBACK = [
     'PC-21 Ground School',
     'ADF Ground School',
     'BPC Academic',
@@ -46,6 +48,7 @@ interface EditCourseFlyoutProps {
     academicLmpType?: string;
     locations: string[];
     units: string[];
+    syllabusDetails?: SyllabusItemDetail[];
     onClose: () => void;
     onSave: (data: {
         startDate: string;
@@ -67,6 +70,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     academicLmpType: initialAcademicLmpType = '',
     locations = [],
     units = [],
+    syllabusDetails = [],
     onClose,
     onSave,
 }) => {
@@ -76,6 +80,18 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
     const [unit, setUnit] = useState(initialUnit);
     const [lmpType, setLmpType] = useState(initialLmpType || 'BPC+IPC');
     const [academicLmpType, setAcademicLmpType] = useState(initialAcademicLmpType || '');
+
+    // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items
+    const academicLmpCourses = useMemo(() => {
+        const courseCodes = new Set<string>();
+        syllabusDetails.forEach(s => {
+            if (s.type === 'Academics' && s.courses) {
+                s.courses.forEach(c => courseCodes.add(c));
+            }
+        });
+        if (courseCodes.size === 0) return ACADEMIC_LMP_COURSES_FALLBACK;
+        return Array.from(courseCodes).sort();
+    }, [syllabusDetails]);
 
     // Sync if props change
     useEffect(() => {
@@ -223,7 +239,7 @@ const EditCourseFlyout: React.FC<EditCourseFlyoutProps> = ({
                             className={fieldClass}
                         >
                             <option value="">— None (Academic LMP tab hidden) —</option>
-                            {ACADEMIC_LMP_COURSES.map(lmp => (
+                            {academicLmpCourses.map(lmp => (
                                 <option key={lmp} value={lmp}>{lmp}</option>
                             ))}
                         </select>
