@@ -208,8 +208,7 @@ async function migrateCptDurations(db) {
 // This runs at startup and corrects any items created before the fix was deployed.
 async function migrateAcademicsCoursesField(db) {
   try {
-    // Find all Academics-type items where courses[] does NOT contain the module name
-    // (i.e. the courses[] field has the item's own code, not the course name)
+    // Find all Academics-type items
     const rows = await db.$queryRawUnsafe(`
       SELECT id, code, module, courses
       FROM "SyllabusItem"
@@ -217,31 +216,40 @@ async function migrateAcademicsCoursesField(db) {
         AND "isActive" = true
     `);
 
+    console.log(`[migrateAcademicsCoursesField] Found ${rows.length} Academics items to check`);
+    if (rows.length > 0) {
+      // Log first few for diagnosis
+      rows.slice(0, 3).forEach(r => {
+        console.log(`  Sample: code="${r.code}", module="${r.module}", courses=${JSON.stringify(r.courses)}`);
+      });
+    }
+
     let updatedCount = 0;
+    let skippedCount = 0;
     for (const row of rows) {
       const courses = Array.isArray(row.courses)
         ? row.courses
         : (typeof row.courses === 'string' ? JSON.parse(row.courses) : []);
       const moduleName = row.module || '';
       
-      // Only fix if:
-      // 1. module is set (non-empty)
-      // 2. courses[] does NOT already contain the module name
+      // Only fix if module is set and courses[] does NOT already contain the module name
       if (moduleName && !courses.includes(moduleName)) {
-        // Replace courses with [moduleName] — the module IS the Academic LMP course name
+        // Use ARRAY[$1::text] to set a PostgreSQL TEXT[] with one element
         await db.$executeRawUnsafe(
-          `UPDATE "SyllabusItem" SET "courses" = $1, "updatedAt" = NOW() WHERE "id" = $2`,
-          [moduleName],
+          `UPDATE "SyllabusItem" SET "courses" = ARRAY[$1::text], "updatedAt" = NOW() WHERE "id" = $2`,
+          moduleName,
           row.id
         );
         updatedCount++;
+      } else {
+        skippedCount++;
       }
     }
 
     if (updatedCount > 0) {
-      console.log(`✅ migrateAcademicsCoursesField: fixed ${updatedCount} Academics items (set courses[] to module name)`);
+      console.log(`✅ migrateAcademicsCoursesField: fixed ${updatedCount} items, skipped ${skippedCount} (already correct)`);
     } else {
-      console.log(`✅ migrateAcademicsCoursesField: all Academics items already have correct courses[] field`);
+      console.log(`✅ migrateAcademicsCoursesField: all ${skippedCount} Academics items already have correct courses[] field`);
     }
   } catch (err) {
     console.error('❌ migrateAcademicsCoursesField failed (non-fatal):', err.message);
@@ -2700,7 +2708,7 @@ app.post('/api/merge-burns-accounts', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v2-academic-fix' });
 });
 
 // GET /api/version - returns the active git commit hash from Railway environment
@@ -2786,6 +2794,69 @@ app.get('/api/debug/snapshots', async (req, res) => {
       ORDER BY date DESC
     `);
     res.json({ count: rows.length, snapshots: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/fix-academics-courses - Manually trigger the Academics courses[] migration
+// GET /api/admin/fix-academics-courses?secret=dfp-fix-2026 - same but via GET for easy browser use
+app.get('/api/admin/fix-academics-courses', async (req, res) => {
+  if (req.query.secret !== 'dfp-fix-2026') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, courses
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics' AND "isActive" = true
+    `);
+    let fixed = 0;
+    let alreadyCorrect = 0;
+    const details = [];
+    for (const row of rows) {
+      const courses = Array.isArray(row.courses) ? row.courses : [];
+      const moduleName = row.module || '';
+      if (moduleName && !courses.includes(moduleName)) {
+        await db.$executeRawUnsafe(
+          `UPDATE "SyllabusItem" SET "courses" = ARRAY[$1::text], "updatedAt" = NOW() WHERE "id" = $2`,
+          moduleName, row.id
+        );
+        details.push({ code: row.code, from: courses, to: [moduleName] });
+        fixed++;
+      } else {
+        alreadyCorrect++;
+      }
+    }
+    res.json({ success: true, total: rows.length, fixed, alreadyCorrect, details });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/academics - Diagnostic: show all Academics-type syllabus items and their courses[] field
+app.get('/api/debug/academics', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, type, courses, "isActive"
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics'
+      ORDER BY "sortOrder" ASC
+      LIMIT 20
+    `);
+    res.json({
+      count: rows.length,
+      items: rows.map(r => ({
+        id: r.id,
+        code: r.code,
+        module: r.module,
+        type: r.type,
+        courses: r.courses,
+        isActive: r.isActive,
+      }))
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
