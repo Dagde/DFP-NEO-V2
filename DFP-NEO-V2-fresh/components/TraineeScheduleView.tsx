@@ -633,6 +633,22 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                     event={event}
                     traineesData={traineesData}
                     onSelectEvent={() => { if (!didDragRef.current) onSelectEvent(event); }}
+                    onSelectAcademicTile={(tile) => {
+                        if (didDragRef.current) return;
+                        // Build a synthetic event for the clicked inset tile
+                        const syntheticEvent = {
+                            ...event,
+                            flightNumber: tile.lessonCode,
+                            startTime: tile.startTime,
+                            duration: tile.duration,
+                            notes: tile.label && tile.label !== tile.lessonCode
+                                ? tile.label.replace(new RegExp('^' + tile.lessonCode + '[\s:\u2014-]*'), '').trim()
+                                : '',
+                            _academicTileClick: true,
+                            _parentAcademicEvent: event,
+                        } as any;
+                        onSelectEvent(syntheticEvent);
+                    }}
                     onMouseDown={(e) => handleMouseDown(e, event)}
                     onMouseEnter={() => setHoveredEventId(event.id)}
                     onMouseLeave={() => setHoveredEventId(null)}

@@ -6,6 +6,7 @@ interface FlightTileProps {
   event: ScheduleEvent | EventSegment;
   traineesData: Trainee[];
   onSelectEvent: () => void;
+  onSelectAcademicTile?: (tile: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }) => void;
   onMouseDown: (e: MouseEvent<HTMLDivElement>) => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -93,7 +94,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -572,6 +573,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                         return (
                             <div
                                 key={i}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onSelectAcademicTile) onSelectAcademicTile(t);
+                                }}
                                 style={{
                                     position: 'absolute',
                                     top: 0,
@@ -582,7 +587,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                                     border: '1px solid rgba(255,255,255,0.30)',
                                     borderRadius: 4,
                                     overflow: 'hidden',
-                                    cursor: 'default',
+                                    cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',

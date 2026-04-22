@@ -981,10 +981,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [courses, traineesData]);
 
     const modalTitle = useMemo(() => {
+        if ((event as any)._academicTileClick || (event as any).isAcademic) return 'Ground School Details';
         if (eventType === 'flight') return 'Flight Details';
         if (eventType === 'ftd') return 'FTD Session Details';
         return 'Ground Event Details';
-    }, [eventType]);
+    }, [eventType, event]);
 
     useEffect(() => {
         setFlightNumber(event.flightNumber);
