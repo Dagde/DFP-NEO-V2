@@ -13174,6 +13174,28 @@ updates.forEach(update => {
                                 setSelectedPersonForProfile(selectedTraineeForLMP);
                                 handleNavigation('CourseRoster');
                             }}
+                            syllabusDetails={syllabusDetails}
+                            allTraineesData={allTraineesData}
+                            onOpenPt051ForLesson={(trainee, lessonCode) => {
+                                const mockEvent: ScheduleEvent = {
+                                    id: `academic-${lessonCode}-${trainee.idNumber}-${Date.now()}`,
+                                    flightNumber: lessonCode,
+                                    date: new Date().toISOString().split('T')[0],
+                                    startTime: '08:00',
+                                    endTime: '09:00',
+                                    instructor: '',
+                                    student: trainee.fullName,
+                                    syllabus: lessonCode,
+                                    aircraft: '',
+                                    type: 'ground',
+                                    status: 'Scheduled',
+                                    notes: '',
+                                    crew: []
+                                };
+                                setSelectedTraineeForHateSheet(trainee);
+                                setEventForPt051(mockEvent);
+                                handleNavigation('PT051');
+                            }}
                         />;
                     }
                 }
