@@ -777,6 +777,20 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                                    }
                                }
                            }}
+                        onSelectAcademicTile={(tile) => {
+                            if (didDragRef.current || isPauseSelectMode || isMultiSelectMode) return;
+                            const syntheticEvent = {
+                                ...event,
+                                flightNumber: tile.lessonCode,
+                                startTime: tile.startTime,
+                                duration: tile.duration,
+                                notes: tile.label && tile.label !== tile.lessonCode
+                                    ? tile.label.replace(new RegExp('^' + tile.lessonCode + '[\s:\u2014-]*'), '').trim()
+                                    : '',
+                                _academicTileClick: true,
+                            } as any;
+                            onSelectEvent(syntheticEvent);
+                        }}
                         onMouseDown={(e) => handleMouseDown(e, event)}
                         onMouseEnter={() => {}}
                         onMouseLeave={() => {}}

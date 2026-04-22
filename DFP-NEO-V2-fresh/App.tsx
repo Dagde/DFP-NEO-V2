@@ -7887,12 +7887,16 @@ const App: React.FC = () => {
         } else {
             // CRITICAL FIX: Always fetch the latest version of the event from the schedule
             // This ensures we get the most up-to-date data, especially after NEO remedies
-            const isNextDayContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
-            const currentEvents = isNextDayContext ? nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate })) : eventsForDate;
-            const latestEvent = currentEvents.find(e => e.id === event.id);
-            
-            // Use the latest version if found, otherwise fall back to the passed event
-            const eventToOpen = latestEvent || event;
+            // EXCEPTION: Academic tile clicks use a synthetic event — skip the lookup so the
+            // individual lesson details (lessonCode, startTime, duration) are preserved.
+            let eventToOpen = event;
+            if (!(event as any)._academicTileClick) {
+                const isNextDayContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
+                const currentEvents = isNextDayContext ? nextDayBuildEvents.map(e => ({ ...e, date: buildDfpDate })) : eventsForDate;
+                const latestEvent = currentEvents.find(e => e.id === event.id);
+                // Use the latest version if found, otherwise fall back to the passed event
+                eventToOpen = latestEvent || event;
+            }
             
             setSelectedEvent(eventToOpen);
             setIsEditingDefault(false);
