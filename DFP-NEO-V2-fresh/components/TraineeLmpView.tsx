@@ -484,16 +484,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
     const [activeTab, setActiveTab] = useState<'neo' | 'academic'>('neo');
 
-    // Determine whether to show Academic tab
-    const hasAcademicSyllabus = useMemo(() => {
-        if (!syllabusDetails || syllabusDetails.length === 0) return false;
-        const academicLmpType = (trainee as any).academicLmpType;
-        if (!academicLmpType || syllabusDetails.length === 0) return false;
-        return syllabusDetails.some(s =>
-            s.type === 'Academics' &&
-            s.courses?.includes(academicLmpType)
-        );
-    }, [syllabusDetails, (trainee as any).academicLmpType]);
+    // Always show Academic tab when syllabusDetails prop is provided
+    // The tab itself will show a "configure" message if academicLmpType not set
+    const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
 
     // ── NEO Build LMP: dual-source completion check ──
     const completedEventIds = useMemo(() => {
