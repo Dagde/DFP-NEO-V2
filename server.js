@@ -2708,7 +2708,7 @@ app.post('/api/merge-burns-accounts', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v2-academic-fix' });
 });
 
 // GET /api/version - returns the active git commit hash from Railway environment
