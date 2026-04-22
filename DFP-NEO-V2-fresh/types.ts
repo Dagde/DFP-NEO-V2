@@ -199,7 +199,7 @@ export interface ScheduleEvent {
       notes?: string;
       isSctRequest?: boolean;
   isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
-  academicTiles?: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }[];  // Inset lesson tiles for academic events
+  academicTiles?: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean; instructor?: string }[];  // Inset lesson tiles for academic events
       sctRequestId?: string;
       sctRequestType?: 'flight' | 'ftd';
       isRemedialForceSchedule?: boolean;

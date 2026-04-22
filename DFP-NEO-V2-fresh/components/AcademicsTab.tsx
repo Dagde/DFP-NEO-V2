@@ -13,6 +13,7 @@ interface TimelineTile {
   color: string;
   isStandard?: boolean; // standard event (break, lunch, etc.)
   customDescription?: string;
+  instructor?: string; // instructor allocated for this specific event
 }
 
 interface AcademicsTabProps {
@@ -192,6 +193,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [otherText, setOtherText] = useState('');
   const [resourceId, setResourceId] = useState(''); // blank by default
   const [instructor, setInstructor] = useState('');
+  // Per-tile instructor edit modal
+  const [editTileId, setEditTileId] = useState<string | null>(null);
+  const [editTileInstructor, setEditTileInstructor] = useState('');
 
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
@@ -628,13 +632,9 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
               ))}
             </select>
             {instructors.length > 0 && (
-              <>
-                <div style={S.label}>Instructor</div>
-                <select style={{ ...S.select, width: 160 }} value={instructor} onChange={e => setInstructor(e.target.value)}>
-                  <option value="">— Unallocated —</option>
-                  {instructors.map(i => <option key={i} value={i}>{i}</option>)}
-                </select>
-              </>
+              <div style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic' }}>
+                Double-click a tile to assign instructor
+              </div>
             )}
           </div>
         </div>
@@ -677,7 +677,13 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 key={tile.id}
                 className="acad-tile"
                 onMouseDown={e => onMouseDownTile(e, tile.id)}
-                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)}`}
+                onDoubleClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditTileId(tile.id);
+                  setEditTileInstructor(tile.instructor || '');
+                }}
+                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)}${tile.instructor ? ` | ${tile.instructor}` : ''}\nDouble-click to assign instructor`}
                 style={{
                   position: 'absolute',
                   top: 18,
@@ -685,7 +691,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   left: x,
                   width: w,
                   backgroundColor: conflict ? '#991b1b' : tile.color,
-                  border: conflict ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.2)',
+                  border: conflict ? '2px solid #ef4444' : tile.instructor ? '2px solid #86efac' : '1px solid rgba(255,255,255,0.2)',
                   borderRadius: 4,
                   cursor: 'grab',
                   overflow: 'hidden',
@@ -701,6 +707,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)' }}>
                   {fmtTime(tile.startTime)}–{fmtTime(tile.startTime + tile.duration)}
                 </span>
+                {tile.instructor && (
+                  <span style={{ fontSize: 8, color: '#86efac', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {tile.instructor}
+                  </span>
+                )}
               </div>
             );
           })}
@@ -742,6 +753,62 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           Save Academic Session
         </button>
       </div>
+
+      {/* ── Per-tile Instructor Edit Modal ── */}
+      {editTileId && (() => {
+        const editTile = tiles.find(t => t.id === editTileId);
+        if (!editTile) return null;
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} onClick={() => setEditTileId(null)}>
+            <div
+              style={{
+                backgroundColor: '#1f2937', border: '1px solid #374151',
+                borderRadius: 10, padding: 20, minWidth: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#f9fafb', marginBottom: 12 }}>
+                Assign Instructor — <span style={{ color: '#7dd3fc' }}>{editTile.lessonCode}</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>
+                {editTile.label} &nbsp;|&nbsp; {fmtTime(editTile.startTime)} – {fmtTime(editTile.startTime + editTile.duration)}
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Instructor</div>
+                <select
+                  style={{ background: '#374151', border: '1px solid #4b5563', borderRadius: 6, color: '#f9fafb', fontSize: 13, padding: '5px 8px', width: '100%' }}
+                  value={editTileInstructor}
+                  onChange={e => setEditTileInstructor(e.target.value)}
+                >
+                  <option value="">— Unallocated —</option>
+                  {instructors.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+                <button
+                  onClick={() => setEditTileId(null)}
+                  style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #4b5563', background: '#374151', color: '#9ca3af', cursor: 'pointer', fontSize: 12 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setTiles(prev => prev.map(t => t.id === editTileId ? { ...t, instructor: editTileInstructor || undefined } : t));
+                    setEditTileId(null);
+                  }}
+                  style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

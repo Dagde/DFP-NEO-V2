@@ -1,5 +1,5 @@
 
-import React, { MouseEvent } from 'react';
+import React, { MouseEvent, useState } from 'react';
 import { ScheduleEvent, Trainee, EventSegment } from '../types';
 
 interface FlightTileProps {
@@ -92,6 +92,126 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
     return '';
 };
 
+
+// ─── AcademicDayTile sub-component (uses useState for hover tooltip) ───
+interface AcademicTileData {
+    lessonCode: string;
+    label: string;
+    startTime: number;
+    duration: number;
+    color: string;
+    isStandard?: boolean;
+    instructor?: string;
+}
+interface AcademicDayTileProps {
+    tiles: AcademicTileData[];
+    dayStart: number;
+    dayDuration: number;
+    notes?: string;
+    instructor?: string;
+    resourceId?: string;
+    formatTime: (t: number) => string;
+}
+const AcademicDayTile: React.FC<AcademicDayTileProps> = ({ tiles, dayStart, dayDuration, notes, instructor, resourceId, formatTime }) => {
+    const [hovered, setHovered] = useState(false);
+
+    return (
+        <div
+            style={{ position: 'relative', width: '100%', height: '100%', background: 'rgba(186,230,253,0.07)', border: '2px solid rgba(147,197,253,0.40)', borderRadius: 5, boxSizing: 'border-box' }}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            {/* Inset lesson tiles — show only event name, no time */}
+            <div style={{ position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, overflow: 'hidden' }}>
+                {tiles.map((t, i) => {
+                    const offsetFromStart = t.startTime - dayStart;
+                    const leftPct = (offsetFromStart / dayDuration) * 100;
+                    const widthPct = (t.duration / dayDuration) * 100;
+                    const bgColor = t.color || '#1d4ed8';
+                    return (
+                        <div
+                            key={i}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                bottom: 0,
+                                left: `calc(${leftPct}% + 1px)`,
+                                width: `calc(${widthPct}% - 2px)`,
+                                backgroundColor: bgColor,
+                                border: '1px solid rgba(255,255,255,0.25)',
+                                borderRadius: 3,
+                                overflow: 'hidden',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            <span style={{
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: '#fff',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                paddingLeft: 3,
+                                paddingRight: 3,
+                                lineHeight: 1.2,
+                                textAlign: 'center',
+                            }}>
+                                {t.lessonCode}
+                            </span>
+                        </div>
+                    );
+                })}
+            </div>
+            {/* Hover tooltip — positioned above (z-index > parent), visible via React state not CSS overflow */}
+            {hovered && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: '110%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #3b82f6',
+                    borderRadius: 5,
+                    padding: '6px 10px',
+                    minWidth: 220,
+                    fontSize: 11,
+                    color: '#e2e8f0',
+                    fontWeight: 600,
+                    pointerEvents: 'none',
+                    zIndex: 9999,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.7)',
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                }}>
+                    <div style={{ color: '#93c5fd', marginBottom: 3 }}>
+                        {notes || 'Academics Session'}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>
+                        {formatTime(dayStart)} – {formatTime(dayStart + dayDuration)}
+                    </div>
+                    {instructor && (
+                        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>
+                            Instructor: {instructor}
+                        </div>
+                    )}
+                    {tiles.length > 0 && (
+                        <div style={{ marginTop: 4, borderTop: '1px solid #1e3a5f', paddingTop: 3 }}>
+                            {tiles.map((t, i) => (
+                                <div key={i} style={{ fontSize: 10, color: '#cbd5e1', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                                    <span style={{ color: '#7dd3fc' }}>{t.lessonCode}</span>
+                                    <span>{formatTime(t.startTime)} – {formatTime(t.startTime + t.duration)}</span>
+                                    {t.instructor && <span style={{ color: '#86efac' }}>{t.instructor}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
@@ -439,105 +559,20 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     // ─── Academic Day Tile: outer container spanning workStart→workEnd with inset lesson tiles ───
     if ((event as any).isAcademic && (event as any).academicTiles) {
         const acadEvent = event as any;
-        const tiles: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }[] = acadEvent.academicTiles || [];
+        const acadTiles: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean; instructor?: string }[] = acadEvent.academicTiles || [];
         const dayStart = effectiveStartTime;
         const dayDuration = effectiveDuration;
 
         return (
-            <div 
-                className="academic-day-tile"
-                style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: 'rgba(186,230,253,0.07)', border: '2px solid rgba(147,197,253,0.40)', borderRadius: 5, boxSizing: 'border-box' }}
-            >
-                {/* Tooltip on hover - shows full details including start/end time and instructor */}
-                <div className="academic-tile-tooltip" style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    backgroundColor: '#0f172a',
-                    border: '1px solid #3b82f6',
-                    borderRadius: 5,
-                    padding: '6px 10px',
-                    minWidth: 200,
-                    fontSize: 11,
-                    color: '#e2e8f0',
-                    fontWeight: 600,
-                    pointerEvents: 'none',
-                    opacity: 0,
-                    transition: 'opacity 0.15s',
-                    zIndex: 100,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.5)',
-                    textAlign: 'center',
-                }}>
-                    <div style={{ color: '#93c5fd', marginBottom: 2 }}>
-                        {acadEvent.notes || 'Academics Session'}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#94a3b8' }}>
-                        {formatTime(dayStart)} – {formatTime(dayStart + dayDuration)}
-                    </div>
-                    {(acadEvent.instructor || acadEvent.resourceId) && (
-                        <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1 }}>
-                            Instructor: {acadEvent.instructor || acadEvent.resourceId}
-                        </div>
-                    )}
-                </div>
-                {/* CSS for tooltip hover */}
-                <style>{`
-                    .academic-day-tile:hover .academic-tile-tooltip { opacity: 1 !important; }
-                `}</style>
-                {/* Inset lesson tiles */}
-                <div style={{ position: 'absolute', top: 2, left: 2, right: 2, bottom: 2, overflow: 'hidden' }}>
-                    {tiles.map((t, i) => {
-                        // Position each inset tile proportionally within the outer tile
-                        const offsetFromStart = t.startTime - dayStart;
-                        const leftPct = (offsetFromStart / dayDuration) * 100;
-                        const widthPct = (t.duration / dayDuration) * 100;
-                        const bgColor = t.color || '#1d4ed8';
-                        const shortLabel = t.lessonCode;
-                        return (
-                            <div
-                                key={i}
-                                className="academic-inset-tile"
-                                style={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    bottom: 0,
-                                    left: `calc(${leftPct}% + 1px)`,
-                                    width: `calc(${widthPct}% - 2px)`,
-                                    backgroundColor: bgColor,
-                                    border: '1px solid rgba(255,255,255,0.25)',
-                                    borderRadius: 3,
-                                    overflow: 'hidden',
-                                    cursor: 'default',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    zIndex: 3,
-                                }}
-                            >
-                                <span style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: '#fff',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    paddingLeft: 3,
-                                    paddingRight: 3,
-                                    lineHeight: 1.2,
-                                    textAlign: 'center',
-                                }}>
-                                    {shortLabel}
-                                </span>
-                                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)' }}>
-                                    {formatTime(t.startTime)}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-            </div>
+            <AcademicDayTile
+                tiles={acadTiles}
+                dayStart={dayStart}
+                dayDuration={dayDuration}
+                notes={acadEvent.notes}
+                instructor={acadEvent.instructor}
+                resourceId={acadEvent.resourceId}
+                formatTime={formatTime}
+            />
         );
     }
 

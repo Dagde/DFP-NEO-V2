@@ -10171,6 +10171,7 @@ updates.forEach(update => {
                 duration: t.duration,
                 color: t.color,
                 isStandard: t.isStandard,
+                instructor: t.instructor,
             })),
         }));
 
