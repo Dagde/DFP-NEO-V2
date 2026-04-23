@@ -64,6 +64,8 @@ async function getPrisma() {
     } catch (tieErr) {
       console.error('TIE startup failed (non-fatal):', tieErr.message);
     }
+    // Ensure TraineePerformance table exists (single source of truth for PT-051 assessments)
+    await ensureTraineePerformanceTable(prisma);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(prisma);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
@@ -6090,6 +6092,342 @@ app.put('/api/tie/settings', async (req, res) => {
     res.status(500).json({ error: 'Failed to update setting', details: error.message });
   }
 });
+
+// ============================================================
+// TRAINEE PERFORMANCE API ROUTES
+// Single source of truth for all PT-051 assessments
+// ============================================================
+
+// Ensure TraineePerformance table exists (called at Prisma startup)
+async function ensureTraineePerformanceTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TraineePerformance" (
+        "id"                       TEXT NOT NULL,
+        "traineeId"                TEXT NOT NULL,
+        "traineeFullName"          TEXT NOT NULL,
+        "eventId"                  TEXT NOT NULL,
+        "eventCode"                TEXT NOT NULL,
+        "flightNumber"             TEXT NOT NULL,
+        "eventDescription"         TEXT,
+        "date"                     TEXT NOT NULL,
+        "instructorName"           TEXT NOT NULL,
+        "instructorId"             TEXT,
+        "overallGrade"             TEXT NOT NULL DEFAULT 'No Grade',
+        "overallResult"            TEXT,
+        "dcoResult"                TEXT,
+        "startTime"                DOUBLE PRECISION,
+        "duration"                 DOUBLE PRECISION,
+        "endTime"                  DOUBLE PRECISION,
+        "comments"                 TEXT,
+        "elementScores"            JSONB NOT NULL DEFAULT '[]',
+        "isCompleted"              BOOLEAN NOT NULL DEFAULT false,
+        "isGroundSchoolAssessment" BOOLEAN NOT NULL DEFAULT false,
+        "groundSchoolResult"       INTEGER,
+        "course"                   TEXT,
+        "syllabusPhase"            TEXT,
+        "eventSequence"            INTEGER,
+        "createdAt"                TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt"                TIMESTAMP NOT NULL DEFAULT NOW(),
+        "createdBy"                TEXT,
+        "updatedBy"                TEXT,
+        CONSTRAINT "TraineePerformance_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "TraineePerformance_eventId_key" UNIQUE ("eventId")
+      )
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_idx" ON "TraineePerformance"("traineeId")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_idx" ON "TraineePerformance"("instructorName")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_course_idx" ON "TraineePerformance"("course")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_date_idx" ON "TraineePerformance"("date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_isCompleted_idx" ON "TraineePerformance"("isCompleted")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_date_idx" ON "TraineePerformance"("traineeId", "date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_completed_idx" ON "TraineePerformance"("instructorName", "isCompleted")`);
+    console.log('✅ TraineePerformance table ready');
+  } catch (err) {
+    console.error('❌ ensureTraineePerformanceTable error (non-fatal):', err.message);
+  }
+}
+
+// GET /api/trainee-performance/stats - must be before /:eventId
+app.get('/api/trainee-performance/stats', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT course, COUNT(*) as count, SUM(CASE WHEN "isCompleted" THEN 1 ELSE 0 END) as completed
+      FROM "TraineePerformance"
+      GROUP BY course ORDER BY course
+    `);
+    const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
+    res.json({ courses: rows, total });
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance/stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
+  }
+});
+
+// GET /api/trainee-performance
+app.get('/api/trainee-performance', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId, traineeFullName, instructorName, course, isCompleted, dateFrom, dateTo, limit = 500, offset = 0 } = req.query;
+    const conditions = [];
+    const params = [];
+    let paramIdx = 1;
+    if (traineeId) { conditions.push(`"traineeId" = $${paramIdx++}::text`); params.push(traineeId); }
+    if (traineeFullName) { conditions.push(`"traineeFullName" = $${paramIdx++}::text`); params.push(traineeFullName); }
+    if (instructorName) { conditions.push(`"instructorName" = $${paramIdx++}::text`); params.push(instructorName); }
+    if (course) { conditions.push(`"course" = $${paramIdx++}::text`); params.push(course); }
+    if (isCompleted !== undefined) { conditions.push(`"isCompleted" = $${paramIdx++}::boolean`); params.push(isCompleted === 'true'); }
+    if (dateFrom) { conditions.push(`"date" >= $${paramIdx++}::text`); params.push(dateFrom); }
+    if (dateTo) { conditions.push(`"date" <= $${paramIdx++}::text`); params.push(dateTo); }
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const limitVal = Math.min(parseInt(limit) || 500, 2000);
+    const offsetVal = parseInt(offset) || 0;
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" ${whereClause} ORDER BY "date" DESC, "eventSequence" ASC LIMIT ${limitVal} OFFSET ${offsetVal}`,
+      ...params
+    );
+    res.json(rows.map(row => mapRowToAssessment(row)));
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance error:', error);
+    res.status(500).json({ error: 'Failed to fetch assessments', details: error.message });
+  }
+});
+
+// GET /api/trainee-performance/:eventId
+app.get('/api/trainee-performance/:eventId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, req.params.eventId);
+    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Assessment not found' });
+    res.json(mapRowToAssessment(rows[0]));
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance/:eventId error:', error);
+    res.status(500).json({ error: 'Failed to fetch assessment', details: error.message });
+  }
+});
+
+// POST /api/trainee-performance - create/upsert
+app.post('/api/trainee-performance', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const data = req.body;
+    if (!data.eventId || !data.traineeId || !data.traineeFullName) {
+      return res.status(400).json({ error: 'eventId, traineeId, traineeFullName are required' });
+    }
+    const row = mapAssessmentToRow(data);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "TraineePerformance" (
+        "id","traineeId","traineeFullName","eventId","eventCode","flightNumber",
+        "eventDescription","date","instructorName","instructorId",
+        "overallGrade","overallResult","dcoResult",
+        "startTime","duration","endTime","comments",
+        "elementScores","isCompleted","isGroundSchoolAssessment","groundSchoolResult",
+        "course","syllabusPhase","eventSequence","createdAt","updatedAt","createdBy"
+      ) VALUES (
+        $1::text,$2::text,$3::text,$4::text,$5::text,$6::text,
+        $7::text,$8::text,$9::text,$10::text,
+        $11::text,$12::text,$13::text,
+        $14,$15,$16,$17::text,
+        $18::jsonb,$19::boolean,$20::boolean,$21,
+        $22::text,$23::text,$24,NOW(),NOW(),$25::text
+      )
+      ON CONFLICT ("eventId") DO UPDATE SET
+        "overallGrade"=$11::text,"overallResult"=$12::text,"dcoResult"=$13::text,
+        "comments"=$17::text,"elementScores"=$18::jsonb,"isCompleted"=$19::boolean,
+        "instructorName"=$9::text,"startTime"=$14,"duration"=$15,"endTime"=$16,
+        "isGroundSchoolAssessment"=$20::boolean,"groundSchoolResult"=$21,"updatedAt"=NOW()
+    `,
+      row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+      row.eventDescription, row.date, row.instructorName, row.instructorId,
+      row.overallGrade, row.overallResult, row.dcoResult,
+      row.startTime, row.duration, row.endTime, row.comments,
+      JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+      row.course, row.syllabusPhase, row.eventSequence, row.createdBy
+    );
+    const created = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, row.eventId);
+    res.status(201).json(mapRowToAssessment(created[0]));
+  } catch (error) {
+    console.error('❌ POST /api/trainee-performance error:', error);
+    res.status(500).json({ error: 'Failed to create assessment', details: error.message });
+  }
+});
+
+// PUT /api/trainee-performance/:eventId
+app.put('/api/trainee-performance/:eventId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { eventId } = req.params;
+    const data = req.body;
+    const existing = await db.$queryRawUnsafe(`SELECT "id" FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId);
+    if (!existing || existing.length === 0) return res.status(404).json({ error: 'Assessment not found' });
+    const comments = buildCommentsString(data);
+    const elementScores = data.scores || data.elementScores || [];
+    const isGS = data.groundSchoolAssessment?.isAssessment || false;
+    const gsResult = data.groundSchoolAssessment?.result ?? null;
+    await db.$executeRawUnsafe(`
+      UPDATE "TraineePerformance" SET
+        "overallGrade"=$1::text,"overallResult"=$2::text,"dcoResult"=$3::text,
+        "instructorName"=$4::text,"date"=$5::text,"flightNumber"=$6::text,
+        "comments"=$7::text,"elementScores"=$8::jsonb,"isCompleted"=$9::boolean,
+        "startTime"=$10,"duration"=$11,"endTime"=$12,
+        "isGroundSchoolAssessment"=$13::boolean,"groundSchoolResult"=$14,"updatedAt"=NOW()
+      WHERE "eventId"=$15::text
+    `,
+      String(data.overallGrade ?? 'No Grade'), data.overallResult ?? null, data.dcoResult ?? null,
+      data.instructorName ?? '', data.date ?? '', data.flightNumber ?? '',
+      comments, JSON.stringify(elementScores), data.isCompleted ?? false,
+      data.startTime ?? null, data.duration ?? null, data.endTime ?? null,
+      isGS, gsResult, eventId
+    );
+    const updated = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId);
+    res.json(mapRowToAssessment(updated[0]));
+  } catch (error) {
+    console.error('❌ PUT /api/trainee-performance/:eventId error:', error);
+    res.status(500).json({ error: 'Failed to update assessment', details: error.message });
+  }
+});
+
+// DELETE /api/trainee-performance/:eventId
+app.delete('/api/trainee-performance/:eventId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await db.$executeRawUnsafe(`DELETE FROM "TraineePerformance" WHERE "eventId" = $1::text`, req.params.eventId);
+    res.json({ success: true, eventId: req.params.eventId });
+  } catch (error) {
+    console.error('❌ DELETE /api/trainee-performance/:eventId error:', error);
+    res.status(500).json({ error: 'Failed to delete assessment', details: error.message });
+  }
+});
+
+// POST /api/trainee-performance/bulk - batch import
+app.post('/api/trainee-performance/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { records } = req.body;
+    if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: 'records array required' });
+    let inserted = 0, skipped = 0;
+    const errors = [];
+    for (let i = 0; i < records.length; i += 100) {
+      for (const data of records.slice(i, i + 100)) {
+        try {
+          const row = mapAssessmentToRow(data);
+          await db.$executeRawUnsafe(`
+            INSERT INTO "TraineePerformance" (
+              "id","traineeId","traineeFullName","eventId","eventCode","flightNumber",
+              "eventDescription","date","instructorName","instructorId",
+              "overallGrade","overallResult","dcoResult",
+              "startTime","duration","endTime","comments",
+              "elementScores","isCompleted","isGroundSchoolAssessment","groundSchoolResult",
+              "course","syllabusPhase","eventSequence","createdAt","updatedAt","createdBy"
+            ) VALUES (
+              $1::text,$2::text,$3::text,$4::text,$5::text,$6::text,
+              $7::text,$8::text,$9::text,$10::text,
+              $11::text,$12::text,$13::text,
+              $14,$15,$16,$17::text,
+              $18::jsonb,$19::boolean,$20::boolean,$21,
+              $22::text,$23::text,$24,NOW(),NOW(),$25::text
+            ) ON CONFLICT ("eventId") DO NOTHING
+          `,
+            row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+            row.eventDescription, row.date, row.instructorName, row.instructorId,
+            row.overallGrade, row.overallResult, row.dcoResult,
+            row.startTime, row.duration, row.endTime, row.comments,
+            JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+            row.course, row.syllabusPhase, row.eventSequence, row.createdBy
+          );
+          inserted++;
+        } catch (rowErr) {
+          skipped++;
+          if (errors.length < 10) errors.push({ eventId: data.eventId, error: rowErr.message });
+        }
+      }
+    }
+    res.json({ success: true, inserted, skipped, errors });
+  } catch (error) {
+    console.error('❌ POST /api/trainee-performance/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk insert', details: error.message });
+  }
+});
+
+// Helper: Map DB row → Pt051Assessment shape
+function mapRowToAssessment(row) {
+  if (!row) return null;
+  let scores = row.elementScores;
+  if (typeof scores === 'string') { try { scores = JSON.parse(scores); } catch { scores = []; } }
+  if (!Array.isArray(scores)) scores = [];
+  const overallComments = extractOverallComment(row.comments);
+  return {
+    id: row.eventId,
+    traineeFullName: row.traineeFullName,
+    trainedFullName: row.traineeFullName,
+    eventId: row.eventId,
+    flightNumber: row.flightNumber,
+    date: row.date,
+    instructorName: row.instructorName,
+    overallGrade: row.overallGrade,
+    overallResult: row.overallResult || null,
+    dcoResult: row.dcoResult || '',
+    overallComments: overallComments,
+    comments: row.comments || '',
+    startTime: row.startTime || null,
+    duration: row.duration || null,
+    endTime: row.endTime || null,
+    isCompleted: row.isCompleted || false,
+    scores: scores,
+    groundSchoolAssessment: row.isGroundSchoolAssessment ? { isAssessment: true, result: row.groundSchoolResult ?? undefined } : undefined,
+    course: row.course || null,
+    syllabusPhase: row.syllabusPhase || null,
+    eventSequence: row.eventSequence || null,
+    traineeId: row.traineeId,
+    _dbId: row.id
+  };
+}
+
+// Helper: Map Pt051Assessment → DB row
+function mapAssessmentToRow(data) {
+  const id = data._dbId || data.id || generateSimpleId();
+  const elementScores = (data.scores || data.elementScores || []).map(s => ({
+    element: s.element || '', grade: s.grade != null ? String(s.grade) : null, comment: s.comment || ''
+  }));
+  const comments = data.comments || buildCommentsString(data);
+  return {
+    id, traineeId: data.traineeId || '', traineeFullName: data.traineeFullName || data.trainedFullName || '',
+    eventId: data.eventId || '', eventCode: data.eventCode || data.flightNumber || '',
+    flightNumber: data.flightNumber || '', eventDescription: data.eventDescription || null,
+    date: data.date || '', instructorName: data.instructorName || '', instructorId: data.instructorId || null,
+    overallGrade: data.overallGrade != null ? String(data.overallGrade) : 'No Grade',
+    overallResult: data.overallResult || null, dcoResult: data.dcoResult || null,
+    startTime: data.startTime != null ? Number(data.startTime) : null,
+    duration: data.duration != null ? Number(data.duration) : null,
+    endTime: data.endTime != null ? Number(data.endTime) : null,
+    comments: comments || null, elementScores,
+    isCompleted: data.isCompleted === true || data.isCompleted === 'true',
+    isGroundSchoolAssessment: data.groundSchoolAssessment?.isAssessment || false,
+    groundSchoolResult: data.groundSchoolAssessment?.result ?? null,
+    course: data.course || null, syllabusPhase: data.syllabusPhase || null,
+    eventSequence: data.eventSequence != null ? parseInt(data.eventSequence) : null,
+    createdBy: data.createdBy || null
+  };
+}
+
+function buildCommentsString(data) {
+  if (data.comments && data.comments.includes('QFI:')) return data.comments;
+  const qfi = data.qfiComments || '', weather = data.weatherComments || '';
+  const profile = data.profileComments || '', overall = data.overallComments || '', nest = data.nestComments || '';
+  if (!qfi && !weather && !profile && !overall && !nest) return data.comments || null;
+  return `QFI: ${qfi}\nWeather: ${weather}\nProfile: ${profile}\nOverall: ${overall}\nNEST: ${nest}`;
+}
+
+function extractOverallComment(comments) {
+  if (!comments) return '';
+  const match = comments.match(/Overall:\s*([\s\S]*?)(?:\nNEST:|$)/);
+  return match ? match[1].trim() : '';
+}
+
+function generateSimpleId() {
+  return 'tp_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
+}
 
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {

@@ -7775,6 +7775,24 @@ const App: React.FC = () => {
         ].filter(Boolean).join(', ');
         
         logAudit('Mass Completion', 'Edit', `Updated PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+
+        // Persist to TraineePerformance table (fire-and-forget, non-fatal)
+        const traineeRecord = allTraineesData.find(
+            t => t.fullName === assessment.traineeFullName || t.name === assessment.traineeFullName
+        );
+        const payload = {
+            ...assessment,
+            traineeId: traineeRecord ? String(traineeRecord.idNumber) : '',
+            eventCode: assessment.flightNumber,
+            isCompleted: assessment.isCompleted ?? true,
+        };
+        fetch('/api/trainee-performance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        })
+            .then(r => { if (!r.ok) return r.text().then(t => { throw new Error(t); }); })
+            .catch(err => console.warn(`⚠️ TraineePerformance persist failed (non-fatal): ${err.message}`));
     };
     
     const findAvailableResourceId = (eventToPlace: ScheduleEvent, existingEvents: ScheduleEvent[]): string => {
