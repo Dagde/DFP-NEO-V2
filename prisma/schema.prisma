@@ -188,8 +188,10 @@ model Trainee {
   isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  scores              Score[]   @relation("TraineeScores")
-  user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
+  scores              Score[]              @relation("TraineeScores")
+  // All PT-051 assessments for this trainee across all courses
+  performances        TraineePerformance[] @relation("TraineePerformances")
+  user                User?                @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([idNumber])
@@ -266,6 +268,114 @@ model Score {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   trainee    Trainee  @relation("TraineeScores", fields: [traineeId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// TraineePerformance - Single source of truth for all PT-051 assessments
+// Replaces the current dual-storage approach (Score table + Schedule.data JSONB)
+// Covers all courses: ADF301, ADF302, ADF303, ADF306, FIC210, FIC211
+// Populated from spreadsheet imports and live PT-051 form submissions
+// ============================================================================
+model TraineePerformance {
+  // --- Primary Identification ---
+  id                       String   @id @default(cuid())
+  // Foreign key to Trainee.id - links assessment to the trainee record
+  traineeId                String
+  // Denormalised name kept for fast reads without joins (used directly by app components)
+  traineeFullName          String
+  // Unique identifier for this specific scheduled event instance
+  // Format: "sched_[timestamp]_[random8]" - generated on import or post-flight save
+  eventId                  String   @unique
+
+  // --- Event Information ---
+  // Raw event code from spreadsheet Col B (e.g., "BGF MB1", "FIC GND1")
+  eventCode                String
+  // Cleaned event code used by app for syllabus lookups (e.g., "BGF1", "FIC1")
+  flightNumber             String
+  // Human-readable event description from Col C (e.g., "Preparation and Pre / Post Flight Admin")
+  eventDescription         String?
+  // ISO date string YYYY-MM-DD - converted from Excel datetime or DD-MM-YYYY (FIC courses)
+  date                     String
+
+  // --- Personnel ---
+  // Instructor who conducted/assessed the event (from Col H)
+  instructorName           String
+  // Optional foreign key to Personnel.id for future instructor-side queries
+  instructorId             String?
+
+  // --- Grading & Results ---
+  // Stored as String to match TypeScript Pt051OverallGrade = 'No Grade' | 0 | 1 | 2 | 3 | 4 | 5
+  overallGrade             String
+  // 'P' = Pass, 'F' = Fail - mapped from spreadsheet "Pass"/"Fail" values
+  overallResult            String?
+  // DCO result: 'DCO' | 'DPCO' | 'DNCO' | '' - from Col I
+  dcoResult                String?
+
+  // --- Timing (decimal hours - e.g., 8.0 = 08:00, 9.5 = 09:30) ---
+  // Converted from "HH:MM" string format in spreadsheet Col L
+  startTime                Float?
+  // Duration in hours from Col M (e.g., 1.0, 1.2, 1.5)
+  // FIC courses store as "1.0hr" string - parsed to float on import
+  duration                 Float?
+  // Converted from "HH:MM" string format in spreadsheet Col N
+  endTime                  Float?
+
+  // --- Comments (single structured string matching app parseComments() format) ---
+  // Format: "QFI: [text]\nWeather: [text]\nProfile: [text]\nOverall: [text]\nNEST: [text]"
+  // Combined from spreadsheet Cols P/Q/R/S/T during import
+  // ADF courses: QFI col contains "Yes" (boolean flag) - treated as null text
+  // FIC courses: QFI col contains actual instructor name - stored as text
+  // Overall col contains duplicate grade number - treated as null text
+  // NEST col contains "0" placeholder - treated as null (no NEST times for any trainee)
+  comments                 String?
+
+  // --- Element Scores (JSON array of 22 objects matching Pt051Assessment.scores) ---
+  // Schema: [{"element": "Airmanship", "grade": "4", "comment": "..."}, ...]
+  // Grades stored as strings to match TypeScript Pt051Grade = 'MIN' | 'DEMO' | 0..5
+  // 22 elements across 9 categories: Core Dimensions, Procedural Framework,
+  // Takeoff, Departure, Core Handling Skills, Turns, Recovery, Landing, Domestics
+  elementScores            Json
+
+  // --- Status Flags ---
+  // Tracks whether the PT-051 form has been opened, edited and saved by the instructor
+  // Used by MyDashboard.tsx to show incomplete assessments to the assigned QFI
+  isCompleted              Boolean  @default(false)
+
+  // --- Ground School Assessment ---
+  // Whether this record is a ground school assessment rather than a flight assessment
+  isGroundSchoolAssessment Boolean  @default(false)
+  // Ground school result as percentage (0-100); null if not a GS assessment
+  groundSchoolResult       Int?
+
+  // --- Course Context (derived from event codes during import) ---
+  // Course name: 'ADF301' | 'ADF302' | 'ADF303' | 'ADF306' | 'FIC210' | 'FIC211'
+  course                   String?
+  // Syllabus phase derived from event code prefix: 'BGF' | 'BIF' | 'BNF' | 'BNAV' | 'FIC' | 'MB' | 'FTD'
+  syllabusPhase            String?
+  // Numeric sequence within the syllabus phase (e.g., BGF11 -> 11, MB1 -> 1)
+  eventSequence            Int?
+
+  // --- Audit Trail ---
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  // Import script sets these to "import_script"; live submissions set to the submitting user id
+  createdBy                String?
+  updatedBy                String?
+
+  // --- Relations ---
+  trainee                  Trainee  @relation("TraineePerformances", fields: [traineeId], references: [id], onDelete: Cascade)
+
+  // --- Indexes (optimised for app query patterns) ---
+  @@index([traineeId])                   // Core query: all assessments for a trainee
+  @@index([flightNumber, date])          // Query by event type + date
+  @@index([instructorName])              // MyDashboard: incomplete assessments per instructor
+  @@index([instructorName, isCompleted]) // Combined dashboard filter
+  @@index([course])                      // Filter by course (cross-course reporting)
+  @@index([syllabusPhase])               // Filter by phase (BGF, BIF etc.)
+  @@index([date])                        // Sort/filter by date
+  @@index([isCompleted])                 // Filter incomplete PT-051s
+  @@index([traineeId, date])             // Trainee performance timeline
+  @@index([traineeId, course])           // Trainee records within a specific course
 }
 
 enum Role {
