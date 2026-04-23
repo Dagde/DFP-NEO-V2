@@ -416,6 +416,12 @@ interface DfpConfig {
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
   excludedCourses: string[];
+  // ── DB-backed ELCE map (optional) ──────────────────────────────────────
+  // Pre-fetched from /api/event-completions/elce before the build runs.
+  // Maps traineeFullName → { eventCode, eventDate, dcoResult, isCountedAsElce }
+  // If absent (null/undefined), computeNextEventsForTrainee falls back to the
+  // legacy DFP schedule-scan ELCE.
+  dbElceMap?: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null>;
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -566,7 +572,8 @@ const computeNextEventsForTrainee = (
     scores: Map<string, Score[]>,
     masterSyllabus: SyllabusItemDetail[], // Added fallback
     publishedSchedules?: Record<string, ScheduleEvent[]>, // NEW: Optional for ELCE
-    buildDate?: string // NEW: Optional for ELCE
+    buildDate?: string, // NEW: Optional for ELCE
+    dbElceMap?: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> // NEW: DB-backed ELCE
 ): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
     // Check individual LMP first, then fallback to master syllabus
     const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
@@ -588,12 +595,34 @@ const computeNextEventsForTrainee = (
     
     const traineeScores = scores.get(trainee.fullName) || [];
     const completedEventIds = new Set(traineeScores.map(s => s.event));
-    
-    // NEW: Check for ELCE - events completed yesterday but not yet in PT-051
-    if (publishedSchedules && buildDate) {
+
+    // ── Source 1: DB-backed ELCE from EventCompletion table (preferred) ──────
+    // This is written the moment the post-flight form is saved, before PT-051
+    // paperwork is entered.  Only DCO and DPCO count; DNCO must NOT advance
+    // the next-event pointer.
+    const dbElce = dbElceMap?.get(trainee.fullName);
+    if (dbElce && (dbElce.dcoResult === 'DCO' || dbElce.dcoResult === 'DPCO')) {
+        completedEventIds.add(dbElce.eventCode);
+        console.log(
+            `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} (${dbElce.dcoResult}) ` +
+            `completed ${dbElce.eventDate} — added to completedEventIds`
+        );
+    } else if (dbElce && dbElce.dcoResult === 'DNCO') {
+        console.log(
+            `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} was DNCO on ${dbElce.eventDate} ` +
+            `— NOT counted as ELCE (unsuccessful sortie)`
+        );
+    }
+
+    // ── Source 2: Legacy DFP schedule scan (fallback) ────────────────────────
+    // Used when no DB ELCE exists yet (first day of use, or post-flight form
+    // has not been submitted). Scans yesterday's published DFP for events that
+    // finished but are not yet in PT-051.
+    if (!dbElce && publishedSchedules && buildDate) {
         const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
         if (elce) {
             completedEventIds.add(elce);
+            console.log(`[ELCE/DFP] ${trainee.fullName}: ${elce} — DFP-scan fallback (no DB ELCE found)`);
         }
     }
 
@@ -1632,7 +1661,7 @@ function generateDfpInternal(
     const traineeNextEventMap = new Map<string, { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null }>();
 
     activeTrainees.forEach(trainee => {
-        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate);
+        const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
         traineeNextEventMap.set(trainee.fullName, nextEvents);
     });
 
@@ -9267,7 +9296,7 @@ const App: React.FC = () => {
         setTimeout(() => {
             setShowNightFlyingInfo(false);
             // CRITICAL: Pass the preserved events directly to avoid state timing issues
-            runBuildAlgorithm(finalPreservedEvents);
+            void runBuildAlgorithm(finalPreservedEvents);
         }, 3000);
     };
 
@@ -9308,7 +9337,7 @@ const App: React.FC = () => {
         startBuildProcess();
     };
 
-    const runBuildAlgorithm = (preservedEvents?: ScheduleEvent[]) => {
+    const runBuildAlgorithm = async (preservedEvents?: ScheduleEvent[]) => {
         console.log('🚀 [NEO-Build] runBuildAlgorithm called');
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
@@ -9319,6 +9348,43 @@ const App: React.FC = () => {
         
         // Use preserved events if provided, otherwise use state
         const eventsToUse = preservedEvents || highestPriorityEvents;
+
+        // ── Fetch DB-backed ELCE for all active trainees ──────────────────────
+        // This gives the build algorithm real DCO tracking data written the moment
+        // the post-flight form is saved, before PT-051 paperwork is entered.
+        // Non-fatal: if the fetch fails, the build proceeds with legacy DFP-scan ELCE.
+        let dbElceMap: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null> | undefined;
+        try {
+            const activeTraineeNames = traineesData
+                .filter((t: any) => !t.isPaused)
+                .map((t: any) => t.fullName as string)
+                .filter(Boolean);
+
+            if (activeTraineeNames.length > 0) {
+                const apiBase = window.location.origin.includes('railway.app')
+                    ? '/api'
+                    : 'https://dfp-neo-v2-production.up.railway.app/api';
+
+                const elceRes = await fetch(`${apiBase}/event-completions/elce`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ traineeFullNames: activeTraineeNames, buildDate: buildDfpDate }),
+                });
+
+                if (elceRes.ok) {
+                    const elceData = await elceRes.json() as {
+                        elceMap: Record<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null>;
+                    };
+                    dbElceMap = new Map(Object.entries(elceData.elceMap));
+                    const withElce = [...dbElceMap.values()].filter(Boolean).length;
+                    console.log(`[ELCE] Bulk fetch complete — ${dbElceMap.size} trainees, ${withElce} with DB ELCE record`);
+                } else {
+                    console.warn(`[ELCE] Bulk fetch failed (status ${elceRes.status}) — falling back to DFP-scan ELCE`);
+                }
+            }
+        } catch (elceErr) {
+            console.warn('[ELCE] Bulk fetch threw — falling back to DFP-scan ELCE:', elceErr);
+        }
         
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
         
@@ -9366,6 +9432,7 @@ const App: React.FC = () => {
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
             excludedCourses: excludedCourses,
+            dbElceMap,  // DB-backed ELCE map (undefined = fall back to DFP-scan)
         };
 
         setTimeout(() => {
