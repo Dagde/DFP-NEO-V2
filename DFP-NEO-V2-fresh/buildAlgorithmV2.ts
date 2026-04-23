@@ -80,8 +80,53 @@ export const getEffectiveLastCompletedEvent = (
 };
 
 /**
+ * ELCE result sourced from the EventCompletion DB table.
+ *
+ * This is the preferred ELCE source for the build algorithm because it is
+ * written the moment the post-flight form is saved — before the PT-051 Score
+ * record is entered.  This ensures the next-event pointer is correct even
+ * when paperwork is delayed.
+ *
+ * Shape mirrors types/EventCompletion.ts ElceResult so the two can be used
+ * interchangeably without importing the full platform types here.
+ */
+export interface DbElceResult {
+    eventCode:    string;
+    eventDate:    string;
+    startTime:    number;
+    dcoResult:    'DCO' | 'DPCO' | 'DNCO';
+    completionId: string;
+}
+
+/**
  * Compute Next Events for Trainee with ELCE consideration
- * This enhances the existing computeNextEventsForTrainee function
+ *
+ * Enhanced version of the existing computeNextEventsForTrainee function
+ * that layers in TWO sources of ELCE data:
+ *
+ *   1. DB-backed ELCE (preferred):  A pre-fetched DbElceResult from the
+ *      EventCompletion table, populated by the post-flight form save.  This
+ *      covers the case where the sortie finished but PT-051 has not been entered.
+ *
+ *   2. DFP schedule scan (legacy fallback):  The original approach that scans
+ *      yesterday's DFP JSON for events whose end-time has passed.  Still used
+ *      when no EventCompletion record exists (e.g. older data, first day of use).
+ *
+ * DNCO handling:
+ *   If the DB ELCE has dcoResult === 'DNCO', it is NOT added to
+ *   completedEventIds because DNCO means the sortie was unsuccessful.
+ *   The legacy DFP-scan path filters out events marked isCancelled or
+ *   isUnsuccessful for the same reason.
+ *
+ * @param trainee          The trainee to compute next events for
+ * @param traineeLMPs      Map of trainee full name to ordered syllabus items
+ * @param scores           Map of trainee full name to PT-051 Score records
+ * @param masterSyllabus   Fallback syllabus when no individual LMP exists
+ * @param todaysDfp        All schedule events (used for legacy DFP-scan fallback)
+ * @param buildDate        ISO date YYYY-MM-DD of the day being built
+ * @param currentTime      Current time as decimal hours (legacy fallback only)
+ * @param dbElce           Pre-fetched ELCE from the EventCompletion DB table
+ *                         (pass null or undefined to skip DB ELCE)
  */
 export const computeNextEventsWithELCE = (
     trainee: Trainee,
@@ -90,7 +135,8 @@ export const computeNextEventsWithELCE = (
     masterSyllabus: SyllabusItemDetail[],
     todaysDfp: ScheduleEvent[],
     buildDate: string,
-    currentTime: number
+    currentTime: number,
+    dbElce?: DbElceResult | null,
 ): { next: SyllabusItemDetail | null, plusOne: SyllabusItemDetail | null } => {
     // Check individual LMP first, then fallback to master syllabus
     const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
@@ -98,16 +144,39 @@ export const computeNextEventsWithELCE = (
     if (!individualLMP || individualLMP.length === 0) {
         return { next: null, plusOne: null };
     }
-    
+
     const traineeScores = scores.get(trainee.fullName) || [];
     const completedEventIds = new Set(traineeScores.map(s => s.event));
-    
-    // Check for ELCE - events completed today but not yet in PT-051
-    const elce = getEffectiveLastCompletedEvent(traineeName, todaysDfp, buildDate, currentTime);
-    if (elce) {
-        // Add ELCE to completed events set
-        completedEventIds.add(elce.eventCode);
-        console.log(`ELCE for ${trainee.fullName}: ${elce.eventCode} (completed ${elce.eventDate} at ${elce.eventTime})`);
+
+    // Source 1: DB-backed ELCE from EventCompletion table (preferred)
+    // Only count DCO and DPCO results - DNCO must NOT advance the pointer.
+    if (dbElce && (dbElce.dcoResult === 'DCO' || dbElce.dcoResult === 'DPCO')) {
+        completedEventIds.add(dbElce.eventCode);
+        console.log(
+            `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} (${dbElce.dcoResult}) ` +
+            `completed ${dbElce.eventDate} — added to completedEventIds`
+        );
+    }
+
+    // Source 2: Legacy DFP schedule scan (fallback)
+    // Used when no DB ELCE exists yet (e.g. first day of use, or the post-flight
+    // form has not been submitted). Mirrors the original ELCE logic from the
+    // DFP Build Rules documentation.
+    if (!dbElce) {
+        const legacyElce = getEffectiveLastCompletedEvent(
+            trainee.fullName,
+            todaysDfp,
+            buildDate,
+            currentTime,
+        );
+        if (legacyElce) {
+            completedEventIds.add(legacyElce.eventCode);
+            console.log(
+                `[ELCE/DFP] ${trainee.fullName}: ${legacyElce.eventCode} ` +
+                `completed ${legacyElce.eventDate} at ${legacyElce.eventTime} ` +
+                `(DFP-scan fallback — no DB ELCE found)`
+            );
+        }
     }
 
     let nextEvt: SyllabusItemDetail | null = null;
@@ -128,12 +197,12 @@ export const computeNextEventsWithELCE = (
             break;
         }
     }
-    
-    // Find Next +1 Event (sequentially)
+
+    // Find Next +1 Event (sequentially after Next)
     if (nextEventIndex !== -1) {
         for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
             const item = individualLMP[i];
-            // Skip non-schedulable events
+            // Skip non-schedulable milestone events
             if (!item.code.includes(' MB')) {
                 plusOneEvt = item;
                 break;
@@ -142,6 +211,62 @@ export const computeNextEventsWithELCE = (
     }
 
     return { next: nextEvt, plusOne: plusOneEvt };
+};
+
+/**
+ * Fetch ELCE data for all active trainees from the EventCompletion API.
+ *
+ * Calls POST /api/event-completions/elce with the full list of trainee names
+ * and returns a Map of traineeFullName to DbElceResult or null.
+ *
+ * This should be called ONCE at the start of a build, before
+ * computeNextEventsWithELCE is invoked for each trainee.
+ *
+ * Returns an empty Map if the API call fails (non-fatal — the build algorithm
+ * falls back to the legacy DFP-scan ELCE in that case).
+ *
+ * @param traineeFullNames  Array of full names for all active trainees
+ * @param buildDate         ISO date YYYY-MM-DD of the day being built
+ * @param apiBaseUrl        Base URL for the platform API (default: relative path)
+ */
+export const fetchBulkElceFromDb = async (
+    traineeFullNames: string[],
+    buildDate: string,
+    apiBaseUrl = '',
+): Promise<Map<string, DbElceResult | null>> => {
+    if (traineeFullNames.length === 0) return new Map();
+
+    try {
+        const res = await fetch(`${apiBaseUrl}/api/event-completions/elce`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ traineeFullNames, buildDate }),
+        });
+
+        if (!res.ok) {
+            console.warn(`[ELCE] Bulk fetch failed with status ${res.status} — falling back to DFP-scan ELCE`);
+            return new Map();
+        }
+
+        const { elceMap } = await res.json() as {
+            elceMap: Record<string, DbElceResult | null>;
+            buildDate: string;
+            count: number;
+        };
+
+        const result = new Map<string, DbElceResult | null>();
+        for (const [name, elce] of Object.entries(elceMap)) {
+            result.set(name, elce);
+        }
+
+        console.log(`[ELCE] Bulk fetch complete — ${result.size} trainees, ${[...result.values()].filter(Boolean).length} with ELCE`);
+        return result;
+
+    } catch (err) {
+        console.warn('[ELCE] Bulk fetch threw — falling back to DFP-scan ELCE:', err);
+        return new Map();
+    }
 };
 
 /**

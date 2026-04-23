@@ -13454,7 +13454,85 @@ updates.forEach(update => {
                                 }}
                                 onSave={async (data) => {
                                     console.log('Post flight data saved:', data);
-                                    
+
+                                    // ── DCO-based EventCompletion tracking ──────────────────────────────
+                                    // Persist a DCO result record to the EventCompletion table whenever
+                                    // the post-flight form carries a dcoResult (DCO | DPCO | DNCO).
+                                    // This record is later consumed by:
+                                    //   1. The ELCE (Effective Last Completed Event) logic in the build
+                                    //      algorithm, which queries /api/event-completions/elce to find
+                                    //      events that finished after the last PT-051 was entered.
+                                    //   2. DCO result history / analytics views.
+                                    // isCountedAsElce is derived server-side from the dcoResult value:
+                                    //   DCO / DPCO => isCountedAsElce = true
+                                    //   DNCO       => isCountedAsElce = false (does not advance next-event)
+                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight) {
+                                        const pfEvent = eventForPostFlight;
+                                        try {
+                                            // Resolve the trainee DB id for the FK (optional — kept for
+                                            // richer queries, but the record is still useful without it)
+                                            const pfTrainee = pfEvent.student
+                                                ? traineesData.find(t => t.name === pfEvent.student || t.fullName === pfEvent.student)
+                                                : null;
+
+                                            // Build total flight time from takeoff / land strings
+                                            let totalFlightTime: number | undefined;
+                                            if (data.takeoffTime && data.landTime) {
+                                                const toHm = (data.takeoffTime as string).split(':').map(Number);
+                                                const laHm = (data.landTime   as string).split(':').map(Number);
+                                                const toDecimal = toHm[0] + (toHm[1] || 0) / 60;
+                                                const laDecimal = laHm[0] + (laHm[1] || 0) / 60;
+                                                const diff = laDecimal - toDecimal;
+                                                if (diff > 0) totalFlightTime = Math.round(diff * 100) / 100;
+                                            }
+
+                                            const completionPayload = {
+                                                scheduleEventId: pfEvent.id,
+                                                eventCode:       pfEvent.flightNumber || pfEvent.eventCode || pfEvent.id,
+                                                eventDate:       pfEvent.date,
+                                                eventType:       pfEvent.type as 'flight' | 'ftd' | 'cpt' | 'ground',
+                                                startTime:       pfEvent.startTime   ?? 0,
+                                                duration:        pfEvent.duration    ?? 0,
+                                                traineeId:       (pfTrainee as any)?.id ?? undefined,
+                                                traineeFullName: pfEvent.student ?? pfEvent.pilot ?? 'Unknown',
+                                                instructorName:  pfEvent.instructor ?? undefined,
+                                                dcoResult:       data.result as 'DCO' | 'DPCO' | 'DNCO',
+                                                aircraftNumber:  data.aircraftNumber
+                                                    ? `A54-${data.aircraftNumber}`
+                                                    : undefined,
+                                                takeoffTime:     data.takeoffTime     ?? undefined,
+                                                landTime:        data.landTime        ?? undefined,
+                                                totalFlightTime,
+                                                isSolo:          !!data.isSolo,
+                                                isDual:          !!data.isDual,
+                                                source:          'post_flight' as const,
+                                            };
+
+                                            const ecRes = await fetch('/api/event-completions', {
+                                                method:      'POST',
+                                                credentials: 'include',
+                                                headers:     { 'Content-Type': 'application/json' },
+                                                body:        JSON.stringify(completionPayload),
+                                            });
+
+                                            if (ecRes.ok) {
+                                                const ecData = await ecRes.json();
+                                                console.log(
+                                                    `[PostFlight] EventCompletion ${ecData.created ? 'created' : 'updated'} ` +
+                                                    `for ${completionPayload.traineeFullName} — ` +
+                                                    `${completionPayload.eventCode} -> ${data.result}`
+                                                );
+                                            } else {
+                                                const errBody = await ecRes.text();
+                                                console.warn('[PostFlight] EventCompletion save failed:', ecRes.status, errBody);
+                                            }
+                                        } catch (ecErr) {
+                                            // Non-fatal: log but do not block the rest of the save flow
+                                            console.warn('[PostFlight] EventCompletion fetch threw:', ecErr);
+                                        }
+                                    }
+                                    // ── End DCO-based EventCompletion tracking ──────────────────────────
+
                                     // Persist currency updates to person's currency records
                                     if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {
                                         const event = eventForPostFlight;

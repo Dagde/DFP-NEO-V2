@@ -188,9 +188,10 @@ model Trainee {
   isActive            Boolean   @default(true)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
-  scores              Score[]   @relation("TraineeScores")
-  individualLMP       IndividualLMP?  @relation("TraineeLMP")
-  user                User?     @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
+  scores              Score[]          @relation("TraineeScores")
+  individualLMP       IndividualLMP?   @relation("TraineeLMP")
+  eventCompletions    EventCompletion[] @relation("TraineeEventCompletions")
+  user                User?            @relation("Trainee", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([idNumber])
@@ -335,6 +336,114 @@ model AppSettings {
   updatedAt DateTime @updatedAt
 
   @@index([orgId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EventCompletion — DCO-based tracking table
+//
+// Records the completion outcome (DCO / DPCO / DNCO) of every scheduled
+// event whose post-flight form has been submitted.  Serves three purposes:
+//
+//  1. ELCE support in the build algorithm:
+//     The algorithm can query "what is this trainee's last SUCCESSFUL event
+//     as of <buildDate>?" without having to scan the entire Schedule JSON
+//     blob or wait for a PT-051 Score to be entered.
+//
+//  2. DCO result history:
+//     A permanent, queryable audit trail of every DCO / DPCO / DNCO outcome
+//     per trainee, queryable by date range, eventCode, dcoResult, etc.
+//
+//  3. Reporting / analytics:
+//     Completion-rate dashboards, instructor performance analysis, course
+//     progress summaries can all be driven from this table.
+// ─────────────────────────────────────────────────────────────────────────────
+model EventCompletion {
+  id              String   @id @default(cuid())
+
+  // ── Event identity ──────────────────────────────────────────────────────
+  /// The ScheduleEvent.id from the DFP program JSON (unique per sortie)
+  scheduleEventId String   @unique
+
+  /// Syllabus event code, e.g. "BGF2", "BNF1", "BIF3"
+  eventCode       String
+
+  /// ISO date of the scheduled sortie (YYYY-MM-DD)
+  eventDate       String
+
+  /// Category of training event
+  eventType       String   @default("flight")
+  // valid values: "flight" | "ftd" | "cpt" | "ground"
+
+  /// Start time as decimal hours (e.g. 9.5 = 09:30 local)
+  startTime       Float    @default(0)
+
+  /// Duration as decimal hours
+  duration        Float    @default(0)
+
+  // ── Personnel ───────────────────────────────────────────────────────────
+  /// FK to Trainee.id — nullable so the record survives if the trainee is
+  /// archived.  traineeFullName is always kept for fast lookups.
+  traineeId       String?
+
+  /// Denormalised full name — used by ELCE queries and build algorithm
+  /// to avoid a join when the trainee FK has been NULLed.
+  traineeFullName String
+
+  /// Name of the instructor who conducted the event (denormalised string)
+  instructorName  String?
+
+  // ── DCO result (core payload) ────────────────────────────────────────
+  /// Primary completion outcome recorded on the post-flight form.
+  /// DCO  = Duty Carry Out   (successful completion)
+  /// DPCO = Duty Partially Carry Out  (partial completion — counts as ELCE)
+  /// DNCO = Duty Not Carry Out        (unsuccessful — does NOT advance ELCE)
+  dcoResult       String
+  // valid values: "DCO" | "DPCO" | "DNCO"
+
+  /// PT-051 overall grade 0–5, null when not graded (e.g. solo)
+  overallGrade    Int?
+
+  /// PT-051 overall result: "P" (pass) | "F" (fail) | null
+  overallResult   String?
+
+  // ── Flight log details ──────────────────────────────────────────────
+  aircraftNumber  String?
+  takeoffTime     String?           // "HH:MM"
+  landTime        String?           // "HH:MM"
+  totalFlightTime Float?            // decimal hours
+  isSolo          Boolean  @default(false)
+  isDual          Boolean  @default(false)
+
+  // ── ELCE flag ────────────────────────────────────────────────────────
+  /// When true, this record may be used as the Effective Last Completed
+  /// Event for the build algorithm's next-event pointer.
+  /// Automatically set to false when dcoResult == "DNCO".
+  isCountedAsElce Boolean  @default(true)
+
+  // ── Audit / source ──────────────────────────────────────────────────
+  /// userId of the person who saved the post-flight form
+  recordedBy      String?
+
+  /// How the record was created
+  source          String   @default("post_flight")
+  // valid values: "post_flight" | "manual" | "import"
+
+  notes           String?
+
+  // ── Timestamps ──────────────────────────────────────────────────────
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // ── Relations ───────────────────────────────────────────────────────
+  trainee         Trainee? @relation("TraineeEventCompletions", fields: [traineeId], references: [id], onDelete: SetNull)
+
+  // ── Indexes ─────────────────────────────────────────────────────────
+  @@index([traineeId])
+  @@index([traineeFullName])
+  @@index([eventDate])
+  @@index([eventCode])
+  @@index([dcoResult])
+  @@index([traineeFullName, eventDate])
 }
 
 enum Role {
