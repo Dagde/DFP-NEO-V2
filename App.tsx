@@ -7441,6 +7441,65 @@ const App: React.FC = () => {
         // Use traineeFullName for the key to ensure consistency across the app
         const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
         setPt051Assessments(prev => new Map(prev).set(saveKey, assessment));
+
+        // --- Persist to TraineePerformance table (single source of truth) ---
+        // Build the structured comments string that parseComments() expects:
+        // "QFI: [text]\nWeather: [text]\nProfile: [text]\nOverall: [text]\nNEST: [text]"
+        const buildStructuredComments = () => {
+            // If already structured, pass through unchanged
+            if ((assessment as any).comments && String((assessment as any).comments).includes('QFI:')) {
+                return (assessment as any).comments;
+            }
+            // Otherwise assemble from individual fields (backward compat)
+            const overall = assessment.overallComments || '';
+            return `QFI: \nWeather: \nProfile: \nOverall: ${overall}\nNEST: `;
+        };
+
+        // Map scores array - ensure grade is stored as string
+        const elementScores = (assessment.scores || []).map(s => ({
+            element: s.element,
+            grade:   s.grade != null ? String(s.grade) : null,
+            comment: s.comment || ''
+        }));
+
+        const payload = {
+            eventId:             assessment.eventId,
+            traineeId:           (assessment as any).traineeId || assessment.traineeFullName, // fallback to name if no ID
+            traineeFullName:     assessment.traineeFullName,
+            flightNumber:        assessment.flightNumber,
+            eventCode:           (assessment as any).eventCode || assessment.flightNumber,
+            date:                assessment.date,
+            instructorName:      assessment.instructorName,
+            overallGrade:        assessment.overallGrade != null ? String(assessment.overallGrade) : 'No Grade',
+            overallResult:       assessment.overallResult || null,
+            dcoResult:           assessment.dcoResult || null,
+            startTime:           assessment.startTime ?? null,
+            duration:            assessment.duration ?? null,
+            endTime:             assessment.endTime ?? null,
+            comments:            buildStructuredComments(),
+            scores:              elementScores,
+            isCompleted:         assessment.isCompleted ?? true, // saving = completed
+            groundSchoolAssessment: assessment.groundSchoolAssessment,
+            course:              (assessment as any).course || null,
+            syllabusPhase:       (assessment as any).syllabusPhase || null,
+            eventSequence:       (assessment as any).eventSequence || null,
+        };
+
+        // Fire-and-forget: POST to TraineePerformance API (upsert via ON CONFLICT)
+        fetch('/api/trainee-performance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => {
+            if (!r.ok) return r.json().then(e => { throw new Error(e.error || r.statusText); });
+            console.log(`✅ PT-051 persisted to TraineePerformance: ${assessment.flightNumber} for ${assessment.traineeFullName}`);
+        })
+        .catch(err => {
+            // Non-fatal: in-memory state is still updated above
+            console.warn(`⚠️ TraineePerformance persist failed (non-fatal): ${err.message}`);
+        });
+        // --- End TraineePerformance persistence ---
         
         // Log to audit trail
         const changes = [
