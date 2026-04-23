@@ -25,3 +25,7 @@ outputs/
 summarized_conversations/
 _superninja_startup.conf
 GITHUB_PAT.txt
+
+# Large generated data files - run import_trainee_performance.py locally to regenerate
+migration-scripts/trainee_performance_data.sql
+migration-scripts/trainee_performance_import.json
