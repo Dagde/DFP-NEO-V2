@@ -170,11 +170,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
         }
     }, [traineesData, selectedTrainee, isCreatingNew]);
 
-    // Only show courses that have trainees (from groupedTrainees), not all courses in courseColors
-    // This ensures courses without trainees at the selected location are not displayed
-    // Also filter out archived courses - only show courses that are in the active courseColors map
-    const activeCourseNumbers = Object.keys(groupedTrainees)
-        .filter(course => courseColors.hasOwnProperty(course))
+    // Include ALL courses from courseColors (not just those with trainees at the current location)
+    // This ensures newly created courses (without trainees yet) appear in the Add Trainee dropdown
+    // and in the Course Exclusions list in People Profile settings.
+    const activeCourseNumbers = Object.keys(courseColors)
         .sort((a, b) => a.localeCompare(b));
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
 

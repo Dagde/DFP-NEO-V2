@@ -7,7 +7,10 @@ declare var XLSX: any;
 interface BulkUpdateFlyoutProps {
   onClose: () => void;
   onBulkUpdateInstructors: (instructors: Instructor[]) => void;
-  instructorsData: Instructor[];
+  instructorsData?: Instructor[]; // Optional for trainee bulk updates
+  traineesData?: Trainee[]; // For trainee bulk updates
+  isTraineeMode?: boolean; // Toggle between instructor and trainee mode
+  onBulkUpdateTrainees?: (trainees: Trainee[]) => void;
 }
 
 interface RepoFile {
@@ -36,7 +39,14 @@ const getValueFromRow = (row: any, possibleKeys: string[]): any => {
 };
 
 
-const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({ onClose, onBulkUpdateInstructors, instructorsData }) => {
+const BulkUpdateFlyout: React.FC<BulkUpdateFlyoutProps> = ({ 
+  onClose, 
+  onBulkUpdateInstructors, 
+  instructorsData = [],
+  traineesData = [],
+  isTraineeMode = false,
+  onBulkUpdateTrainees 
+}) => {
     const [repoFiles, setRepoFiles] = useState<RepoFile[]>([]);
     const [selectedFileId, setSelectedFileId] = useState<string>('');
     const [isLoading, setIsLoading] = useState(false);

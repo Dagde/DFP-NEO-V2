@@ -981,10 +981,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [courses, traineesData]);
 
     const modalTitle = useMemo(() => {
+        if ((event as any)._academicTileClick || (event as any).isAcademic) return 'Ground School Details';
         if (eventType === 'flight') return 'Flight Details';
         if (eventType === 'ftd') return 'FTD Session Details';
         return 'Ground Event Details';
-    }, [eventType]);
+    }, [eventType, event]);
 
     useEffect(() => {
         setFlightNumber(event.flightNumber);
@@ -1551,23 +1552,37 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         // Check if this is a Mass Brief event
         if (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB')) {
             setShowMassBriefComplete(true);
-        } else {
-            // For regular ground events, mark as complete and close
-            // This would typically update the event status in the system
-            if (traineeObject) {
-                alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
-            } else {
-                alert(`Ground event "${event.flightNumber}" marked as complete`);
-            }
-            onClose();
+            return;
         }
+        // Academic session: open the same MassBriefCompleteFlyout so ALL attendees are marked DCO
+        if ((event as any).isAcademic || (event as any).academicTiles || (event as any)._academicTileClick) {
+            setShowMassBriefComplete(true);
+            return;
+        }
+        // For regular ground events, mark as complete and close
+        if (traineeObject) {
+            alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
+        } else {
+            alert(`Ground event "${event.flightNumber}" marked as complete`);
+        }
+        onClose();
     };
 
     const handleMassBriefComplete = (confirmedTrainees: Trainee[]) => {
         console.log('Mass Brief completed for trainees:', confirmedTrainees.map(t => t.fullName));
         
         const currentDate = new Date().toISOString().split('T')[0];
-        const instructor = event.instructor || 'System';
+        // For academic tile clicks, use the per-tile instructor if available
+        const instructor = (event as any)._tileInstructor || event.instructor || 'System';
+        
+        // For academic tile clicks, the flightNumber is the specific lesson code (e.g. "AERODY4").
+        // For regular academic sessions (outer tile complete), use the event flightNumber.
+        // For Mass Brief, use the event flightNumber.
+        const completionFlightNumber = event.flightNumber;
+        const isAcademicCompletion = (event as any).isAcademic || (event as any).academicTiles || (event as any)._academicTileClick;
+        const overallComments = isAcademicCompletion
+            ? `Academic lesson completed: ${completionFlightNumber} on ${currentDate}`
+            : `Ground event completed via Mass Brief completion on ${currentDate}`;
         
         // Create PT051 assessments for each trainee
         if (onSavePT051Assessment) {
@@ -1577,17 +1592,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     traineeName: trainee.name,
                     traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
                     eventId: event.id,
-                    flightNumber: event.flightNumber,
+                    flightNumber: completionFlightNumber,
                     date: currentDate,
                     instructorName: instructor,
-                    dcoResult: 'DCO', // Check DCO box
-                    overallGrade: 'No Grade', // Set to "No Grade"
-                    overallResult: null, // null for ground events
-                    overallComments: `Ground event completed via Mass Brief completion on ${currentDate}`, // String format for compatibility
-                    scores: [], // Empty scores array for ground events
+                    dcoResult: 'DCO',
+                    overallGrade: 'No Grade',
+                    overallResult: null,
+                    overallComments,
+                    scores: [],
                     isCompleted: true,
                     groundSchoolAssessment: {
-                        isAssessment: false,
+                        isAssessment: isAcademicCompletion,
                         result: 0
                     }
                 };

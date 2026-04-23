@@ -10,11 +10,16 @@ const require = createRequire(import.meta.url);
 // Training Intelligence Engine
 const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine.cjs');
 
+// Cookie parser
+const cookieParser = require('cookie-parser');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Parse JSON bodies
-app.use(express.json());
+// Parse JSON bodies - increased limit to handle large settings/syllabus payloads
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(cookieParser());
 
 // CORS headers for all requests
 app.use((req, res, next) => {
@@ -59,10 +64,198 @@ async function getPrisma() {
     } catch (tieErr) {
       console.error('TIE startup failed (non-fatal):', tieErr.message);
     }
+    // Ensure TraineePerformance table exists (single source of truth for PT-051 assessments)
+    await ensureTraineePerformanceTable(prisma);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(prisma);
+    // Ensure CourseSettings and CourseAcademicProgress tables exist
+    await ensureCourseSettingsTables(prisma);
+    // Ensure Course.lmpType column exists (migration for existing DBs)
+    await ensureCourseLmpTypeColumn(prisma);
+    await ensureAcademicLmpTypeColumns(prisma);
+    // Ensure SyllabusItem and SyllabusHistory tables exist
+    await ensureSyllabusTablesExist(prisma);
+    // Migrate CPT event durations to 1.0 hour
+    await migrateCptDurations(prisma);
+    // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
+    await migrateAcademicsCoursesField(prisma);
   }
   return prisma;
+}
+
+// Create SyllabusItem and SyllabusHistory tables if they don't exist
+async function ensureSyllabusTablesExist(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SyllabusItem" (
+        "id"                   TEXT NOT NULL,
+        "code"                 TEXT NOT NULL,
+        "eventDescription"     TEXT NOT NULL,
+        "phase"                TEXT NOT NULL,
+        "module"               TEXT NOT NULL,
+        "type"                 TEXT NOT NULL,
+        "sortieType"           TEXT,
+        "dayNight"             TEXT NOT NULL DEFAULT 'Day',
+        "courses"              TEXT[] NOT NULL DEFAULT '{}',
+        "methodOfDelivery"     TEXT[] NOT NULL DEFAULT '{}',
+        "methodOfAssessment"   TEXT[] NOT NULL DEFAULT '{}',
+        "resourcesPhysical"    TEXT[] NOT NULL DEFAULT '{}',
+        "resourcesHuman"       TEXT[] NOT NULL DEFAULT '{}',
+        "eventDetailsCommon"   TEXT[] NOT NULL DEFAULT '{}',
+        "eventDetailsSortie"   TEXT[] NOT NULL DEFAULT '{}',
+        "flightOrSimHours"     DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "totalEventHours"      DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "duration"             DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "preFlightTime"        DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "postFlightTime"       DOUBLE PRECISION NOT NULL DEFAULT 0,
+        "prerequisites"        TEXT[] NOT NULL DEFAULT '{}',
+        "prerequisitesGround"  TEXT[] NOT NULL DEFAULT '{}',
+        "prerequisitesFlying"  TEXT[] NOT NULL DEFAULT '{}',
+        "location"             TEXT,
+        "sortOrder"            INTEGER NOT NULL DEFAULT 0,
+        "lmpType"              TEXT,
+        "twrDiReqd"            TEXT,
+        "cctOnly"              TEXT,
+        "isRemedial"           BOOLEAN NOT NULL DEFAULT false,
+        "isActive"             BOOLEAN NOT NULL DEFAULT true,
+        "version"              INTEGER NOT NULL DEFAULT 1,
+        "notes"                TEXT,
+        "createdBy"            TEXT,
+        "createdAt"            TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"            TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SyllabusItem_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SyllabusItem_code_key" ON "SyllabusItem"("code")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_sortOrder_idx" ON "SyllabusItem"("sortOrder")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusItem_isActive_idx" ON "SyllabusItem"("isActive")`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SyllabusHistory" (
+        "id"             TEXT NOT NULL,
+        "syllabusItemId" TEXT NOT NULL,
+        "changeType"     TEXT NOT NULL,
+        "changeData"     JSONB NOT NULL,
+        "previousData"   JSONB,
+        "changedBy"      TEXT,
+        "changeReason"   TEXT,
+        "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "SyllabusHistory_pkey" PRIMARY KEY ("id")
+      )
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SyllabusHistory_syllabusItemId_idx" ON "SyllabusHistory"("syllabusItemId")`);
+
+    console.log('✅ SyllabusItem and SyllabusHistory tables ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Syllabus tables:', err.message);
+  }
+}
+
+// Migration: Fix CPT event durations to 1.0 hour (totalEventHours, duration, preFlightTime, postFlightTime)
+async function migrateCptDurations(db) {
+  try {
+    const result = await db.$executeRawUnsafe(`
+      UPDATE "SyllabusItem"
+      SET
+        "totalEventHours" = 1.0,
+        "flightOrSimHours" = 1.0,
+        "duration" = 1.0,
+        "preFlightTime" = 0,
+        "postFlightTime" = 0,
+        "updatedAt" = NOW()
+      WHERE "code" LIKE '%CPT%'
+        AND ("totalEventHours" != 1.0 OR "duration" != 1.0 OR "preFlightTime" != 0 OR "postFlightTime" != 0)
+    `);
+    console.log(`✅ migrateCptDurations (SyllabusItem): updated ${result} CPT items to 1.0 hr duration`);
+  } catch (err) {
+    console.error('❌ migrateCptDurations (SyllabusItem) failed (non-fatal):', err.message);
+  }
+
+  // Also fix duration in IndividualLMP events JSONB
+  try {
+    // Load all IndividualLMP records
+    const lmps = await db.$queryRawUnsafe(`SELECT "id", "events" FROM "IndividualLMP"`);
+    let updatedCount = 0;
+    for (const lmp of lmps) {
+      let events = lmp.events;
+      if (!Array.isArray(events)) {
+        try { events = JSON.parse(events); } catch { continue; }
+      }
+      let changed = false;
+      const fixedEvents = events.map(evt => {
+        const code = (evt.flightNumber || evt.eventCode || '');
+        if (code.includes('CPT') && evt.duration !== 1.0) {
+          changed = true;
+          return { ...evt, duration: 1.0 };
+        }
+        return evt;
+      });
+      if (changed) {
+        await db.$executeRawUnsafe(
+          `UPDATE "IndividualLMP" SET "events" = $1::jsonb, "updatedAt" = NOW() WHERE "id" = $2`,
+          JSON.stringify(fixedEvents),
+          lmp.id
+        );
+        updatedCount++;
+      }
+    }
+    console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
+  } catch (err) {
+    console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
+  }
+}
+
+// Fix Academics syllabus items that have courses[] pointing to their own code
+// instead of the parent course name (e.g. ['AERODY1'] → ['PC-21 Ground School'])
+// This runs at startup and corrects any items created before the fix was deployed.
+async function migrateAcademicsCoursesField(db) {
+  try {
+    // Find all Academics-type items
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, courses
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics'
+        AND "isActive" = true
+    `);
+
+    console.log(`[migrateAcademicsCoursesField] Found ${rows.length} Academics items to check`);
+    if (rows.length > 0) {
+      // Log first few for diagnosis
+      rows.slice(0, 3).forEach(r => {
+        console.log(`  Sample: code="${r.code}", module="${r.module}", courses=${JSON.stringify(r.courses)}`);
+      });
+    }
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+    for (const row of rows) {
+      const courses = Array.isArray(row.courses)
+        ? row.courses
+        : (typeof row.courses === 'string' ? JSON.parse(row.courses) : []);
+      const moduleName = row.module || '';
+      
+      // Only fix if module is set and courses[] does NOT already contain the module name
+      if (moduleName && !courses.includes(moduleName)) {
+        // Use ARRAY[$1::text] to set a PostgreSQL TEXT[] with one element
+        await db.$executeRawUnsafe(
+          `UPDATE "SyllabusItem" SET "courses" = ARRAY[$1::text], "updatedAt" = NOW() WHERE "id" = $2`,
+          moduleName,
+          row.id
+        );
+        updatedCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`✅ migrateAcademicsCoursesField: fixed ${updatedCount} items, skipped ${skippedCount} (already correct)`);
+    } else {
+      console.log(`✅ migrateAcademicsCoursesField: all ${skippedCount} Academics items already have correct courses[] field`);
+    }
+  } catch (err) {
+    console.error('❌ migrateAcademicsCoursesField failed (non-fatal):', err.message);
+  }
 }
 
 // ============================================================
@@ -117,6 +310,135 @@ app.post('/api/settings', async (req, res) => {
     res.status(500).json({ error: 'Failed to save settings', details: error.message });
   }
 });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Course Settings API Routes
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// GET /api/settings/course-settings - Get course settings (neoBuildCourse + selectedAcademicLmp + excludedCourses)
+app.get('/api/settings/course-settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(
+      'SELECT "neoBuildCourse", "selectedAcademicLmp", "excludedCourses" FROM "CourseSettings" LIMIT 1'
+    );
+    const setting = rows && rows.length > 0 ? rows[0] : null;
+    let excludedCourses = [];
+    if (setting && setting.excludedCourses) {
+      try { excludedCourses = JSON.parse(setting.excludedCourses); } catch (_) {}
+    }
+    return res.json({
+      neoBuildCourse: setting ? (setting.neoBuildCourse || null) : null,
+      selectedAcademicLmp: setting ? (setting.selectedAcademicLmp || null) : null,
+      excludedCourses,
+    });
+  } catch (error) {
+    console.error('[CourseSettings] GET error:', error);
+    res.status(500).json({ error: 'Failed to load course settings', details: error.message });
+  }
+});
+
+// PUT /api/settings/course-settings - Update course settings (neoBuildCourse and/or selectedAcademicLmp and/or excludedCourses)
+app.put('/api/settings/course-settings', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { neoBuildCourse, selectedAcademicLmp, excludedCourses } = req.body;
+    // At least one field must be present (allow empty string/array to clear a value)
+    if (neoBuildCourse === undefined && selectedAcademicLmp === undefined && excludedCourses === undefined) {
+      return res.status(400).json({ error: 'No settings fields provided' });
+    }
+    const existing = await db.$queryRawUnsafe(
+      'SELECT id, "neoBuildCourse", "selectedAcademicLmp", "excludedCourses" FROM "CourseSettings" LIMIT 1'
+    );
+    const now = new Date().toISOString();
+    if (existing && existing.length > 0) {
+      const row = existing[0];
+      const newNeoBuildCourse = neoBuildCourse !== undefined ? neoBuildCourse : row.neoBuildCourse;
+      const newSelectedAcademicLmp = selectedAcademicLmp !== undefined ? selectedAcademicLmp : row.selectedAcademicLmp;
+      const newExcludedCourses = excludedCourses !== undefined ? JSON.stringify(excludedCourses) : (row.excludedCourses || '[]');
+      await db.$executeRawUnsafe(
+        'UPDATE "CourseSettings" SET "neoBuildCourse" = $1, "selectedAcademicLmp" = $2, "excludedCourses" = $3, "updatedAt" = $4::timestamp WHERE id = $5',
+        newNeoBuildCourse || null, newSelectedAcademicLmp || null, newExcludedCourses, now, row.id
+      );
+    } else {
+      const newId = require('crypto').randomUUID();
+      const newExcludedCourses = excludedCourses !== undefined ? JSON.stringify(excludedCourses) : '[]';
+      await db.$executeRawUnsafe(
+        'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "selectedAcademicLmp", "excludedCourses", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5::timestamp, $6::timestamp)',
+        newId, neoBuildCourse || null, selectedAcademicLmp || null, newExcludedCourses, now, now
+      );
+    }
+    console.log(`[CourseSettings] updated: neoBuildCourse=${neoBuildCourse}, selectedAcademicLmp=${selectedAcademicLmp}, excludedCourses=${JSON.stringify(excludedCourses)}`);
+    res.json({ success: true, neoBuildCourse, selectedAcademicLmp, excludedCourses });
+  } catch (error) {
+    console.error('[CourseSettings] PUT error:', error);
+    res.status(500).json({ error: 'Failed to update course settings', details: error.message });
+  }
+});
+
+// GET /api/settings/course-academic-progress - Get all course academic progress records
+app.get('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const records = await db.$queryRawUnsafe(
+      'SELECT "courseCode", "lessonCode" FROM "CourseAcademicProgress" ORDER BY "courseCode" ASC'
+    );
+    const map = {};
+    (records || []).forEach(r => {
+      if (!map[r.courseCode]) map[r.courseCode] = [];
+      map[r.courseCode].push(r.lessonCode);
+    });
+    res.json({ success: true, data: map });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] GET error:', error);
+    res.status(500).json({ error: 'Failed to load course academic progress', details: error.message });
+  }
+});
+
+// POST /api/settings/course-academic-progress - Mark a course lesson as complete
+app.post('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, lessonCode, userId } = req.body;
+    if (!courseCode || !lessonCode) {
+      return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
+    }
+    const newId = require('crypto').randomUUID();
+    const now = new Date().toISOString();
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CourseAcademicProgress" (id, "courseCode", "lessonCode", "completedDate", "completedBy")
+      VALUES ($1, $2, $3, $4::timestamp, $5)
+      ON CONFLICT ("courseCode", "lessonCode") DO NOTHING
+    `, newId, courseCode, lessonCode, now, userId || null);
+    console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as complete`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] POST error:', error);
+    res.status(500).json({ error: 'Failed to save course academic progress', details: error.message });
+  }
+});
+
+// DELETE /api/settings/course-academic-progress - Mark a course lesson as incomplete
+app.delete('/api/settings/course-academic-progress', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { courseCode, lessonCode } = req.query;
+    if (!courseCode || !lessonCode) {
+      return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
+    }
+    await db.$executeRawUnsafe(
+      'DELETE FROM "CourseAcademicProgress" WHERE "courseCode" = $1 AND "lessonCode" = $2',
+      courseCode, lessonCode
+    );
+    console.log(`[CourseAcademicProgress] marked ${courseCode}/${lessonCode} as incomplete`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[CourseAcademicProgress] DELETE error:', error);
+    res.status(500).json({ error: 'Failed to delete course academic progress', details: error.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // GET /api/currencies - Load currency settings (dedicated endpoint for reliability)
 app.get('/api/currencies', async (req, res) => {
@@ -180,6 +502,113 @@ app.post('/api/currencies', async (req, res) => {
   } catch (error) {
     console.error('[Currencies] POST error:', error);
     res.status(500).json({ error: 'Failed to save currencies', details: error.message });
+  }
+});
+
+// GET /api/courses - Fetch all courses from the database
+app.get('/api/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const courses = await db.course.findMany({
+      orderBy: { startDate: 'asc' },
+    });
+    
+    // Sort courses by code numerically (FIC210 before FIC211)
+    courses.sort((a, b) => {
+      const aCode = a.code || a.name;
+      const bCode = b.code || b.name;
+      
+      // Extract numeric part from course codes (e.g., "FIC210" -> 210)
+      const aNum = parseInt(aCode.replace(/\D/g, ''), 10) || 0;
+      const bNum = parseInt(bCode.replace(/\D/g, ''), 10) || 0;
+      
+      // If both have numeric parts, sort by them
+      if (aNum && bNum) {
+        return aNum - bNum;
+      }
+      
+      // Otherwise, fall back to alphabetical sort
+      return aCode.localeCompare(bCode);
+    });
+    
+    // Map DB fields to the App's Course interface
+    const mapped = courses.map(c => ({
+      name: c.name,
+      color: c.color || '#6366f1',
+      startDate: c.startDate || '',
+      gradDate: c.endDate || '',
+      raafStart: c.raafCount || 0,
+      navyStart: c.navyCount || 0,
+      armyStart: c.armyCount || 0,
+      status: c.status || 'ACTIVE',
+      location: c.location || '',
+      unit: c.unit || '',
+      lmpType: c.lmpType || '',
+      academicLmpType: c.academicLmpType || '',
+      code: c.code || c.name,
+    }));
+    res.json({ courses: mapped });
+  } catch (error) {
+    console.error('❌ GET /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to fetch courses' });
+  }
+});
+
+// POST /api/courses - Create or update a course in the database
+app.post('/api/courses', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, status } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const course = await db.course.upsert({
+      where: { code: name },
+      update: {
+        color: color || '#6366f1',
+        startDate: startDate || '',
+        endDate: gradDate || '',
+        raafCount: raafStart || 0,
+        navyCount: navyStart || 0,
+        armyCount: armyStart || 0,
+        location: location || '',
+        unit: unit || '',
+        lmpType: lmpType || '',
+        academicLmpType: academicLmpType || '',
+        status: status || 'ACTIVE',
+        updatedAt: new Date(),
+      },
+      create: {
+        name,
+        code: name,
+        color: color || '#6366f1',
+        startDate: startDate || '',
+        endDate: gradDate || '',
+        raafCount: raafStart || 0,
+        navyCount: navyStart || 0,
+        armyCount: armyStart || 0,
+        location: location || '',
+        unit: unit || '',
+        lmpType: lmpType || '',
+        academicLmpType: academicLmpType || '',
+        status: status || 'ACTIVE',
+      },
+    });
+    res.json({ success: true, course });
+  } catch (error) {
+    console.error('❌ POST /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to save course' });
+  }
+});
+
+// DELETE /api/courses/:name - Delete a course from the database
+app.delete('/api/courses/:name', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const name = decodeURIComponent(req.params.name);
+    await db.course.deleteMany({ where: { code: name } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/courses error:', error);
+    res.status(500).json({ error: 'Failed to delete course' });
   }
 });
 
@@ -293,6 +722,46 @@ app.patch('/api/personnel/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ PATCH /api/personnel error:', error);
     res.status(500).json({ error: 'Failed to update personnel', details: error.message });
+  }
+});
+
+// POST /api/cleanup-deploy-unavailability - Remove all __deploy__ tagged unavailability periods
+// from all personnel and trainees in the DB. One-time fix for stuck "Deployed" conflicts.
+app.post('/api/cleanup-deploy-unavailability', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    let personnelFixed = 0;
+    let traineesFixed = 0;
+
+    // Fix personnel (instructors)
+    const allPersonnel = await db.personnel.findMany({ select: { id: true, name: true, unavailability: true } });
+    for (const person of allPersonnel) {
+      const unavail = Array.isArray(person.unavailability) ? person.unavailability : [];
+      const filtered = unavail.filter(p => !p || !p.notes || !String(p.notes).startsWith('__deploy__'));
+      if (filtered.length !== unavail.length) {
+        await db.personnel.update({ where: { id: person.id }, data: { unavailability: filtered } });
+        console.log(`[CleanupDeploy] Cleaned ${unavail.length - filtered.length} deploy tag(s) from personnel: ${person.name}`);
+        personnelFixed++;
+      }
+    }
+
+    // Fix trainees
+    const allTrainees = await db.trainee.findMany({ select: { id: true, fullName: true, unavailability: true } });
+    for (const trainee of allTrainees) {
+      const unavail = Array.isArray(trainee.unavailability) ? trainee.unavailability : [];
+      const filtered = unavail.filter(p => !p || !p.notes || !String(p.notes).startsWith('__deploy__'));
+      if (filtered.length !== unavail.length) {
+        await db.trainee.update({ where: { id: trainee.id }, data: { unavailability: filtered } });
+        console.log(`[CleanupDeploy] Cleaned ${unavail.length - filtered.length} deploy tag(s) from trainee: ${trainee.fullName}`);
+        traineesFixed++;
+      }
+    }
+
+    console.log(`✅ POST /api/cleanup-deploy-unavailability - fixed ${personnelFixed} personnel, ${traineesFixed} trainees`);
+    res.json({ success: true, personnelFixed, traineesFixed });
+  } catch (error) {
+    console.error('❌ POST /api/cleanup-deploy-unavailability error:', error);
+    res.status(500).json({ error: 'Failed to cleanup deploy unavailability', details: error.message });
   }
 });
 
@@ -528,32 +997,65 @@ app.post('/api/audit/currency', async (req, res) => {
 
     // Build a human-readable summary
     const summary = changes.map(c => {
-      if (!c.oldDate && c.newDate) return `${c.currencyName}: set to ${c.newDate}`;
-      if (c.oldDate && !c.newDate) return `${c.currencyName}: cleared (was ${c.oldDate})`;
-      return `${c.currencyName}: ${c.oldDate} → ${c.newDate}`;
+      const parts = [];
+      if (c.activeChanged) {
+        parts.push(`${c.currencyName}: ${c.isNowInactive ? 'set Inactive' : 'set Active'}`);
+      }
+      if (c.oldDate !== c.newDate) {
+        if (!c.oldDate && c.newDate) parts.push(`${c.currencyName}: date set to ${c.newDate}`);
+        else if (c.oldDate && !c.newDate) parts.push(`${c.currencyName}: date cleared (was ${c.oldDate})`);
+        else if (!c.activeChanged) parts.push(`${c.currencyName}: ${c.oldDate} → ${c.newDate}`);
+      }
+      return parts.join(', ') || `${c.currencyName}: updated`;
     }).join('; ');
 
     // Resolve the DB User for the audit entry
-    // Try to find by userId (the AuthUser.userId / PMKEYS number)
+    // User.userId = PMKEYS string (what frontend sends), User.id = UUID primary key (what AuditLog needs)
     let dbUserId = null;
+
+    // 1. Try by User.userId field (PMKEYS number sent from frontend)
     if (userId) {
-      const user = await db.user.findFirst({ where: { id: userId } });
-      if (user) dbUserId = user.id;
+      const user = await db.user.findFirst({ where: { userId: String(userId) } });
+      if (user) {
+        dbUserId = user.id;
+        console.log(`[Audit] Resolved user by userId/PMKEYS: ${userId} → dbUserId=${dbUserId}`);
+      }
     }
-    // If no auth user found, try to find by userName (fallback)
+
+    // 2. Try matching by username or name fragments
     if (!dbUserId && userName) {
-      const user = await db.user.findFirst({ where: { OR: [
-        { firstName: { contains: userName.split(' ')[0] || '', mode: 'insensitive' } },
-        { username: { contains: userName, mode: 'insensitive' } },
-      ]}});
-      if (user) dbUserId = user.id;
+      const nameParts = userName.split(/[,\s]+/).filter(Boolean);
+      const user = await db.user.findFirst({
+        where: {
+          OR: [
+            { username: { contains: userName, mode: 'insensitive' } },
+            nameParts[0] ? { lastName: { contains: nameParts[0], mode: 'insensitive' } } : undefined,
+            nameParts[1] ? { firstName: { contains: nameParts[1], mode: 'insensitive' } } : undefined,
+          ].filter(Boolean),
+        }
+      });
+      if (user) {
+        dbUserId = user.id;
+        console.log(`[Audit] Resolved user by name match: "${userName}" → dbUserId=${dbUserId}`);
+      }
     }
-    // If still no user, use a system user or skip audit
+
+    // 3. Last resort: use the first active admin/system user so audit is NEVER silently dropped
     if (!dbUserId) {
-      // Create a system audit entry with a placeholder - store in changes JSON without FK
-      // Return success with a warning
-      console.warn(`[Audit] No DB user found for userId=${userId}, userName=${userName}. Audit entry skipped.`);
-      return res.json({ success: true, warning: 'Audit entry skipped: user not found in DB', summary });
+      const fallbackUser = await db.user.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (fallbackUser) {
+        dbUserId = fallbackUser.id;
+        console.warn(`[Audit] Could not match user (userId=${userId}, userName=${userName}). Using fallback user ${dbUserId}. Recording audit anyway.`);
+      }
+    }
+
+    // If absolutely no user exists in DB at all, we cannot create an AuditLog record (FK constraint)
+    if (!dbUserId) {
+      console.warn(`[Audit] No users in DB at all. Cannot log audit for userId=${userId}, userName=${userName}.`);
+      return res.json({ success: true, warning: 'Audit entry skipped: no users in DB', summary });
     }
 
     const auditEntry = await db.auditLog.create({
@@ -1205,9 +1707,8 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 
 // POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
 // Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
-// syllabusData is OPTIONAL - server now loads syllabus directly from DB for accurate backfill.
+// syllabusData is OPTIONAL - server loads syllabus directly from DB for accurate backfill.
 // Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
-// pt051Completions: optional map of traineeFullName → array of completed flightNumbers from DailySnapshot pt051Assessments
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -1219,14 +1720,18 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     // full syllabus (including any ground school prerequisites) is available.
     let dbSyllabusData = {};
     try {
-      const allItems = await db.syllabusItem.findMany({
-        where: { isActive: true },
-        orderBy: { sortOrder: 'asc' },
-      });
-      if (allItems.length > 0) {
-        // Split by lmpType / courses
-        const ficItems = allItems.filter(item => Array.isArray(item.courses) && item.courses.includes('FIC'));
-        const bpcIpcItems = allItems.filter(item => !Array.isArray(item.courses) || !item.courses.includes('FIC'));
+      const allItems = await db.$queryRawUnsafe(
+        `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
+      );
+      if (allItems && allItems.length > 0) {
+        // courses is stored as JSON array in DB; parse if needed
+        const parsed = allItems.map(item => ({
+          ...item,
+          courses: Array.isArray(item.courses) ? item.courses :
+            (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
+        }));
+        const ficItems = parsed.filter(item => item.courses.includes('FIC'));
+        const bpcIpcItems = parsed.filter(item => !item.courses.includes('FIC'));
         dbSyllabusData = {
           'FIC': ficItems,
           'BPC+IPC': bpcIpcItems,
@@ -1234,7 +1739,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         console.log(`[LMP Sync] Loaded syllabus from DB: ${ficItems.length} FIC items, ${bpcIpcItems.length} BPC+IPC items`);
       }
     } catch (syllabusErr) {
-      console.warn('[LMP Sync] Could not load syllabus from DB, falling back to client-provided syllabusData:', syllabusErr.message);
+      console.warn('[LMP Sync] Could not load syllabus from DB, falling back to client syllabusData:', syllabusErr.message);
     }
 
     // Use DB syllabus if available; fall back to client-provided syllabusData
@@ -1243,9 +1748,6 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     if (!syllabusData || Object.keys(syllabusData).length === 0) {
       return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
     }
-
-    // pt051Completions: { "Carter, Chris": ["FIC3","FIC4","FIC5"], ... }
-    const pt051Map = pt051Completions || {};
 
     // Fetch all active trainees with their scores and existing LMP
     const trainees = await db.trainee.findMany({
@@ -1259,7 +1761,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       },
     });
 
-    console.log(`[LMP Sync] Processing ${trainees.length} trainees... (pt051Completions for ${Object.keys(pt051Map).length} trainees)`);
+    console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
 
     const results = [];
 
@@ -1298,16 +1800,14 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       });
 
       // Merge PT-051 completions from DailySnapshot (passed by frontend)
-      // These are completions recorded in DailySnapshot.pt051Assessments that may not yet
-      // have Score DB records. Merging here ensures Course Progress shows correct progress.
+      const pt051Map = pt051Completions || {};
       const pt051Events = pt051Map[trainee.fullName] || [];
       if (pt051Events.length > 0) {
-        console.log(`[LMP Sync] ${trainee.fullName}: merging ${pt051Events.length} PT-051 completions from snapshots: ${pt051Events.join(', ')}`);
+        console.log(`[LMP Sync] ${trainee.fullName}: merging ${pt051Events.length} PT-051 completions: ${pt051Events.join(', ')}`);
         pt051Events.forEach(eventId => {
           const normalized = (eventId || '').replace('*', '');
           if (normalized && !scoreMap[normalized]) {
             scoreMap[normalized] = new Date().toISOString();
-            // Also persist a Score record to the DB so future syncs don't need pt051Completions
             db.score.findFirst({ where: { traineeId: trainee.id, event: normalized } })
               .then(existing => {
                 if (!existing) {
@@ -1332,20 +1832,14 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
 
       // --- ENDURING PREREQUISITE BACKFILL ---
       // If any event N is complete, all syllabus items that appear BEFORE it in the
-      // master syllabus (by sortOrder / array position) must also be complete.
+      // master syllabus (by sortOrder) must also be complete.
       // This prevents regressions when new ground-school or prerequisite events are
       // added to the DB syllabus AFTER trainees have already completed later events.
-      //
-      // Algorithm: Walk the sorted syllabus once. Find the highest-index completed
-      // item. Every item before that index is also marked complete (using the nearest
-      // later item's completion date as a proxy date).
-      //
-      // We match each syllabus item using BOTH id and code because the DB syllabus
-      // may use CUID ids while Score records store event codes.
+      // Example: FIC GND1/2/3 added to DB syllabus after FIC1-FIC5 already completed.
       {
         const sorted = [...masterSyllabus].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
 
-        // Find the highest-sortOrder completed item index
+        // Find the highest-sortOrder completed item index (high-water mark)
         let highWatermark = -1;
         let highWatermarkDate = null;
         for (let i = 0; i < sorted.length; i++) {
@@ -1505,6 +1999,199 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
   }
 });
 
+// POST /api/trainees - Create a new trainee record
+app.post('/api/trainees', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      idNumber, name, fullName, rank, course, lmpType,
+      unit, flight, location, service, seatConfig, isPaused,
+      traineeCallsign, primaryInstructor, secondaryInstructor,
+      phoneNumber, email, permissions, unavailability
+    } = req.body;
+
+    if (!idNumber || !name) {
+      return res.status(400).json({ error: 'idNumber and name are required' });
+    }
+
+    // Check if trainee with this idNumber already exists
+    const existing = await db.trainee.findFirst({ where: { idNumber: Number(idNumber) } });
+    if (existing) {
+      // Update existing record instead
+      const updated = await db.trainee.update({
+        where: { id: existing.id },
+        data: {
+          name: name || existing.name,
+          fullName: fullName || name,
+          rank: rank || existing.rank,
+          course: course || existing.course,
+          lmpType: lmpType || existing.lmpType,
+          unit: unit !== undefined ? unit : existing.unit,
+          flight: flight !== undefined ? flight : existing.flight,
+          location: location !== undefined ? location : existing.location,
+          service: service || existing.service,
+          seatConfig: seatConfig || existing.seatConfig,
+          isPaused: isPaused !== undefined ? isPaused : existing.isPaused,
+          traineeCallsign: traineeCallsign !== undefined ? traineeCallsign : existing.traineeCallsign,
+          primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : existing.primaryInstructor),
+          secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : existing.secondaryInstructor),
+          phoneNumber: phoneNumber !== undefined ? phoneNumber : existing.phoneNumber,
+          email: email !== undefined ? email : existing.email,
+          permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : existing.permissions),
+          unavailability: unavailability || existing.unavailability,
+          isActive: true,
+        }
+      });
+      console.log(`✅ POST /api/trainees - updated existing: ${updated.name} (${updated.idNumber})`);
+      return res.json({ success: true, trainee: updated, action: 'updated' });
+    }
+
+    // Create new trainee
+    const created = await db.trainee.create({
+      data: {
+        idNumber: Number(idNumber),
+        name,
+        fullName: fullName || name,
+        rank: rank || 'FLGOFF',
+        course: course || '',
+        lmpType: lmpType || '',
+        unit: unit || '',
+        flight: flight || '',
+        location: location || '',
+        service: service || null,
+        seatConfig: seatConfig || 'Front',
+        isPaused: isPaused || false,
+        traineeCallsign: traineeCallsign || null,
+        primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : []),
+        secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : []),
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : []),
+        unavailability: unavailability || [],
+        isActive: true,
+      }
+    });
+
+    console.log(`✅ POST /api/trainees - created: ${created.name} (${created.idNumber})`);
+    res.status(201).json({ success: true, trainee: created, action: 'created' });
+  } catch (error) {
+    console.error('❌ POST /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to create trainee', details: error.message });
+  }
+});
+
+// POST /api/trainees/bulk - Bulk create or update trainees
+app.post('/api/trainees/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { trainees, course, replaceAll } = req.body;
+
+    console.log(`🔵 POST /api/trainees/bulk - received request body keys: ${Object.keys(req.body).join(', ')}`);
+    console.log(`🔵 POST /api/trainees/bulk - trainees type: ${typeof trainees}, isArray: ${Array.isArray(trainees)}, length: ${Array.isArray(trainees) ? trainees.length : 'N/A'}`);
+    console.log(`🔵 POST /api/trainees/bulk - course: ${course}, replaceAll: ${replaceAll}`);
+    if (Array.isArray(trainees) && trainees.length > 0) {
+      console.log(`🔵 POST /api/trainees/bulk - first trainee sample: ${JSON.stringify(trainees[0])}`);
+    }
+
+    if (!Array.isArray(trainees) || trainees.length === 0) {
+      console.error(`❌ POST /api/trainees/bulk - invalid trainees array`);
+      return res.status(400).json({ error: 'trainees array is required and must not be empty' });
+    }
+
+    console.log(`🔵 POST /api/trainees/bulk - processing ${trainees.length} trainees, course: ${course || 'all'}, replaceAll: ${replaceAll}`);
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const results = [];
+
+    // If replaceAll and course is specified, mark all existing trainees in that course as inactive first
+    if (replaceAll && course) {
+      await db.trainee.updateMany({
+        where: { course, isActive: true },
+        data: { isActive: false }
+      });
+      console.log(`🔵 Marked all existing ${course} trainees as inactive for replacement`);
+    }
+
+    for (const t of trainees) {
+      try {
+        if (!t.idNumber || !t.name) {
+          skippedCount++;
+          continue;
+        }
+
+        const idNum = Number(t.idNumber);
+        if (isNaN(idNum) || idNum <= 0) {
+          skippedCount++;
+          continue;
+        }
+
+        // Look for existing trainee by idNumber in this course (or any course if no course filter)
+        const whereClause = course 
+          ? { idNumber: idNum }
+          : { idNumber: idNum };
+        
+        const existing = await db.trainee.findFirst({ where: whereClause });
+
+        const traineeData = {
+          name: t.name,
+          fullName: t.fullName || t.name,
+          rank: t.rank || 'FLGOFF',
+          course: t.course || course || '',
+          lmpType: t.lmpType || '',
+          unit: t.unit || '',
+          flight: t.flight || '',
+          location: t.location || '',
+          service: t.service || null,
+          seatConfig: t.seatConfig || 'Front',
+          isPaused: t.isPaused || false,
+          traineeCallsign: t.traineeCallsign !== undefined ? String(t.traineeCallsign) : null,
+          primaryInstructor: Array.isArray(t.primaryInstructor) ? t.primaryInstructor : (t.primaryInstructor ? [t.primaryInstructor] : []),
+          secondaryInstructor: Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : (t.secondaryInstructor ? [t.secondaryInstructor] : []),
+          phoneNumber: t.phoneNumber || null,
+          email: t.email || null,
+          permissions: Array.isArray(t.permissions) ? t.permissions : (t.permissions ? [t.permissions] : []),
+          unavailability: t.unavailability || [],
+          isActive: true,
+        };
+
+        if (existing) {
+          await db.trainee.update({
+            where: { id: existing.id },
+            data: traineeData
+          });
+          updatedCount++;
+          results.push({ idNumber: idNum, name: t.name, action: 'updated' });
+        } else {
+          const created = await db.trainee.create({
+            data: { idNumber: idNum, ...traineeData }
+          });
+          createdCount++;
+          results.push({ idNumber: idNum, name: t.name, action: 'created', id: created.id });
+        }
+      } catch (rowError) {
+        console.error(`❌ Error processing trainee ${t.idNumber} - ${t.name}:`, rowError.message);
+        skippedCount++;
+        results.push({ idNumber: t.idNumber, name: t.name, action: 'error', error: rowError.message });
+      }
+    }
+
+    console.log(`✅ POST /api/trainees/bulk complete - created: ${createdCount}, updated: ${updatedCount}, skipped: ${skippedCount}`);
+    res.json({
+      success: true,
+      created: createdCount,
+      updated: updatedCount,
+      skipped: skippedCount,
+      total: trainees.length,
+      results
+    });
+  } catch (error) {
+    console.error('❌ POST /api/trainees/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk update trainees', details: error.message });
+  }
+});
+
 // PATCH /api/trainees/:id - Update a trainee record
 app.patch('/api/trainees/:id', async (req, res) => {
   try {
@@ -1559,36 +2246,6 @@ app.get('/api/aircraft', async (req, res) => {
   }
 });
 
-// GET /api/syllabus - Return all active syllabus items from DB
-// Mirrors the Next.js platform's /api/syllabus so the React app gets consistent
-// syllabus data regardless of which server is handling the request.
-// This ensures syllabusDetails (and thus traineeLMPs) always includes items like
-// FIC GND1/2/3 when they are present in the DB, so the LMP backfill logic works.
-app.get('/api/syllabus', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { course, phase, type, includeInactive } = req.query;
-
-    const where = {};
-    if (includeInactive !== 'true') where.isActive = true;
-    if (phase) where.phase = phase;
-    if (type) where.type = type;
-    if (course) where.courses = { has: course };
-
-    const syllabusItems = await db.syllabusItem.findMany({
-      where,
-      orderBy: { sortOrder: 'asc' },
-    });
-
-    console.log(`📚 GET /api/syllabus - returning ${syllabusItems.length} items`);
-    // Return as both 'syllabus' and 'syllabusItems' for compatibility with syllabusService.ts
-    res.json({ syllabus: syllabusItems, syllabusItems });
-  } catch (error) {
-    console.error('❌ GET /api/syllabus error:', error);
-    res.status(500).json({ error: 'Failed to fetch syllabus', details: error.message });
-  }
-});
-
 // GET /api/scores
 app.get('/api/scores', async (req, res) => {
   try {
@@ -1630,6 +2287,109 @@ app.get('/api/scores', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/scores error:', error);
     res.status(500).json({ error: 'Failed to fetch scores', details: error.message });
+  }
+});
+
+// POST /api/scores - create/upsert a single score record
+app.post('/api/scores', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = req.body;
+
+    let resolvedTraineeId = traineeId;
+    if (!resolvedTraineeId && traineeFullName) {
+      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
+      if (!trainee) return res.status(404).json({ error: `Trainee not found: ${traineeFullName}` });
+      resolvedTraineeId = trainee.id;
+    }
+    if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
+    if (!event) return res.status(400).json({ error: 'event is required' });
+
+    // Upsert: update if exists, create if not
+    const existing = await db.score.findFirst({ where: { traineeId: resolvedTraineeId, event } });
+    let scoreRecord;
+    if (existing) {
+      scoreRecord = await db.score.update({
+        where: { id: existing.id },
+        data: {
+          score: score !== undefined ? parseInt(score) : existing.score,
+          date: date ? new Date(date) : existing.date,
+          instructor: instructor || existing.instructor,
+          notes: notes || existing.notes,
+          details: details !== undefined ? details : existing.details,
+        },
+      });
+    } else {
+      scoreRecord = await db.score.create({
+        data: {
+          traineeId: resolvedTraineeId,
+          event,
+          score: score !== undefined ? parseInt(score) : 3,
+          date: date ? new Date(date) : new Date(),
+          instructor: instructor || 'DCO',
+          notes: notes || '',
+          details: details || null,
+        },
+      });
+    }
+
+    // Also update IndividualLMP completedEventIds to include this event + backfill prerequisites
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId: resolvedTraineeId } });
+      if (lmp) {
+        const existing_ids = lmp.completedEventIds || [];
+        const updatedSet = new Set(existing_ids);
+        updatedSet.add(event);
+
+        // --- PREREQUISITE BACKFILL (real-time) ---
+        const lmpEvents = Array.isArray(lmp.events) ? lmp.events : [];
+        if (lmpEvents.length > 0) {
+          let highWatermark = -1;
+          const allCompleted = new Set(updatedSet);
+          for (let i = 0; i < lmpEvents.length; i++) {
+            const item = lmpEvents[i];
+            const itemId = (item.id || item.code || '').replace('*', '');
+            const itemCode = (item.code || '').replace('*', '');
+            if (allCompleted.has(itemId) || allCompleted.has(itemCode)) {
+              highWatermark = i;
+            }
+          }
+          if (highWatermark > 0) {
+            const backfilled = [];
+            for (let i = 0; i < highWatermark; i++) {
+              const item = lmpEvents[i];
+              const itemCode = (item.code || '').replace('*', '');
+              const itemId = (item.id || item.code || '').replace('*', '');
+              const canonicalKey = itemCode || itemId;
+              if (canonicalKey && !allCompleted.has(itemCode) && !allCompleted.has(itemId)) {
+                updatedSet.add(canonicalKey);
+                backfilled.push(canonicalKey);
+              }
+            }
+            if (backfilled.length > 0) {
+              console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled prerequisites: ${backfilled.join(', ')}`);
+            }
+          }
+        }
+        // --- END BACKFILL ---
+
+        const updated_ids = [...updatedSet];
+        if (updated_ids.length !== existing_ids.length || !existing_ids.includes(event)) {
+          await db.individualLMP.update({
+            where: { id: lmp.id },
+            data: { completedEventIds: updated_ids, updatedAt: new Date() },
+          });
+          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event} (total: ${updated_ids.length})`);
+        }
+      }
+    } catch (lmpErr) {
+      console.warn(`[POST /api/scores] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
+    res.json({ success: true, score: scoreRecord });
+  } catch (error) {
+    console.error('❌ POST /api/scores error:', error);
+    res.status(500).json({ error: 'Failed to create score', details: error.message });
   }
 });
 
@@ -1950,7 +2710,7 @@ app.post('/api/merge-burns-accounts', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v2-academic-fix' });
 });
 
 // GET /api/version - returns the active git commit hash from Railway environment
@@ -2004,6 +2764,708 @@ app.get('/api/debug/trainees/:course', async (req, res) => {
     res.json({ course, count: trainees.length, trainees });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/solo-syllabus - Show solo syllabus items from DB (BGF11, BGF18 + sortieType='Solo')
+app.get('/api/debug/solo-syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, "eventDescription", "sortieType", "type", "isActive"
+      FROM "SyllabusItem"
+      WHERE "sortieType" = 'Solo'
+         OR code IN ('BGF11', 'BGF18')
+         OR "eventDescription" ILIKE '%solo%'
+      ORDER BY code
+    `);
+    res.json({ count: rows.length, items: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/snapshots - Show all saved DailySnapshot records (id, date, event count, savedAt)
+app.get('/api/debug/snapshots', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, date, "savedAt", "savedBy",
+             jsonb_array_length("scheduleEvents") AS "eventCount"
+      FROM "DailySnapshot"
+      ORDER BY date DESC
+    `);
+    res.json({ count: rows.length, snapshots: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/fix-academics-courses - Manually trigger the Academics courses[] migration
+// GET /api/admin/fix-academics-courses?secret=dfp-fix-2026 - same but via GET for easy browser use
+app.get('/api/admin/fix-academics-courses', async (req, res) => {
+  if (req.query.secret !== 'dfp-fix-2026') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, courses
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics' AND "isActive" = true
+    `);
+    let fixed = 0;
+    let alreadyCorrect = 0;
+    const details = [];
+    for (const row of rows) {
+      const courses = Array.isArray(row.courses) ? row.courses : [];
+      const moduleName = row.module || '';
+      if (moduleName && !courses.includes(moduleName)) {
+        await db.$executeRawUnsafe(
+          `UPDATE "SyllabusItem" SET "courses" = ARRAY[$1::text], "updatedAt" = NOW() WHERE "id" = $2`,
+          moduleName, row.id
+        );
+        details.push({ code: row.code, from: courses, to: [moduleName] });
+        fixed++;
+      } else {
+        alreadyCorrect++;
+      }
+    }
+    res.json({ success: true, total: rows.length, fixed, alreadyCorrect, details });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/academics - Diagnostic: show all Academics-type syllabus items and their courses[] field
+app.get('/api/debug/academics', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, type, courses, "isActive"
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics'
+      ORDER BY "sortOrder" ASC
+      LIMIT 20
+    `);
+    res.json({
+      count: rows.length,
+      items: rows.map(r => ({
+        id: r.id,
+        code: r.code,
+        module: r.module,
+        type: r.type,
+        courses: r.courses,
+        isActive: r.isActive,
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// SYLLABUS API
+// ============================================================
+
+// GET /api/syllabus - Fetch all active syllabus items
+app.get('/api/syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { course, phase, type, includeInactive } = req.query;
+
+    // Build WHERE clause
+    const conditions = [];
+    const params = [];
+
+    if (!includeInactive || includeInactive !== 'true') {
+      params.push(true);
+      conditions.push(`"isActive" = $${params.length}`);
+    }
+    if (course) {
+      params.push(course);
+      conditions.push(`$${params.length} = ANY("courses")`);
+    }
+    if (phase) {
+      params.push(`%${phase}%`);
+      conditions.push(`"phase" ILIKE $${params.length}`);
+    }
+    if (type) {
+      params.push(type);
+      conditions.push(`"type" = $${params.length}`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const query = `SELECT * FROM "SyllabusItem" ${whereClause} ORDER BY "sortOrder" ASC`;
+
+    const items = await db.$queryRawUnsafe(query, ...params);
+    console.log(`✅ GET /api/syllabus - returning ${items.length} items`);
+    res.json({ syllabus: items, count: items.length });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus error:', error);
+    res.status(500).json({ error: 'Failed to fetch syllabus', details: error.message });
+  }
+});
+
+// GET /api/syllabus/:id - Fetch single syllabus item by id or code
+app.get('/api/syllabus/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1 LIMIT 1`,
+      id
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Syllabus item not found' });
+    }
+    res.json({ item: rows[0] });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus/:id error:', error);
+    res.status(500).json({ error: 'Failed to fetch syllabus item', details: error.message });
+  }
+});
+
+// GET /api/syllabus/codes - Get all existing active course codes (for duplicate checking)
+app.get('/api/syllabus/codes', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`SELECT DISTINCT "code" FROM "SyllabusItem" WHERE "isActive" = true OR "isActive" IS NULL`);
+    const codes = rows.map(r => r.code);
+    res.json({ success: true, codes });
+  } catch (error) {
+    console.error('❌ GET /api/syllabus/codes error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/syllabus - Create a new syllabus item
+app.post('/api/syllabus', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const body = req.body;
+    const { randomUUID } = await import('crypto');
+    const id = randomUUID();
+
+    // Auto-resolve duplicate codes: if code already exists (active items only), append a number suffix
+    let baseCode = body.code;
+    let finalCode = baseCode;
+    let suffix = 2;
+    while (true) {
+      const existing = await db.$queryRawUnsafe(
+        `SELECT "id" FROM "SyllabusItem" WHERE "code" = $1 AND "isActive" = true LIMIT 1`,
+        finalCode
+      );
+      if (existing.length === 0) break; // code is available
+      finalCode = `${baseCode}${suffix}`;
+      suffix++;
+      if (suffix > 99) break; // safety valve
+    }
+
+    // Also update the courses array to use the final code
+    let finalCourses = (body.courses || []).map(c => c === baseCode ? finalCode : c);
+
+    await db.$executeRawUnsafe(`
+      INSERT INTO "SyllabusItem" (
+        "id","code","eventDescription","phase","module","type","sortieType","dayNight",
+        "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourcesHuman",
+        "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
+        "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
+        "location","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
+        "notes","createdBy","createdAt","updatedAt"
+      ) VALUES (
+        $1,$2,$3,$4,$5,$6,$7,$8,
+        $9,$10,$11,$12,$13,
+        $14,$15,$16,$17,$18,
+        $19,$20,$21,$22,$23,
+        $24,$25,$26,$27,$28,$29,$30,$31,
+        $32,$33,NOW(),NOW()
+      )`,
+      id, finalCode, body.eventDescription, body.phase, body.module, body.type,
+      body.sortieType || null, body.dayNight || 'Day',
+      finalCourses, body.methodOfDelivery || [], body.methodOfAssessment || [],
+      body.resourcesPhysical || [], body.resourcesHuman || [],
+      body.eventDetailsCommon || [], body.eventDetailsSortie || [],
+      body.flightOrSimHours || 0, body.totalEventHours || 1, body.duration || 1,
+      body.preFlightTime || 0, body.postFlightTime || 0,
+      body.prerequisites || [], body.prerequisitesGround || [], body.prerequisitesFlying || [],
+      body.location || null, body.sortOrder || 0,
+      body.lmpType || null, body.twrDiReqd || null, body.cctOnly || null,
+      body.isRemedial || false, true, 1,
+      body.notes || null, body.createdBy || null
+    );
+
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1`, id);
+    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
+    if (finalCode !== baseCode) {
+      console.log(`✅ POST /api/syllabus - created: ${finalCode} (requested: ${baseCode}, was duplicate)`);
+    } else {
+      console.log(`✅ POST /api/syllabus - created: ${finalCode}`);
+    }
+    res.json({ success: true, syllabusItem, item: rows[0] });
+  } catch (error) {
+    console.error('❌ POST /api/syllabus error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create syllabus item', details: error.message });
+  }
+});
+
+// PUT /api/syllabus/:id - Update a syllabus item
+app.put('/api/syllabus/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const body = req.body;
+
+    // Exclude server-managed fields, timestamps, and non-column metadata fields sent from frontend
+    const EXCLUDED_FIELDS = ['id', 'createdAt', 'createdBy', 'updatedAt', 'version', 'changeReason'];
+    const fields = Object.keys(body).filter(k => !EXCLUDED_FIELDS.includes(k));
+    if (fields.length === 0) return res.status(400).json({ error: 'No fields to update' });
+
+    // Build SET clauses, casting array fields and boolean fields properly
+    const ARRAY_FIELDS = ['courses','methodOfDelivery','methodOfAssessment','resourcesPhysical','resourcesHuman',
+                          'eventDetailsCommon','eventDetailsSortie','prerequisites','prerequisitesGround','prerequisitesFlying'];
+    const BOOL_FIELDS = ['isActive','isRemedial','cctOnly','twrDiReqd'];
+
+    const setClauses = fields.map((f, i) => {
+      if (ARRAY_FIELDS.includes(f)) return `"${f}" = $${i + 2}::text[]`;
+      if (BOOL_FIELDS.includes(f)) return `"${f}" = $${i + 2}::boolean`;
+      return `"${f}" = $${i + 2}`;
+    }).join(', ');
+    const values = fields.map(f => body[f]);
+
+    await db.$executeRawUnsafe(
+      `UPDATE "SyllabusItem" SET ${setClauses}, "version" = "version" + 1, "updatedAt" = NOW() WHERE "id" = $1 OR "code" = $1`,
+      id, ...values
+    );
+
+    const rows = await db.$queryRawUnsafe(`SELECT * FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`, id);
+    const syllabusItem = rows[0] ? { ...rows[0], id: rows[0].code || rows[0].id } : null;
+    console.log(`✅ PUT /api/syllabus/${id}`);
+    res.json({ success: true, syllabusItem, item: rows[0] });
+  } catch (error) {
+    console.error('❌ PUT /api/syllabus/:id error:', error);
+    res.status(500).json({ error: error.message || 'Failed to update syllabus item', details: error.message });
+  }
+});
+
+// DELETE /api/syllabus/:id - Hard delete a syllabus item (permanently removes from DB)
+app.delete('/api/syllabus/:id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { id } = req.params;
+    const { hardDelete } = req.body || {};
+
+    // Always hard delete - permanently remove from DB so codes can be reused
+    await db.$executeRawUnsafe(
+      `DELETE FROM "SyllabusItem" WHERE "id" = $1 OR "code" = $1`,
+      id
+    );
+
+    console.log(`✅ DELETE /api/syllabus/${id} (hard delete)`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ DELETE /api/syllabus/:id error:', error);
+    res.status(500).json({ error: 'Failed to delete syllabus item', details: error.message });
+  }
+});
+
+// POST /api/auth/verify-password - Verify current user's password for destructive action confirmations
+app.post('/api/auth/verify-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ valid: false, error: 'Password required' });
+    }
+
+    // Get session token from Authorization header (Bearer token)
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+    const sessionToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (!sessionToken) {
+      return res.status(401).json({ valid: false, error: 'Not authenticated - no session token' });
+    }
+
+    // Look up the session in the Session table to get userId
+    const sessions = await db.$queryRawUnsafe(
+      `SELECT "userId", "expires" FROM "Session" WHERE "sessionToken" = $1`,
+      sessionToken
+    );
+
+    if (!sessions || sessions.length === 0) {
+      return res.status(401).json({ valid: false, error: 'Invalid or expired session' });
+    }
+
+    const session = sessions[0];
+
+    // Check session has not expired
+    if (new Date(session.expires) < new Date()) {
+      return res.status(401).json({ valid: false, error: 'Session expired' });
+    }
+
+    const userDbId = session.userId;
+
+    // Fetch user with password from database using the id from Session table
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", "firstName", "lastName", password FROM "User" WHERE id = $1`,
+      userDbId
+    );
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({ valid: false, error: 'User not found' });
+    }
+
+    const userData = users[0];
+    const displayName = `${userData.firstName || ''} ${userData.lastName || ''}`.trim();
+
+    // Check if user has a password set
+    if (!userData.password) {
+      console.warn(`⚠️ User ${displayName} has no password set`);
+      return res.status(400).json({ 
+        valid: false, 
+        error: 'No password set for this account. Run the set-password curl command first.',
+        reason: 'no_password'
+      });
+    }
+
+    // Use bcryptjs to verify password
+    const bcrypt = require('bcryptjs');
+    const valid = await bcrypt.compare(password, userData.password);
+
+    if (valid) {
+      console.log(`✅ Password verified for ${displayName}`);
+    } else {
+      console.log(`❌ Password verification failed for ${displayName}`);
+    }
+
+    res.json({ valid });
+  } catch (error) {
+    console.error('❌ POST /api/auth/verify-password error:', error);
+    res.status(500).json({ valid: false, error: error.message || 'Server error' });
+  }
+});
+
+// POST /api/admin/set-user-password - Set or update a user's password (for initial setup/reset)
+app.post('/api/admin/set-user-password', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { fullName, password, userId, email } = req.body;
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Password must be at least 8 characters' 
+      });
+    }
+
+    // Find user by fullName (firstName + lastName), userId, or email
+    let user;
+    let sql, params;
+    
+    if (fullName) {
+      // fullName might be like "SQNLDR Alexander Burns" - parse for first/last name
+      // Split by space, take last word as lastName, first word as firstName (skip title like SQNLDR)
+      const parts = fullName.trim().split(/\s+/);
+      const lastName = parts.pop(); // Last word is lastName
+      const firstName = parts.pop() || ''; // Second-to-last is firstName (skip title)
+      
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" 
+             WHERE (firstName ILIKE $1 AND lastName ILIKE $2)
+             OR (firstName || ' ' || COALESCE(lastName, '')) ILIKE $3`;
+      params = [`%${firstName}%`, lastName, `%${fullName}%`];
+    } else if (userId) {
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" WHERE id = $1 OR userId = $1`;
+      params = [userId];
+    } else {
+      sql = `SELECT id, firstName, lastName, email, username, password, isActive, role FROM "User" WHERE email = $1`;
+      params = [email];
+    }
+    
+    const userRows = await db.$queryRawUnsafe(sql, ...params);
+
+    if (!userRows || userRows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'User not found',
+        searchBy: fullName ? 'fullName' : userId ? 'userId' : 'email',
+        searchValue: fullName || userId || email,
+        note: 'Searching by firstName + lastName combined, userId, or email'
+      });
+    }
+
+    user = userRows[0];
+    // Handle both id and userId columns (User table has both)
+    const userIdFromDb = user.id; // Use the primary id column as it's what UPDATE uses
+
+    // Hash the password using bcryptjs
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update the user's password
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "password" = $1, "updatedAt" = NOW() WHERE "id" = $2`,
+      hashedPassword,
+      userIdFromDb
+    );
+
+    console.log(`✅ Password set for user: ${user.firstName} ${user.lastName} (${userIdFromDb})`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password set successfully for ${user.firstName} ${user.lastName}`,
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        isActive: user.isActive
+      }
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/set-user-password error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to set password',
+      details: error.toString()
+    });
+  }
+});
+
+// GET /api/admin/list-users - List all users (for debugging/user ID lookup)
+app.get('/api/admin/list-users', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const users = await db.$queryRawUnsafe(`
+      SELECT id, userId, username, email, firstName, lastName, isActive, role 
+      FROM "User" 
+      WHERE isActive = true 
+      ORDER BY firstName, lastName
+    `);
+    res.json({ success: true, users });
+  } catch (error) {
+    console.error('❌ GET /api/admin/list-users error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message,
+      details: error.toString()
+    });
+  }
+});
+
+// POST /api/admin/set-user-password-by-id - Set password using direct userId
+app.post('/api/admin/set-user-password-by-id', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { userId, password } = req.body;
+
+    if (!userId || !password || password.length < 8) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'userId (password >= 8 chars)' 
+      });
+    }
+
+    // Use bcryptjs to hash the password
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Update by userId (the unique userId field, not id)
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "password" = $1, "updatedAt" = NOW() WHERE "userId" = $2`,
+      hashedPassword,
+      userId
+    );
+
+    console.log(`✅ Password set for userId: ${userId}`);
+    
+    res.json({ 
+      success: true, 
+      message: `Password set successfully for userId ${userId}`
+    });
+  } catch (error) {
+    console.error('❌ POST /api/admin/set-user-password-by-id error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.message || 'Failed to set password',
+      details: error.toString()
+    });
+  }
+});
+
+// GET /api/admin/seed-syllabus - One-click seed endpoint (browser URL)
+// DELETE /api/admin/purge-inactive - Hard delete all soft-deleted (isActive=false) syllabus items
+app.delete('/api/admin/purge-inactive', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await db.$executeRawUnsafe(
+      `DELETE FROM "SyllabusItem" WHERE "isActive" = false`
+    );
+    console.log(`✅ Purged inactive syllabus items`);
+    res.json({ success: true, message: 'Purged all inactive (soft-deleted) syllabus items' });
+  } catch (error) {
+    console.error('❌ purge-inactive error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/admin/seed-syllabus', async (req, res) => {
+  const SEED_SECRET = process.env.SEED_SECRET || 'dfp-seed-2026';
+  const { secret, force } = req.query;
+
+  if (secret !== SEED_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized. Provide ?secret=YOUR_SECRET' });
+  }
+
+  try {
+    const db = await getPrisma();
+
+    // Check if already seeded
+    const countRows = await db.$queryRawUnsafe(`SELECT COUNT(*)::int as count FROM "SyllabusItem"`);
+    const existingCount = countRows[0].count;
+
+    if (existingCount > 0 && force !== 'true') {
+      return res.json({
+        success: true,
+        message: `Database already has ${existingCount} syllabus items. Use ?force=true to re-seed.`,
+        count: existingCount,
+        skipped: true,
+      });
+    }
+
+    if (force === 'true' && existingCount > 0) {
+      await db.$executeRawUnsafe(`DELETE FROM "SyllabusHistory"`);
+      await db.$executeRawUnsafe(`DELETE FROM "SyllabusItem"`);
+      console.log(`🗑️ Cleared existing syllabus data (force re-seed)`);
+    }
+
+    const { randomUUID } = await import('crypto');
+    const now = new Date().toISOString();
+
+    const items = [
+      // BGF
+      { code: 'BGF_GND_001', eventDescription: 'Air Law and Regulations', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 10, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_002', eventDescription: 'Meteorology Fundamentals', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 20, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_003', eventDescription: 'Navigation Principles', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 30, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_004', eventDescription: 'Aircraft Systems - General', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 40, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_GND_005', eventDescription: 'Flight Planning Basics', phase: 'Basic Ground Flying', module: 'BGF', type: 'Ground', courses: ['BGF'], sortOrder: 50, totalEventHours: 2, duration: 2 },
+      { code: 'BGF_SIM_001', eventDescription: 'Simulator Familiarisation', phase: 'Basic Ground Flying', module: 'BGF', type: 'Simulator', courses: ['BGF'], sortOrder: 60, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_SIM_002', eventDescription: 'Basic Aircraft Handling - Simulator', phase: 'Basic Ground Flying', module: 'BGF', type: 'Simulator', courses: ['BGF'], sortOrder: 70, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_001', eventDescription: 'Aircraft Familiarisation', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 80, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_002', eventDescription: 'Effects of Controls', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 90, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_003', eventDescription: 'Straight and Level Flight', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 100, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_004', eventDescription: 'Climbing and Descending', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 110, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_005', eventDescription: 'Medium Level Turns', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 120, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_006', eventDescription: 'Stalling', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 130, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_007', eventDescription: 'Circuit Training', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 140, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_008', eventDescription: 'First Solo', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 150, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_009', eventDescription: 'Advanced Circuits', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 160, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_010', eventDescription: 'Navigation Exercise 1', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 170, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_011', eventDescription: 'Navigation Exercise 2', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 180, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_012', eventDescription: 'BGF Progress Check', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 190, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BGF_FLT_013', eventDescription: 'BGF Final Handling Test', phase: 'Basic Ground Flying', module: 'BGF', type: 'Flying', courses: ['BGF'], sortOrder: 200, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // BIF
+      { code: 'BIF_GND_001', eventDescription: 'Instrument Flight Rules Theory', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Ground', courses: ['BIF'], sortOrder: 210, totalEventHours: 2, duration: 2 },
+      { code: 'BIF_GND_002', eventDescription: 'Instrument Meteorological Conditions', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Ground', courses: ['BIF'], sortOrder: 220, totalEventHours: 2, duration: 2 },
+      { code: 'BIF_GND_003', eventDescription: 'Instrument Scanning Techniques', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Ground', courses: ['BIF'], sortOrder: 230, totalEventHours: 2, duration: 2 },
+      { code: 'BIF_SIM_001', eventDescription: 'Instrument Flying - Simulator 1', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Simulator', courses: ['BIF'], sortOrder: 240, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_SIM_002', eventDescription: 'Instrument Flying - Simulator 2', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Simulator', courses: ['BIF'], sortOrder: 250, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_SIM_003', eventDescription: 'Instrument Flying - Simulator 3', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Simulator', courses: ['BIF'], sortOrder: 260, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_001', eventDescription: 'Basic Instrument Flying 1', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 270, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_002', eventDescription: 'Basic Instrument Flying 2', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 280, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_003', eventDescription: 'Basic Instrument Flying 3', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 290, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_004', eventDescription: 'Instrument Navigation Exercise', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 300, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_005', eventDescription: 'BIF Progress Check', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 310, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BIF_FLT_006', eventDescription: 'BIF Final Instrument Test', phase: 'Basic Instrument Flying', module: 'BIF', type: 'Flying', courses: ['BIF'], sortOrder: 320, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // BNF
+      { code: 'BNF_GND_001', eventDescription: 'Advanced Navigation Theory', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Ground', courses: ['BNF'], sortOrder: 330, totalEventHours: 2, duration: 2 },
+      { code: 'BNF_GND_002', eventDescription: 'Map Reading and Chart Work', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Ground', courses: ['BNF'], sortOrder: 340, totalEventHours: 2, duration: 2 },
+      { code: 'BNF_SIM_001', eventDescription: 'Navigation Simulator Exercise 1', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Simulator', courses: ['BNF'], sortOrder: 350, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_SIM_002', eventDescription: 'Navigation Simulator Exercise 2', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Simulator', courses: ['BNF'], sortOrder: 360, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_001', eventDescription: 'Solo Navigation Exercise 1', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 370, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_002', eventDescription: 'Solo Navigation Exercise 2', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 380, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_003', eventDescription: 'Navigation Cross Country 1', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 390, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_004', eventDescription: 'Navigation Cross Country 2', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 400, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_005', eventDescription: 'BNF Progress Check', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 410, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNF_FLT_006', eventDescription: 'BNF Final Navigation Test', phase: 'Basic Navigation Flying', module: 'BNF', type: 'Flying', courses: ['BNF'], sortOrder: 420, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // BNAV
+      { code: 'BNAV_GND_001', eventDescription: 'Advanced Navigation Systems', phase: 'Basic Navigation', module: 'BNAV', type: 'Ground', courses: ['BNAV'], sortOrder: 430, totalEventHours: 2, duration: 2 },
+      { code: 'BNAV_GND_002', eventDescription: 'GPS and Electronic Navigation', phase: 'Basic Navigation', module: 'BNAV', type: 'Ground', courses: ['BNAV'], sortOrder: 440, totalEventHours: 2, duration: 2 },
+      { code: 'BNAV_GND_003', eventDescription: 'Flight Planning - Advanced', phase: 'Basic Navigation', module: 'BNAV', type: 'Ground', courses: ['BNAV'], sortOrder: 450, totalEventHours: 2, duration: 2 },
+      { code: 'BNAV_SIM_001', eventDescription: 'Advanced Navigation Simulator 1', phase: 'Basic Navigation', module: 'BNAV', type: 'Simulator', courses: ['BNAV'], sortOrder: 460, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_SIM_002', eventDescription: 'Advanced Navigation Simulator 2', phase: 'Basic Navigation', module: 'BNAV', type: 'Simulator', courses: ['BNAV'], sortOrder: 470, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_FLT_001', eventDescription: 'Advanced Navigation Flight 1', phase: 'Basic Navigation', module: 'BNAV', type: 'Flying', courses: ['BNAV'], sortOrder: 480, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_FLT_002', eventDescription: 'Advanced Navigation Flight 2', phase: 'Basic Navigation', module: 'BNAV', type: 'Flying', courses: ['BNAV'], sortOrder: 490, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'BNAV_FLT_003', eventDescription: 'BNAV Final Test', phase: 'Basic Navigation', module: 'BNAV', type: 'Flying', courses: ['BNAV'], sortOrder: 500, flightOrSimHours: 2, totalEventHours: 3, duration: 3, preFlightTime: 0.5, postFlightTime: 0.5 },
+      // FIC
+      { code: 'FIC_GND_001', eventDescription: 'Instructional Techniques', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 510, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_GND_002', eventDescription: 'Teaching and Learning Theory', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 520, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_GND_003', eventDescription: 'Lesson Planning', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 530, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_GND_004', eventDescription: 'Airmanship and Airspace', phase: 'Flight Instructor Course', module: 'FIC', type: 'Ground', courses: ['FIC'], sortOrder: 540, totalEventHours: 2, duration: 2 },
+      { code: 'FIC_SIM_001', eventDescription: 'Instructional Simulator Exercise 1', phase: 'Flight Instructor Course', module: 'FIC', type: 'Simulator', courses: ['FIC'], sortOrder: 550, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_SIM_002', eventDescription: 'Instructional Simulator Exercise 2', phase: 'Flight Instructor Course', module: 'FIC', type: 'Simulator', courses: ['FIC'], sortOrder: 560, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_001', eventDescription: 'Instructional Flying - Effects of Controls', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 570, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_002', eventDescription: 'Instructional Flying - Circuits', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 580, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_003', eventDescription: 'Instructional Flying - Navigation', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 590, flightOrSimHours: 1.5, totalEventHours: 2.5, duration: 2.5, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_004', eventDescription: 'Instructional Flying - Instruments', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 600, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_005', eventDescription: 'FIC Progress Check', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 610, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+      { code: 'FIC_FLT_006', eventDescription: 'FIC Final Handling Test', phase: 'Flight Instructor Course', module: 'FIC', type: 'Flying', courses: ['FIC'], sortOrder: 620, flightOrSimHours: 1, totalEventHours: 2, duration: 2, preFlightTime: 0.5, postFlightTime: 0.5 },
+    ];
+
+    let created = 0;
+    const errors = [];
+
+    for (const item of items) {
+      try {
+        const id = randomUUID();
+        await db.$executeRawUnsafe(`
+          INSERT INTO "SyllabusItem" (
+            "id","code","eventDescription","phase","module","type","sortieType","dayNight",
+            "courses","methodOfDelivery","methodOfAssessment","resourcesPhysical","resourcesHuman",
+            "eventDetailsCommon","eventDetailsSortie","flightOrSimHours","totalEventHours","duration",
+            "preFlightTime","postFlightTime","prerequisites","prerequisitesGround","prerequisitesFlying",
+            "location","sortOrder","lmpType","twrDiReqd","cctOnly","isRemedial","isActive","version",
+            "notes","createdBy","createdAt","updatedAt"
+          ) VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,
+            $9,$10,$11,$12,$13,$14,$15,
+            $16,$17,$18,$19,$20,
+            $21,$22,$23,$24,$25,
+            $26,$27,$28,$29,$30,$31,
+            $32,$33,NOW(),NOW()
+          )`,
+          id, item.code, item.eventDescription, item.phase, item.module, item.type,
+          null, 'Day',
+          item.courses, ['Instructor Led'], ['Instructor Assessment'],
+          [], ['QFI'],
+          [], [],
+          item.flightOrSimHours || 0, item.totalEventHours || 1, item.duration || 1,
+          item.preFlightTime || 0, item.postFlightTime || 0,
+          [], [], [],
+          null, item.sortOrder || 0,
+          null, null, null,
+          false, true, 1,
+          null, 'seed'
+        );
+        created++;
+      } catch (err) {
+        errors.push(`${item.code}: ${err.message}`);
+      }
+    }
+
+    console.log(`✅ GET /api/admin/seed-syllabus - seeded ${created} items`);
+    res.json({
+      success: true,
+      message: `Successfully seeded ${created} syllabus items`,
+      created,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+
+  } catch (error) {
+    console.error('❌ GET /api/admin/seed-syllabus error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -2062,6 +3524,91 @@ async function ensureAppSettingsTable(db) {
   }
 }
 
+async function ensureCourseSettingsTables(db) {
+  try {
+    // CourseSettings: stores neoBuildCourse + selectedAcademicLmp + excludedCourses
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CourseSettings" (
+        "id"                  TEXT         NOT NULL,
+        "neoBuildCourse"      TEXT,
+        "selectedAcademicLmp" TEXT,
+        "excludedCourses"     TEXT         NOT NULL DEFAULT '[]',
+        "createdAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt"           TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CourseSettings_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    // Migration safety: add columns if table was created without them
+    try {
+      await db.$executeRawUnsafe(`
+        ALTER TABLE "CourseSettings" ADD COLUMN IF NOT EXISTS "selectedAcademicLmp" TEXT;
+      `);
+    } catch (_) {}
+    try {
+      await db.$executeRawUnsafe(`
+        ALTER TABLE "CourseSettings" ADD COLUMN IF NOT EXISTS "excludedCourses" TEXT NOT NULL DEFAULT '[]';
+      `);
+    } catch (_) {}
+    console.log('✅ CourseSettings table ready');
+
+    // CourseAcademicProgress: tracks which lessons have been completed per course cohort
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CourseAcademicProgress" (
+        "id"            TEXT         NOT NULL,
+        "courseCode"    TEXT         NOT NULL,
+        "lessonCode"    TEXT         NOT NULL,
+        "completedDate" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "completedBy"   TEXT,
+        CONSTRAINT "CourseAcademicProgress_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "CourseAcademicProgress_courseCode_lessonCode_key"
+      ON "CourseAcademicProgress"("courseCode", "lessonCode");
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "CourseAcademicProgress_courseCode_idx"
+      ON "CourseAcademicProgress"("courseCode");
+    `);
+    console.log('✅ CourseAcademicProgress table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure CourseSettings tables:', err.message);
+  }
+}
+
+async function ensureCourseLmpTypeColumn(db) {
+  try {
+    // Add lmpType column to Course table if it doesn't exist (migration for existing DBs)
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "lmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Course.lmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course.lmpType column:', err.message);
+  }
+}
+
+async function ensureAcademicLmpTypeColumns(db) {
+  try {
+    // Add academicLmpType column to Trainee table if it doesn't exist
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Trainee.academicLmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Trainee.academicLmpType column:', err.message);
+  }
+  try {
+    // Add academicLmpType column to Course table if it doesn't exist
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Course.academicLmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course.academicLmpType column:', err.message);
+  }
+}
+
 async function ensureAircraftAvailabilityTable(db) {
   try {
     await db.$executeRawUnsafe(`
@@ -2116,7 +3663,7 @@ async function ensureAircraftAvailabilityEventTable(db) {
         "date" TEXT NOT NULL,
         "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "availableCount" INTEGER NOT NULL,
-        "totalFleet" INTEGER NOT NULL,
+        "totalAircraft" INTEGER NOT NULL,
         "notes" TEXT,
         CONSTRAINT "AircraftAvailabilityEvent_pkey" PRIMARY KEY ("id")
       );
@@ -2223,14 +3770,15 @@ app.get('/api/aircraft-availability-events', async (req, res) => {
 app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
+    // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
     const { date, availableCount, notes, timestamp } = req.body;
-    const totalFleet = req.body.totalFleet ?? req.body.totalAircraft ?? req.body.availableCount;
-    if (!date || availableCount === undefined) {
-      return res.status(400).json({ error: 'date and availableCount required' });
+    const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
+    if (!date || availableCount === undefined || !totalFleet) {
+      return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
     }
     const ts = timestamp ? new Date(timestamp).toISOString() : new Date().toISOString();
     await db.$executeRawUnsafe(
-      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalFleet", "notes")
+      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
        VALUES ($1::text, $2::text::timestamp, $3::int, $4::int, $5::text)`,
       date, ts, availableCount, totalFleet, notes || null
     );
@@ -2344,7 +3892,8 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
     res.json({
       current: {
         availableCount: latest.availableCount,
-        totalFleet: latest.totalFleet,
+        totalFleet: latest.totalAircraft ?? latest.totalFleet,
+        totalAircraft: latest.totalAircraft ?? latest.totalFleet,
         timestamp: latest.timestamp,
         id: Number(latest.id)
       },
@@ -4096,128 +5645,63 @@ app.post('/api/scores/bulk', async (req, res) => {
   }
 });
 
-// POST /api/scores - create or update a single score record (called when PT-051 is saved)
-app.post('/api/scores', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = req.body;
-
-    let resolvedTraineeId = traineeId;
-    if (!resolvedTraineeId && traineeFullName) {
-      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
-      if (!trainee) return res.status(404).json({ error: `Trainee not found: ${traineeFullName}` });
-      resolvedTraineeId = trainee.id;
-    }
-    if (!resolvedTraineeId) return res.status(400).json({ error: 'traineeId or traineeFullName required' });
-    if (!event) return res.status(400).json({ error: 'event is required' });
-
-    // Upsert: update if exists, create if not
-    const existing = await db.score.findFirst({ where: { traineeId: resolvedTraineeId, event } });
-    let scoreRecord;
-    if (existing) {
-      scoreRecord = await db.score.update({
-        where: { id: existing.id },
-        data: {
-          score: score !== undefined ? parseInt(score) : existing.score,
-          date: date ? new Date(date) : existing.date,
-          instructor: instructor || existing.instructor,
-          notes: notes || existing.notes,
-          details: details !== undefined ? details : existing.details,
-        },
-      });
-    } else {
-      scoreRecord = await db.score.create({
-        data: {
-          traineeId: resolvedTraineeId,
-          event,
-          score: score !== undefined ? parseInt(score) : 3,
-          date: date ? new Date(date) : new Date(),
-          instructor: instructor || 'DCO',
-          notes: notes || '',
-          details: details || null,
-        },
-      });
-    }
-
-    // Also update IndividualLMP completedEventIds to include this event + backfill prerequisites
-    try {
-      const lmp = await db.individualLMP.findFirst({ where: { traineeId: resolvedTraineeId } });
-      if (lmp) {
-        const existing_ids = lmp.completedEventIds || [];
-        const updatedSet = new Set(existing_ids);
-        updatedSet.add(event);
-
-        // --- PREREQUISITE BACKFILL (real-time) ---
-        // Use the LMP's events array (ordered syllabus) to find all items that appear
-        // before the newly added event and mark them complete too.
-        // This mirrors the LMP sync logic so scheduling stays consistent in real-time.
-        const lmpEvents = Array.isArray(lmp.events) ? lmp.events : [];
-        if (lmpEvents.length > 0) {
-          // Find the index of the highest completed event in the LMP
-          let highWatermark = -1;
-          const allCompleted = new Set(updatedSet);
-          for (let i = 0; i < lmpEvents.length; i++) {
-            const item = lmpEvents[i];
-            const itemId = (item.id || item.code || '').replace('*', '');
-            const itemCode = (item.code || '').replace('*', '');
-            if (allCompleted.has(itemId) || allCompleted.has(itemCode)) {
-              highWatermark = i;
-            }
-          }
-          // Backfill everything before the high-water mark
-          if (highWatermark > 0) {
-            const backfilled = [];
-            for (let i = 0; i < highWatermark; i++) {
-              const item = lmpEvents[i];
-              const itemCode = (item.code || '').replace('*', '');
-              const itemId = (item.id || item.code || '').replace('*', '');
-              const canonicalKey = itemCode || itemId;
-              if (canonicalKey && !allCompleted.has(itemCode) && !allCompleted.has(itemId)) {
-                updatedSet.add(canonicalKey);
-                backfilled.push(canonicalKey);
-              }
-            }
-            if (backfilled.length > 0) {
-              console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled prerequisites: ${backfilled.join(', ')}`);
-            }
-          }
-        }
-        // --- END BACKFILL ---
-
-        const updated_ids = [...updatedSet];
-        if (updated_ids.length !== existing_ids.length || !existing_ids.includes(event)) {
-          await db.individualLMP.update({
-            where: { id: lmp.id },
-            data: { completedEventIds: updated_ids, updatedAt: new Date() },
-          });
-          console.log(`[POST /api/scores] Updated IndividualLMP for trainee ${resolvedTraineeId}: added ${event} (total: ${updated_ids.length})`);
-        }
-      }
-    } catch (lmpErr) {
-      console.warn(`[POST /api/scores] Could not update IndividualLMP:`, lmpErr.message);
-    }
-
-    res.json({ success: true, score: scoreRecord });
-  } catch (error) {
-    console.error('❌ POST /api/scores error:', error);
-    res.status(500).json({ error: 'Failed to create score', details: error.message });
-  }
-});
-
 // DELETE /api/scores/trainee/:traineeId - delete scores for a trainee (optionally filtered by event prefix)
 app.delete('/api/scores/trainee/:traineeId', async (req, res) => {
   try {
     const db = await getPrisma();
     const { traineeId } = req.params;
     const { eventPrefix } = req.query;
+
     const where = { traineeId };
     if (eventPrefix) {
       where.event = { startsWith: eventPrefix };
     }
+
     const result = await db.score.deleteMany({ where });
     res.json({ success: true, deleted: result.count });
   } catch (error) {
     console.error('❌ DELETE /api/scores/trainee error:', error);
+    res.status(500).json({ error: 'Failed to delete scores', details: error.message });
+  }
+});
+
+// DELETE /api/scores/trainee/:traineeId/events - delete specific event scores for a trainee
+// Body: { events: string[] } - array of event codes to delete
+// Also removes those events from IndividualLMP.completedEventIds
+app.delete('/api/scores/trainee/:traineeId/events', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { traineeId } = req.params;
+    const { events } = req.body;
+
+    if (!events || !Array.isArray(events) || events.length === 0) {
+      return res.status(400).json({ error: 'events array is required in request body' });
+    }
+
+    // Delete score records for the specified events
+    const result = await db.score.deleteMany({
+      where: { traineeId, event: { in: events } },
+    });
+
+    // Also remove from IndividualLMP.completedEventIds
+    try {
+      const lmp = await db.individualLMP.findFirst({ where: { traineeId } });
+      if (lmp) {
+        const updated = (lmp.completedEventIds || []).filter(id => !events.includes(id));
+        await db.individualLMP.update({
+          where: { id: lmp.id },
+          data: { completedEventIds: updated, updatedAt: new Date() },
+        });
+        console.log(`[DELETE /api/scores/events] Updated IndividualLMP for ${traineeId}: removed ${events.length} events`);
+      }
+    } catch (lmpErr) {
+      console.warn(`[DELETE /api/scores/events] Could not update IndividualLMP:`, lmpErr.message);
+    }
+
+    console.log(`✅ DELETE /api/scores/trainee/${traineeId}/events - deleted ${result.count} score records`);
+    res.json({ success: true, deleted: result.count, events });
+  } catch (error) {
+    console.error('❌ DELETE /api/scores/trainee/events error:', error);
     res.status(500).json({ error: 'Failed to delete scores', details: error.message });
   }
 });
@@ -4608,6 +6092,490 @@ app.put('/api/tie/settings', async (req, res) => {
     res.status(500).json({ error: 'Failed to update setting', details: error.message });
   }
 });
+
+// ============================================================
+// TRAINEE PERFORMANCE API ROUTES
+// Single source of truth for all PT-051 assessments
+// ============================================================
+
+// Ensure TraineePerformance table exists (called at Prisma startup)
+async function ensureTraineePerformanceTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TraineePerformance" (
+        "id"                       TEXT NOT NULL,
+        "traineeId"                TEXT NOT NULL,
+        "traineeFullName"          TEXT NOT NULL,
+        "eventId"                  TEXT NOT NULL,
+        "eventCode"                TEXT NOT NULL,
+        "flightNumber"             TEXT NOT NULL,
+        "eventDescription"         TEXT,
+        "date"                     TEXT NOT NULL,
+        "instructorName"           TEXT NOT NULL,
+        "instructorId"             TEXT,
+        "overallGrade"             TEXT NOT NULL DEFAULT 'No Grade',
+        "overallResult"            TEXT,
+        "dcoResult"                TEXT,
+        "startTime"                DOUBLE PRECISION,
+        "duration"                 DOUBLE PRECISION,
+        "endTime"                  DOUBLE PRECISION,
+        "comments"                 TEXT,
+        "elementScores"            JSONB NOT NULL DEFAULT '[]',
+        "isCompleted"              BOOLEAN NOT NULL DEFAULT false,
+        "isGroundSchoolAssessment" BOOLEAN NOT NULL DEFAULT false,
+        "groundSchoolResult"       INTEGER,
+        "course"                   TEXT,
+        "syllabusPhase"            TEXT,
+        "eventSequence"            INTEGER,
+        "createdAt"                TIMESTAMP NOT NULL DEFAULT NOW(),
+        "updatedAt"                TIMESTAMP NOT NULL DEFAULT NOW(),
+        "createdBy"                TEXT,
+        "updatedBy"                TEXT,
+        CONSTRAINT "TraineePerformance_pkey" PRIMARY KEY ("id"),
+        CONSTRAINT "TraineePerformance_eventId_key" UNIQUE ("eventId")
+      )
+    `);
+    // Create indexes for common query patterns
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_idx" ON "TraineePerformance"("traineeId")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_idx" ON "TraineePerformance"("instructorName")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_course_idx" ON "TraineePerformance"("course")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_date_idx" ON "TraineePerformance"("date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_isCompleted_idx" ON "TraineePerformance"("isCompleted")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_date_idx" ON "TraineePerformance"("traineeId", "date")`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_completed_idx" ON "TraineePerformance"("instructorName", "isCompleted")`);
+    console.log('✅ TraineePerformance table ready');
+  } catch (err) {
+    console.error('❌ ensureTraineePerformanceTable error (non-fatal):', err.message);
+  }
+}
+
+// GET /api/trainee-performance
+// Query params: traineeId, traineeFullName, instructorName, course, isCompleted, dateFrom, dateTo, limit, offset
+app.get('/api/trainee-performance', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      traineeId,
+      traineeFullName,
+      instructorName,
+      course,
+      isCompleted,
+      dateFrom,
+      dateTo,
+      limit = 500,
+      offset = 0
+    } = req.query;
+
+    // Build dynamic WHERE clause
+    const conditions = [];
+    const params = [];
+    let paramIdx = 1;
+
+    if (traineeId) {
+      conditions.push(`"traineeId" = $${paramIdx++}::text`);
+      params.push(traineeId);
+    }
+    if (traineeFullName) {
+      conditions.push(`"traineeFullName" = $${paramIdx++}::text`);
+      params.push(traineeFullName);
+    }
+    if (instructorName) {
+      conditions.push(`"instructorName" = $${paramIdx++}::text`);
+      params.push(instructorName);
+    }
+    if (course) {
+      conditions.push(`"course" = $${paramIdx++}::text`);
+      params.push(course);
+    }
+    if (isCompleted !== undefined) {
+      conditions.push(`"isCompleted" = $${paramIdx++}::boolean`);
+      params.push(isCompleted === 'true');
+    }
+    if (dateFrom) {
+      conditions.push(`"date" >= $${paramIdx++}::text`);
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      conditions.push(`"date" <= $${paramIdx++}::text`);
+      params.push(dateTo);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const limitVal = Math.min(parseInt(limit) || 500, 2000);
+    const offsetVal = parseInt(offset) || 0;
+
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" ${whereClause} ORDER BY "date" DESC, "eventSequence" ASC LIMIT ${limitVal} OFFSET ${offsetVal}`,
+      ...params
+    );
+
+    // Map DB rows to Pt051Assessment shape expected by the app
+    const assessments = rows.map(row => mapRowToAssessment(row));
+    res.json(assessments);
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance error:', error);
+    res.status(500).json({ error: 'Failed to fetch assessments', details: error.message });
+  }
+});
+
+// GET /api/trainee-performance/stats - summary counts per course
+// IMPORTANT: This must come BEFORE /:eventId to avoid Express matching 'stats' as an eventId
+app.get('/api/trainee-performance/stats', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT course, COUNT(*) as count, SUM(CASE WHEN "isCompleted" THEN 1 ELSE 0 END) as completed
+      FROM "TraineePerformance"
+      GROUP BY course
+      ORDER BY course
+    `);
+    const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
+    res.json({ courses: rows, total });
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance/stats error:', error);
+    res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
+  }
+});
+
+// GET /api/trainee-performance/:eventId - get single assessment
+app.get('/api/trainee-performance/:eventId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { eventId } = req.params;
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`,
+      eventId
+    );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+    res.json(mapRowToAssessment(rows[0]));
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance/:eventId error:', error);
+    res.status(500).json({ error: 'Failed to fetch assessment', details: error.message });
+  }
+});
+
+// POST /api/trainee-performance - create new assessment
+app.post('/api/trainee-performance', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const data = req.body;
+
+    if (!data.eventId || !data.traineeId || !data.traineeFullName) {
+      return res.status(400).json({ error: 'eventId, traineeId, traineeFullName are required' });
+    }
+
+    // Map Pt051Assessment shape → DB columns
+    const row = mapAssessmentToRow(data);
+
+    await db.$executeRawUnsafe(`
+      INSERT INTO "TraineePerformance" (
+        "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
+        "eventDescription", "date", "instructorName", "instructorId",
+        "overallGrade", "overallResult", "dcoResult",
+        "startTime", "duration", "endTime", "comments",
+        "elementScores", "isCompleted", "isGroundSchoolAssessment", "groundSchoolResult",
+        "course", "syllabusPhase", "eventSequence", "createdAt", "updatedAt", "createdBy"
+      ) VALUES (
+        $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+        $7::text, $8::text, $9::text, $10::text,
+        $11::text, $12::text, $13::text,
+        $14, $15, $16, $17::text,
+        $18::jsonb, $19::boolean, $20::boolean, $21,
+        $22::text, $23::text, $24, NOW(), NOW(), $25::text
+      )
+      ON CONFLICT ("eventId") DO UPDATE SET
+        "overallGrade"             = EXCLUDED."overallGrade",
+        "overallResult"            = EXCLUDED."overallResult",
+        "dcoResult"                = EXCLUDED."dcoResult",
+        "comments"                 = EXCLUDED."comments",
+        "elementScores"            = EXCLUDED."elementScores",
+        "isCompleted"              = EXCLUDED."isCompleted",
+        "instructorName"           = EXCLUDED."instructorName",
+        "startTime"                = EXCLUDED."startTime",
+        "duration"                 = EXCLUDED."duration",
+        "endTime"                  = EXCLUDED."endTime",
+        "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
+        "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
+        "updatedAt"                = NOW(),
+        "updatedBy"                = EXCLUDED."createdBy"
+    `,
+      row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+      row.eventDescription, row.date, row.instructorName, row.instructorId,
+      row.overallGrade, row.overallResult, row.dcoResult,
+      row.startTime, row.duration, row.endTime, row.comments,
+      JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+      row.course, row.syllabusPhase, row.eventSequence, row.createdBy
+    );
+
+    const created = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, row.eventId
+    );
+    res.status(201).json(mapRowToAssessment(created[0]));
+  } catch (error) {
+    console.error('❌ POST /api/trainee-performance error:', error);
+    res.status(500).json({ error: 'Failed to create assessment', details: error.message });
+  }
+});
+
+// PUT /api/trainee-performance/:eventId - update existing assessment
+app.put('/api/trainee-performance/:eventId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { eventId } = req.params;
+    const data = req.body;
+
+    // Check it exists
+    const existing = await db.$queryRawUnsafe(
+      `SELECT "id" FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
+    );
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+
+    // Build update from Pt051Assessment fields
+    const comments = buildCommentsString(data);
+    const elementScores = (data.scores || data.elementScores || []);
+    const isGS = data.groundSchoolAssessment?.isAssessment || false;
+    const gsResult = data.groundSchoolAssessment?.result ?? null;
+
+    await db.$executeRawUnsafe(`
+      UPDATE "TraineePerformance" SET
+        "overallGrade"             = $1::text,
+        "overallResult"            = $2::text,
+        "dcoResult"                = $3::text,
+        "instructorName"           = $4::text,
+        "date"                     = $5::text,
+        "flightNumber"             = $6::text,
+        "comments"                 = $7::text,
+        "elementScores"            = $8::jsonb,
+        "isCompleted"              = $9::boolean,
+        "startTime"                = $10,
+        "duration"                 = $11,
+        "endTime"                  = $12,
+        "isGroundSchoolAssessment" = $13::boolean,
+        "groundSchoolResult"       = $14,
+        "updatedAt"                = NOW()
+      WHERE "eventId" = $15::text
+    `,
+      String(data.overallGrade ?? 'No Grade'),
+      data.overallResult ?? null,
+      data.dcoResult ?? null,
+      data.instructorName ?? '',
+      data.date ?? '',
+      data.flightNumber ?? '',
+      comments,
+      JSON.stringify(elementScores),
+      data.isCompleted ?? false,
+      data.startTime ?? null,
+      data.duration ?? null,
+      data.endTime ?? null,
+      isGS,
+      gsResult,
+      eventId
+    );
+
+    const updated = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
+    );
+    res.json(mapRowToAssessment(updated[0]));
+  } catch (error) {
+    console.error('❌ PUT /api/trainee-performance/:eventId error:', error);
+    res.status(500).json({ error: 'Failed to update assessment', details: error.message });
+  }
+});
+
+// DELETE /api/trainee-performance/:eventId - delete assessment
+app.delete('/api/trainee-performance/:eventId', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { eventId } = req.params;
+    await db.$executeRawUnsafe(
+      `DELETE FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
+    );
+    res.json({ success: true, eventId });
+  } catch (error) {
+    console.error('❌ DELETE /api/trainee-performance/:eventId error:', error);
+    res.status(500).json({ error: 'Failed to delete assessment', details: error.message });
+  }
+});
+
+// POST /api/trainee-performance/bulk - bulk insert for data import (idempotent)
+app.post('/api/trainee-performance/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { records } = req.body;
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records array required' });
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+    const errors = [];
+
+    // Process in batches of 100
+    for (let i = 0; i < records.length; i += 100) {
+      const batch = records.slice(i, i + 100);
+      for (const data of batch) {
+        try {
+          const row = mapAssessmentToRow(data);
+          await db.$executeRawUnsafe(`
+            INSERT INTO "TraineePerformance" (
+              "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
+              "eventDescription", "date", "instructorName", "instructorId",
+              "overallGrade", "overallResult", "dcoResult",
+              "startTime", "duration", "endTime", "comments",
+              "elementScores", "isCompleted", "isGroundSchoolAssessment", "groundSchoolResult",
+              "course", "syllabusPhase", "eventSequence", "createdAt", "updatedAt", "createdBy"
+            ) VALUES (
+              $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+              $7::text, $8::text, $9::text, $10::text,
+              $11::text, $12::text, $13::text,
+              $14, $15, $16, $17::text,
+              $18::jsonb, $19::boolean, $20::boolean, $21,
+              $22::text, $23::text, $24, NOW(), NOW(), $25::text
+            )
+            ON CONFLICT ("eventId") DO NOTHING
+          `,
+            row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+            row.eventDescription, row.date, row.instructorName, row.instructorId,
+            row.overallGrade, row.overallResult, row.dcoResult,
+            row.startTime, row.duration, row.endTime, row.comments,
+            JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+            row.course, row.syllabusPhase, row.eventSequence, row.createdBy
+          );
+          inserted++;
+        } catch (rowErr) {
+          skipped++;
+          if (errors.length < 10) errors.push({ eventId: data.eventId, error: rowErr.message });
+        }
+      }
+    }
+
+    res.json({ success: true, inserted, skipped, errors });
+  } catch (error) {
+    console.error('❌ POST /api/trainee-performance/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk insert assessments', details: error.message });
+  }
+});
+
+// -----------------------------------------------------------------------
+// Helper: Map DB row → Pt051Assessment (app interface shape)
+// -----------------------------------------------------------------------
+function mapRowToAssessment(row) {
+  if (!row) return null;
+  // elementScores is stored as JSONB - parse if string
+  let scores = row.elementScores;
+  if (typeof scores === 'string') {
+    try { scores = JSON.parse(scores); } catch { scores = []; }
+  }
+  if (!Array.isArray(scores)) scores = [];
+
+  // comments is the structured "QFI: ...\nWeather: ..." string
+  // overallComments is extracted from it for backward compatibility
+  const overallComments = extractOverallComment(row.comments);
+
+  return {
+    id:                  row.eventId,           // app uses eventId as the key identifier
+    traineeFullName:     row.traineeFullName,
+    trainedFullName:     row.traineeFullName,   // backward compat alias used in MyDashboard
+    eventId:             row.eventId,
+    flightNumber:        row.flightNumber,
+    date:                row.date,
+    instructorName:      row.instructorName,
+    overallGrade:        row.overallGrade,
+    overallResult:       row.overallResult || null,
+    dcoResult:           row.dcoResult || '',
+    overallComments:     overallComments,
+    comments:            row.comments || '',
+    startTime:           row.startTime || null,
+    duration:            row.duration || null,
+    endTime:             row.endTime || null,
+    isCompleted:         row.isCompleted || false,
+    scores:              scores,                // array of {element, grade, comment}
+    groundSchoolAssessment: row.isGroundSchoolAssessment ? {
+      isAssessment: true,
+      result: row.groundSchoolResult ?? undefined
+    } : undefined,
+    // Extra fields for filtering/display
+    course:              row.course || null,
+    syllabusPhase:       row.syllabusPhase || null,
+    eventSequence:       row.eventSequence || null,
+    traineeId:           row.traineeId,
+    _dbId:               row.id               // internal DB id, not used by app
+  };
+}
+
+// Helper: Map Pt051Assessment (app shape) → DB row for INSERT
+function mapAssessmentToRow(data) {
+  const id = data._dbId || data.id || generateSimpleId();
+
+  // Normalize scores: app uses data.scores, import uses data.elementScores
+  const elementScores = (data.scores || data.elementScores || []).map(s => ({
+    element: s.element || '',
+    grade:   s.grade != null ? String(s.grade) : null,
+    comment: s.comment || ''
+  }));
+
+  // Build structured comments string from Pt051Assessment shape
+  const comments = data.comments || buildCommentsString(data);
+
+  return {
+    id:                      id,
+    traineeId:               data.traineeId || '',
+    traineeFullName:         data.traineeFullName || data.trainedFullName || '',
+    eventId:                 data.eventId || '',
+    eventCode:               data.eventCode || data.flightNumber || '',
+    flightNumber:            data.flightNumber || '',
+    eventDescription:        data.eventDescription || null,
+    date:                    data.date || '',
+    instructorName:          data.instructorName || '',
+    instructorId:            data.instructorId || null,
+    overallGrade:            data.overallGrade != null ? String(data.overallGrade) : 'No Grade',
+    overallResult:           data.overallResult || null,
+    dcoResult:               data.dcoResult || null,
+    startTime:               data.startTime != null ? Number(data.startTime) : null,
+    duration:                data.duration != null ? Number(data.duration) : null,
+    endTime:                 data.endTime != null ? Number(data.endTime) : null,
+    comments:                comments || null,
+    elementScores:           elementScores,
+    isCompleted:             data.isCompleted === true || data.isCompleted === 'true',
+    isGroundSchoolAssessment: data.groundSchoolAssessment?.isAssessment || false,
+    groundSchoolResult:      data.groundSchoolAssessment?.result ?? null,
+    course:                  data.course || null,
+    syllabusPhase:           data.syllabusPhase || null,
+    eventSequence:           data.eventSequence != null ? parseInt(data.eventSequence) : null,
+    createdBy:               data.createdBy || null
+  };
+}
+
+// Helper: Build "QFI: ...\nWeather: ..." string from Pt051Assessment fields
+function buildCommentsString(data) {
+  // If already in structured format, return as-is
+  if (data.comments && data.comments.includes('QFI:')) return data.comments;
+  // Build from individual fields (backward compat)
+  const qfi     = data.qfiComments     || '';
+  const weather  = data.weatherComments || '';
+  const profile  = data.profileComments || '';
+  const overall  = data.overallComments || '';
+  const nest     = data.nestComments    || '';
+  if (!qfi && !weather && !profile && !overall && !nest) return data.comments || null;
+  return `QFI: ${qfi}\nWeather: ${weather}\nProfile: ${profile}\nOverall: ${overall}\nNEST: ${nest}`;
+}
+
+// Helper: Extract "Overall" section from structured comments string
+function extractOverallComment(comments) {
+  if (!comments) return '';
+  const match = comments.match(/Overall:\s*([\s\S]*?)(?:\nNEST:|$)/);
+  return match ? match[1].trim() : '';
+}
+
+// Helper: Generate a simple unique ID when cuid2 is not available
+function generateSimpleId() {
+  return 'tp_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
+}
 
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {

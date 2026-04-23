@@ -13,6 +13,7 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
+// ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
@@ -264,6 +265,17 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
+    // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items (DB only)
+    const academicLmpCourses = useMemo(() => {
+        const courseCodes = new Set<string>();
+        syllabusDetails.forEach(s => {
+            if (s.type === 'Academics' && s.courses) {
+                s.courses.forEach(c => courseCodes.add(c));
+            }
+        });
+        return Array.from(courseCodes).sort();
+    }, [syllabusDetails]);
+
     // Shared 3D card style (matches Staff Profile)
     const card3d = "rounded-lg border border-gray-500/60 shadow-md";
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
@@ -302,6 +314,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
+  const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -420,6 +433,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setService(trainee.service || '');
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || 'BPC+IPC');
+        setAcademicLmpType((trainee as any).academicLmpType || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -571,6 +585,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             fullName,
             course,
             lmpType,
+            academicLmpType,
             rank,
             seatConfig,
             isPaused,
@@ -1029,6 +1044,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
                               {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                             </Dropdown>
+                            <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
+                              <option value="">— None —</option>
+                              {academicLmpCourses.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                            </Dropdown>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
@@ -1099,6 +1118,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
                               >{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{(trainee as any).academicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>

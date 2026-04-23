@@ -15,6 +15,17 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
   <style>
   @keyframes fade-in {
+  @keyframes pulse-red {
+    0%, 100% {
+      color: #ef4444; /* bright red-500 */
+    }
+    50% {
+      color: #991b1b; /* dull red-800 */
+    }
+  }
+  .animate-pulse-red {
+    animation: pulse-red 1s ease-in-out infinite;
+  }
     from { opacity: 0; transform: scale(0.95); }
     to { opacity: 1; transform: scale(1); }
   }
@@ -33,6 +44,16 @@
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+  }
+  @keyframes pulse-neo-text {
+    0%, 100% { color: #fb923c; text-shadow: 0 0 4px rgba(251, 146, 60, 0.6); }
+    50% { color: #fdba74; text-shadow: 0 0 8px rgba(251, 146, 60, 1); }
+  }
+  .animate-pulse-neo-text { animation: pulse-neo-text 1s ease-in-out infinite; }
+  .neo-tile-text { color: #fb923c; }
+  /* Override Tailwind CDN !important rules for flight tile background colors */
+  [data-is-flight-tile="true"][style*="--tile-bg"] {
+    background-color: var(--tile-bg) !important;
   }
   .btn-shape-fill {
     background-color: #9ca3af; /* gray-400 fallback */
@@ -161,12 +182,13 @@
     background-image: linear-gradient(to right, #e5e7eb, #ffffff, #e5e7eb);
   }
   .btn-aluminium-brushed.active, .btn-aluminium-brushed:active {
-    background-image: linear-gradient(to right, #9ca3af, #d1d5db, #9ca3af);
+    background-color: #a0a0a0;
+    background-image: none;
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
-    border-top-color: #9ca3af;
-    border-bottom-color: #d1d5db;
-    border-left-color: #9ca3af;
-    border-right-color: #9ca3af;
+    border-top-color: #909090;
+    border-bottom-color: #b0b0b0;
+    border-left-color: #909090;
+    border-right-color: #909090;
     transform: none;
   }
   .changed-bar-stripes {
@@ -179,8 +201,10 @@
     );
   }
   </style>
-  <script type="module" crossorigin src="./assets/index-BoscOuGE.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-Cz3inMS_.css">
+  <script type="module" crossorigin src="./assets/index.js?v=1776877361273"></script>
+  <link rel="modulepreload" crossorigin href="./assets/vendor-react.js">
+  <link rel="modulepreload" crossorigin href="./assets/vendor-pdf.js">
+  <link rel="stylesheet" crossorigin href="./assets/index.css">
 </head>
     <body class="bg-gray-800 text-white">
       <div id="root"></div>

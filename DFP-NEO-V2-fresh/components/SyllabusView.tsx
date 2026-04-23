@@ -696,17 +696,23 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
 
   const handleAddLMPSave = async () => {
       if (!newLMPName.trim()) { alert('Please enter a course title.'); return; }
-      // Auto-generate a course code from the title:
-      // Take first letter of each word, uppercase, max 8 chars — e.g. "Basic Flying Course" → "BFC"
+      // For Academic Training courses, use the full name as the course code/identifier.
+      // This is critical: the academicLmpType field on trainees/courses stores the FULL NAME
+      // (e.g. 'PC-21 Ground School'), and syllabus items are filtered by courses.includes(academicLmpType).
+      // Using autoCode (initials) would cause a mismatch — 'PC-21 Ground School' → 'PGS' not equal to 'PC-21 Ground School'.
+      // For Flight Training courses, use the traditional short auto-generated code.
       const words = newLMPName.trim().split(/\s+/);
-      const autoCode = words.length === 1
+      const shortCode = words.length === 1
           ? newLMPName.trim().toUpperCase().slice(0, 8)
           : words.map(w => w[0].toUpperCase()).join('').slice(0, 8);
+      // Academic Training: use full name as course identifier so it matches academicLmpType dropdown
+      const isAcademic = newLMPCourseType === 'Academic Training';
+      const courseCode = isAcademic ? newLMPName.trim() : shortCode;
       // Build the new course/LMP item with basics filled in
       const newItem: SyllabusItemDetail = {
           id: `new-lmp-${Date.now()}`,
-          code: autoCode,
-          phase: autoCode,
+          code: courseCode,
+          phase: courseCode,
           module: newLMPName.trim(),
           dayNight: 'Day',
           eventDescription: newLMPName.trim(),
@@ -720,13 +726,13 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           duration: 1,
           preFlightTime: 0,
           postFlightTime: 0,
-          type: newLMPCourseType === 'Academic Training' ? 'Academics' : 'Ground School',
+          type: isAcademic ? 'Academics' : 'Ground School',
           methodOfDelivery: [],
           methodOfAssessment: [],
           resourcesPhysical: [],
           resourcesHuman: [],
           location: '',
-          courses: [autoCode],
+          courses: [courseCode],
           lmpType: 'Master LMP',
       };
       setShowAddLMPModal(false);
@@ -750,6 +756,8 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
 
   const handleAddEvent = () => {
       // Create a blank new item pre-filled for the currently selected course
+      // Determine if this is an Academics course (so new events default to Academics type)
+      const isAcademicCourse = filteredSyllabusDetails.some(s => s.type === 'Academics');
       const newItem: SyllabusItemDetail = {
           id: `new-${Date.now()}`,
           code: '',
@@ -767,7 +775,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
           duration: 1,
           preFlightTime: 0,
           postFlightTime: 0,
-          type: 'Ground School',
+          type: isAcademicCourse ? 'Academics' : 'Ground School',
           methodOfDelivery: [],
           methodOfAssessment: [],
           resourcesPhysical: [],

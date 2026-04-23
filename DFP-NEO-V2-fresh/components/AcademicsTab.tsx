@@ -13,7 +13,6 @@ interface TimelineTile {
   color: string;
   isStandard?: boolean; // standard event (break, lunch, etc.)
   customDescription?: string;
-  instructor?: string; // instructor allocated for this specific event
 }
 
 interface AcademicsTabProps {
@@ -26,9 +25,16 @@ interface AcademicsTabProps {
   date: string;
   courseColors: { [key: string]: string };
   school: 'ESL' | 'PEA';
+  locationAbbreviations?: Record<string, string>; // long name -> short code
+  // Course-level academic completion: Map<courseCode, Set<lessonCode>>
+  courseAcademicProgress?: Map<string, Set<string>>;
+  onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
+  // Persisted Academic LMP selection (survives hard reset)
+  persistedAcademicLmp?: string;
+  onUpdatePersistedAcademicLmp?: (lmp: string) => void;
+  instructors?: string[];    // list of instructor names for allocation dropdown
   onSave: (data: AcademicSaveData) => void;
   onClose: () => void;
-  instructors?: string[];
 }
 
 export interface AcademicSaveData {
@@ -40,8 +46,8 @@ export interface AcademicSaveData {
   workStart: number;
   workEnd: number;
   resourceId: string;
+  instructor: string;
   isAcademic: true;
-  instructor?: string;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -81,7 +87,7 @@ const fmtTime = (dec: number): string => {
 
 const snap = (val: number): number => Math.round(val / SNAP) * SNAP;
 
-// Subject area colour mapping
+// Subject area colour mapping — full name keys
 const subjectColor = (subject: string): string => {
   const map: Record<string, string> = {
     'Aerodynamics':    '#1e40af',
@@ -97,6 +103,88 @@ const subjectColor = (subject: string): string => {
   };
   return map[subject] || '#1f2937';
 };
+
+// Lesson-code prefix → subtle tile colour for the schedule tile insets
+// Covers common RAAF/ADF academic module codes. All colours are desaturated
+// enough to remain readable against white label text at small sizes.
+const LESSON_CODE_COLORS: Record<string, string> = {
+  // Aerodynamics
+  'AERODY':   '#1e3a6e',  // deep navy-blue
+  'AERO':     '#1e3a6e',
+  // Air Traffic Control
+  'ATC':      '#4a1d6e',  // muted purple
+  // Meteorology / Weather
+  'MET':      '#0e4d6e',  // steel teal
+  'METEO':    '#0e4d6e',
+  'WX':       '#0e4d6e',
+  // Navigation
+  'NAV':      '#0a4a30',  // forest green
+  'NAVS':     '#0a4a30',
+  // Performance
+  'PERF':     '#0a3d6e',  // dark slate-blue
+  // Airmanship / Flight Rules
+  'AIR':      '#5a2d0c',  // warm dark-brown
+  'AIRMAN':   '#5a2d0c',
+  // Aircraft Systems
+  'SYS':      '#1f2937',  // near-black slate
+  'ACFT':     '#1f2937',
+  'SYSTEM':   '#1f2937',
+  // Instruments / Instrument Flying
+  'INSTR':    '#1a3a6e',  // blue-grey
+  'IFR':      '#1a3a6e',
+  // Human Factors
+  'HF':       '#5b1a8a',  // dim violet
+  'HUFAC':    '#5b1a8a',
+  'HUMAN':    '#5b1a8a',
+  // Regulations / Rules of the Air
+  'REG':      '#374151',  // dark grey
+  'REGS':     '#374151',
+  'ROA':      '#374151',
+  // Leadership / Command
+  'LEAD':     '#6b2d00',  // dark burnt-orange
+  // Survival
+  'SURV':     '#1a4a1a',  // dark olive
+  // Communications
+  'COMM':     '#1a4a5a',  // dark cyan-slate
+  // Engines / Propulsion
+  'ENG':      '#2a1a3e',  // very dark indigo
+  // Electronic Warfare
+  'EW':       '#2a3a0a',  // dark military-olive
+  // Standard / admin tiles (keep their original colors)
+  'MORNING_BREAK':    '#64748b',
+  'LUNCH':            '#78716c',
+  'AFTERNOON_BREAK':  '#64748b',
+  'SELF_STUDY':       '#475569',
+  'SPORT':            '#15803d',
+  'ADMIN':            '#7c3aed',
+  'FREE_TIME':        '#0f766e',
+  'OTHER':            '#b45309',
+};
+
+/**
+ * Returns a subtle background colour for a lesson tile based on its lesson code.
+ * Tries exact match first, then matches by common prefixes (longest first).
+ * Falls back to a default academic blue.
+ */
+function getLessonTileColor(lessonCode: string, existingColor?: string): string {
+  // Standard event tiles keep their configured colour
+  const isStandardCode = ['MORNING_BREAK','LUNCH','AFTERNOON_BREAK','SELF_STUDY','SPORT','ADMIN','FREE_TIME','OTHER'].includes(lessonCode);
+  if (isStandardCode && existingColor) return existingColor;
+
+  const upper = lessonCode.toUpperCase();
+
+  // 1. Exact match
+  if (LESSON_CODE_COLORS[upper]) return LESSON_CODE_COLORS[upper];
+
+  // 2. Prefix match — longest prefix wins
+  const prefixKeys = Object.keys(LESSON_CODE_COLORS).sort((a, b) => b.length - a.length);
+  for (const prefix of prefixKeys) {
+    if (upper.startsWith(prefix)) return LESSON_CODE_COLORS[prefix];
+  }
+
+  // 3. Fall back to default academic blue
+  return '#1d3461';
+}
 
 // ── Lesson Completion ─────────────────────────────────────────────────────────
 
@@ -118,15 +206,58 @@ function getLessonCompletion(
 
 // ── Subject grouping ─────────────────────────────────────────────────────────
 
-function groupBySubject(items: SyllabusItemDetail[]): Record<string, SyllabusItemDetail[]> {
+// Derive a subject/module key from an event description prefix
+// e.g. "AERODY1" -> "AERODY", "MET Review" -> "MET", "ATC Exam" -> "ATC"
+function getDescriptionPrefix(desc: string): string {
+  if (!desc) return 'General';
+  // Strip trailing numbers and keywords like Review/Exam/Debrief/CBT
+  return desc.replace(/\s*(\d+|Review|Exam|Debrief|CBT|\d+\s*CBT)\s*$/i, '').trim() || desc;
+}
+
+function groupByModule(items: SyllabusItemDetail[]): { moduleKey: string; label: string; items: SyllabusItemDetail[] }[] {
+  // Determine grouping strategy:
+  // 1. If items have meaningful module field values (numeric or short non-title values), group by module
+  // 2. Otherwise, group by event description prefix (subject area)
   const groups: Record<string, SyllabusItemDetail[]> = {};
+
+  // Check if module fields contain meaningful module numbers/names
+  // (not just the course title repeated on every item)
+  const moduleValues = items.map(i => i.module?.trim()).filter(Boolean);
+  const uniqueModules = new Set(moduleValues);
+  // If all items share the same module value (e.g. all = "PC-21 Ground School"),
+  // or module values are missing, fall back to grouping by description prefix
+  const hasMeaningfulModules = uniqueModules.size > 1 ||
+    (uniqueModules.size === 1 && /^\d+$/.test([...uniqueModules][0] || ''));
+
   for (const item of items) {
-    // Use module as subject area, or phase if module is empty
-    const subject = item.module?.trim() || item.phase?.trim() || 'General';
-    if (!groups[subject]) groups[subject] = [];
-    groups[subject].push(item);
+    let key: string;
+    if (hasMeaningfulModules) {
+      // Use module field, fallback to phase, then description prefix
+      key = item.module?.trim() || item.phase?.trim() || getDescriptionPrefix(item.eventDescription);
+    } else {
+      // Fall back to event description prefix as the grouping key
+      key = getDescriptionPrefix(item.eventDescription);
+    }
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(item);
   }
-  return groups;
+
+  // Sort keys: numeric keys first (1, 2, 3...), then alphabetical
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const numA = parseFloat(a);
+    const numB = parseFloat(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    if (!isNaN(numA)) return -1;
+    if (!isNaN(numB)) return 1;
+    return a.localeCompare(b);
+  });
+
+  return sortedKeys.map(key => {
+    // Build a nice display label: "Module 1" for numeric keys, else the key itself
+    const num = parseFloat(key);
+    const label = !isNaN(num) ? `Module ${num}` : key;
+    return { moduleKey: key, label, items: groups[key] };
+  });
 }
 
 // ── Trainee Status ────────────────────────────────────────────────────────────
@@ -169,18 +300,34 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   date,
   courseColors,
   school,
+  locationAbbreviations,
   defaultLocality,
+  courseAcademicProgress,
+  onUpdateCourseAcademicProgress,
+  persistedAcademicLmp,
+  onUpdatePersistedAcademicLmp,
+  instructors = [],
   onSave,
   onClose,
-  instructors = [],
 }) => {
   // ── Control bar state ──
   const localities = useMemo(() => {
     const locs = new Set<string>();
     traineesData.forEach(t => { if (t.location) locs.add(t.location); });
     if (locs.size === 0) locs.add(school === 'ESL' ? 'East Sale' : 'Pearce');
-    return Array.from(locs);
-  }, [traineesData, school]);
+    // Consolidate locations that have the same long name (mapped via locationAbbreviations)
+    const locsArray = Array.from(locs);
+    const consolidated: string[] = [];
+    const seen = new Set<string>();
+    for (const loc of locsArray) {
+      const longName = Object.entries(locationAbbreviations || {}).find(([_, code]) => code === loc)?.[0] || loc;
+      if (!seen.has(longName)) {
+        consolidated.push(longName);
+        seen.add(longName);
+      }
+    }
+    return consolidated.length > 0 ? consolidated : locsArray;
+  }, [traineesData, school, locationAbbreviations]);
 
   const [selectedLocality, setSelectedLocality] = useState(() => {
     // Default to the locality currently selected in the header (passed as defaultLocality)
@@ -192,21 +339,24 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   const [workEnd, setWorkEnd]   = useState(17);
   const [otherText, setOtherText] = useState('');
   const [resourceId, setResourceId] = useState(''); // blank by default
-  const [instructor, setInstructor] = useState('');
-  // Per-tile instructor edit modal
+  const [instructor, setInstructor] = useState(''); // allocated instructor for this academic session
+
+  // Edit-tile modal state
   const [editTileId, setEditTileId] = useState<string | null>(null);
-  const [editTileInstructor, setEditTileInstructor] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editDuration, setEditDuration] = useState('');
 
   // Courses filtered by locality
   const coursesForLocality = useMemo(() => {
     const courses = new Set<string>();
+    const locationShortCode = Object.entries(locationAbbreviations || {}).find(([name, _]) => name === selectedLocality)?.[1] || '';
     traineesData.forEach(t => {
-      if (!selectedLocality || t.location === selectedLocality || localities.length <= 1) {
+      if (!selectedLocality || t.location === selectedLocality || t.location === locationShortCode || localities.length <= 1) {
         courses.add(t.course);
       }
     });
     return Array.from(courses).sort();
-  }, [traineesData, selectedLocality, localities]);
+  }, [traineesData, selectedLocality, localities, locationAbbreviations]);
 
   const [selectedCourse, setSelectedCourse] = useState(coursesForLocality[0] || '');
 
@@ -260,18 +410,53 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
     setSelectedTrainees(prev => [...prev, name]);
   };
 
-  // ── Academic syllabus (Academics + Ground School types) ──
-  const academicSyllabus = useMemo(() => {
-    return syllabusDetails.filter(s =>
-      (s.type === 'Academics' || (s.type === 'Ground School' && !s.methodOfDelivery?.includes('CPT'))) &&
-      (s.courses?.includes(selectedCourse) || s.courses?.length === 0 || !s.courses)
-    );
-  }, [syllabusDetails, selectedCourse]);
+  // ── Academic LMP courses — includes ALL syllabus types (not just 'Academics')
+  // so Ground School, PC-21 Ground School etc are all selectable ──────────────
+  const academicLmpCourses = useMemo(() => {
+    const courseCodeSet = new Set<string>();
+    syllabusDetails.forEach(s => {
+      (s.courses || []).forEach(c => courseCodeSet.add(c));
+    });
+    return Array.from(courseCodeSet).map(code => {
+      const firstItem = syllabusDetails.find(s => s.courses?.includes(code));
+      // module field holds the full course title (e.g. "PC-21 Ground School")
+      const title = firstItem?.module?.trim() || code;
+      return { code, title };
+    }).sort((a, b) => a.title.localeCompare(b.title));
+  }, [syllabusDetails]);
 
-  const subjectGroups = useMemo(() => groupBySubject(academicSyllabus), [academicSyllabus]);
+  // selectedAcademicLmp: initialise from persisted DB value, fall back to first available
+  const [selectedAcademicLmp, setSelectedAcademicLmp] = useState<string>(() => persistedAcademicLmp || '');
+
+  // When persistedAcademicLmp arrives from DB (async), update if we don't have a value yet
+  useEffect(() => {
+    if (persistedAcademicLmp && !selectedAcademicLmp) {
+      setSelectedAcademicLmp(persistedAcademicLmp);
+    }
+  }, [persistedAcademicLmp]);
+
+  // Auto-select first academic LMP course if nothing is persisted yet
+  useEffect(() => {
+    if (academicLmpCourses.length > 0 && !selectedAcademicLmp) {
+      const firstCode = academicLmpCourses[0].code;
+      setSelectedAcademicLmp(firstCode);
+      onUpdatePersistedAcademicLmp?.(firstCode);
+    }
+  }, [academicLmpCourses]);
+
+  // ── Academic syllabus filtered by selected Academic LMP course ─────────────
+  // Includes all event types — Ground School, Academics, etc.
+  const academicSyllabus = useMemo(() => {
+    if (!selectedAcademicLmp) return [];
+    return syllabusDetails.filter(s => s.courses?.includes(selectedAcademicLmp));
+  }, [syllabusDetails, selectedAcademicLmp]);
+
+  const moduleGroups = useMemo(() => groupByModule(academicSyllabus), [academicSyllabus]);
 
   // ── Timeline tiles ──
   const [tiles, setTiles] = useState<TimelineTile[]>([]);
+  // Derived: the tile currently being edited (must be after tiles declaration)
+  const editTile = editTileId ? tiles.find(t => t.id === editTileId) ?? null : null;
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set());
   const [selectedStandard, setSelectedStandard] = useState<Set<string>>(new Set());
 
@@ -294,13 +479,17 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       setSelectedLessons(prev => new Set(prev).add(key));
       const dur = item.duration || 1;
       const start = getNextStart(dur);
+      // Avoid duplicate: if eventDescription already starts with the code, use it directly
+      const tileLabel = item.eventDescription?.startsWith(key)
+        ? item.eventDescription
+        : `${key} ${item.eventDescription}`;
       setTiles(prev => [...prev, {
         id: uuidv4(),
         lessonCode: key,
-        label: `${key}: ${item.eventDescription}`,
+        label: tileLabel,
         startTime: start,
         duration: dur,
-        color: ACADEMIC_TILE_COLOR,
+        color: getLessonTileColor(key),
       }]);
     }
   }, [selectedLessons, getNextStart]);
@@ -392,9 +581,29 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
 
   // ── Save ──
   const handleSave = () => {
-    if (!selectedCourse) { alert('Please select a course.'); return; }
-    if (selectedTrainees.length === 0) { alert('Please select at least one trainee.'); return; }
-    if (tiles.length === 0) { alert('Please add at least one lesson to the timeline.'); return; }
+    console.log('🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====');
+    console.log('🎓 [AcademicsTab.handleSave] selectedCourse:', selectedCourse);
+    console.log('🎓 [AcademicsTab.handleSave] selectedTrainees:', selectedTrainees, '(count:', selectedTrainees.length, ')');
+    console.log('🎓 [AcademicsTab.handleSave] tiles:', tiles, '(count:', tiles.length, ')');
+    console.log('🎓 [AcademicsTab.handleSave] selectedDate:', selectedDate);
+    console.log('🎓 [AcademicsTab.handleSave] workStart:', workStart, 'workEnd:', workEnd);
+    console.log('🎓 [AcademicsTab.handleSave] resourceId:', resourceId);
+
+    if (!selectedCourse) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse');
+      alert('Please select a course.');
+      return;
+    }
+    if (selectedTrainees.length === 0) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedTrainees');
+      alert('Please select at least one trainee.');
+      return;
+    }
+    if (tiles.length === 0) {
+      console.error('🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no tiles in timeline');
+      alert('Please add at least one lesson to the timeline.');
+      return;
+    }
 
     const lessons = tiles
       .filter(t => !t.isStandard)
@@ -403,7 +612,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         return { code: t.lessonCode, description: s?.eventDescription || t.label, duration: t.duration };
       });
 
-    onSave({
+    const saveData = {
       lessons,
       timeline: tiles,
       selectedTrainees,
@@ -413,8 +622,24 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       workEnd,
       resourceId,
       instructor,
-      isAcademic: true,
+      isAcademic: true as const,
+    };
+
+    console.log('🎓 [AcademicsTab.handleSave] Calling onSave with data:', {
+      course: saveData.course,
+      date: saveData.date,
+      workStart: saveData.workStart,
+      workEnd: saveData.workEnd,
+      resourceId: saveData.resourceId,
+      selectedTrainees: saveData.selectedTrainees,
+      lessonsCount: saveData.lessons.length,
+      tilesCount: saveData.timeline.length,
+      isAcademic: saveData.isAcademic,
     });
+    console.log('🎓 [AcademicsTab.handleSave] onSave function exists?', typeof onSave);
+
+    onSave(saveData);
+    console.log('🎓 [AcademicsTab.handleSave] onSave() called successfully');
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -438,7 +663,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
   return (
     <div style={S.container}>
       {/* ── Control Bar ── */}
-      <div style={{ ...S.card, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', gap: 10 }}>
+      <div style={{ ...S.card, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr', gap: 10 }}>
         <div>
           <div style={S.label}>Locality</div>
           <select style={S.select} value={selectedLocality} onChange={e => setSelectedLocality(e.target.value)}>
@@ -450,6 +675,22 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
           <select style={S.select} value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)}>
             <option value="">-- Select --</option>
             {coursesForLocality.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{ ...S.label, color: '#93c5fd' }}>Academic LMP</div>
+          <select
+            style={{ ...S.select, borderColor: '#1d4ed8' }}
+            value={selectedAcademicLmp}
+            onChange={e => {
+              setSelectedAcademicLmp(e.target.value);
+              onUpdatePersistedAcademicLmp?.(e.target.value);
+              setSelectedLessons(new Set());
+              setTiles(prev => prev.filter(t => t.isStandard));
+            }}
+          >
+            <option value="">-- Select LMP --</option>
+            {academicLmpCourses.map(c => <option key={c.code} value={c.code}>{c.title}</option>)}
           </select>
         </div>
         <div>
@@ -478,11 +719,11 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
       </div>
 
-      {/* ── Main 3-Panel Layout ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 10 }}>
+      {/* ── Main 2-Panel Layout (fixed combined width = timeline) ── */}
+      <div style={{ display: 'flex', gap: 10 }}>
 
-        {/* Left Panel: Trainees */}
-        <div style={{ ...S.card, maxHeight: 360, overflowY: 'auto' }}>
+        {/* Left Panel: Trainees - fixed width */}
+        <div style={{ ...S.card, width: 200, minWidth: 200, maxWidth: 200, maxHeight: 360, overflowY: 'auto', flexShrink: 0 }}>
           <div style={{ ...S.label, marginBottom: 8 }}>Attendees
             <span style={{ fontWeight: 400, color: '#6b7280', fontSize: 10, marginLeft: 6 }}>
               {selectedTrainees.length}/{courseTrainees.length}
@@ -510,7 +751,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         </div>
 
         {/* Centre Panel: Lesson Selector + Standard Events */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1, minWidth: 0 }}>
 
           {/* Suggestions */}
           {suggestions.length > 0 && (
@@ -533,52 +774,94 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
             </div>
           )}
 
-          {/* Lesson columns by subject */}
-          <div style={{ ...S.card, maxHeight: 280, overflowY: 'auto' }}>
-            <div style={S.label}>LMP Lessons</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
-              {Object.entries(subjectGroups).map(([subject, items]) => (
-                <div key={subject}>
-                  <div style={{
-                    fontSize: 10, fontWeight: 700, color: '#e5e7eb',
-                    backgroundColor: subjectColor(subject),
-                    padding: '2px 6px', borderRadius: 4, marginBottom: 4, textTransform: 'uppercase'
-                  }}>{subject}</div>
-                  {items.map(item => {
-                    const completion = getLessonCompletion(item.code, courseTrainees, scores);
-                    const isSelected = selectedLessons.has(item.code);
-                    return (
-                      <div key={item.code}
-                        onClick={() => toggleLesson(item)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 5, padding: '3px 4px',
-                          cursor: 'pointer', borderRadius: 4,
-                          backgroundColor: isSelected ? 'rgba(29,78,216,0.3)' : 'transparent',
-                          border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
-                          marginBottom: 2,
-                        }}>
-                        {/* Completion indicator */}
-                        <span style={{ fontSize: 10, width: 14, textAlign: 'center', flexShrink: 0 }}>
-                          {completion === 'complete' ? '✅' : completion === 'partial' ? '🟡' : '⬜'}
-                        </span>
-                        <span style={{ fontSize: 11, color: isSelected ? '#93c5fd' : '#d1d5db', flex: 1, lineHeight: 1.2 }}>
-                          <span style={{ fontWeight: 600, color: '#f9fafb' }}>{item.code}</span>
-                          {' '}{item.eventDescription}
-                        </span>
-                        <span style={{ fontSize: 10, color: '#6b7280', flexShrink: 0 }}>
-                          {item.duration ? `${item.duration}h` : ''}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-              {Object.keys(subjectGroups).length === 0 && (
-                <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>
-                  No academic lessons found for this course
-                </div>
-              )}
+          {/* Lesson columns by module */}
+          <div style={{ ...S.card, maxHeight: 300, overflowY: 'auto', flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+              <div style={S.label}>LMP Lessons</div>
+              <span style={{ fontSize: 10, color: '#6b7280' }}>
+                ✅ = course complete &nbsp;⬜ = not yet complete &nbsp;
+                <span style={{ color: '#93c5fd' }}>(click ✅/⬜ to toggle course completion)</span>
+              </span>
             </div>
+            {moduleGroups.length === 0 ? (
+              <div style={{ color: '#6b7280', fontSize: 12, fontStyle: 'italic' }}>
+                No academic lessons found for this course
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                {moduleGroups.map(({ moduleKey, label, items: moduleItems }) => (
+                  <div key={moduleKey} style={{
+                    minWidth: 190, flexShrink: 0,
+                    backgroundColor: '#111827', borderRadius: 6, border: '1px solid #1d4ed8',
+                    overflow: 'hidden'
+                  }}>
+                    {/* Module header */}
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: '#bfdbfe',
+                      backgroundColor: '#1e3a5f',
+                      padding: '4px 8px', textTransform: 'uppercase', letterSpacing: 1
+                    }}>{label}</div>
+                    {/* Lessons list */}
+                    <div style={{ padding: '4px 2px' }}>
+                      {moduleItems.map(item => {
+                        // Course-level completion: from courseAcademicProgress prop
+                        // This is separate from individual PT-051 scores
+                        const courseProgress = courseAcademicProgress?.get(selectedCourse);
+                        const isCourseDone = courseProgress?.has(item.code) ?? false;
+                        const isSelected = selectedLessons.has(item.code);
+                        return (
+                          <div key={item.code}
+                            style={{
+                              display: 'flex', alignItems: 'flex-start', gap: 5, padding: '3px 6px',
+                              borderRadius: 4,
+                              backgroundColor: isSelected ? 'rgba(29,78,216,0.35)' : 'transparent',
+                              border: isSelected ? '1px solid #3b82f6' : '1px solid transparent',
+                              marginBottom: 1,
+                            }}>
+                            {/* Course-level completion toggle button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onUpdateCourseAcademicProgress && selectedCourse) {
+                                  onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
+                                }
+                              }}
+                              title={isCourseDone ? 'Mark as NOT completed by this course' : 'Mark as completed by this course cohort'}
+                              style={{
+                                background: 'none', border: 'none', cursor: onUpdateCourseAcademicProgress ? 'pointer' : 'default',
+                                fontSize: 16, width: 22, textAlign: 'center', flexShrink: 0, padding: 0, marginTop: 0,
+                                opacity: onUpdateCourseAcademicProgress ? 1 : 0.6,
+                                filter: 'brightness(1.3)',
+                              }}
+                            >
+                              {isCourseDone ? '✅' : '⬜'}
+                            </button>
+                            {/* Lesson label — click to add to timeline */}
+                            <span
+                              onClick={() => toggleLesson(item)}
+                              style={{
+                                fontSize: 11, flex: 1, lineHeight: 1.3, cursor: 'pointer',
+                                color: isCourseDone ? '#9ca3af' : isSelected ? '#93c5fd' : '#e5e7eb',
+                                textDecoration: isCourseDone ? 'line-through' : 'none',
+                              }}>
+                              <span style={{ fontWeight: 700, color: isCourseDone ? '#9ca3af' : '#f9fafb', fontSize: 11 }}>{item.code}</span>
+                              {item.eventDescription && !item.eventDescription.startsWith(item.code)
+                                ? <>{' '}{item.eventDescription}</>
+                                : null}
+                            </span>
+                            {item.duration ? (
+                              <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, marginTop: 1 }}>
+                                {item.duration}h
+                              </span>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Standard Events */}
@@ -623,7 +906,19 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
       <div style={S.card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={S.label}>Timeline — {fmtTime(workStart)} to {fmtTime(workEnd)}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* Instructor allocation */}
+            {instructors.length > 0 && (
+              <>
+                <div style={S.label}>Instructor</div>
+                <select style={{ ...S.select, width: 160 }} value={instructor} onChange={e => setInstructor(e.target.value)}>
+                  <option value="">— Unallocated —</option>
+                  {instructors.map(i => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                </select>
+              </>
+            )}
             <div style={S.label}>Classroom</div>
             <select style={{ ...S.select, width: 120 }} value={resourceId} onChange={e => setResourceId(e.target.value)}>
               <option value="">— Select —</option>
@@ -631,11 +926,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
-            {instructors.length > 0 && (
-              <div style={{ fontSize: 10, color: '#6b7280', fontStyle: 'italic' }}>
-                Double-click a tile to assign instructor
-              </div>
-            )}
           </div>
         </div>
 
@@ -681,9 +971,10 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   e.preventDefault();
                   e.stopPropagation();
                   setEditTileId(tile.id);
-                  setEditTileInstructor(tile.instructor || '');
+                  setEditStartTime(fmtTime(tile.startTime));
+                  setEditDuration(String(tile.duration));
                 }}
-                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)}${tile.instructor ? ` | ${tile.instructor}` : ''}\nDouble-click to assign instructor`}
+                title={`${tile.label} — ${fmtTime(tile.startTime)} to ${fmtTime(tile.startTime + tile.duration)} | Double-click to edit`}
                 style={{
                   position: 'absolute',
                   top: 18,
@@ -691,7 +982,7 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                   left: x,
                   width: w,
                   backgroundColor: conflict ? '#991b1b' : tile.color,
-                  border: conflict ? '2px solid #ef4444' : tile.instructor ? '2px solid #86efac' : '1px solid rgba(255,255,255,0.2)',
+                  border: conflict ? '2px solid #ef4444' : '1px solid rgba(255,255,255,0.2)',
                   borderRadius: 4,
                   cursor: 'grab',
                   overflow: 'hidden',
@@ -707,11 +998,6 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
                 <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.7)' }}>
                   {fmtTime(tile.startTime)}–{fmtTime(tile.startTime + tile.duration)}
                 </span>
-                {tile.instructor && (
-                  <span style={{ fontSize: 8, color: '#86efac', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {tile.instructor}
-                  </span>
-                )}
               </div>
             );
           })}
@@ -744,71 +1030,103 @@ const AcademicsTab: React.FC<AcademicsTabProps> = ({
         )}
       </div>
 
-      {/* ── Footer ── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
-        <button onClick={onClose} className="w-[90px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
-          Cancel
-        </button>
-        <button onClick={handleSave} className="w-[120px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
-          Save Academic Session
-        </button>
-      </div>
-
-      {/* ── Per-tile Instructor Edit Modal ── */}
-      {editTileId && (() => {
-        const editTile = tiles.find(t => t.id === editTileId);
-        if (!editTile) return null;
-        return (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            backgroundColor: 'rgba(0,0,0,0.6)',
+      {/* ── Edit Tile Modal ── */}
+      {editTile && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 200,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }} onClick={() => setEditTileId(null)}>
-            <div
-              style={{
-                backgroundColor: '#1f2937', border: '1px solid #374151',
-                borderRadius: 10, padding: 20, minWidth: 320, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#f9fafb', marginBottom: 12 }}>
-                Assign Instructor — <span style={{ color: '#7dd3fc' }}>{editTile.lessonCode}</span>
-              </div>
-              <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>
-                {editTile.label} &nbsp;|&nbsp; {fmtTime(editTile.startTime)} – {fmtTime(editTile.startTime + editTile.duration)}
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Instructor</div>
-                <select
-                  style={{ background: '#374151', border: '1px solid #4b5563', borderRadius: 6, color: '#f9fafb', fontSize: 13, padding: '5px 8px', width: '100%' }}
-                  value={editTileInstructor}
-                  onChange={e => setEditTileInstructor(e.target.value)}
-                >
-                  <option value="">— Unallocated —</option>
-                  {instructors.map(i => <option key={i} value={i}>{i}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                <button
-                  onClick={() => setEditTileId(null)}
-                  style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid #4b5563', background: '#374151', color: '#9ca3af', cursor: 'pointer', fontSize: 12 }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    setTiles(prev => prev.map(t => t.id === editTileId ? { ...t, instructor: editTileInstructor || undefined } : t));
-                    setEditTileId(null);
+          }}
+          onClick={() => setEditTileId(null)}
+        >
+          <div
+            style={{
+              background: '#1e2535', border: '1px solid #334155', borderRadius: 8,
+              padding: '20px 24px', minWidth: 300, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontWeight: 700, color: '#93c5fd', fontSize: 14, marginBottom: 12 }}>
+              Edit: {editTile.lessonCode}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label style={{ color: '#94a3b8', fontSize: 12 }}>
+                Start Time (HH:MM)
+                <input
+                  type="text"
+                  value={editStartTime}
+                  onChange={e => setEditStartTime(e.target.value)}
+                  placeholder="e.g. 09:00"
+                  style={{
+                    display: 'block', marginTop: 4, width: '100%',
+                    background: '#0f172a', border: '1px solid #475569', borderRadius: 4,
+                    color: '#fff', padding: '6px 10px', fontSize: 13,
                   }}
-                  style={{ padding: '6px 14px', borderRadius: 6, border: 'none', background: '#2563eb', color: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
-                >
-                  Save
-                </button>
-              </div>
+                />
+              </label>
+              <label style={{ color: '#94a3b8', fontSize: 12 }}>
+                Duration (hours, e.g. 1.0)
+                <input
+                  type="number"
+                  min="0.25"
+                  max="8"
+                  step="0.25"
+                  value={editDuration}
+                  onChange={e => setEditDuration(e.target.value)}
+                  style={{
+                    display: 'block', marginTop: 4, width: '100%',
+                    background: '#0f172a', border: '1px solid #475569', borderRadius: 4,
+                    color: '#fff', padding: '6px 10px', fontSize: 13,
+                  }}
+                />
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button
+                onClick={() => setEditTileId(null)}
+                style={{
+                  padding: '6px 14px', background: 'transparent',
+                  border: '1px solid #475569', borderRadius: 4, color: '#94a3b8',
+                  cursor: 'pointer', fontSize: 12,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Parse HH:MM start time
+                  const parts = editStartTime.split(':');
+                  const h = parseInt(parts[0] || '0', 10);
+                  const m = parseInt(parts[1] || '0', 10);
+                  const newStart = snap(h + m / 60);
+                  const newDur = Math.max(0.25, parseFloat(editDuration) || 1);
+                  setTiles(prev => prev.map(t =>
+                    t.id === editTileId ? { ...t, startTime: newStart, duration: newDur } : t
+                  ));
+                  setEditTileId(null);
+                }}
+                style={{
+                  padding: '6px 14px', background: '#2563eb',
+                  border: 'none', borderRadius: 4, color: '#fff',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                }}
+              >
+                Apply
+              </button>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
+
+      {/* ── Footer ── */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, paddingTop: 4 }}>
+        <button onClick={onClose} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed">
+          Cancel
+        </button>
+        <button onClick={handleSave} className="w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed text-green-500">
+          Publish
+        </button>
+      </div>
     </div>
   );
 };

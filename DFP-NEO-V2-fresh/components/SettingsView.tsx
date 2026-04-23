@@ -33,6 +33,10 @@ interface SettingsViewProps {
     activeSection?: 'scoring-matrix' | 'location' | 'units' | 'duty-turnaround' | 'sct-events' | 'currencies' | 'business-rules' | 'data-loaders' | 'event-limits' | 'permissions' | 'validation' | 'timezone' | 'data-sources' | 'trainee-database' | 'trainee-mockdata' | 'user-list' | 'staff-database' | 'staff-mockdata' | 'staff-combined-data' | 'organisation' | 'appearance' | 'emergency';
     locations: string[];
     onUpdateLocations: (locations: string[]) => void;
+    locationAbbreviations?: Record<string, string>;
+    onUpdateLocationAbbreviations?: (abbrevs: Record<string, string>) => void;
+    serviceDefinitions?: Array<{ longName: string; shortName: string }>;
+    onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
     units: string[];
     onUpdateUnits: (units: string[]) => void;
     unitLocations: Record<string, string>;
@@ -415,7 +419,13 @@ const UpdateIcon = () => (
 // FIX: Export the component to make it available for import.
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
     hideHeader = false,
-    locations, onUpdateLocations, 
+    locations, onUpdateLocations,
+    locationAbbreviations = {}, onUpdateLocationAbbreviations,
+    serviceDefinitions = [
+        { longName: 'Air Force', shortName: 'RAAF' },
+        { longName: 'Navy',      shortName: 'RAN'  },
+        { longName: 'Army',      shortName: 'ARA'  },
+    ], onUpdateServiceDefinitions,
     units, onUpdateUnits, 
     unitLocations, onUpdateUnitLocations,
     locationOpAreas = {}, onUpdateLocationOpAreas,
@@ -468,6 +478,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const [isEditingLocations, setIsEditingLocations] = useState(false);
     const [tempLocations, setTempLocations] = useState<string[]>([]);
     const [newLocation, setNewLocation] = useState('');
+    const [tempLocationAbbreviations, setTempLocationAbbreviations] = useState<Record<string, string>>({});
+
+    // Services state
+    const [isEditingServices, setIsEditingServices] = useState(false);
+    const [tempServiceDefs, setTempServiceDefs] = useState<Array<{ longName: string; shortName: string }>>([]);
+    const [newServiceLong, setNewServiceLong] = useState('');
+    const [newServiceShort, setNewServiceShort] = useState('');
 
     // Op Areas State
     const [isEditingOpAreas, setIsEditingOpAreas] = useState(false);
@@ -632,6 +649,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     // Location Handlers
     const handleEditLocations = () => {
         setTempLocations([...locations]);
+        setTempLocationAbbreviations({ ...locationAbbreviations });
         setIsEditingLocations(true);
     };
 
@@ -639,6 +657,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const oldLocations = locations.join(', ');
         const newLocations = tempLocations.join(', ');
         onUpdateLocations(tempLocations);
+        if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(tempLocationAbbreviations);
         setIsEditingLocations(false);
         logAudit({
             page: 'Settings - Location',
@@ -651,6 +670,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     const handleCancelLocations = () => {
         setNewLocation('');
         setIsEditingLocations(false);
+    };
+
+    // Services Handlers
+    const handleEditServices = () => {
+        setTempServiceDefs([...serviceDefinitions]);
+        setIsEditingServices(true);
+    };
+
+    const handleSaveServices = () => {
+        if (onUpdateServiceDefinitions) onUpdateServiceDefinitions(tempServiceDefs);
+        setIsEditingServices(false);
+        logAudit({
+            page: 'Settings - Services',
+            action: 'update',
+            description: 'Updated service definitions',
+            changes: tempServiceDefs.map(s => `${s.longName} (${s.shortName})`).join(', ')
+        });
+    };
+
+    const handleCancelServices = () => {
+        setNewServiceLong('');
+        setNewServiceShort('');
+        setIsEditingServices(false);
+    };
+
+    const handleAddService = () => {
+        const ln = newServiceLong.trim();
+        const sn = newServiceShort.trim().toUpperCase();
+        if (!ln || !sn) return;
+        if (tempServiceDefs.some(s => s.shortName === sn)) return; // no duplicates
+        setTempServiceDefs([...tempServiceDefs, { longName: ln, shortName: sn }]);
+        setNewServiceLong('');
+        setNewServiceShort('');
+    };
+
+    const handleRemoveService = (shortName: string) => {
+        setTempServiceDefs(tempServiceDefs.filter(s => s.shortName !== shortName));
     };
     
     const handleAddLocation = () => {
@@ -1160,21 +1216,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     };
 
     const parseTraineeRow = (row: any): Partial<Trainee> | null => {
+        const rowKeys = Object.keys(row);
+        
+        // Try to find PMKeys/ID with detailed logging
         const idValue = getNum(row, ['PMKeys/ID', 'idNumber']);
-        if (idValue === undefined) return null;
+        if (idValue === undefined) {
+            // Check what keys exist related to ID
+            const idRelatedKeys = rowKeys.filter(k => k.toLowerCase().includes('id') || k.toLowerCase().includes('pm') || k.toLowerCase().includes('key'));
+            console.warn('🔴 [PARSE] Row missing idNumber. Row keys:', rowKeys.join(', '));
+            console.warn('🔴 [PARSE] ID-related keys found:', idRelatedKeys.join(', '));
+            console.warn('🔴 [PARSE] Full row:', JSON.stringify(row));
+            return null;
+        }
 
         const parsed: Partial<Trainee> = { idNumber: idValue };
 
         // Try to get name from combined "Name" column first
-        const nameField = getStr(row, ['Name', 'Name [Surname, Firstname]']);
+        // The template column is "Name\n [Surname, Firstname]" — try multiple variants
+        const nameField = getStr(row, [
+            'Name\n [Surname, Firstname]',
+            'Name [Surname, Firstname]',
+            'Name  [Surname, Firstname]',
+            'Name',
+            'Full Name',
+            'FullName'
+        ]);
         if (nameField) {
             parsed.name = nameField;
+            console.log(`✅ [PARSE] ID=${idValue} name from combined field: "${nameField}"`);
         } else {
             // Fallback to separate Surname and Firstname columns
             const surname = getStr(row, ['Surname', 'Last Name']);
             const firstname = getStr(row, ['First Name', 'Firstname', 'Given Name']);
             if (surname && firstname) {
                 parsed.name = `${surname}, ${firstname}`;
+                console.log(`✅ [PARSE] ID=${idValue} name from Surname+Firstname: "${parsed.name}"`);
+            } else {
+                // Last resort: check all keys for any name-like field
+                const nameKey = rowKeys.find(k => k.toLowerCase().includes('name') || k.toLowerCase().includes('surname'));
+                if (nameKey && row[nameKey]) {
+                    parsed.name = String(row[nameKey]);
+                    console.warn(`🟡 [PARSE] ID=${idValue} name from fallback key "${nameKey}": "${parsed.name}"`);
+                } else {
+                    console.error(`🔴 [PARSE] ID=${idValue} — NO NAME FOUND. Row keys: ${rowKeys.join(', ')}`);
+                    console.error(`🔴 [PARSE] Row values:`, JSON.stringify(row));
+                }
             }
         }
 
@@ -1199,7 +1285,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const callsign = getStr(row, ['Callsign', 'callsign']); 
         if (callsign) parsed.callsignNumber = parseInt(callsign) || undefined;
         
-        const service = getStr(row, ['Service']); if (service) parsed.service = service as 'RAAF' | 'RAN' | 'ARA';
+        const serviceRaw = getStr(row, ['Service']);
+        if (serviceRaw) {
+            // Normalise free-text service values to the exact enum the DB expects
+            const svc = serviceRaw.trim().toLowerCase();
+            if (svc === 'raaf' || svc === 'air force' || svc === 'airforce' || svc === 'royal australian air force') {
+                parsed.service = 'RAAF';
+            } else if (svc === 'ran' || svc === 'navy' || svc === 'royal australian navy') {
+                parsed.service = 'RAN';
+            } else if (svc === 'ara' || svc === 'army' || svc === 'australian army') {
+                parsed.service = 'ARA';
+            } else {
+                // Pass through as-is (may be already correct enum value)
+                parsed.service = serviceRaw as 'RAAF' | 'RAN' | 'ARA';
+            }
+        }
         const unit = getStr(row, ['Unit']); if (unit) parsed.unit = unit;
         
         // Flight - new field
@@ -1207,7 +1307,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (flight) parsed.flight = flight;
         
         const location = getStr(row, ['Location']); if (location) parsed.location = location;
-        const seatConfig = getStr(row, ['Seat Config', 'seatConfig']); if (seatConfig) parsed.seatConfig = seatConfig as SeatConfig;
+        const seatConfigRaw = getStr(row, ['Seat Config', 'seatConfig', 'Seat config']);
+        if (seatConfigRaw) {
+            // Normalise seat config to valid enum values
+            const sc = seatConfigRaw.trim().toLowerCase();
+            if (sc === 'normal' || sc === 'norm') {
+                parsed.seatConfig = 'Normal';
+            } else if (sc === 'fwd/short' || sc === 'forward/short' || sc === 'fwd' || sc === 'front') {
+                parsed.seatConfig = 'FWD/SHORT';
+            } else if (sc === 'rear/short' || sc === 'rear') {
+                parsed.seatConfig = 'REAR/SHORT';
+            } else if (sc === 'fwd/long' || sc === 'forward/long' || sc === 'long') {
+                parsed.seatConfig = 'FWD/LONG';
+            } else {
+                parsed.seatConfig = seatConfigRaw as SeatConfig;
+            }
+        }
         const phone = getStr(row, ['Phone Number', 'phoneNumber']); if (phone) parsed.phoneNumber = phone;
         const email = getStr(row, ['Email']); if (email) parsed.email = email;
         
@@ -1232,7 +1347,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         if (!parsed.isPaused) parsed.isPaused = false;
         if (!parsed.unit) parsed.unit = '';
         if (!parsed.rank) parsed.rank = 'FLGOFF' as TraineeRank; // Default rank
-        if (!parsed.seatConfig) parsed.seatConfig = 'Front' as SeatConfig; // Default seat config
+        if (!parsed.seatConfig) parsed.seatConfig = 'Normal' as SeatConfig; // Default seat config
         if (!parsed.unavailability) parsed.unavailability = [];
         
         if (parsed.name && parsed.course) {
@@ -1288,26 +1403,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 // For trainee bulk update with course selection
                 if (course) {
                     const parsedRows = rows.map(parseTraineeRow);
-                    console.log('🔵 BULK UPDATE DEBUG - Parsed rows:', parsedRows.length);
-                    console.log('🔵 First parsed row:', parsedRows[0]);
+                    console.log('🔵 [BULK] Raw Excel rows:', rows.length);
+                    console.log('🔵 [BULK] First raw row keys:', rows[0] ? Object.keys(rows[0]) : 'NO ROWS');
+                    console.log('🔵 [BULK] First raw row values:', rows[0]);
+                    console.log('🔵 [BULK] Parsed rows:', parsedRows.length);
+                    console.log('🔵 [BULK] First parsed row:', JSON.stringify(parsedRows[0]));
+                    console.log('🔵 [BULK] Rows with null result:', parsedRows.filter(r => r === null).length);
+                    console.log('🔵 [BULK] Rows missing idNumber:', parsedRows.filter(r => r && !r.idNumber).length);
+                    console.log('🔵 [BULK] Rows missing name:', parsedRows.filter(r => r && r.idNumber && !r.name).length);
                     finalRows = parsedRows.filter(t => t && t.idNumber && t.name);
-                    console.log('🔵 Filtered rows (with ID and name):', finalRows.length);
+                    console.log('🔵 [BULK] Filtered rows (with ID and name):', finalRows.length);
                     if (finalRows.length === 0) {
-                        console.error('🔴 NO ROWS PASSED FILTER! Check if rows have idNumber and name');
-                        console.log('🔴 Sample parsed row:', parsedRows[0]);
+                        console.error('🔴 [BULK] NO ROWS PASSED FILTER!');
+                        console.error('🔴 [BULK] All parsed rows:', JSON.stringify(parsedRows.slice(0, 3)));
+                        console.error('🔴 [BULK] All raw rows:', JSON.stringify(rows.slice(0, 3)));
                     }
                     // Remove all existing trainees from the selected course
                     const otherCourseTrainees = traineesData.filter(t => t.course !== course);
-                    console.log('🔵 Other course trainees:', otherCourseTrainees.length);
-                    // Add new trainees from file (they should have course set in the file)
+                    console.log('🔵 [BULK] Other course trainees (kept):', otherCourseTrainees.length);
+                    // Add new trainees from file (override course with selected course)
                     const newTrainees = finalRows.map(t => ({ ...t, course } as Trainee));
-                    console.log('🔵 New trainees to add:', newTrainees.length);
-                    console.log('🔵 Sample new trainee:', newTrainees[0]);
-                    console.log('🔵 Total trainees after update:', otherCourseTrainees.length + newTrainees.length);
+                    console.log('🔵 [BULK] New trainees to add:', newTrainees.length);
+                    console.log('🔵 [BULK] Sample new trainee:', JSON.stringify(newTrainees[0]));
+                    console.log('🔵 [BULK] Total trainees after update:', otherCourseTrainees.length + newTrainees.length);
+                    console.log('🔵 [BULK] Calling onReplaceTrainees with', [...otherCourseTrainees, ...newTrainees].length, 'total trainees');
                     onReplaceTrainees([...otherCourseTrainees, ...newTrainees]);
                 } else {
                     // Legacy behavior: replace all trainees
+                    console.warn('🟡 [BULK] No course selected — replacing ALL trainees');
                     finalRows = rows.map(parseTraineeRow).filter(t => t && t.idNumber && t.name);
+                    console.log('🔵 [BULK] Legacy replace — rows:', finalRows.length);
                     onReplaceTrainees(finalRows as Trainee[]);
                 }
                 break;
@@ -1663,12 +1788,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="p-4 space-y-4">
                             {isEditingLocations ? (
                                 <>
-                                    <p className="text-sm text-gray-400">Manage available operating locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
+                                    <p className="text-sm text-gray-400">Manage available operating locations and their abbreviation codes.</p>
+                                    <ul className="space-y-2 max-h-48 overflow-y-auto">
                                         {tempLocations.map(loc => (
-                                            <li key={loc} className="flex items-center justify-between p-2 bg-gray-700/50 rounded">
-                                                <span className="text-white">{loc}</span>
-                                                <button onClick={() => handleRemoveLocation(loc)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
+                                            <li key={loc} className="flex items-center gap-2 p-2 bg-gray-700/50 rounded">
+                                                <span className="text-white flex-1 text-sm">{loc}</span>
+                                                <input
+                                                    type="text"
+                                                    maxLength={5}
+                                                    value={tempLocationAbbreviations[loc] || ''}
+                                                    onChange={e => setTempLocationAbbreviations(prev => ({ ...prev, [loc]: e.target.value.toUpperCase() }))}
+                                                    placeholder="Code"
+                                                    title="Short code (e.g. ESL)"
+                                                    className="w-16 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-yellow-300 text-xs font-mono font-bold uppercase text-center focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                                />
+                                                <button onClick={() => handleRemoveLocation(loc)} className="p-1 text-gray-400 hover:text-red-400 flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
                                             </li>
                                         ))}
                                     </ul>
@@ -1676,14 +1810,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <input type="text" value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="New location name" className="flex-grow bg-gray-700 border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500" />
                                         <button onClick={handleAddLocation} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
                                     </div>
+                                    <p className="text-xs text-gray-500">Enter a short code (e.g. ESL) for each location so the app can match either name or code when filtering by locality.</p>
                                 </>
                             ) : (
                                 <>
                                     <p className="text-sm text-gray-400">Configured operating locations.</p>
-                                    <ul className="space-y-2 max-h-40 overflow-y-auto">
+                                    <ul className="space-y-2 max-h-48 overflow-y-auto">
                                         {locations.map(loc => (
-                                            <li key={loc} className="p-2 bg-gray-700/50 rounded text-white">
-                                                {loc}
+                                            <li key={loc} className="flex items-center justify-between p-2 bg-gray-700/50 rounded text-white">
+                                                <span className="text-sm">{loc}</span>
+                                                {locationAbbreviations[loc] && (
+                                                    <span className="text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded">{locationAbbreviations[loc]}</span>
+                                                )}
                                             </li>
                                         ))}
                                     </ul>
@@ -1693,6 +1831,74 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
                    )}
 
+                      {/* Services Window */}
+                      {shouldShowSection('location') && (
+                        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit">
+                            <div className="p-4 flex justify-between items-center border-b border-gray-700">
+                                <h2 className="text-lg font-semibold text-gray-200">Services</h2>
+                                {isEditingServices ? (
+                                    <div className="flex space-x-2">
+                                        <button onClick={handleSaveServices} className="px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold">Save</button>
+                                        <button onClick={handleCancelServices} className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-xs font-semibold">Cancel</button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleEditServices}
+                                        disabled={!canEditSettings}
+                                        className={`px-3 py-1 rounded-md text-xs font-semibold ${canEditSettings ? 'bg-gray-600 text-white hover:bg-gray-700 cursor-pointer' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+                                    >
+                                        Edit
+                                    </button>
+                                )}
+                            </div>
+                            <div className="p-4 space-y-4">
+                                {isEditingServices ? (
+                                    <>
+                                        <p className="text-sm text-gray-400">Define service branches with long name and short code. Both are recognised when filtering by service.</p>
+                                        <ul className="space-y-2 max-h-40 overflow-y-auto">
+                                            {tempServiceDefs.map(svc => (
+                                                <li key={svc.shortName} className="flex items-center gap-2 p-2 bg-gray-700/50 rounded">
+                                                    <span className="text-xs font-mono font-bold text-yellow-300 bg-gray-600 px-2 py-0.5 rounded w-14 text-center">{svc.shortName}</span>
+                                                    <span className="text-white text-sm flex-1">{svc.longName}</span>
+                                                    <button onClick={() => handleRemoveService(svc.shortName)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg></button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={newServiceShort}
+                                                onChange={e => setNewServiceShort(e.target.value.toUpperCase())}
+                                                placeholder="Code (e.g. RAAF)"
+                                                maxLength={6}
+                                                className="w-28 bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-yellow-300 text-sm font-mono uppercase focus:outline-none focus:ring-sky-500"
+                                            />
+                                            <input
+                                                type="text"
+                                                value={newServiceLong}
+                                                onChange={e => setNewServiceLong(e.target.value)}
+                                                placeholder="Long name (e.g. Air Force)"
+                                                className="flex-grow bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm focus:outline-none focus:ring-sky-500"
+                                            />
+                                            <button onClick={handleAddService} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-sm text-gray-400">Configured service branches.</p>
+                                        <ul className="space-y-2 max-h-40 overflow-y-auto">
+                                            {serviceDefinitions.map(svc => (
+                                                <li key={svc.shortName} className="flex items-center gap-3 p-2 bg-gray-700/50 rounded">
+                                                    <span className="text-xs font-mono font-bold text-yellow-400 bg-gray-600 px-2 py-0.5 rounded w-14 text-center">{svc.shortName}</span>
+                                                    <span className="text-white text-sm">{svc.longName}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                      )}
 
                       {/* Op Areas Window */}
                       {shouldShowSection('location') && (

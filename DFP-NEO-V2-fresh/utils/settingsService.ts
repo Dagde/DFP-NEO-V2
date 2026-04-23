@@ -4,12 +4,21 @@
  * Settings are persisted org-wide (not per-user) so they survive restarts.
  */
 
+export interface ServiceDefinition {
+  longName: string;   // e.g. "Air Force"
+  shortName: string;  // e.g. "RAAF"
+}
+
 export interface AppSettingsData {
   // Locations & Units
   locations: string[];
+  /** Short codes for each location name, e.g. { "East Sale": "ESL", "Pearce": "PEA" } */
+  locationAbbreviations: Record<string, string>;
   units: string[];
   unitLocations: Record<string, string>;
   locationOpAreas: Record<string, string[]>; // Per-location training areas e.g. { "East Sale": ["A","B","C",...] }
+  /** Service definitions: long name and short code, e.g. [{ longName: "Air Force", shortName: "RAAF" }] */
+  serviceDefinitions: ServiceDefinition[];
 
   // Event Limits
   eventLimits: {
@@ -248,6 +257,12 @@ export const saveSettingsImmediately = async (settings: AppSettingsData, userId?
 export const buildSettingsSnapshot = (state: Partial<AppSettingsData>): AppSettingsData => {
   return {
     locations: state.locations || [],
+    locationAbbreviations: state.locationAbbreviations || {},
+    serviceDefinitions: state.serviceDefinitions || [
+      { longName: 'Air Force', shortName: 'RAAF' },
+      { longName: 'Navy',      shortName: 'RAN'  },
+      { longName: 'Army',      shortName: 'ARA'  },
+    ],
     units: state.units || [],
     unitLocations: state.unitLocations || {},
     locationOpAreas: state.locationOpAreas || {},

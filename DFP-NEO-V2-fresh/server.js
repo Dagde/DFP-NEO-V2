@@ -68,10 +68,15 @@ async function getPrisma() {
     await ensureAppSettingsTable(prisma);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(prisma);
+    // Ensure Course.lmpType column exists (migration for existing DBs)
+    await ensureCourseLmpTypeColumn(prisma);
+    await ensureAcademicLmpTypeColumns(prisma);
     // Ensure SyllabusItem and SyllabusHistory tables exist
     await ensureSyllabusTablesExist(prisma);
     // Migrate CPT event durations to 1.0 hour
     await migrateCptDurations(prisma);
+    // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
+    await migrateAcademicsCoursesField(prisma);
   }
   return prisma;
 }
@@ -195,6 +200,59 @@ async function migrateCptDurations(db) {
     console.log(`✅ migrateCptDurations (IndividualLMP): updated ${updatedCount} LMP records`);
   } catch (err) {
     console.error('❌ migrateCptDurations (IndividualLMP) failed (non-fatal):', err.message);
+  }
+}
+
+// Fix Academics syllabus items that have courses[] pointing to their own code
+// instead of the parent course name (e.g. ['AERODY1'] → ['PC-21 Ground School'])
+// This runs at startup and corrects any items created before the fix was deployed.
+async function migrateAcademicsCoursesField(db) {
+  try {
+    // Find all Academics-type items
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, courses
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics'
+        AND "isActive" = true
+    `);
+
+    console.log(`[migrateAcademicsCoursesField] Found ${rows.length} Academics items to check`);
+    if (rows.length > 0) {
+      // Log first few for diagnosis
+      rows.slice(0, 3).forEach(r => {
+        console.log(`  Sample: code="${r.code}", module="${r.module}", courses=${JSON.stringify(r.courses)}`);
+      });
+    }
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+    for (const row of rows) {
+      const courses = Array.isArray(row.courses)
+        ? row.courses
+        : (typeof row.courses === 'string' ? JSON.parse(row.courses) : []);
+      const moduleName = row.module || '';
+      
+      // Only fix if module is set and courses[] does NOT already contain the module name
+      if (moduleName && !courses.includes(moduleName)) {
+        // Use ARRAY[$1::text] to set a PostgreSQL TEXT[] with one element
+        await db.$executeRawUnsafe(
+          `UPDATE "SyllabusItem" SET "courses" = ARRAY[$1::text], "updatedAt" = NOW() WHERE "id" = $2`,
+          moduleName,
+          row.id
+        );
+        updatedCount++;
+      } else {
+        skippedCount++;
+      }
+    }
+
+    if (updatedCount > 0) {
+      console.log(`✅ migrateAcademicsCoursesField: fixed ${updatedCount} items, skipped ${skippedCount} (already correct)`);
+    } else {
+      console.log(`✅ migrateAcademicsCoursesField: all ${skippedCount} Academics items already have correct courses[] field`);
+    }
+  } catch (err) {
+    console.error('❌ migrateAcademicsCoursesField failed (non-fatal):', err.message);
   }
 }
 
@@ -482,6 +540,9 @@ app.get('/api/courses', async (req, res) => {
       armyStart: c.armyCount || 0,
       status: c.status || 'ACTIVE',
       location: c.location || '',
+      unit: c.unit || '',
+      lmpType: c.lmpType || '',
+      academicLmpType: c.academicLmpType || '',
       code: c.code || c.name,
     }));
     res.json({ courses: mapped });
@@ -495,7 +556,7 @@ app.get('/api/courses', async (req, res) => {
 app.post('/api/courses', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, status } = req.body;
+    const { name, color, startDate, gradDate, raafStart, navyStart, armyStart, location, unit, lmpType, academicLmpType, status } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const course = await db.course.upsert({
       where: { code: name },
@@ -507,6 +568,9 @@ app.post('/api/courses', async (req, res) => {
         navyCount: navyStart || 0,
         armyCount: armyStart || 0,
         location: location || '',
+        unit: unit || '',
+        lmpType: lmpType || '',
+        academicLmpType: academicLmpType || '',
         status: status || 'ACTIVE',
         updatedAt: new Date(),
       },
@@ -520,7 +584,9 @@ app.post('/api/courses', async (req, res) => {
         navyCount: navyStart || 0,
         armyCount: armyStart || 0,
         location: location || '',
-        unit: '',
+        unit: unit || '',
+        lmpType: lmpType || '',
+        academicLmpType: academicLmpType || '',
         status: status || 'ACTIVE',
       },
     });
@@ -1931,6 +1997,199 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
   }
 });
 
+// POST /api/trainees - Create a new trainee record
+app.post('/api/trainees', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      idNumber, name, fullName, rank, course, lmpType,
+      unit, flight, location, service, seatConfig, isPaused,
+      traineeCallsign, primaryInstructor, secondaryInstructor,
+      phoneNumber, email, permissions, unavailability
+    } = req.body;
+
+    if (!idNumber || !name) {
+      return res.status(400).json({ error: 'idNumber and name are required' });
+    }
+
+    // Check if trainee with this idNumber already exists
+    const existing = await db.trainee.findFirst({ where: { idNumber: Number(idNumber) } });
+    if (existing) {
+      // Update existing record instead
+      const updated = await db.trainee.update({
+        where: { id: existing.id },
+        data: {
+          name: name || existing.name,
+          fullName: fullName || name,
+          rank: rank || existing.rank,
+          course: course || existing.course,
+          lmpType: lmpType || existing.lmpType,
+          unit: unit !== undefined ? unit : existing.unit,
+          flight: flight !== undefined ? flight : existing.flight,
+          location: location !== undefined ? location : existing.location,
+          service: service || existing.service,
+          seatConfig: seatConfig || existing.seatConfig,
+          isPaused: isPaused !== undefined ? isPaused : existing.isPaused,
+          traineeCallsign: traineeCallsign !== undefined ? traineeCallsign : existing.traineeCallsign,
+          primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : existing.primaryInstructor),
+          secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : existing.secondaryInstructor),
+          phoneNumber: phoneNumber !== undefined ? phoneNumber : existing.phoneNumber,
+          email: email !== undefined ? email : existing.email,
+          permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : existing.permissions),
+          unavailability: unavailability || existing.unavailability,
+          isActive: true,
+        }
+      });
+      console.log(`✅ POST /api/trainees - updated existing: ${updated.name} (${updated.idNumber})`);
+      return res.json({ success: true, trainee: updated, action: 'updated' });
+    }
+
+    // Create new trainee
+    const created = await db.trainee.create({
+      data: {
+        idNumber: Number(idNumber),
+        name,
+        fullName: fullName || name,
+        rank: rank || 'FLGOFF',
+        course: course || '',
+        lmpType: lmpType || '',
+        unit: unit || '',
+        flight: flight || '',
+        location: location || '',
+        service: service || null,
+        seatConfig: seatConfig || 'Front',
+        isPaused: isPaused || false,
+        traineeCallsign: traineeCallsign || null,
+        primaryInstructor: Array.isArray(primaryInstructor) ? primaryInstructor : (primaryInstructor ? [primaryInstructor] : []),
+        secondaryInstructor: Array.isArray(secondaryInstructor) ? secondaryInstructor : (secondaryInstructor ? [secondaryInstructor] : []),
+        phoneNumber: phoneNumber || null,
+        email: email || null,
+        permissions: Array.isArray(permissions) ? permissions : (permissions ? [permissions] : []),
+        unavailability: unavailability || [],
+        isActive: true,
+      }
+    });
+
+    console.log(`✅ POST /api/trainees - created: ${created.name} (${created.idNumber})`);
+    res.status(201).json({ success: true, trainee: created, action: 'created' });
+  } catch (error) {
+    console.error('❌ POST /api/trainees error:', error);
+    res.status(500).json({ error: 'Failed to create trainee', details: error.message });
+  }
+});
+
+// POST /api/trainees/bulk - Bulk create or update trainees
+app.post('/api/trainees/bulk', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { trainees, course, replaceAll } = req.body;
+
+    console.log(`🔵 POST /api/trainees/bulk - received request body keys: ${Object.keys(req.body).join(', ')}`);
+    console.log(`🔵 POST /api/trainees/bulk - trainees type: ${typeof trainees}, isArray: ${Array.isArray(trainees)}, length: ${Array.isArray(trainees) ? trainees.length : 'N/A'}`);
+    console.log(`🔵 POST /api/trainees/bulk - course: ${course}, replaceAll: ${replaceAll}`);
+    if (Array.isArray(trainees) && trainees.length > 0) {
+      console.log(`🔵 POST /api/trainees/bulk - first trainee sample: ${JSON.stringify(trainees[0])}`);
+    }
+
+    if (!Array.isArray(trainees) || trainees.length === 0) {
+      console.error(`❌ POST /api/trainees/bulk - invalid trainees array`);
+      return res.status(400).json({ error: 'trainees array is required and must not be empty' });
+    }
+
+    console.log(`🔵 POST /api/trainees/bulk - processing ${trainees.length} trainees, course: ${course || 'all'}, replaceAll: ${replaceAll}`);
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+    const results = [];
+
+    // If replaceAll and course is specified, mark all existing trainees in that course as inactive first
+    if (replaceAll && course) {
+      await db.trainee.updateMany({
+        where: { course, isActive: true },
+        data: { isActive: false }
+      });
+      console.log(`🔵 Marked all existing ${course} trainees as inactive for replacement`);
+    }
+
+    for (const t of trainees) {
+      try {
+        if (!t.idNumber || !t.name) {
+          skippedCount++;
+          continue;
+        }
+
+        const idNum = Number(t.idNumber);
+        if (isNaN(idNum) || idNum <= 0) {
+          skippedCount++;
+          continue;
+        }
+
+        // Look for existing trainee by idNumber in this course (or any course if no course filter)
+        const whereClause = course 
+          ? { idNumber: idNum }
+          : { idNumber: idNum };
+        
+        const existing = await db.trainee.findFirst({ where: whereClause });
+
+        const traineeData = {
+          name: t.name,
+          fullName: t.fullName || t.name,
+          rank: t.rank || 'FLGOFF',
+          course: t.course || course || '',
+          lmpType: t.lmpType || '',
+          unit: t.unit || '',
+          flight: t.flight || '',
+          location: t.location || '',
+          service: t.service || null,
+          seatConfig: t.seatConfig || 'Front',
+          isPaused: t.isPaused || false,
+          traineeCallsign: t.traineeCallsign !== undefined ? String(t.traineeCallsign) : null,
+          primaryInstructor: Array.isArray(t.primaryInstructor) ? t.primaryInstructor : (t.primaryInstructor ? [t.primaryInstructor] : []),
+          secondaryInstructor: Array.isArray(t.secondaryInstructor) ? t.secondaryInstructor : (t.secondaryInstructor ? [t.secondaryInstructor] : []),
+          phoneNumber: t.phoneNumber || null,
+          email: t.email || null,
+          permissions: Array.isArray(t.permissions) ? t.permissions : (t.permissions ? [t.permissions] : []),
+          unavailability: t.unavailability || [],
+          isActive: true,
+        };
+
+        if (existing) {
+          await db.trainee.update({
+            where: { id: existing.id },
+            data: traineeData
+          });
+          updatedCount++;
+          results.push({ idNumber: idNum, name: t.name, action: 'updated' });
+        } else {
+          const created = await db.trainee.create({
+            data: { idNumber: idNum, ...traineeData }
+          });
+          createdCount++;
+          results.push({ idNumber: idNum, name: t.name, action: 'created', id: created.id });
+        }
+      } catch (rowError) {
+        console.error(`❌ Error processing trainee ${t.idNumber} - ${t.name}:`, rowError.message);
+        skippedCount++;
+        results.push({ idNumber: t.idNumber, name: t.name, action: 'error', error: rowError.message });
+      }
+    }
+
+    console.log(`✅ POST /api/trainees/bulk complete - created: ${createdCount}, updated: ${updatedCount}, skipped: ${skippedCount}`);
+    res.json({
+      success: true,
+      created: createdCount,
+      updated: updatedCount,
+      skipped: skippedCount,
+      total: trainees.length,
+      results
+    });
+  } catch (error) {
+    console.error('❌ POST /api/trainees/bulk error:', error);
+    res.status(500).json({ error: 'Failed to bulk update trainees', details: error.message });
+  }
+});
+
 // PATCH /api/trainees/:id - Update a trainee record
 app.patch('/api/trainees/:id', async (req, res) => {
   try {
@@ -2449,7 +2708,7 @@ app.post('/api/merge-burns-accounts', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v2-academic-fix' });
 });
 
 // GET /api/version - returns the active git commit hash from Railway environment
@@ -2535,6 +2794,69 @@ app.get('/api/debug/snapshots', async (req, res) => {
       ORDER BY date DESC
     `);
     res.json({ count: rows.length, snapshots: rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/admin/fix-academics-courses - Manually trigger the Academics courses[] migration
+// GET /api/admin/fix-academics-courses?secret=dfp-fix-2026 - same but via GET for easy browser use
+app.get('/api/admin/fix-academics-courses', async (req, res) => {
+  if (req.query.secret !== 'dfp-fix-2026') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, courses
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics' AND "isActive" = true
+    `);
+    let fixed = 0;
+    let alreadyCorrect = 0;
+    const details = [];
+    for (const row of rows) {
+      const courses = Array.isArray(row.courses) ? row.courses : [];
+      const moduleName = row.module || '';
+      if (moduleName && !courses.includes(moduleName)) {
+        await db.$executeRawUnsafe(
+          `UPDATE "SyllabusItem" SET "courses" = ARRAY[$1::text], "updatedAt" = NOW() WHERE "id" = $2`,
+          moduleName, row.id
+        );
+        details.push({ code: row.code, from: courses, to: [moduleName] });
+        fixed++;
+      } else {
+        alreadyCorrect++;
+      }
+    }
+    res.json({ success: true, total: rows.length, fixed, alreadyCorrect, details });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/debug/academics - Diagnostic: show all Academics-type syllabus items and their courses[] field
+app.get('/api/debug/academics', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(`
+      SELECT id, code, module, type, courses, "isActive"
+      FROM "SyllabusItem"
+      WHERE "type" = 'Academics'
+      ORDER BY "sortOrder" ASC
+      LIMIT 20
+    `);
+    res.json({
+      count: rows.length,
+      items: rows.map(r => ({
+        id: r.id,
+        code: r.code,
+        module: r.module,
+        type: r.type,
+        courses: r.courses,
+        isActive: r.isActive,
+      }))
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -3249,6 +3571,39 @@ async function ensureCourseSettingsTables(db) {
     console.log('✅ CourseAcademicProgress table ready');
   } catch (err) {
     console.error('❌ Failed to ensure CourseSettings tables:', err.message);
+  }
+}
+
+async function ensureCourseLmpTypeColumn(db) {
+  try {
+    // Add lmpType column to Course table if it doesn't exist (migration for existing DBs)
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "lmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Course.lmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course.lmpType column:', err.message);
+  }
+}
+
+async function ensureAcademicLmpTypeColumns(db) {
+  try {
+    // Add academicLmpType column to Trainee table if it doesn't exist
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Trainee" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Trainee.academicLmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Trainee.academicLmpType column:', err.message);
+  }
+  try {
+    // Add academicLmpType column to Course table if it doesn't exist
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "Course" ADD COLUMN IF NOT EXISTS "academicLmpType" TEXT NOT NULL DEFAULT '';
+    `);
+    console.log('✅ Course.academicLmpType column ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure Course.academicLmpType column:', err.message);
   }
 }
 

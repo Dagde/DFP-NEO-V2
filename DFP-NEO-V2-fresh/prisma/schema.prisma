@@ -169,6 +169,7 @@ model Trainee {
   service             String?
   course              String?
   lmpType             String?   @default("BPC+IPC")
+  academicLmpType     String?   @default("")
   traineeCallsign     String?
   seatConfig          String?
   isPaused            Boolean   @default(false)
@@ -249,6 +250,8 @@ model Course {
   armyCount     Int?
   location      String
   unit          String
+  lmpType       String?
+  academicLmpType String?
   status        String   @default("ACTIVE")
   color         String?
   createdAt     DateTime @default(now())

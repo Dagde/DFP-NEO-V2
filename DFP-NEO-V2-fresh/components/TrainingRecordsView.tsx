@@ -14,6 +14,7 @@ interface TrainingRecordsViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
+    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
     traineesData: Trainee[];
     instructorsData: Instructor[];
     archivedTraineesData: Trainee[];
@@ -24,6 +25,8 @@ interface TrainingRecordsViewProps {
     syllabusDetails: SyllabusItemDetail[];
     pt051Assessments: Map<string, Pt051Assessment>;
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
+    locations?: string[];
+    units?: string[];
 }
 
 type TabType = 'courses' | 'export';
@@ -37,6 +40,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
     onUpdateCourseDates,
+    onUpdateCourse,
     traineesData,
     instructorsData,
     archivedTraineesData,
@@ -46,7 +50,9 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     publishedSchedules,
     syllabusDetails,
     pt051Assessments,
-    onSavePT051Assessment
+    onSavePT051Assessment,
+    locations = [],
+    units = [],
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
@@ -99,6 +105,10 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         onNavigateToCourseRoster={onNavigateToCourseRoster}
                         onNavigateToArchivedCourses={onNavigateToArchivedCourses}
                         onUpdateCourseDates={onUpdateCourseDates}
+                        onUpdateCourse={onUpdateCourse}
+                        locations={locations}
+                        units={units}
+                        syllabusDetails={syllabusDetails}
                     />
                 )}
                 {activeTab === 'export' && (

@@ -1292,7 +1292,8 @@ const syllabusItems: SyllabusItemDetail[] = [
     createSyllabusItem('B CAT 2', 'B Categorisation 2', ['Staff CAT']),
     createSyllabusItem('B CAT 3', 'B Categorisation 3', ['Staff CAT']),
     createSyllabusItem('B CAT 4', 'B Categorisation 4', ['Staff CAT']),
-];
+
+    ];
 
 const populatePrerequisites = (syllabus: SyllabusItemDetail[]): SyllabusItemDetail[] => {
     return syllabus.map((item, index, arr) => {

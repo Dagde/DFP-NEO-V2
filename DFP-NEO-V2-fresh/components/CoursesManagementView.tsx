@@ -1,6 +1,6 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useMemo } from 'react';
-import { Course } from '../types';
+import { Course, SyllabusItemDetail } from '../types';
 import AddCourseFlyout, { NewCourseData } from './AddCourseFlyout';
 import EditCourseFlyout from './EditCourseFlyout';
 import { showDarkConfirm } from './DarkMessageModal';
@@ -14,6 +14,10 @@ interface CoursesManagementViewProps {
     onNavigateToCourseRoster: (courseName: string) => void;
     onNavigateToArchivedCourses: () => void;
     onUpdateCourseDates: (courseName: string, startDate: string, gradDate: string) => void;
+    onUpdateCourse?: (courseName: string, data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => void;
+    locations?: string[];
+    units?: string[];
+    syllabusDetails?: SyllabusItemDetail[];
 }
 
 const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
@@ -24,7 +28,11 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     onDeleteCourse,
     onNavigateToCourseRoster,
     onNavigateToArchivedCourses,
-    onUpdateCourseDates
+    onUpdateCourseDates,
+    onUpdateCourse,
+    locations = [],
+    units = [],
+    syllabusDetails = [],
 }) => {
     const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
     const { isFrozen } = useSystemFreeze();
@@ -91,6 +99,17 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
     const handleUpdateCourseDates = (startDate: string, gradDate: string) => {
         if (courseToEdit) {
             onUpdateCourseDates(courseToEdit.name, startDate, gradDate);
+        }
+    };
+
+    const handleUpdateCourse = (data: { startDate: string; gradDate: string; location: string; unit: string; lmpType: string; academicLmpType: string }) => {
+        if (courseToEdit) {
+            if (onUpdateCourse) {
+                onUpdateCourse(courseToEdit.name, data);
+            } else {
+                // Fallback: at minimum update dates
+                onUpdateCourseDates(courseToEdit.name, data.startDate, data.gradDate);
+            }
         }
     };
 
@@ -273,6 +292,8 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                         setShowAddCourseFlyout(false);
                     }}
                     existingCourses={courseColors}
+                    locations={locations}
+                    units={units}
                 />
             )}
 
@@ -282,11 +303,18 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                     courseName={courseToEdit.name}
                     startDate={courseToEdit.startDate}
                     gradDate={courseToEdit.gradDate}
+                    location={courseToEdit.location || ''}
+                    unit={courseToEdit.unit || ''}
+                    lmpType={courseToEdit.lmpType || 'BPC+IPC'}
+                    academicLmpType={(courseToEdit as any).academicLmpType || ''}
+                    locations={locations}
+                    units={units}
+                    syllabusDetails={syllabusDetails}
                     onClose={() => {
                         setShowEditFlyout(false);
                         setCourseToEdit(null);
                     }}
-                    onSave={handleUpdateCourseDates}
+                    onSave={handleUpdateCourse}
                 />
             )}
 

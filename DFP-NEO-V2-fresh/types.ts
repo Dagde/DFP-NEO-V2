@@ -57,6 +57,11 @@ export interface Course {
   raafStart: number;
   navyStart: number;
   armyStart: number;
+  location?: string;
+  unit?: string;
+  lmpType?: string;         // determines which syllabus events populate the Individual LMP (NEO Build)
+  academicLmpType?: string; // determines which Academics events populate the Academic LMP tab
+  status?: string;
 }
 
 export type InstructorRank = 'WGCDR' | 'SQNLDR' | 'FLTLT' | 'FLGOFF' | 'PLTOFF' | 'Mr';
@@ -273,6 +278,7 @@ export interface Trainee {
   primaryInstructor?: string | string[];
   secondaryInstructor?: string | string[];
   lmpType?: string;
+  academicLmpType?: string; // Academic LMP tab assignment
   
      traineeCallsign?: string;
   permissions?: string[];

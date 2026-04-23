@@ -538,7 +538,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
               
               if (showValidation) {
                 const traineeEventsForBars = events
-                  .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee))
+                  .filter(e => e.student === trainee || (e.flightType === 'Solo' && e.pilot === trainee) || (e.isAcademic && Array.isArray(e.attendees) && e.attendees.includes(trainee)))
                   .sort((a, b) => a.startTime - b.startTime);
                 
                 for (let i = 0; i < traineeEventsForBars.length; i++) {
@@ -603,7 +603,8 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
               
               const traineeEvents = eventsWithUnavailability.filter(event => 
                 event.student === trainee || 
-                (event.flightType === 'Solo' && event.pilot === trainee)
+                (event.flightType === 'Solo' && event.pilot === trainee) ||
+                (event.isAcademic && Array.isArray(event.attendees) && event.attendees.includes(trainee))
               ).sort((a, b) => a.startTime - b.startTime);
               
               const eventTiles = traineeEvents.map(event => {
@@ -632,6 +633,22 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                     event={event}
                     traineesData={traineesData}
                     onSelectEvent={() => { if (!didDragRef.current) onSelectEvent(event); }}
+                    onSelectAcademicTile={(tile) => {
+                        if (didDragRef.current) return;
+                        // Build a synthetic event for the clicked inset tile
+                        const syntheticEvent = {
+                            ...event,
+                            flightNumber: tile.lessonCode,
+                            startTime: tile.startTime,
+                            duration: tile.duration,
+                            notes: tile.label && tile.label !== tile.lessonCode
+                                ? tile.label.replace(new RegExp('^' + tile.lessonCode + '[\s:\u2014-]*'), '').trim()
+                                : '',
+                            _academicTileClick: true,
+                            _parentAcademicEvent: event,
+                        } as any;
+                        onSelectEvent(syntheticEvent);
+                    }}
                     onMouseDown={(e) => handleMouseDown(e, event)}
                     onMouseEnter={() => setHoveredEventId(event.id)}
                     onMouseLeave={() => setHoveredEventId(null)}

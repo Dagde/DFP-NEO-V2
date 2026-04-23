@@ -11,6 +11,7 @@ interface PeopleProfilePageProps {
     onUpdateExcludedCourses: (courses: string[]) => void;
     onShowSuccess: (msg: string) => void;
     currentUserPermission: string;
+    courseColors?: { [key: string]: string };
 }
 
 const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
@@ -23,6 +24,7 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
     onUpdateExcludedCourses,
     onShowSuccess,
     currentUserPermission,
+    courseColors = {},
 }) => {
     const [pendingCourse, setPendingCourse] = useState<string>(neoBuildCourse);
 
@@ -46,16 +48,22 @@ const PeopleProfilePage: React.FC<PeopleProfilePageProps> = ({
         return Array.from(lmpTypeSet).sort();
     }, [syllabusDetails]);
 
-    // Derive unique active courses from trainees data
+    // Derive unique active courses from BOTH traineesData AND courseColors
+    // This ensures newly created courses (without trainees yet) appear in the exclusion list
     const availableCourses = useMemo(() => {
         const courseSet = new Set<string>();
+        // From trainee data
         traineesData.forEach(t => {
             if (t.course && t.course.trim()) {
                 courseSet.add(t.course.trim());
             }
         });
+        // From registered course colours (includes new courses with no trainees yet)
+        Object.keys(courseColors).forEach(c => {
+            if (c && c.trim()) courseSet.add(c.trim());
+        });
         return Array.from(courseSet).sort();
-    }, [traineesData]);
+    }, [traineesData, courseColors]);
 
     // Count trainees per course
     const courseTraineeCounts = useMemo(() => {

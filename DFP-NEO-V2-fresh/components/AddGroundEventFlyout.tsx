@@ -20,6 +20,11 @@ interface AddGroundEventFlyoutProps {
   date?: string;
   courseColors?: { [key: string]: string };
   school?: 'ESL' | 'PEA';
+  locationAbbreviations?: Record<string, string>; // long name -> short code
+  courseAcademicProgress?: Map<string, Set<string>>;
+  onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
+  persistedAcademicLmp?: string;
+  onUpdatePersistedAcademicLmp?: (lmp: string) => void;
 }
 
 type TabKey = 'ground' | 'academics';
@@ -40,6 +45,11 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     date,
     courseColors,
     school,
+    locationAbbreviations,
+    courseAcademicProgress,
+    onUpdateCourseAcademicProgress,
+    persistedAcademicLmp,
+    onUpdatePersistedAcademicLmp,
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('ground');
 
@@ -353,13 +363,35 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
                                 date={date || new Date().toISOString().split('T')[0]}
                                 courseColors={courseColors || activeCourses}
                                 school={school || 'ESL'}
+                                locationAbbreviations={locationAbbreviations}
                                 defaultLocality={(school || 'ESL') === 'ESL' ? 'East Sale' : 'Pearce'}
+                                courseAcademicProgress={courseAcademicProgress}
+                                onUpdateCourseAcademicProgress={onUpdateCourseAcademicProgress}
+                                persistedAcademicLmp={persistedAcademicLmp}
+                                onUpdatePersistedAcademicLmp={onUpdatePersistedAcademicLmp}
+                                instructors={instructors}
                                 onSave={(data) => {
-                                    if (onSaveAcademic) onSaveAcademic(data);
-                                    else onSave(data);
+                                    console.log('🎓 [AddGroundEventFlyout] AcademicsTab onSave triggered');
+                                    console.log('🎓 [AddGroundEventFlyout] onSaveAcademic prop exists?', typeof onSaveAcademic);
+                                    console.log('🎓 [AddGroundEventFlyout] data passed up:', {
+                                        course: data.course,
+                                        date: data.date,
+                                        workStart: data.workStart,
+                                        workEnd: data.workEnd,
+                                        resourceId: data.resourceId,
+                                        selectedTrainees: data.selectedTrainees,
+                                        tilesCount: data.timeline?.length,
+                                        lessonsCount: data.lessons?.length,
+                                    });
+                                    if (onSaveAcademic) {
+                                        console.log('🎓 [AddGroundEventFlyout] → calling onSaveAcademic');
+                                        onSaveAcademic(data);
+                                    } else {
+                                        console.warn('🎓 [AddGroundEventFlyout] ⚠️ onSaveAcademic not provided, falling back to onSave');
+                                        onSave(data);
+                                    }
                                 }}
                                 onClose={onClose}
-                                instructors={instructorsData?.map(i => i.fullName) || []}
                             />
                         )}
                     </div>
