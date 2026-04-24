@@ -26,6 +26,7 @@ interface HeaderProps {
     onLogout?: () => void;
     onShowAdminPanel?: () => void;
     onShowChangePassword?: () => void;
+       onPauseFlightOps?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -50,6 +51,7 @@ const Header: React.FC<HeaderProps> = ({
     onLogout,
     onShowAdminPanel,
     onShowChangePassword,
+          onPauseFlightOps,
 }) => {
     const [showAuditFlyout, setShowAuditFlyout] = useState(false);
     const [showUserMenu, setShowUserMenu] = useState(false);
@@ -175,7 +177,18 @@ const Header: React.FC<HeaderProps> = ({
                             </button>
                         )}
 
-                        {/* 7. Add Ground Tile Button */}
+                        {/* Pause Flight Ops Button */}
+                           {onPauseFlightOps && (
+                               <button
+                                   onClick={onPauseFlightOps}
+                                   className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                   title="Pause Flight Ops"
+                               >
+                                   <span className="text-center leading-tight">Pause<br/>Flight Ops</span>
+                               </button>
+                           )}
+
+                           {/* 7. Add Ground Tile Button */}
                         <button 
                             onClick={onAddGroundEvent}
                             className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
@@ -252,6 +265,7 @@ const Header: React.FC<HeaderProps> = ({
                     </div>
                     <button
                         onClick={() => { setShowUserMenu(false); onShowChangePassword?.(); }}
+       onPauseFlightOps?: () => void;
                         className="w-full px-3 py-2 text-left text-xs text-gray-300 hover:bg-gray-700/50 flex items-center gap-2"
                     >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

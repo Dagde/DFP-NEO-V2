@@ -17,6 +17,7 @@ import LogbookView from './components/LogbookView';
 import { AlgoContext } from './components/App';
 import CurrencyBuilderView from './components/CurrencyBuilderView';
 import DarkMessageModal from './components/DarkMessageModal';
+import PauseFlightOpsModal, { PauseBuildConfig } from './components/PauseFlightOpsModal';
 import SystemFreezeBanner from './components/SystemFreezeBanner';
 import DataLoadingMonitor from './components/DataLoadingMonitor';
 
@@ -4204,6 +4205,7 @@ const App: React.FC = () => {
     const [authLoading, setAuthLoading] = useState<boolean>(true);
     const [showChangePassword, setShowChangePassword] = useState<boolean>(false);
     const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
+    const [showPauseModal, setShowPauseModal] = useState<boolean>(false);
 
     // Fetch the logged-in user's military rank from Personnel table and update audit logger
     const fetchAndSetAuditUser = async (firstName: string | null, lastName: string | null, displayName?: string) => {
@@ -13162,7 +13164,49 @@ updates.forEach(update => {
              setSuccessMessage(`Navigated to Trainee Profile: ${user.name}`);
        }
     };
-    return (
+// Pause Flight Ops Handlers
+    const handlePauseFlightOps = () => {
+        setShowPauseModal(true);
+    };
+
+    const handlePublishPauseUpdate = (updatedEvents: ScheduleEvent[]) => {
+        setPublishedSchedules(prev => {
+            const dateKey = buildDfpDate;
+            return {
+                ...prev,
+                [dateKey]: updatedEvents
+            };
+        });
+    };
+
+    const handleBuildPause = async (config: PauseBuildConfig): Promise<ScheduleEvent[]> => {
+        console.log('[Pause Flight Ops] Building pause schedule:', config);
+        
+        const activeEvents = config.existingEvents.filter(e => 
+            !e.isCancelled && 
+            (e.startTime + e.duration) <= config.pauseStart ||
+            (e.startTime >= config.pauseEnd)
+        );
+        
+        const cancelledEvents = config.existingEvents.filter(e => {
+            const isImpacted = config.affectedTypes.includes(e.type as any);
+            const isInPauseWindow = e.startTime < config.pauseEnd && (e.startTime + e.duration) > config.pauseStart;
+            const isCompleted = config.completedEventIds.has(e.id);
+            return isImpacted && isInPauseWindow && !isCompleted && !e.isCancelled;
+        }).map(e => ({
+            ...e,
+            isCancelled: true,
+            cancellationCode: 'OPS_PAUSE',
+            cancelledBy: authUser?.displayName || 'System',
+            cancelledAt: new Date().toISOString()
+        }));
+        
+        const postPauseEvents = config.existingEvents.filter(e => 
+            !e.isCancelled && e.startTime >= config.pauseEnd
+        );
+        
+        return [...activeEvents, ...cancelledEvents, ...postPauseEvents];
+    };    return (
     <>
         <SystemFreezeBanner />
         <DataLoadingMonitor 
@@ -13231,6 +13275,7 @@ updates.forEach(update => {
                        onLogout={handleLogout}
                        onShowAdminPanel={() => setShowAdminPanel(true)}
                        onShowChangePassword={() => setShowChangePassword(true)}
+                          onPauseFlightOps={handlePauseFlightOps}
                 />}
                 <div className="flex-1 overflow-hidden flex flex-col min-h-0">
                 {renderActiveView()}
@@ -13685,6 +13730,22 @@ updates.forEach(update => {
                     onCancel={authUser.mustChangePassword ? undefined : () => setShowChangePassword(false)}
                 />
             )}
+               {/* Pause Flight Ops Modal */}
+               {showPauseModal && (
+                   <PauseFlightOpsModal
+                       isOpen={showPauseModal}
+                       onClose={() => setShowPauseModal(false)}
+                       date={buildDfpDate}
+                       eventsForDate={publishedSchedules[buildDfpDate] || []}
+                       flyingStartTime={flyingStartTime}
+                       flyingEndTime={flyingEndTime}
+                       ftdStartTime={ftdStartTime}
+                       ftdEndTime={ftdEndTime}
+                       onPublish={handlePublishPauseUpdate}
+                       onBuildPause={handleBuildPause}
+                       authUser={authUser ? { userId: authUser.userId, displayName: authUser.displayName || authUser.name } : null}
+                   />
+               )}
 
             {/* Admin Panel */}
             {showAdminPanel && authUser && (
