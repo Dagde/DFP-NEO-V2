@@ -85,12 +85,13 @@ final class APIService {
     }
 
     func post<T: Decodable, B: Encodable>(endpoint: String, body: B, authenticated: Bool = true) async throws -> T {
+        let data: Data
         do {
-            let data = try encoder.encode(body)
-            return try await request(endpoint: endpoint, method: .POST, body: data, authenticated: authenticated)
+            data = try encoder.encode(body)
         } catch {
             throw APIServiceError.encodingFailed
         }
+        return try await request(endpoint: endpoint, method: .POST, body: data, authenticated: authenticated)
     }
 
     // MARK: - Core request (401 refresh retry)

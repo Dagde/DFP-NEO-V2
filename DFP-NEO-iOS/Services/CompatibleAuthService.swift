@@ -18,13 +18,18 @@ class AuthService {
             throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"])
         }
         
-        // Handle both success and error responses
         if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
             do {
-                // Try new format first
+                // Try new format first: { success, message, data: { accessToken, refreshToken, user } }
                 let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
                 
                 if let loginData = loginResponse.loginData {
+                    // ✅ CRITICAL: Store tokens in APIService so ScheduleViewModel & UnavailabilityViewModel work
+                    APIService.shared.setTokens(access: loginData.accessToken, refresh: loginData.refreshToken)
+                    APIService.shared.setUserId(loginData.user.userId)
+                    print("✅ [AuthService] Tokens stored in APIService after login")
+                    print("   - userId: \(loginData.user.userId)")
+                    print("   - accessToken prefix: \(String(loginData.accessToken.prefix(20)))")
                     return loginData
                 } else {
                     throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No login data in response"])
@@ -32,8 +37,16 @@ class AuthService {
             } catch {
                 // Fallback: try parsing as direct LoginData (old simple format)
                 do {
-                    return try JSONDecoder().decode(LoginData.self, from: data)
+                    let loginData = try JSONDecoder().decode(LoginData.self, from: data)
+                    // ✅ CRITICAL: Store tokens in APIService
+                    APIService.shared.setTokens(access: loginData.accessToken, refresh: loginData.refreshToken)
+                    APIService.shared.setUserId(loginData.user.userId)
+                    print("✅ [AuthService] Tokens stored in APIService (fallback format)")
+                    return loginData
                 } catch {
+                    let rawBody = String(data: data, encoding: .utf8) ?? "(unreadable)"
+                    print("❌ [AuthService] Failed to parse login response: \(error)")
+                    print("❌ [AuthService] Raw response: \(rawBody)")
                     throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to parse response: \(error.localizedDescription)"])
                 }
             }
@@ -41,8 +54,8 @@ class AuthService {
             // Handle error responses
             let errorMessage: String
             if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                errorMessage = errorResponse["error"] as? String ?? 
-                             errorResponse["message"] as? String ?? 
+                errorMessage = errorResponse["error"] as? String ??
+                             errorResponse["message"] as? String ??
                              "Login failed"
             } else {
                 errorMessage = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
@@ -74,13 +87,17 @@ class AuthService {
                 let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
                 
                 if let loginData = loginResponse.loginData {
+                    // ✅ Update tokens in APIService
+                    APIService.shared.setTokens(access: loginData.accessToken, refresh: loginData.refreshToken)
                     return loginData
                 } else {
                     throw NSError(domain: "AuthService", code: -1, userInfo: [NSLocalizedDescriptionKey: "No login data in response"])
                 }
             } catch {
                 // Fallback parsing
-                return try JSONDecoder().decode(LoginData.self, from: data)
+                let loginData = try JSONDecoder().decode(LoginData.self, from: data)
+                APIService.shared.setTokens(access: loginData.accessToken, refresh: loginData.refreshToken)
+                return loginData
             }
         } else {
             let errorMessage: String
