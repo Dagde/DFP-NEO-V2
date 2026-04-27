@@ -6889,22 +6889,6 @@ app.post('/api/event-completions', async (req, res) => {
   }
 });
 
-// Fallback: serve index-v2.html for all non-API routes
-app.get('*', (req, res) => {
-  const indexPath = path.join(staticPath, 'index-v2.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(404).send('Not found');
-  }
-});
-
-// ============================================================
-// START SERVER
-// ============================================================
-
-
-// ============================================================
 // MOBILE API ENDPOINTS
 // ============================================================
 
@@ -7214,6 +7198,21 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
  
 
 
+app.get('*', (req, res) => {
+  const indexPath = path.join(staticPath, 'index-v2.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Not found');
+  }
+});
+
+// ============================================================
+// START SERVER
+// ============================================================
+
+
+// ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 DFP-NEO V2 Server running on port ${PORT} [theme-system-v1 build:${new Date().toISOString()}]`);
   console.log(`📊 Database URL: ${process.env.DATABASE_URL ? 'SET' : 'NOT SET'}`);
