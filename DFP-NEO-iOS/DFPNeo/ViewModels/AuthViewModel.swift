@@ -19,13 +19,9 @@ class AuthViewModel: ObservableObject {
 
     private let authService = AuthService.shared
     private let biometricService = BiometricService.shared
-    private var sessionTimer: Timer?
-    private let sessionTimeout: TimeInterval = 180 // 3 minutes
-    private var lastActivityTime = Date()
 
     init() {
         checkExistingSession()
-        setupSessionMonitoring()
     }
 
     // MARK: - Authentication
@@ -38,15 +34,9 @@ class AuthViewModel: ObservableObject {
             let response = try await authService.login(userId: userId, password: password)
             currentUser = response.effectiveUser
             isAuthenticated = true
+            isSessionLocked = false
 
             print("✅ Login successful for user: \(response.effectiveUser?.effectiveDisplayName ?? userId)")
-
-            // Prompt for biometric setup after first successful login
-            if biometricService.isBiometricAvailable && !biometricsEnabled {
-                await promptBiometricSetup()
-            }
-
-            resetActivityTimer()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -63,22 +53,10 @@ class AuthViewModel: ObservableObject {
         isSessionLocked = false
         currentUser = nil
         biometricsEnabled = false
-        sessionTimer?.invalidate()
+        UserDefaults.standard.set(false, forKey: "biometricsEnabled")
     }
 
-    // MARK: - Biometric Authentication
-
-    func promptBiometricSetup() async {
-        let biometricType = biometricService.biometricType
-
-        switch biometricType {
-        case .faceID, .touchID:
-            biometricsEnabled = true
-            UserDefaults.standard.set(true, forKey: "biometricsEnabled")
-        case .none:
-            return
-        }
-    }
+    // MARK: - Biometric Authentication (disabled - was causing session lock loop)
 
     func unlockWithBiometrics() async {
         do {
@@ -89,7 +67,6 @@ class AuthViewModel: ObservableObject {
             if success {
                 _ = try await authService.refreshToken()
                 isSessionLocked = false
-                resetActivityTimer()
             }
         } catch {
             errorMessage = error.localizedDescription
@@ -99,9 +76,7 @@ class AuthViewModel: ObservableObject {
     // MARK: - Session Management
 
     func lockSession() {
-        if isAuthenticated && biometricsEnabled {
-            isSessionLocked = true
-        }
+        // Biometric session locking disabled - was causing "No refresh token" loop
     }
 
     func checkSessionValidity() {
@@ -112,45 +87,28 @@ class AuthViewModel: ObservableObject {
                     logout()
                 }
             } catch {
-                lockSession()
+                // Don't lock on error - just continue
+                print("⚠️ Session validity check failed: \(error.localizedDescription)")
             }
         }
     }
 
     func resetActivityTimer() {
-        lastActivityTime = Date()
+        // No-op - session timeout disabled
     }
 
     private func checkExistingSession() {
+        // Clear any stale biometrics flag that could cause lock loop
+        UserDefaults.standard.set(false, forKey: "biometricsEnabled")
+        biometricsEnabled = false
+
         if authService.isAuthenticated() {
             isAuthenticated = true
-            biometricsEnabled = UserDefaults.standard.bool(forKey: "biometricsEnabled")
-
-            if biometricsEnabled {
-                isSessionLocked = true
-            }
+            isSessionLocked = false
 
             Task {
                 checkSessionValidity()
             }
         }
-    }
-
-    private func setupSessionMonitoring() {
-        sessionTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                let timeSinceLastActivity = Date().timeIntervalSince(self.lastActivityTime)
-
-                if timeSinceLastActivity > self.sessionTimeout && self.isAuthenticated && !self.isSessionLocked {
-                    self.lockSession()
-                }
-            }
-        }
-    }
-
-    deinit {
-        sessionTimer?.invalidate()
     }
 }
