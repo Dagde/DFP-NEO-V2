@@ -7289,11 +7289,19 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
 
       if (snapRows && snapRows.length > 0) {
         const snap = snapRows[0];
-        const allSnapshotEvents = [
+        // Combine all event arrays and deduplicate by id
+        const allSnapshotEventsRaw = [
           ...(Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []),
-          ...(Array.isArray(snap.traineeEvents) ? snap.traineeEvents : []),
-          ...(Array.isArray(snap.staffEvents) ? snap.staffEvents : [])
+          ...(Array.isArray(snap.staffEvents) ? snap.staffEvents : []),
+          ...(Array.isArray(snap.traineeEvents) ? snap.traineeEvents : [])
         ];
+        const seenIds = new Set();
+        const allSnapshotEvents = allSnapshotEventsRaw.filter(e => {
+          const eid = e.id || e.eventId;
+          if (eid && seenIds.has(eid)) return false;
+          if (eid) seenIds.add(eid);
+          return true;
+        });
 
         // Filter events for this user by name or traineeId matching userId
         // Match by "First Last", "Last, First", or traineeId
