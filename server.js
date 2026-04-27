@@ -7094,97 +7094,198 @@ function formatTime(timeValue) {
 app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   try {
     const db = await getPrisma();
-    const userId = req.userId;
+    const jwtUserId = req.userId; // This is the human-readable userId (e.g. "alexander.burns")
     const { date, startDate, endDate } = req.query;
 
-    console.log("📅 Fetching schedule for userId=" + userId + ", params: " + JSON.stringify(req.query));
+    console.log("📅 Fetching schedule for jwtUserId=" + jwtUserId + ", params: " + JSON.stringify(req.query));
 
-    // Support single date query (iOS format) and date range query
-    let query = `SELECT id, "userId", date, "isPublished", "serverTime", data FROM "Schedule" WHERE "userId" = $1`;
-    let params = [userId];
+    // Step 1: Look up the User record by userId to get the DB id (cuid)
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
+      jwtUserId
+    );
 
-    // Handle single date parameter (iOS app format)
+    if (!users || users.length === 0) {
+      console.log("❌ No user found for jwtUserId=" + jwtUserId);
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    const dbUser = users[0];
+    const dbUserId = dbUser.id; // cuid - used as FK in Schedule table
+    const userFullName = ((dbUser.firstName || '') + ' ' + (dbUser.lastName || '')).trim();
+
+    console.log("👤 Resolved user: dbId=" + dbUserId + ", name=" + userFullName);
+
+    // Step 2: Build schedule query using real columns (no isPublished/serverTime)
+    let scheduleWhere = { userId: dbUserId };
     if (date) {
-      query += ` AND date = $2`;
-      params.push(date);
-    } else {
-      // Handle date range parameters
-      if (startDate) {
-        query += ` AND date >= $${params.length + 1}`;
-        params.push(startDate);
-      }
-
-      if (endDate) {
-        query += ` AND date <= $${params.length + 1}`;
-        params.push(endDate);
-      }
+      scheduleWhere.date = date;
+    } else if (startDate || endDate) {
+      scheduleWhere.date = {};
+      if (startDate) scheduleWhere.date.gte = startDate;
+      if (endDate) scheduleWhere.date.lte = endDate;
     }
 
-    query += ` ORDER BY date ASC`;
-
-    const schedules = await db.$queryRawUnsafe(query, ...params);
-
-    if (!schedules || schedules.length === 0) {
-      console.log("❌ No schedule found for userId=" + userId);
-      return res.json({
-        schedule: null,
-        message: date ? "Schedule not published for this date" : "No schedules found"
-      });
-    }
-
-    // Get events for all schedules
-    const scheduleIds = schedules.map(s => s.id);
-    const eventsQuery = `SELECT "scheduleId", id, "startTime", "endTime", "eventType", location, role, status, notes, aircraft, instructor FROM "ScheduleEvent" WHERE "scheduleId" = ANY($1) ORDER BY "scheduleId", "startTime" ASC`;
-    
-    const allEvents = await db.$queryRawUnsafe(eventsQuery, scheduleIds);
-
-    // Group events by scheduleId
-    const eventsBySchedule = {};
-    allEvents.forEach(event => {
-      if (!eventsBySchedule[event.scheduleId]) {
-        eventsBySchedule[event.scheduleId] = [];
-      }
-      eventsBySchedule[event.scheduleId].push({
-        id: String(event.id),
-        startTime: formatTime(event.startTime),
-        endTime: formatTime(event.endTime),
-        eventType: event.eventType || "Other",
-        location: event.location,
-        role: event.role,
-        status: event.status || "Tentative",
-        notes: event.notes,
-        aircraft: event.aircraft,
-        instructor: event.instructor
-      });
+    const schedules = await db.schedule.findMany({
+      where: scheduleWhere,
+      orderBy: { date: 'asc' }
     });
 
-    // Transform schedules to match iOS expected format
-    const transformedSchedules = schedules.map(schedule => {
-      const events = eventsBySchedule[schedule.id] || [];
-      
-      return {
-        id: String(schedule.id),
-        date: schedule.date,
-        isPublished: schedule.isPublished,
-        events: events,
-        serverTime: schedule.serverTime
-      };
-    });
-
-    // If single date was requested, return single schedule object (iOS format)
-    if (date && transformedSchedules.length > 0) {
-      console.log("✅ GET /api/mobile/schedule successful for userId=" + userId + " - Single date: " + date + ", events: " + transformedSchedules[0].events.length);
-      return res.json({
-        schedule: transformedSchedules[0]
-      });
+    // Helper: convert decimal hours (e.g. 9.5) or HH:MM string to "HH:MM"
+    function toHHMM(val) {
+      if (!val && val !== 0) return "00:00";
+      if (typeof val === 'string' && /^\d{2}:\d{2}/.test(val)) return val.substring(0, 5);
+      const num = parseFloat(val);
+      if (isNaN(num)) return "00:00";
+      const h = Math.floor(num);
+      const m = Math.round((num - h) * 60);
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
     }
 
-    console.log("✅ GET /api/mobile/schedule successful for userId=" + userId + " - Found " + transformedSchedules.length + " schedules");
+    // Helper: map event type string to iOS EventType enum values
+    function mapEventType(type) {
+      if (!type) return "Other";
+      const t = type.toLowerCase();
+      if (t === 'flight') return "Flight";
+      if (t === 'ftd' || t === 'simulator') return "FTD";
+      if (t === 'brief' || t === 'briefing') return "Brief";
+      if (t === 'duty') return "Duty";
+      if (t === 'ground') return "Ground";
+      return "Other";
+    }
 
-    // Return multiple schedules for date range query
-    res.json({
-      success: true,
-      schedules: transformedSchedules
+    // Helper: map role string to iOS EventRole enum values
+    function mapRole(role) {
+      if (!role) return null;
+      const r = role.toLowerCase();
+      if (r === 'student' || r === 'trainee') return "Student";
+      if (r === 'instructor') return "Instructor";
+      if (r === 'crew') return "Crew";
+      if (r === 'observer') return "Observer";
+      if (r === 'pilot') return "Pilot";
+      if (r === 'copilot' || r === 'co-pilot') return "Co-Pilot";
+      return null;
+    }
+
+    // Helper: extract events from Schedule.data JSON blob
+    function extractEventsFromData(dataJson) {
+      if (!dataJson) return [];
+      try {
+        const data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
+        // data could be an array of events or an object with an events array
+        let rawEvents = [];
+        if (Array.isArray(data)) {
+          rawEvents = data;
+        } else if (data.events && Array.isArray(data.events)) {
+          rawEvents = data.events;
+        } else if (data.scheduleEvents && Array.isArray(data.scheduleEvents)) {
+          rawEvents = data.scheduleEvents;
+        } else if (data.slots && Array.isArray(data.slots)) {
+          rawEvents = data.slots;
+        } else {
+          // Try to find any array property that looks like events
+          for (const key of Object.keys(data)) {
+            if (Array.isArray(data[key]) && data[key].length > 0 && data[key][0].startTime !== undefined) {
+              rawEvents = data[key];
+              break;
+            }
+          }
+        }
+        return rawEvents.map((e, idx) => ({
+          id: String(e.id || e.eventId || idx + 1),
+          startTime: toHHMM(e.startTime),
+          endTime: toHHMM(e.endTime || (e.startTime ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null)),
+          eventType: mapEventType(e.type || e.eventType || e.eventCode),
+          location: e.location || e.origin || null,
+          role: mapRole(e.role || (e.student === userFullName ? 'Student' : e.instructor === userFullName ? 'Instructor' : null)),
+          status: e.status || "Published",
+          notes: e.notes || e.eventDescription || null,
+          aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
+          instructor: e.instructor || null
+        }));
+      } catch (err) {
+        console.error("⚠️ Error parsing schedule data:", err.message);
+        return [];
+      }
+    }
+
+    // Step 3: If Schedule records exist, use them
+    if (schedules && schedules.length > 0) {
+      const transformedSchedules = schedules.map(schedule => {
+        const events = extractEventsFromData(schedule.data);
+        return {
+          id: String(schedule.id),
+          date: schedule.date,
+          isPublished: true,
+          events: events,
+          serverTime: new Date().toISOString()
+        };
+      });
+
+      if (date && transformedSchedules.length > 0) {
+        console.log("✅ GET /api/mobile/schedule - Single date: " + date + ", events: " + transformedSchedules[0].events.length);
+        return res.json({ schedule: transformedSchedules[0] });
+      }
+
+      console.log("✅ GET /api/mobile/schedule - Found " + transformedSchedules.length + " schedules for userId=" + jwtUserId);
+      return res.json({ success: true, schedules: transformedSchedules });
+    }
+
+    // Step 4: No Schedule record - check DailySnapshot for published events filtered to this user
+    if (date) {
+      const snapRows = await db.$queryRawUnsafe(
+        `SELECT "scheduleEvents", "traineeEvents", "staffEvents" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+        date
+      );
+
+      if (snapRows && snapRows.length > 0) {
+        const snap = snapRows[0];
+        const allSnapshotEvents = [
+          ...(Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []),
+          ...(Array.isArray(snap.traineeEvents) ? snap.traineeEvents : []),
+          ...(Array.isArray(snap.staffEvents) ? snap.staffEvents : [])
+        ];
+
+        // Filter events for this user by name or traineeId matching userId
+        const userEvents = allSnapshotEvents.filter(e =>
+          (e.student && (e.student === userFullName || e.student.toLowerCase() === userFullName.toLowerCase())) ||
+          (e.instructor && (e.instructor === userFullName || e.instructor.toLowerCase() === userFullName.toLowerCase())) ||
+          (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
+        );
+
+        if (userEvents.length > 0) {
+          const mappedEvents = userEvents.map((e, idx) => ({
+            id: String(e.id || e.eventId || idx + 1),
+            startTime: toHHMM(e.startTime),
+            endTime: toHHMM(e.endTime || (e.startTime ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null)),
+            eventType: mapEventType(e.type || e.eventType || e.eventCode),
+            location: e.location || e.origin || null,
+            role: mapRole(e.student === userFullName ? 'Student' : e.instructor === userFullName ? 'Instructor' : e.role || null),
+            status: "Published",
+            notes: e.notes || e.eventDescription || null,
+            aircraft: e.aircraft || e.aircraftNumber || null,
+            instructor: e.instructor || null
+          }));
+
+          console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
+          return res.json({
+            schedule: {
+              id: date,
+              date: date,
+              isPublished: true,
+              events: mappedEvents,
+              serverTime: new Date().toISOString()
+            }
+          });
+        }
+      }
+    }
+
+    // Step 5: Nothing found
+    console.log("❌ No schedule found for jwtUserId=" + jwtUserId + ", date=" + (date || 'range'));
+    return res.json({
+      schedule: null,
+      message: date ? "Schedule not published for this date" : "No schedules found"
     });
 
   } catch (error) {
@@ -7195,7 +7296,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     });
   }
 });
- 
+
 
 
 app.get('*', (req, res) => {
