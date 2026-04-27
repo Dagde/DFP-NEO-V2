@@ -3,44 +3,24 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
-import crypto from 'crypto';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
-
-// Robust UUID v4 generator - works on all Node versions
-function generateUUID() {
-  if (typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  const bytes = crypto.randomBytes(16);
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  return [
-    bytes.slice(0, 4).toString('hex'),
-    bytes.slice(4, 6).toString('hex'),
-    bytes.slice(6, 8).toString('hex'),
-    bytes.slice(8, 10).toString('hex'),
-    bytes.slice(10, 16).toString('hex')
-  ].join('-');
-}
 
 // Training Intelligence Engine
 const { ensureTIETables, seedTIEDefaults, runTIEAnalytics } = require('./tie-engine.cjs');
 
 // Cookie parser
 const cookieParser = require('cookie-parser');
-// JWT for mobile API authentication
-import jwt from 'jsonwebtoken';
+const jwt = require('jsonwebtoken');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 // JWT Configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'dfp-neo-secret-key-change-in-production';
 const JWT_ACCESS_EXPIRY = '1h';
 const JWT_REFRESH_EXPIRY = '7d';
-
-
-const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Parse JSON bodies - increased limit to handle large settings/syllabus payloads
 app.use(express.json({ limit: '10mb' }));
@@ -105,27 +85,8 @@ async function getPrisma() {
     await migrateCptDurations(prisma);
     // Fix Academics items: ensure courses[] contains the module name (not the item's own code)
     await migrateAcademicsCoursesField(prisma);
-      // Ensure FlightLogEntry and EventCompletion tables exist
-      await ensureFlightLogEntryTable(prisma);
-      await ensureEventCompletionTable(prisma);
-     // Ensure Personnel.photoUrl column exists (added 2026-04-21)
-     await ensurePersonnelPhotoUrlColumn(prisma);
   }
   return prisma;
-}
-
-// Ensure Personnel.photoUrl column exists (migration for existing DBs)
-// This is idempotent — safe to run on every startup
-async function ensurePersonnelPhotoUrlColumn(db) {
-  try {
-    await db.$executeRawUnsafe(`
-      ALTER TABLE "Personnel" ADD COLUMN IF NOT EXISTS "photoUrl" TEXT
-    `);
-    console.log('✅ ensurePersonnelPhotoUrlColumn: Personnel.photoUrl column ready');
-  } catch (err) {
-    // Column may already exist or another benign error — non-fatal
-    console.warn('⚠️ ensurePersonnelPhotoUrlColumn (non-fatal):', err.message);
-  }
 }
 
 // Create SyllabusItem and SyllabusHistory tables if they don't exist
@@ -406,7 +367,7 @@ app.put('/api/settings/course-settings', async (req, res) => {
         newNeoBuildCourse || null, newSelectedAcademicLmp || null, newExcludedCourses, now, row.id
       );
     } else {
-      const newId = generateUUID();
+      const newId = require('crypto').randomUUID();
       const newExcludedCourses = excludedCourses !== undefined ? JSON.stringify(excludedCourses) : '[]';
       await db.$executeRawUnsafe(
         'INSERT INTO "CourseSettings" (id, "neoBuildCourse", "selectedAcademicLmp", "excludedCourses", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5::timestamp, $6::timestamp)',
@@ -448,7 +409,7 @@ app.post('/api/settings/course-academic-progress', async (req, res) => {
     if (!courseCode || !lessonCode) {
       return res.status(400).json({ error: 'Missing courseCode or lessonCode' });
     }
-    const newId = generateUUID();
+    const newId = require('crypto').randomUUID();
     const now = new Date().toISOString();
     await db.$executeRawUnsafe(`
       INSERT INTO "CourseAcademicProgress" (id, "courseCode", "lessonCode", "completedDate", "completedBy")
@@ -705,22 +666,6 @@ app.post('/api/personnel', async (req, res) => {
       }
     }
 
-
-     // ── Duplicate prevention: block if idNumber or name already exists ──
-     if (body.idNumber) {
-       const existing = await db.personnel.findFirst({ where: { idNumber: body.idNumber } });
-       if (existing) {
-         console.warn(`⚠️ POST /api/personnel - duplicate blocked: idNumber ${body.idNumber} already exists as ${existing.name}`);
-         return res.status(409).json({ error: 'Duplicate personnel', message: `A personnel record with idNumber ${body.idNumber} already exists`, existingId: existing.id, existingName: existing.name });
-       }
-     } else if (body.name) {
-       const existing = await db.personnel.findFirst({ where: { name: body.name } });
-       if (existing) {
-         console.warn(`⚠️ POST /api/personnel - duplicate blocked: name "${body.name}" already exists`);
-         return res.status(409).json({ error: 'Duplicate personnel', message: `A personnel record named "${body.name}" already exists`, existingId: existing.id, existingName: existing.name });
-       }
-     }
-
     const newPersonnel = await db.personnel.create({
       data: {
         name: body.name || '',
@@ -734,7 +679,6 @@ app.post('/api/personnel', async (req, res) => {
         email: body.email || null,
         phoneNumber: body.phoneNumber || null,
         seatConfig: body.seatConfig || null,
-        photoUrl: body.photoUrl || null,
         isQFI: body.isQFI || false,
         isOFI: body.isOFI || false,
         isCFI: body.isCFI || false,
@@ -763,7 +707,7 @@ app.patch('/api/personnel/:id', async (req, res) => {
   try {
     const db = await getPrisma();
     const { id } = req.params;
-    const body = req.body;
+    const updates = req.body;
 
     if (!id) {
       return res.status(400).json({ error: 'Personnel ID is required' });
@@ -774,24 +718,9 @@ app.patch('/api/personnel/:id', async (req, res) => {
       return res.status(404).json({ error: 'Personnel not found' });
     }
 
-    // Whitelist only known Prisma schema fields to avoid passing unknown properties
-    const allowedFields = [
-      'name', 'rank', 'role', 'category', 'unit', 'location', 'idNumber',
-      'callsignNumber', 'email', 'phoneNumber', 'seatConfig', 'photoUrl',
-      'isQFI', 'isOFI', 'isCFI', 'isExecutive', 'isFlyingSupervisor', 'isIRE',
-      'isCommandingOfficer', 'isTestingOfficer', 'isContractor', 'isAdminStaff',
-      'isDeputyFlightCommander', 'isActive', 'service', 'flight',
-      'unavailability', 'permissions', 'priorExperience',
-      'isContractor', 'userId',
-    ];
-    const safeUpdates = {};
-    for (const field of allowedFields) {
-      if (field in body) safeUpdates[field] = body[field];
-    }
-
     const updated = await db.personnel.update({
       where: { id },
-      data: safeUpdates
+      data: updates
     });
 
     console.log(`✅ PATCH /api/personnel/${id} - updated: ${updated.name}`);
@@ -799,82 +728,6 @@ app.patch('/api/personnel/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ PATCH /api/personnel error:', error);
     res.status(500).json({ error: 'Failed to update personnel', details: error.message });
-  }
-});
-
-// POST /api/personnel/:id/photo - Upload or update a profile photo for a personnel member
-// Accepts JSON body: { photoUrl: "data:image/jpeg;base64,..." } or { photoUrl: "https://..." }
-// The photoUrl is stored directly in the Personnel table as a text field.
-// Max encoded size: ~2MB (covers most profile photos when compressed to JPEG)
-app.post('/api/personnel/:id/photo', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { id } = req.params;
-    const { photoUrl } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ error: 'Personnel ID is required' });
-    }
-    if (!photoUrl) {
-      return res.status(400).json({ error: 'photoUrl is required in the request body' });
-    }
-
-    // Validate: must be a data URI or an https URL
-    const isDataUri = photoUrl.startsWith('data:image/');
-    const isHttps   = photoUrl.startsWith('https://') || photoUrl.startsWith('http://');
-    if (!isDataUri && !isHttps) {
-      return res.status(400).json({ error: 'photoUrl must be a base64 data URI (data:image/...) or an https URL' });
-    }
-
-    // Rough size guard: base64 data URI for a 1.5MB file is ~2MB of text
-    if (photoUrl.length > 3 * 1024 * 1024) {
-      return res.status(413).json({ error: 'Photo too large. Please resize to under ~1.5 MB before uploading.' });
-    }
-
-    // Confirm the personnel record exists
-    const existing = await db.personnel.findUnique({ where: { id } });
-    if (!existing) {
-      return res.status(404).json({ error: 'Personnel not found' });
-    }
-
-    const updated = await db.personnel.update({
-      where: { id },
-      data: { photoUrl }
-    });
-
-    console.log(`✅ POST /api/personnel/${id}/photo - photo saved for: ${updated.name}`);
-    res.json({ success: true, photoUrl: updated.photoUrl, name: updated.name });
-  } catch (error) {
-    console.error('❌ POST /api/personnel/:id/photo error:', error);
-    res.status(500).json({ error: 'Failed to save photo', details: error.message });
-  }
-});
-
-// DELETE /api/personnel/:id/photo - Remove the profile photo for a personnel member
-app.delete('/api/personnel/:id/photo', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { id } = req.params;
-
-    if (!id) {
-      return res.status(400).json({ error: 'Personnel ID is required' });
-    }
-
-    const existing = await db.personnel.findUnique({ where: { id } });
-    if (!existing) {
-      return res.status(404).json({ error: 'Personnel not found' });
-    }
-
-    await db.personnel.update({
-      where: { id },
-      data: { photoUrl: null }
-    });
-
-    console.log(`✅ DELETE /api/personnel/${id}/photo - photo removed for: ${existing.name}`);
-    res.json({ success: true, message: `Photo removed for ${existing.name}` });
-  } catch (error) {
-    console.error('❌ DELETE /api/personnel/:id/photo error:', error);
-    res.status(500).json({ error: 'Failed to remove photo', details: error.message });
   }
 });
 
@@ -1359,7 +1212,6 @@ app.post('/api/personnel/bulk', async (req, res) => {
             email: body.email || null,
             phoneNumber: body.phoneNumber || null,
             seatConfig: body.seatConfig || null,
-            photoUrl: body.photoUrl || null,
             service: body.service || null,
             isQFI: body.isQFI || false,
             isOFI: body.isOFI || false,
@@ -2728,30 +2580,45 @@ app.post('/api/cleanup-duplicate-personnel', async (req, res) => {
       return res.status(400).json({ error: 'Invalid confirmation token. Send { confirmToken: "CONFIRM_DELETE_BURNS_DUPLICATES" }' });
     }
 
-     // Keeping: cmnf8ouem0001o601nt04ilp2 (oldest, has qualification/currency data, created 2026-03-31)
-     // Deleting: cmo6kustq0003pj01chpeobx0 and cmo6kuq9c0001pj01sd5m3610 (empty duplicates created 2026-04-20)
-     const personnelToDelete = [
-       'cmo6kustq0003pj01chpeobx0',  // SQNLDR Burns duplicate, no data, created 2026-04-20
-       'cmo6kuq9c0001pj01sd5m3610',  // SQNLDR Burns duplicate, no data, created 2026-04-20
-       // Previous round duplicates (already deleted - errors caught below)
-       'cmkdj92gx0001p10ffa85av90',
-       'cmkdj9co60003p10flx1glphw',
-       'cmkdhs9cv0003pn0frh9ql1yj',
-       'cmkdhghjs0001pn0fwek3zkx2',
-       'cmkdkjq610001mq0f5v72mj56',
-     ];
+    // These are the confirmed duplicate Personnel IDs to delete
+    // Keeping: cmkivhycv0001k30fbih64ptl (FLTLT, linked to active user cmkdynoqv0000o30fwtqqwkzw)
+    const personnelToDelete = [
+      'cmkdj92gx0001p10ffa85av90',  // FLTLT, no user
+      'cmkdj9co60003p10flx1glphw',  // SQNLDR, no user
+      'cmkdhs9cv0003pn0frh9ql1yj',  // FLTLT, no user
+      'cmkdhghjs0001pn0fwek3zkx2',  // SQNLDR, no user
+      'cmkdkjq610001mq0f5v72mj56',  // SQNLDR, linked to duplicate user cmk3m3d8w0000kymjmsdlxsy9
+    ];
 
-     const results = [];
+    // The duplicate User account linked to the SQNLDR personnel record
+    const duplicateUserId = 'cmk3m3d8w0000kymjmsdlxsy9';
 
-     // Delete all duplicate personnel records
-     for (const id of personnelToDelete) {
-       try {
-         await db.personnel.delete({ where: { id } });
-         results.push(`Deleted personnel: ${id}`);
-       } catch (e) {
-         results.push(`Skipped/already deleted ${id}: ${e.message}`);
-       }
-     }
+    const results = [];
+
+    // First unlink the SQNLDR personnel from the duplicate user account
+    await db.personnel.update({
+      where: { id: 'cmkdkjq610001mq0f5v72mj56' },
+      data: { userId: null }
+    });
+    results.push('Unlinked SQNLDR personnel from duplicate user account');
+
+    // Delete all duplicate personnel records
+    for (const id of personnelToDelete) {
+      try {
+        await db.personnel.delete({ where: { id } });
+        results.push(`Deleted personnel: ${id}`);
+      } catch (e) {
+        results.push(`Failed to delete personnel ${id}: ${e.message}`);
+      }
+    }
+
+    // Delete the duplicate user account
+    try {
+      await db.user.delete({ where: { id: duplicateUserId } });
+      results.push(`Deleted duplicate user account: ${duplicateUserId}`);
+    } catch (e) {
+      results.push(`Failed to delete duplicate user ${duplicateUserId}: ${e.message}`);
+    }
 
     // Verify the cleanup
     const remaining = await db.personnel.findMany({
@@ -3085,7 +2952,8 @@ app.post('/api/syllabus', async (req, res) => {
   try {
     const db = await getPrisma();
     const body = req.body;
-    const id = generateUUID();
+    const { randomUUID } = await import('crypto');
+    const id = randomUUID();
 
     // Auto-resolve duplicate codes: if code already exists (active items only), append a number suffix
     let baseCode = body.code;
@@ -3286,6 +3154,437 @@ app.post('/api/auth/verify-password', async (req, res) => {
   }
 });
 
+
+
+  // ============================================================
+  // MOBILE API ENDPOINTS
+  // ============================================================
+
+  // Helper: Generate JWT tokens
+  function generateAccessTokens(userId) {
+    const accessToken = jwt.sign(
+      { userId, type: 'access' },
+      JWT_SECRET,
+      { expiresIn: JWT_ACCESS_EXPIRY }
+    );
+    const refreshToken = jwt.sign(
+      { userId, type: 'refresh' },
+      JWT_SECRET,
+      { expiresIn: JWT_REFRESH_EXPIRY }
+    );
+    return { accessToken, refreshToken };
+  }
+
+  // Helper: Verify JWT token and extract userId
+  function verifyJWT(token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (decoded.type === 'access' || decoded.type === 'refresh') {
+        return decoded.userId;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // POST /api/mobile/auth/login - Mobile JWT login
+  app.post('/api/mobile/auth/login', async (req, res) => {
+    try {
+      const db = await getPrisma();
+      const { userId: loginUserId, password } = req.body;
+
+      if (!loginUserId || !password) {
+        return res.status(400).json({ 
+          error: 'userId and password are required' 
+        });
+      }
+
+      // Find user by userId
+      const users = await db.$queryRawUnsafe(
+        `SELECT id, "userId", "firstName", "lastName", email, "role", "isActive", password FROM "User" WHERE "userId" = $1`,
+        loginUserId
+      );
+
+      if (!users || users.length === 0) {
+        console.log(`❌ Mobile login failed: User not found for userId=${loginUserId}`);
+        return res.status(401).json({ 
+          error: 'Invalid userId or password' 
+        });
+      }
+
+      const user = users[0];
+
+      // Check if user is active
+      if (!user.isActive) {
+        console.log(`❌ Mobile login failed: User ${loginUserId} is not active`);
+        return res.status(403).json({ 
+          error: 'Account is inactive' 
+        });
+      }
+
+      // Verify password
+      const bcrypt = require('bcryptjs');
+      const validPassword = await bcrypt.compare(password, user.password);
+
+      if (!validPassword) {
+        console.log(`❌ Mobile login failed: Invalid password for userId=${loginUserId}`);
+        return res.status(401).json({ 
+          error: 'Invalid userId or password' 
+        });
+      }
+
+      // Generate JWT tokens
+      const { accessToken, refreshToken } = generateAccessTokens(user.userId);
+
+      // Update last login
+      await db.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() }
+      });
+
+      // Map role to iOS enum format
+      const roleMap = {
+        'SUPER_ADMIN': 'ADMIN',
+        'ADMIN': 'ADMIN',
+        'INSTRUCTOR': 'INSTRUCTOR',
+        'USER': 'STUDENT',
+        'PILOT': 'OTHER'
+      };
+      const iOSRole = roleMap[user.role] || 'OTHER';
+
+      console.log(`✅ Mobile login successful for userId=${loginUserId}, role=${user.role}`);
+
+      res.json({
+           success: true,
+           message: "Login successful",
+           data: {
+             accessToken,
+             refreshToken,
+             user: {
+               id: user.userId,
+               userId: user.userId,
+               displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+               email: user.email,
+               isActive: user.isActive,
+               role: iOSRole,
+               firstName: user.firstName,
+               lastName: user.lastName
+             }
+           }
+         });
+    } catch (error) {
+      console.error('❌ POST /api/mobile/auth/login error:', error);
+      res.status(500).json({ error: 'Login failed', details: error.message });
+    }
+  });
+
+  // POST /api/mobile/auth/refresh - Refresh JWT access token
+  app.post('/api/mobile/auth/refresh', async (req, res) => {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        return res.status(400).json({ error: 'Refresh token is required' });
+      }
+
+      // Verify refresh token
+      const userId = verifyJWT(refreshToken);
+
+      if (!userId) {
+        console.log('❌ Mobile refresh failed: Invalid or expired refresh token');
+        return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      }
+
+      // Verify user exists and is active
+      const db = await getPrisma();
+      const users = await db.$queryRawUnsafe(
+        `SELECT id, "userId", "isActive" FROM "User" WHERE "userId" = $1`,
+        userId
+      );
+
+      if (!users || users.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const user = users[0];
+
+      if (!user.isActive) {
+        return res.status(403).json({ error: 'Account is inactive' });
+      }
+
+      // Generate new tokens
+      const { accessToken, refreshToken: newRefreshToken } = generateAccessTokens(user.userId);
+
+      console.log(`✅ Mobile refresh successful for userId=${userId}`);
+
+      res.json({
+        accessToken,
+        refreshToken: newRefreshToken
+      });
+    } catch (error) {
+      console.error('❌ POST /api/mobile/auth/refresh error:', error);
+      res.status(500).json({ error: 'Token refresh failed', details: error.message });
+    }
+  });
+
+  // Middleware: Verify JWT for protected mobile routes
+  function authenticateMobileJWT(req, res, next) {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+
+    if (!token) {
+      return res.status(401).json({ error: 'No access token provided' });
+    }
+
+    const userId = verifyJWT(token);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Invalid or expired access token' });
+    }
+
+    req.mobileUserId = userId;
+    next();
+  }
+
+  // GET /api/mobile/schedule - Get user's schedule for a specific date
+  app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
+    try {
+      const db = await getPrisma();
+      const userId = req.mobileUserId;
+      const { date } = req.query;
+
+      if (!date) {
+        return res.status(400).json({ 
+          error: 'Date parameter is required (format: YYYY-MM-DD)' 
+        });
+      }
+
+      // Find schedule for this user and date
+      const schedules = await db.schedule.findMany({
+        where: {
+          userId: userId,
+          date: date
+        },
+        orderBy: {
+          updatedAt: 'desc'
+        }
+      });
+
+      if (!schedules || schedules.length === 0) {
+        console.log(`ℹ️ No schedule found for userId=${userId}, date=${date}`);
+        return res.json({
+          events: [],
+          message: `No schedule found for this date.`
+        });
+      }
+
+      // Get the most recent schedule for this date
+      const schedule = schedules[0];
+
+      // Extract events from schedule data
+      const events = (schedule.data && schedule.data.events) ? schedule.data.events : [];
+
+      console.log(`✅ Mobile schedule retrieved for userId=${userId}, date=${date}, events=${events.length}`);
+
+      res.json({
+        events: events,
+        message: `Found ${events.length} events for ${date}`
+      });
+    } catch (error) {
+      console.error('❌ GET /api/mobile/schedule error:', error);
+      res.status(500).json({ error: 'Failed to fetch schedule', details: error.message });
+    }
+  });
+
+  // ============================================================
+  // MOBILE UNAVAILABILITY ENDPOINTS
+  // ============================================================
+
+  // GET /api/mobile/unavailability/reasons - Get list of unavailability reasons
+  app.get('/api/mobile/unavailability/reasons', authenticateMobileJWT, async (req, res) => {
+    try {
+      const reasons = [
+        { id: 'TMUF', code: 'TMUF', description: 'TMUF', requiresApproval: false },
+        { id: 'TMUF - Ground Duties only', code: 'TMUF-GD', description: 'TMUF - Ground Duties only', requiresApproval: false },
+        { id: 'Leave', code: 'LEAVE', description: 'Leave', requiresApproval: true },
+        { id: 'Appointment', code: 'APPT', description: 'Appointment', requiresApproval: false },
+        { id: 'Deployed', code: 'DEPLOY', description: 'Deployed', requiresApproval: true },
+        { id: 'Other', code: 'OTHER', description: 'Other', requiresApproval: false },
+      ];
+      console.log(`✅ GET /api/mobile/unavailability/reasons - returned ${reasons.length} reasons`);
+      res.json({ reasons });
+    } catch (error) {
+      console.error('❌ GET /api/mobile/unavailability/reasons error:', error);
+      res.status(500).json({ error: 'Failed to fetch reasons', message: error.message });
+    }
+  });
+
+  // POST /api/mobile/unavailability/quick - Submit quick unavailability (today 0800-2300)
+  app.post('/api/mobile/unavailability/quick', authenticateMobileJWT, async (req, res) => {
+    try {
+      const db = await getPrisma();
+      const userId = req.mobileUserId;
+      const { date, reasonId, notes } = req.body;
+
+      if (!date || !reasonId) {
+        return res.status(400).json({ error: 'Missing required fields', message: 'date and reasonId are required' });
+      }
+
+      // Find the personnel or trainee record linked to this userId
+      let record = null;
+      let recordType = null;
+
+      const personnel = await db.personnel.findFirst({ where: { userId } });
+      if (personnel) {
+        record = personnel;
+        recordType = 'personnel';
+      } else {
+        const trainee = await db.trainee.findFirst({ where: { userId } });
+        if (trainee) {
+          record = trainee;
+          recordType = 'trainee';
+        }
+      }
+
+      if (!record) {
+        return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account' });
+      }
+
+      // Build the unavailability period entry
+      const newPeriod = {
+        id: `mobile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        startDate: date,
+        endDate: date,
+        allDay: false,
+        startTime: '08:00',
+        endTime: '23:00',
+        reason: reasonId,
+        notes: notes || undefined,
+      };
+
+      // Append to existing unavailability array
+      const existing = Array.isArray(record.unavailability) ? record.unavailability : [];
+      const updated = [...existing, newPeriod];
+
+      if (recordType === 'personnel') {
+        await db.personnel.update({ where: { id: record.id }, data: { unavailability: updated } });
+      } else {
+        await db.trainee.update({ where: { id: record.id }, data: { unavailability: updated } });
+      }
+
+      console.log(`✅ POST /api/mobile/unavailability/quick - userId=${userId}, date=${date}, reason=${reasonId}`);
+
+      res.json({
+        id: newPeriod.id,
+        status: 'approved',
+        startDateTime: `${date}T08:00:00.000Z`,
+        endDateTime: `${date}T23:00:00.000Z`,
+        reason: { id: reasonId, code: reasonId, description: reasonId, requiresApproval: false },
+        notes: notes || null,
+        submittedAt: new Date().toISOString(),
+        message: `Quick unavailability submitted for ${date} (0800-2300)`,
+      });
+    } catch (error) {
+      console.error('❌ POST /api/mobile/unavailability/quick error:', error);
+      res.status(500).json({ error: 'Failed to submit unavailability', message: error.message });
+    }
+  });
+
+  // POST /api/mobile/unavailability/create - Submit custom unavailability
+  app.post('/api/mobile/unavailability/create', authenticateMobileJWT, async (req, res) => {
+    try {
+      const db = await getPrisma();
+      const userId = req.mobileUserId;
+      const { startDateTime, endDateTime, reasonId, notes } = req.body;
+
+      if (!startDateTime || !endDateTime || !reasonId) {
+        return res.status(400).json({ error: 'Missing required fields', message: 'startDateTime, endDateTime and reasonId are required' });
+      }
+
+      // Parse ISO dates into date/time parts
+      const startDt = new Date(startDateTime);
+      const endDt = new Date(endDateTime);
+
+      if (isNaN(startDt.getTime()) || isNaN(endDt.getTime())) {
+        return res.status(400).json({ error: 'Invalid dates', message: 'startDateTime and endDateTime must be valid ISO date strings' });
+      }
+
+      if (startDt >= endDt) {
+        return res.status(400).json({ error: 'Invalid date range', message: 'endDateTime must be after startDateTime' });
+      }
+
+      const pad = n => String(n).padStart(2, '0');
+      const startDate = `${startDt.getUTCFullYear()}-${pad(startDt.getUTCMonth()+1)}-${pad(startDt.getUTCDate())}`;
+      const endDate = `${endDt.getUTCFullYear()}-${pad(endDt.getUTCMonth()+1)}-${pad(endDt.getUTCDate())}`;
+      const startTime = `${pad(startDt.getUTCHours())}:${pad(startDt.getUTCMinutes())}`;
+      const endTime = `${pad(endDt.getUTCHours())}:${pad(endDt.getUTCMinutes())}`;
+      const allDay = startDate !== endDate && startTime === '00:00' && endTime === '00:00';
+
+      // Find the personnel or trainee record linked to this userId
+      let record = null;
+      let recordType = null;
+
+      const personnel = await db.personnel.findFirst({ where: { userId } });
+      if (personnel) {
+        record = personnel;
+        recordType = 'personnel';
+      } else {
+        const trainee = await db.trainee.findFirst({ where: { userId } });
+        if (trainee) {
+          record = trainee;
+          recordType = 'trainee';
+        }
+      }
+
+      if (!record) {
+        return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account' });
+      }
+
+      // Build the unavailability period entry
+      const newPeriod = {
+        id: `mobile-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        startDate,
+        endDate,
+        allDay,
+        startTime: allDay ? undefined : startTime,
+        endTime: allDay ? undefined : endTime,
+        reason: reasonId,
+        notes: notes || undefined,
+      };
+
+      // Append to existing unavailability array
+      const existing = Array.isArray(record.unavailability) ? record.unavailability : [];
+      const updated = [...existing, newPeriod];
+
+      if (recordType === 'personnel') {
+        await db.personnel.update({ where: { id: record.id }, data: { unavailability: updated } });
+      } else {
+        await db.trainee.update({ where: { id: record.id }, data: { unavailability: updated } });
+      }
+
+      console.log(`✅ POST /api/mobile/unavailability/create - userId=${userId}, start=${startDateTime}, end=${endDateTime}, reason=${reasonId}`);
+
+      res.json({
+        id: newPeriod.id,
+        status: 'approved',
+        startDateTime,
+        endDateTime,
+        reason: { id: reasonId, code: reasonId, description: reasonId, requiresApproval: false },
+        notes: notes || null,
+        submittedAt: new Date().toISOString(),
+        message: `Unavailability submitted from ${startDate} to ${endDate}`,
+      });
+    } catch (error) {
+      console.error('❌ POST /api/mobile/unavailability/create error:', error);
+      res.status(500).json({ error: 'Failed to submit unavailability', message: error.message });
+    }
+  });
+
+  // ============================================================
+  // END MOBILE API ENDPOINTS
+  // ============================================================
+
 // POST /api/admin/set-user-password - Set or update a user's password (for initial setup/reset)
 app.post('/api/admin/set-user-password', async (req, res) => {
   try {
@@ -3479,6 +3778,7 @@ app.get('/api/admin/seed-syllabus', async (req, res) => {
       console.log(`🗑️ Cleared existing syllabus data (force re-seed)`);
     }
 
+    const { randomUUID } = await import('crypto');
     const now = new Date().toISOString();
 
     const items = [
@@ -3556,7 +3856,7 @@ app.get('/api/admin/seed-syllabus', async (req, res) => {
 
     for (const item of items) {
       try {
-        const id = generateUUID();
+        const id = randomUUID();
         await db.$executeRawUnsafe(`
           INSERT INTO "SyllabusItem" (
             "id","code","eventDescription","phase","module","type","sortieType","dayNight",
@@ -3908,41 +4208,22 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
     // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
-    const { date, availableCount, notes, timestamp, changeType, recordedBy } = req.body;
+    const { date, availableCount, notes, timestamp } = req.body;
     const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
-    if (!date || availableCount === undefined) {
-      return res.status(400).json({ error: 'date and availableCount are required' });
+    if (!date || availableCount === undefined || !totalFleet) {
+      return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
     }
-    const ts = timestamp ? new Date(timestamp) : new Date();
-    const eventId = generateUUID();
-
-    // Try INSERT with extended columns (id, changeType, recordedBy) first
-    // Fall back to minimal INSERT if those columns don't exist yet
-    try {
-      await db.$executeRawUnsafe(
-        `INSERT INTO "AircraftAvailabilityEvent" ("id", "date", "timestamp", "availableCount", "totalAircraft", "changeType", "recordedBy", "notes", "createdAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())`,
-        eventId, date, ts, parseInt(availableCount),
-        totalFleet ? parseInt(totalFleet) : parseInt(availableCount),
-        changeType || 'change', recordedBy || null, notes || null
-      );
-    } catch (insertErr) {
-      // Fallback: minimal INSERT without extended columns
-      console.log('[AV-EVENTS] Extended INSERT failed, trying minimal INSERT:', insertErr.message);
-      await db.$executeRawUnsafe(
-        `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
-         VALUES ($1::text, $2::text::timestamp, $3::int, $4::int, $5::text)`,
-        date, ts.toISOString(), parseInt(availableCount),
-        totalFleet ? parseInt(totalFleet) : parseInt(availableCount),
-        notes || null
-      );
-    }
-
+    const ts = timestamp ? new Date(timestamp).toISOString() : new Date().toISOString();
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
+       VALUES ($1::text, $2::text::timestamp, $3::int, $4::int, $5::text)`,
+      date, ts, availableCount, totalFleet, notes || null
+    );
     const inserted = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1 ORDER BY "timestamp" DESC LIMIT 1`, date
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "id" DESC LIMIT 1`, date
     );
     const record = inserted[0];
-    res.json({ success: true, event: record });
+    res.json({ event: { ...record, id: Number(record.id) } });
   } catch (error) {
     console.error('❌ POST /api/aircraft-availability-events error:', error);
     res.status(500).json({ error: 'Failed to create event', details: error.message });
@@ -6291,6 +6572,7 @@ async function ensureTraineePerformanceTable(db) {
         CONSTRAINT "TraineePerformance_eventId_key" UNIQUE ("eventId")
       )
     `);
+    // Create indexes for common query patterns
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_traineeId_idx" ON "TraineePerformance"("traineeId")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_instructorName_idx" ON "TraineePerformance"("instructorName")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "tp_course_idx" ON "TraineePerformance"("course")`);
@@ -6304,14 +6586,85 @@ async function ensureTraineePerformanceTable(db) {
   }
 }
 
-// GET /api/trainee-performance/stats - must be before /:eventId
+// GET /api/trainee-performance
+// Query params: traineeId, traineeFullName, instructorName, course, isCompleted, dateFrom, dateTo, limit, offset
+app.get('/api/trainee-performance', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      traineeId,
+      traineeFullName,
+      instructorName,
+      course,
+      isCompleted,
+      dateFrom,
+      dateTo,
+      limit = 500,
+      offset = 0
+    } = req.query;
+
+    // Build dynamic WHERE clause
+    const conditions = [];
+    const params = [];
+    let paramIdx = 1;
+
+    if (traineeId) {
+      conditions.push(`"traineeId" = $${paramIdx++}::text`);
+      params.push(traineeId);
+    }
+    if (traineeFullName) {
+      conditions.push(`"traineeFullName" = $${paramIdx++}::text`);
+      params.push(traineeFullName);
+    }
+    if (instructorName) {
+      conditions.push(`"instructorName" = $${paramIdx++}::text`);
+      params.push(instructorName);
+    }
+    if (course) {
+      conditions.push(`"course" = $${paramIdx++}::text`);
+      params.push(course);
+    }
+    if (isCompleted !== undefined) {
+      conditions.push(`"isCompleted" = $${paramIdx++}::boolean`);
+      params.push(isCompleted === 'true');
+    }
+    if (dateFrom) {
+      conditions.push(`"date" >= $${paramIdx++}::text`);
+      params.push(dateFrom);
+    }
+    if (dateTo) {
+      conditions.push(`"date" <= $${paramIdx++}::text`);
+      params.push(dateTo);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const limitVal = Math.min(parseInt(limit) || 500, 2000);
+    const offsetVal = parseInt(offset) || 0;
+
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" ${whereClause} ORDER BY "date" DESC, "eventSequence" ASC LIMIT ${limitVal} OFFSET ${offsetVal}`,
+      ...params
+    );
+
+    // Map DB rows to Pt051Assessment shape expected by the app
+    const assessments = rows.map(row => mapRowToAssessment(row));
+    res.json(assessments);
+  } catch (error) {
+    console.error('❌ GET /api/trainee-performance error:', error);
+    res.status(500).json({ error: 'Failed to fetch assessments', details: error.message });
+  }
+});
+
+// GET /api/trainee-performance/stats - summary counts per course
+// IMPORTANT: This must come BEFORE /:eventId to avoid Express matching 'stats' as an eventId
 app.get('/api/trainee-performance/stats', async (req, res) => {
   try {
     const db = await getPrisma();
     const rows = await db.$queryRawUnsafe(`
       SELECT course, COUNT(*) as count, SUM(CASE WHEN "isCompleted" THEN 1 ELSE 0 END) as completed
       FROM "TraineePerformance"
-      GROUP BY course ORDER BY course
+      GROUP BY course
+      ORDER BY course
     `);
     const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
     res.json({ courses: rows, total });
@@ -6321,41 +6674,18 @@ app.get('/api/trainee-performance/stats', async (req, res) => {
   }
 });
 
-// GET /api/trainee-performance
-app.get('/api/trainee-performance', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { traineeId, traineeFullName, instructorName, course, isCompleted, dateFrom, dateTo, limit = 500, offset = 0 } = req.query;
-    const conditions = [];
-    const params = [];
-    let paramIdx = 1;
-    if (traineeId) { conditions.push(`"traineeId" = $${paramIdx++}::text`); params.push(traineeId); }
-    if (traineeFullName) { conditions.push(`"traineeFullName" = $${paramIdx++}::text`); params.push(traineeFullName); }
-    if (instructorName) { conditions.push(`"instructorName" = $${paramIdx++}::text`); params.push(instructorName); }
-    if (course) { conditions.push(`"course" = $${paramIdx++}::text`); params.push(course); }
-    if (isCompleted !== undefined) { conditions.push(`"isCompleted" = $${paramIdx++}::boolean`); params.push(isCompleted === 'true'); }
-    if (dateFrom) { conditions.push(`"date" >= $${paramIdx++}::text`); params.push(dateFrom); }
-    if (dateTo) { conditions.push(`"date" <= $${paramIdx++}::text`); params.push(dateTo); }
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const limitVal = Math.min(parseInt(limit) || 500, 2000);
-    const offsetVal = parseInt(offset) || 0;
-    const rows = await db.$queryRawUnsafe(
-      `SELECT * FROM "TraineePerformance" ${whereClause} ORDER BY "date" DESC, "eventSequence" ASC LIMIT ${limitVal} OFFSET ${offsetVal}`,
-      ...params
-    );
-    res.json(rows.map(row => mapRowToAssessment(row)));
-  } catch (error) {
-    console.error('❌ GET /api/trainee-performance error:', error);
-    res.status(500).json({ error: 'Failed to fetch assessments', details: error.message });
-  }
-});
-
-// GET /api/trainee-performance/:eventId
+// GET /api/trainee-performance/:eventId - get single assessment
 app.get('/api/trainee-performance/:eventId', async (req, res) => {
   try {
     const db = await getPrisma();
-    const rows = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, req.params.eventId);
-    if (!rows || rows.length === 0) return res.status(404).json({ error: 'Assessment not found' });
+    const { eventId } = req.params;
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`,
+      eventId
+    );
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
     res.json(mapRowToAssessment(rows[0]));
   } catch (error) {
     console.error('❌ GET /api/trainee-performance/:eventId error:', error);
@@ -6363,36 +6693,50 @@ app.get('/api/trainee-performance/:eventId', async (req, res) => {
   }
 });
 
-// POST /api/trainee-performance - create/upsert
+// POST /api/trainee-performance - create new assessment
 app.post('/api/trainee-performance', async (req, res) => {
   try {
     const db = await getPrisma();
     const data = req.body;
+
     if (!data.eventId || !data.traineeId || !data.traineeFullName) {
       return res.status(400).json({ error: 'eventId, traineeId, traineeFullName are required' });
     }
+
+    // Map Pt051Assessment shape → DB columns
     const row = mapAssessmentToRow(data);
+
     await db.$executeRawUnsafe(`
       INSERT INTO "TraineePerformance" (
-        "id","traineeId","traineeFullName","eventId","eventCode","flightNumber",
-        "eventDescription","date","instructorName","instructorId",
-        "overallGrade","overallResult","dcoResult",
-        "startTime","duration","endTime","comments",
-        "elementScores","isCompleted","isGroundSchoolAssessment","groundSchoolResult",
-        "course","syllabusPhase","eventSequence","createdAt","updatedAt","createdBy"
+        "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
+        "eventDescription", "date", "instructorName", "instructorId",
+        "overallGrade", "overallResult", "dcoResult",
+        "startTime", "duration", "endTime", "comments",
+        "elementScores", "isCompleted", "isGroundSchoolAssessment", "groundSchoolResult",
+        "course", "syllabusPhase", "eventSequence", "createdAt", "updatedAt", "createdBy"
       ) VALUES (
-        $1::text,$2::text,$3::text,$4::text,$5::text,$6::text,
-        $7::text,$8::text,$9::text,$10::text,
-        $11::text,$12::text,$13::text,
-        $14,$15,$16,$17::text,
-        $18::jsonb,$19::boolean,$20::boolean,$21,
-        $22::text,$23::text,$24,NOW(),NOW(),$25::text
+        $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+        $7::text, $8::text, $9::text, $10::text,
+        $11::text, $12::text, $13::text,
+        $14, $15, $16, $17::text,
+        $18::jsonb, $19::boolean, $20::boolean, $21,
+        $22::text, $23::text, $24, NOW(), NOW(), $25::text
       )
       ON CONFLICT ("eventId") DO UPDATE SET
-        "overallGrade"=$11::text,"overallResult"=$12::text,"dcoResult"=$13::text,
-        "comments"=$17::text,"elementScores"=$18::jsonb,"isCompleted"=$19::boolean,
-        "instructorName"=$9::text,"startTime"=$14,"duration"=$15,"endTime"=$16,
-        "isGroundSchoolAssessment"=$20::boolean,"groundSchoolResult"=$21,"updatedAt"=NOW()
+        "overallGrade"             = EXCLUDED."overallGrade",
+        "overallResult"            = EXCLUDED."overallResult",
+        "dcoResult"                = EXCLUDED."dcoResult",
+        "comments"                 = EXCLUDED."comments",
+        "elementScores"            = EXCLUDED."elementScores",
+        "isCompleted"              = EXCLUDED."isCompleted",
+        "instructorName"           = EXCLUDED."instructorName",
+        "startTime"                = EXCLUDED."startTime",
+        "duration"                 = EXCLUDED."duration",
+        "endTime"                  = EXCLUDED."endTime",
+        "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
+        "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
+        "updatedAt"                = NOW(),
+        "updatedBy"                = EXCLUDED."createdBy"
     `,
       row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
       row.eventDescription, row.date, row.instructorName, row.instructorId,
@@ -6401,7 +6745,10 @@ app.post('/api/trainee-performance', async (req, res) => {
       JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
       row.course, row.syllabusPhase, row.eventSequence, row.createdBy
     );
-    const created = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, row.eventId);
+
+    const created = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, row.eventId
+    );
     res.status(201).json(mapRowToAssessment(created[0]));
   } catch (error) {
     console.error('❌ POST /api/trainee-performance error:', error);
@@ -6409,34 +6756,66 @@ app.post('/api/trainee-performance', async (req, res) => {
   }
 });
 
-// PUT /api/trainee-performance/:eventId
+// PUT /api/trainee-performance/:eventId - update existing assessment
 app.put('/api/trainee-performance/:eventId', async (req, res) => {
   try {
     const db = await getPrisma();
     const { eventId } = req.params;
     const data = req.body;
-    const existing = await db.$queryRawUnsafe(`SELECT "id" FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId);
-    if (!existing || existing.length === 0) return res.status(404).json({ error: 'Assessment not found' });
+
+    // Check it exists
+    const existing = await db.$queryRawUnsafe(
+      `SELECT "id" FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
+    );
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: 'Assessment not found' });
+    }
+
+    // Build update from Pt051Assessment fields
     const comments = buildCommentsString(data);
-    const elementScores = data.scores || data.elementScores || [];
+    const elementScores = (data.scores || data.elementScores || []);
     const isGS = data.groundSchoolAssessment?.isAssessment || false;
     const gsResult = data.groundSchoolAssessment?.result ?? null;
+
     await db.$executeRawUnsafe(`
       UPDATE "TraineePerformance" SET
-        "overallGrade"=$1::text,"overallResult"=$2::text,"dcoResult"=$3::text,
-        "instructorName"=$4::text,"date"=$5::text,"flightNumber"=$6::text,
-        "comments"=$7::text,"elementScores"=$8::jsonb,"isCompleted"=$9::boolean,
-        "startTime"=$10,"duration"=$11,"endTime"=$12,
-        "isGroundSchoolAssessment"=$13::boolean,"groundSchoolResult"=$14,"updatedAt"=NOW()
-      WHERE "eventId"=$15::text
+        "overallGrade"             = $1::text,
+        "overallResult"            = $2::text,
+        "dcoResult"                = $3::text,
+        "instructorName"           = $4::text,
+        "date"                     = $5::text,
+        "flightNumber"             = $6::text,
+        "comments"                 = $7::text,
+        "elementScores"            = $8::jsonb,
+        "isCompleted"              = $9::boolean,
+        "startTime"                = $10,
+        "duration"                 = $11,
+        "endTime"                  = $12,
+        "isGroundSchoolAssessment" = $13::boolean,
+        "groundSchoolResult"       = $14,
+        "updatedAt"                = NOW()
+      WHERE "eventId" = $15::text
     `,
-      String(data.overallGrade ?? 'No Grade'), data.overallResult ?? null, data.dcoResult ?? null,
-      data.instructorName ?? '', data.date ?? '', data.flightNumber ?? '',
-      comments, JSON.stringify(elementScores), data.isCompleted ?? false,
-      data.startTime ?? null, data.duration ?? null, data.endTime ?? null,
-      isGS, gsResult, eventId
+      String(data.overallGrade ?? 'No Grade'),
+      data.overallResult ?? null,
+      data.dcoResult ?? null,
+      data.instructorName ?? '',
+      data.date ?? '',
+      data.flightNumber ?? '',
+      comments,
+      JSON.stringify(elementScores),
+      data.isCompleted ?? false,
+      data.startTime ?? null,
+      data.duration ?? null,
+      data.endTime ?? null,
+      isGS,
+      gsResult,
+      eventId
     );
-    const updated = await db.$queryRawUnsafe(`SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId);
+
+    const updated = await db.$queryRawUnsafe(
+      `SELECT * FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
+    );
     res.json(mapRowToAssessment(updated[0]));
   } catch (error) {
     console.error('❌ PUT /api/trainee-performance/:eventId error:', error);
@@ -6444,46 +6823,58 @@ app.put('/api/trainee-performance/:eventId', async (req, res) => {
   }
 });
 
-// DELETE /api/trainee-performance/:eventId
+// DELETE /api/trainee-performance/:eventId - delete assessment
 app.delete('/api/trainee-performance/:eventId', async (req, res) => {
   try {
     const db = await getPrisma();
-    await db.$executeRawUnsafe(`DELETE FROM "TraineePerformance" WHERE "eventId" = $1::text`, req.params.eventId);
-    res.json({ success: true, eventId: req.params.eventId });
+    const { eventId } = req.params;
+    await db.$executeRawUnsafe(
+      `DELETE FROM "TraineePerformance" WHERE "eventId" = $1::text`, eventId
+    );
+    res.json({ success: true, eventId });
   } catch (error) {
     console.error('❌ DELETE /api/trainee-performance/:eventId error:', error);
     res.status(500).json({ error: 'Failed to delete assessment', details: error.message });
   }
 });
 
-// POST /api/trainee-performance/bulk - batch import
+// POST /api/trainee-performance/bulk - bulk insert for data import (idempotent)
 app.post('/api/trainee-performance/bulk', async (req, res) => {
   try {
     const db = await getPrisma();
     const { records } = req.body;
-    if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: 'records array required' });
-    let inserted = 0, skipped = 0;
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return res.status(400).json({ error: 'records array required' });
+    }
+
+    let inserted = 0;
+    let skipped = 0;
     const errors = [];
+
+    // Process in batches of 100
     for (let i = 0; i < records.length; i += 100) {
-      for (const data of records.slice(i, i + 100)) {
+      const batch = records.slice(i, i + 100);
+      for (const data of batch) {
         try {
           const row = mapAssessmentToRow(data);
           await db.$executeRawUnsafe(`
             INSERT INTO "TraineePerformance" (
-              "id","traineeId","traineeFullName","eventId","eventCode","flightNumber",
-              "eventDescription","date","instructorName","instructorId",
-              "overallGrade","overallResult","dcoResult",
-              "startTime","duration","endTime","comments",
-              "elementScores","isCompleted","isGroundSchoolAssessment","groundSchoolResult",
-              "course","syllabusPhase","eventSequence","createdAt","updatedAt","createdBy"
+              "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
+              "eventDescription", "date", "instructorName", "instructorId",
+              "overallGrade", "overallResult", "dcoResult",
+              "startTime", "duration", "endTime", "comments",
+              "elementScores", "isCompleted", "isGroundSchoolAssessment", "groundSchoolResult",
+              "course", "syllabusPhase", "eventSequence", "createdAt", "updatedAt", "createdBy"
             ) VALUES (
-              $1::text,$2::text,$3::text,$4::text,$5::text,$6::text,
-              $7::text,$8::text,$9::text,$10::text,
-              $11::text,$12::text,$13::text,
-              $14,$15,$16,$17::text,
-              $18::jsonb,$19::boolean,$20::boolean,$21,
-              $22::text,$23::text,$24,NOW(),NOW(),$25::text
-            ) ON CONFLICT ("eventId") DO NOTHING
+              $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+              $7::text, $8::text, $9::text, $10::text,
+              $11::text, $12::text, $13::text,
+              $14, $15, $16, $17::text,
+              $18::jsonb, $19::boolean, $20::boolean, $21,
+              $22::text, $23::text, $24, NOW(), NOW(), $25::text
+            )
+            ON CONFLICT ("eventId") DO NOTHING
           `,
             row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
             row.eventDescription, row.date, row.instructorName, row.instructorId,
@@ -6499,886 +6890,131 @@ app.post('/api/trainee-performance/bulk', async (req, res) => {
         }
       }
     }
+
     res.json({ success: true, inserted, skipped, errors });
   } catch (error) {
     console.error('❌ POST /api/trainee-performance/bulk error:', error);
-    res.status(500).json({ error: 'Failed to bulk insert', details: error.message });
+    res.status(500).json({ error: 'Failed to bulk insert assessments', details: error.message });
   }
 });
 
-// Helper: Map DB row → Pt051Assessment shape
+// -----------------------------------------------------------------------
+// Helper: Map DB row → Pt051Assessment (app interface shape)
+// -----------------------------------------------------------------------
 function mapRowToAssessment(row) {
   if (!row) return null;
+  // elementScores is stored as JSONB - parse if string
   let scores = row.elementScores;
-  if (typeof scores === 'string') { try { scores = JSON.parse(scores); } catch { scores = []; } }
+  if (typeof scores === 'string') {
+    try { scores = JSON.parse(scores); } catch { scores = []; }
+  }
   if (!Array.isArray(scores)) scores = [];
+
+  // comments is the structured "QFI: ...\nWeather: ..." string
+  // overallComments is extracted from it for backward compatibility
   const overallComments = extractOverallComment(row.comments);
+
   return {
-    id: row.eventId,
-    traineeFullName: row.traineeFullName,
-    trainedFullName: row.traineeFullName,
-    eventId: row.eventId,
-    flightNumber: row.flightNumber,
-    date: row.date,
-    instructorName: row.instructorName,
-    overallGrade: row.overallGrade,
-    overallResult: row.overallResult || null,
-    dcoResult: row.dcoResult || '',
-    overallComments: overallComments,
-    comments: row.comments || '',
-    startTime: row.startTime || null,
-    duration: row.duration || null,
-    endTime: row.endTime || null,
-    isCompleted: row.isCompleted || false,
-    scores: scores,
-    groundSchoolAssessment: row.isGroundSchoolAssessment ? { isAssessment: true, result: row.groundSchoolResult ?? undefined } : undefined,
-    course: row.course || null,
-    syllabusPhase: row.syllabusPhase || null,
-    eventSequence: row.eventSequence || null,
-    traineeId: row.traineeId,
-    _dbId: row.id
+    id:                  row.eventId,           // app uses eventId as the key identifier
+    traineeFullName:     row.traineeFullName,
+    trainedFullName:     row.traineeFullName,   // backward compat alias used in MyDashboard
+    eventId:             row.eventId,
+    flightNumber:        row.flightNumber,
+    date:                row.date,
+    instructorName:      row.instructorName,
+    overallGrade:        row.overallGrade,
+    overallResult:       row.overallResult || null,
+    dcoResult:           row.dcoResult || '',
+    overallComments:     overallComments,
+    comments:            row.comments || '',
+    startTime:           row.startTime || null,
+    duration:            row.duration || null,
+    endTime:             row.endTime || null,
+    isCompleted:         row.isCompleted || false,
+    scores:              scores,                // array of {element, grade, comment}
+    groundSchoolAssessment: row.isGroundSchoolAssessment ? {
+      isAssessment: true,
+      result: row.groundSchoolResult ?? undefined
+    } : undefined,
+    // Extra fields for filtering/display
+    course:              row.course || null,
+    syllabusPhase:       row.syllabusPhase || null,
+    eventSequence:       row.eventSequence || null,
+    traineeId:           row.traineeId,
+    _dbId:               row.id               // internal DB id, not used by app
   };
 }
 
-// Helper: Map Pt051Assessment → DB row
+// Helper: Map Pt051Assessment (app shape) → DB row for INSERT
 function mapAssessmentToRow(data) {
   const id = data._dbId || data.id || generateSimpleId();
+
+  // Normalize scores: app uses data.scores, import uses data.elementScores
   const elementScores = (data.scores || data.elementScores || []).map(s => ({
-    element: s.element || '', grade: s.grade != null ? String(s.grade) : null, comment: s.comment || ''
+    element: s.element || '',
+    grade:   s.grade != null ? String(s.grade) : null,
+    comment: s.comment || ''
   }));
+
+  // Build structured comments string from Pt051Assessment shape
   const comments = data.comments || buildCommentsString(data);
+
   return {
-    id, traineeId: data.traineeId || '', traineeFullName: data.traineeFullName || data.trainedFullName || '',
-    eventId: data.eventId || '', eventCode: data.eventCode || data.flightNumber || '',
-    flightNumber: data.flightNumber || '', eventDescription: data.eventDescription || null,
-    date: data.date || '', instructorName: data.instructorName || '', instructorId: data.instructorId || null,
-    overallGrade: data.overallGrade != null ? String(data.overallGrade) : 'No Grade',
-    overallResult: data.overallResult || null, dcoResult: data.dcoResult || null,
-    startTime: data.startTime != null ? Number(data.startTime) : null,
-    duration: data.duration != null ? Number(data.duration) : null,
-    endTime: data.endTime != null ? Number(data.endTime) : null,
-    comments: comments || null, elementScores,
-    isCompleted: data.isCompleted === true || data.isCompleted === 'true',
+    id:                      id,
+    traineeId:               data.traineeId || '',
+    traineeFullName:         data.traineeFullName || data.trainedFullName || '',
+    eventId:                 data.eventId || '',
+    eventCode:               data.eventCode || data.flightNumber || '',
+    flightNumber:            data.flightNumber || '',
+    eventDescription:        data.eventDescription || null,
+    date:                    data.date || '',
+    instructorName:          data.instructorName || '',
+    instructorId:            data.instructorId || null,
+    overallGrade:            data.overallGrade != null ? String(data.overallGrade) : 'No Grade',
+    overallResult:           data.overallResult || null,
+    dcoResult:               data.dcoResult || null,
+    startTime:               data.startTime != null ? Number(data.startTime) : null,
+    duration:                data.duration != null ? Number(data.duration) : null,
+    endTime:                 data.endTime != null ? Number(data.endTime) : null,
+    comments:                comments || null,
+    elementScores:           elementScores,
+    isCompleted:             data.isCompleted === true || data.isCompleted === 'true',
     isGroundSchoolAssessment: data.groundSchoolAssessment?.isAssessment || false,
-    groundSchoolResult: data.groundSchoolAssessment?.result ?? null,
-    course: data.course || null, syllabusPhase: data.syllabusPhase || null,
-    eventSequence: data.eventSequence != null ? parseInt(data.eventSequence) : null,
-    createdBy: data.createdBy || null
+    groundSchoolResult:      data.groundSchoolAssessment?.result ?? null,
+    course:                  data.course || null,
+    syllabusPhase:           data.syllabusPhase || null,
+    eventSequence:           data.eventSequence != null ? parseInt(data.eventSequence) : null,
+    createdBy:               data.createdBy || null
   };
 }
 
+// Helper: Build "QFI: ...\nWeather: ..." string from Pt051Assessment fields
 function buildCommentsString(data) {
+  // If already in structured format, return as-is
   if (data.comments && data.comments.includes('QFI:')) return data.comments;
-  const qfi = data.qfiComments || '', weather = data.weatherComments || '';
-  const profile = data.profileComments || '', overall = data.overallComments || '', nest = data.nestComments || '';
+  // Build from individual fields (backward compat)
+  const qfi     = data.qfiComments     || '';
+  const weather  = data.weatherComments || '';
+  const profile  = data.profileComments || '';
+  const overall  = data.overallComments || '';
+  const nest     = data.nestComments    || '';
   if (!qfi && !weather && !profile && !overall && !nest) return data.comments || null;
   return `QFI: ${qfi}\nWeather: ${weather}\nProfile: ${profile}\nOverall: ${overall}\nNEST: ${nest}`;
 }
 
+// Helper: Extract "Overall" section from structured comments string
 function extractOverallComment(comments) {
   if (!comments) return '';
   const match = comments.match(/Overall:\s*([\s\S]*?)(?:\nNEST:|$)/);
   return match ? match[1].trim() : '';
 }
 
+// Helper: Generate a simple unique ID when cuid2 is not available
 function generateSimpleId() {
   return 'tp_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
 }
 
-// ── Ensure FlightLogEntry table exists ────────────────────────────────────────
-async function ensureFlightLogEntryTable(db) {
-  try {
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "FlightLogEntry" (
-        "id"              TEXT NOT NULL,
-        "scheduleEventId" TEXT NOT NULL,
-        "eventCode"       TEXT NOT NULL,
-        "eventDate"       TEXT NOT NULL,
-        "eventType"       TEXT NOT NULL DEFAULT 'flight',
-        "traineeId"       TEXT,
-        "personnelId"     TEXT,
-        "personName"      TEXT NOT NULL,
-        "personRole"      TEXT NOT NULL,
-        "aircraftNumber"  TEXT,
-        "fromIcao"        TEXT,
-        "toIcao"          TEXT,
-        "duty"            TEXT,
-        "isSolo"          BOOLEAN NOT NULL DEFAULT false,
-        "isDual"          BOOLEAN NOT NULL DEFAULT false,
-        "isFlightLog"     BOOLEAN NOT NULL DEFAULT true,
-        "isFtdLog"        BOOLEAN NOT NULL DEFAULT false,
-        "takeoffTime"     TEXT,
-        "landTime"        TEXT,
-        "totalTime"       DOUBLE PRECISION,
-        "captainTime"     DOUBLE PRECISION,
-        "instructorTime"  DOUBLE PRECISION,
-        "nightTime"       DOUBLE PRECISION,
-        "ifActualTime"    DOUBLE PRECISION,
-        "ifSimTime"       DOUBLE PRECISION,
-        "ineffectiveTime" DOUBLE PRECISION,
-        "ilsCount"        INTEGER NOT NULL DEFAULT 0,
-        "rnpCount"        INTEGER NOT NULL DEFAULT 0,
-        "tacanCount"      INTEGER NOT NULL DEFAULT 0,
-        "vorCount"        INTEGER NOT NULL DEFAULT 0,
-        "captainLogSnapshot" JSONB,
-        "crewLogSnapshot"    JSONB,
-        "recordedBy"      TEXT,
-        "notes"           TEXT,
-        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "FlightLogEntry_pkey" PRIMARY KEY ("id")
-      )
-    `);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_fle_scheduleEventId" ON "FlightLogEntry"("scheduleEventId")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_fle_scheduleEventId_role" ON "FlightLogEntry"("scheduleEventId", "personRole")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_fle_traineeId" ON "FlightLogEntry"("traineeId")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_fle_eventDate" ON "FlightLogEntry"("eventDate")`);
-    console.log('✅ FlightLogEntry table ready');
-  } catch (err) {
-    console.log('[FlightLog] table ensure error:', err.message);
-  }
-}
-
-// ── Ensure EventCompletion table exists ───────────────────────────────────────
-async function ensureEventCompletionTable(db) {
-  try {
-    await db.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "EventCompletion" (
-        "id"              TEXT NOT NULL,
-        "scheduleEventId" TEXT NOT NULL,
-        "eventCode"       TEXT NOT NULL,
-        "eventDate"       TEXT NOT NULL,
-        "eventType"       TEXT NOT NULL DEFAULT 'flight',
-        "startTime"       DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "duration"        DOUBLE PRECISION NOT NULL DEFAULT 0,
-        "traineeId"       TEXT,
-        "traineeFullName" TEXT NOT NULL,
-        "instructorName"  TEXT,
-        "dcoResult"       TEXT NOT NULL,
-        "overallGrade"    INTEGER,
-        "overallResult"   TEXT,
-        "aircraftNumber"  TEXT,
-        "takeoffTime"     TEXT,
-        "landTime"        TEXT,
-        "totalFlightTime" DOUBLE PRECISION,
-        "isSolo"          BOOLEAN NOT NULL DEFAULT false,
-        "isDual"          BOOLEAN NOT NULL DEFAULT false,
-        "isCountedAsElce" BOOLEAN NOT NULL DEFAULT true,
-        "recordedBy"      TEXT,
-        "source"          TEXT NOT NULL DEFAULT 'post_flight',
-        "notes"           TEXT,
-        "createdAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt"       TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "EventCompletion_pkey" PRIMARY KEY ("id")
-      )
-    `);
-    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "EventCompletion_scheduleEventId_key" ON "EventCompletion"("scheduleEventId")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_ec_traineeId" ON "EventCompletion"("traineeId")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_ec_traineeFullName" ON "EventCompletion"("traineeFullName")`);
-    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "idx_ec_eventDate" ON "EventCompletion"("eventDate")`);
-    console.log('✅ EventCompletion table ready');
-  } catch (err) {
-    console.log('[EventCompletion] table ensure error:', err.message);
-  }
-}
-
-// ── Ensure FlightLogEntry snapshot columns exist (backwards compat) ───────────
-async function ensureFlightLogSnapshotColumns(db) {
-  try {
-    await db.$executeRawUnsafe(`
-      ALTER TABLE "FlightLogEntry"
-        ADD COLUMN IF NOT EXISTS "captainLogSnapshot" JSONB,
-        ADD COLUMN IF NOT EXISTS "crewLogSnapshot" JSONB
-    `);
-  } catch (err) {
-    console.log('[FlightLog] snapshot column ensure:', err.message);
-  }
-}
-
-// ── GET /api/flight-log?scheduleEventId=... OR ?traineeId=... OR ?personnelId=... ──────
-app.get('/api/flight-log', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    await ensureFlightLogEntryTable(db);
-    await ensureFlightLogSnapshotColumns(db);
-    const { scheduleEventId, traineeId, personnelId, personName } = req.query;
-    let where = {};
-    if (scheduleEventId) {
-      where = { scheduleEventId };
-    } else if (traineeId) {
-      where = { traineeId };
-    } else if (personnelId) {
-      where = { personnelId };
-    } else if (personName) {
-      where = { personName };
-    } else {
-      return res.status(400).json({ error: 'scheduleEventId, traineeId, personnelId, or personName query param required' });
-    }
-    const entries = await db.flightLogEntry.findMany({
-      where,
-      orderBy: { eventDate: 'asc' },
-    });
-    console.log(`✅ GET /api/flight-log ${JSON.stringify(where)} → ${entries.length} rows`);
-    res.json({ entries });
-  } catch (error) {
-    console.error('❌ GET /api/flight-log error:', error);
-    res.status(500).json({ error: 'Failed to fetch flight log entries', details: error.message });
-  }
-});
-
-// ── POST /api/flight-log (upsert by scheduleEventId + personRole) ─────────────
-app.post('/api/flight-log', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    await ensureFlightLogEntryTable(db);
-    await ensureFlightLogSnapshotColumns(db);
-    const body = req.body;
-    const {
-      scheduleEventId, eventCode, eventDate, eventType,
-      traineeId, personnelId, personName, personRole,
-      aircraftNumber, fromIcao, toIcao, duty,
-      isSolo, isDual, isFlightLog, isFtdLog,
-      takeoffTime, landTime, totalTime, captainTime, instructorTime,
-      nightTime, ifActualTime, ifSimTime, ineffectiveTime,
-      ilsCount, rnpCount, tacanCount, vorCount,
-      captainLogSnapshot, crewLogSnapshot,
-      recordedBy, notes,
-    } = body;
-
-    if (!scheduleEventId || !personRole || !personName) {
-      return res.status(400).json({ error: 'scheduleEventId, personName, personRole are required' });
-    }
-
-    // Upsert: one row per sortie per role
-    const existing = await db.flightLogEntry.findFirst({
-      where: { scheduleEventId, personRole },
-    });
-
-    const data = {
-      scheduleEventId,
-      eventCode:      eventCode || scheduleEventId,
-      eventDate:      eventDate || new Date().toISOString().slice(0, 10),
-      eventType:      eventType || 'flight',
-      traineeId:      traineeId  || null,
-      personnelId:    personnelId || null,
-      personName,
-      personRole,
-      aircraftNumber: aircraftNumber || null,
-      fromIcao:       fromIcao || null,
-      toIcao:         toIcao   || null,
-      duty:           duty     || null,
-      isSolo:         !!isSolo,
-      isDual:         !!isDual,
-      isFlightLog:    isFlightLog !== undefined ? !!isFlightLog : true,
-      isFtdLog:       !!isFtdLog,
-      takeoffTime:    takeoffTime || null,
-      landTime:       landTime   || null,
-      totalTime:      totalTime       != null ? parseFloat(totalTime)       : null,
-      captainTime:    captainTime     != null ? parseFloat(captainTime)     : null,
-      instructorTime: instructorTime  != null ? parseFloat(instructorTime)  : null,
-      nightTime:      nightTime       != null ? parseFloat(nightTime)       : null,
-      ifActualTime:   ifActualTime    != null ? parseFloat(ifActualTime)    : null,
-      ifSimTime:      ifSimTime       != null ? parseFloat(ifSimTime)       : null,
-      ineffectiveTime:ineffectiveTime != null ? parseFloat(ineffectiveTime) : null,
-      ilsCount:       parseInt(ilsCount)   || 0,
-      rnpCount:       parseInt(rnpCount)   || 0,
-      tacanCount:     parseInt(tacanCount) || 0,
-      vorCount:       parseInt(vorCount)   || 0,
-      captainLogSnapshot: captainLogSnapshot || null,
-      crewLogSnapshot:    crewLogSnapshot   || null,
-      recordedBy:     recordedBy || null,
-      notes:          notes      || null,
-    };
-
-    let entry, created;
-    if (existing) {
-      entry = await db.flightLogEntry.update({ where: { id: existing.id }, data });
-      created = false;
-    } else {
-      entry = await db.flightLogEntry.create({ data });
-      created = true;
-    }
-
-    console.log(`✅ POST /api/flight-log ${created ? 'created' : 'updated'} id=${entry.id} scheduleEventId=${scheduleEventId} role=${personRole}`);
-    res.json({ success: true, entry, created });
-  } catch (error) {
-    console.error('❌ POST /api/flight-log error:', error);
-    res.status(500).json({ error: 'Failed to save flight log entry', details: error.message });
-  }
-});
-
-// ── GET /api/event-completions?scheduleEventId=... ────────────────────────────
-app.get('/api/event-completions', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    await ensureEventCompletionTable(db);
-    const { scheduleEventId, traineeId } = req.query;
-    const where = {};
-    if (scheduleEventId) where.scheduleEventId = scheduleEventId;
-    if (traineeId) where.traineeId = traineeId;
-    if (!scheduleEventId && !traineeId) {
-      return res.status(400).json({ error: 'scheduleEventId or traineeId query param required' });
-    }
-    const completions = await db.eventCompletion.findMany({
-      where,
-      orderBy: { eventDate: 'asc' },
-    });
-    console.log(`✅ GET /api/event-completions → ${completions.length} rows`);
-    res.json({ completions });
-  } catch (error) {
-    console.error('❌ GET /api/event-completions error:', error);
-    res.status(500).json({ error: 'Failed to fetch event completions', details: error.message });
-  }
-});
-
-// ── POST /api/event-completions (upsert by scheduleEventId) ──────────────────
-app.post('/api/event-completions', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    await ensureEventCompletionTable(db);
-    const {
-      scheduleEventId, eventCode, eventDate, eventType,
-      startTime, duration, traineeId, traineeFullName,
-      instructorName, dcoResult, aircraftNumber,
-      takeoffTime, landTime, totalFlightTime,
-      isSolo, isDual, source,
-    } = req.body;
-
-    if (!scheduleEventId) {
-      return res.status(400).json({ error: 'scheduleEventId is required' });
-    }
-
-    const existing = await db.eventCompletion.findFirst({
-      where: { scheduleEventId },
-    });
-
-    const data = {
-      scheduleEventId,
-      eventCode:      eventCode || scheduleEventId,
-      eventDate:      eventDate || new Date().toISOString().slice(0, 10),
-      eventType:      eventType || 'flight',
-      startTime:      startTime      != null ? parseInt(startTime)      : null,
-      duration:       duration       != null ? parseInt(duration)       : null,
-      traineeId:      traineeId      || null,
-      traineeFullName: traineeFullName || null,
-      instructorName: instructorName || null,
-      dcoResult:      dcoResult      || null,
-      aircraftNumber: aircraftNumber || null,
-      takeoffTime:    takeoffTime    || null,
-      landTime:       landTime       || null,
-      totalFlightTime: totalFlightTime != null ? parseFloat(totalFlightTime) : null,
-      isSolo:         !!isSolo,
-      isDual:         !!isDual,
-      source:         source || 'postflight',
-    };
-
-    let completion, created;
-    if (existing) {
-      completion = await db.eventCompletion.update({ where: { id: existing.id }, data });
-      created = false;
-    } else {
-      completion = await db.eventCompletion.create({ data });
-      created = true;
-    }
-
-    console.log(`✅ POST /api/event-completions ${created ? 'created' : 'updated'} id=${completion.id}`);
-    res.json({ success: true, completion, created });
-  } catch (error) {
-    console.error('❌ POST /api/event-completions error:', error);
-    res.status(500).json({ error: 'Failed to save event completion', details: error.message });
-  }
-});
-
-// MOBILE API ENDPOINTS
-// ============================================================
-
-// Helper: Generate JWT tokens
-function generateAccessTokens(userId) {
-  const accessToken = jwt.sign(
-    { userId, type: 'access' },
-    JWT_SECRET,
-    { expiresIn: JWT_ACCESS_EXPIRY }
-  );
-  const refreshToken = jwt.sign(
-    { userId, type: 'refresh' },
-    JWT_SECRET,
-    { expiresIn: JWT_REFRESH_EXPIRY }
-  );
-  return { accessToken, refreshToken };
-}
-
-// Helper: Verify JWT token and extract userId
-function verifyJWT(token) {
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.type === 'access' || decoded.type === 'refresh') {
-      return decoded.userId;
-    }
-    return null;
-  } catch (error) {
-    return null;
-  }
-}
-
-// Helper: Middleware to authenticate JWT tokens
-function authenticateMobileJWT(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No token provided' });
-  }
-  
-  const token = authHeader.substring(7);
-  const userId = verifyJWT(token);
-  
-  if (!userId) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-  
-  req.userId = userId;
-  next();
-}
-
-// POST /api/mobile/auth/login - Mobile JWT login
-app.post('/api/mobile/auth/login', async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const { userId: loginUserId, password } = req.body;
-
-    if (!loginUserId || !password) {
-      return res.status(400).json({ 
-        error: 'userId and password are required' 
-      });
-    }
-
-    // Find user by userId
-    const users = await db.$queryRawUnsafe(
-      `SELECT id, "userId", "firstName", "lastName", email, "role", "isActive", password FROM "User" WHERE "userId" = $1`,
-      loginUserId
-    );
-
-    if (!users || users.length === 0) {
-      console.log('❌ Mobile login failed: User not found for userId=' + loginUserId);
-      return res.status(401).json({ 
-        error: 'Invalid userId or password' 
-      });
-    }
-
-    const user = users[0];
-
-    // Check if user is active
-    if (!user.isActive) {
-      console.log('❌ Mobile login failed: User ' + loginUserId + ' is not active');
-      return res.status(403).json({ 
-        error: 'Account is inactive' 
-      });
-    }
-
-    // Verify password
-    const bcrypt = require('bcryptjs');
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!validPassword) {
-      console.log('❌ Mobile login failed: Invalid password for userId=' + loginUserId);
-      return res.status(401).json({ 
-        error: 'Invalid userId or password' 
-      });
-    }
-
-    // Map database role to iOS enum format
-    let mappedRole = 'OTHER'; // default
-    if (user.role) {
-      const roleUpper = user.role.toUpperCase();
-      if (roleUpper === 'ADMIN') {
-        mappedRole = 'ADMIN';
-      } else if (roleUpper === 'INSTRUCTOR' || roleUpper === 'STAFFINSTRUCTOR') {
-        mappedRole = 'INSTRUCTOR';
-      } else if (roleUpper === 'STUDENT' || roleUpper === 'TRAINEE') {
-        mappedRole = 'STUDENT';
-      }
-    }
-
-    // Generate tokens
-    const { accessToken, refreshToken } = generateAccessTokens(user.userId);
-
-    console.log('✅ Mobile login successful for userId=' + loginUserId);
-        
-        // Return success response in iOS app's expected format
-        res.json({
-           success: true,
-           message: "Login successful",
-           data: {
-                 accessToken: accessToken,
-                 refreshToken: refreshToken,
-                 user: {
-                 id: String(user.id),
-                 userId: user.userId,
-                 displayName: user.firstName + " " + user.lastName,
-                 email: user.email,
-                 isActive: user.isActive,
-                 role: mappedRole,
-                 firstName: user.firstName,
-                 lastName: user.lastName
-                 }
-           }
-       });
-
-  } catch (error) {
-    console.error('❌ POST /api/mobile/auth/login error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
-    });
-  }
-});
-
-// POST /api/mobile/auth/refresh - Refresh access token
-app.post('/api/mobile/auth/refresh', async (req, res) => {
-  try {
-    const { refreshToken } = req.body;
-
-    if (!refreshToken) {
-      return res.status(400).json({ 
-        error: 'refreshToken is required' 
-      });
-    }
-
-    // Verify refresh token
-    const userId = verifyJWT(refreshToken);
-
-    if (!userId) {
-      return res.status(401).json({ 
-        error: 'Invalid or expired refresh token' 
-      });
-    }
-
-    // Generate new tokens
-    const { accessToken, refreshToken: newRefreshToken } = generateAccessTokens(userId);
-
-    console.log('✅ Mobile token refresh successful for userId=' + userId);
-
-    res.json({
-        accessToken: accessToken,
-        refreshToken: newRefreshToken,
-        expiresIn: 3600 // 1 hour in seconds
-      });
-  } catch (error) {
-    console.error('❌ POST /api/mobile/auth/refresh error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      details: error.message 
-    });
-  }
-});
-
-
-// GET /api/mobile/auth/me - Validate token and return current user info
-app.get('/api/mobile/auth/me', authenticateMobileJWT, async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const jwtUserId = req.userId; // human-readable userId from JWT
-
-    const users = await db.$queryRawUnsafe(
-      `SELECT id, "userId", "firstName", "lastName", email, "role", "isActive" FROM "User" WHERE "userId" = $1 LIMIT 1`,
-      jwtUserId
-    );
-
-    if (!users || users.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    const user = users[0];
-
-    let mappedRole = 'OTHER';
-    if (user.role) {
-      const roleUpper = user.role.toUpperCase();
-      if (roleUpper === 'ADMIN') mappedRole = 'ADMIN';
-      else if (roleUpper === 'INSTRUCTOR' || roleUpper === 'STAFFINSTRUCTOR') mappedRole = 'INSTRUCTOR';
-      else if (roleUpper === 'STUDENT' || roleUpper === 'TRAINEE') mappedRole = 'STUDENT';
-    }
-
-    console.log('✅ GET /api/mobile/auth/me - userId=' + jwtUserId);
-    res.json({
-      id: String(user.id),
-      userId: user.userId,
-      displayName: ((user.firstName || '') + ' ' + (user.lastName || '')).trim(),
-      email: user.email,
-      isActive: user.isActive,
-      role: mappedRole,
-      firstName: user.firstName,
-      lastName: user.lastName
-    });
-  } catch (error) {
-    console.error('❌ GET /api/mobile/auth/me error:', error);
-    res.status(500).json({ error: 'Internal server error', details: error.message });
-  }
-});
-
-// Helper function to format time from database to HH:mm format
-function formatTime(timeValue) {
-  if (!timeValue) return "00:00";
-  
-  // Handle both TIME type and string formats
-  if (typeof timeValue === "string") {
-    // Already in string format, just return if valid
-    return timeValue;
-  }
-  
-  // Handle Date object
-  if (timeValue instanceof Date) {
-    const hours = String(timeValue.getHours()).padStart(2, "0");
-    const minutes = String(timeValue.getMinutes()).padStart(2, "0");
-    return hours + ":" + minutes;
-  }
-  
-  return "00:00";
-}
-
-// GET /api/mobile/schedule - Get user's schedule (authenticated)
-app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
-  try {
-    const db = await getPrisma();
-    const jwtUserId = req.userId; // This is the human-readable userId (e.g. "alexander.burns")
-    const { date, startDate, endDate } = req.query;
-
-    console.log("📅 Fetching schedule for jwtUserId=" + jwtUserId + ", params: " + JSON.stringify(req.query));
-
-    // Step 1: Look up the User record by userId to get the DB id (cuid)
-    const users = await db.$queryRawUnsafe(
-      `SELECT id, "userId", "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
-      jwtUserId
-    );
-
-    if (!users || users.length === 0) {
-      console.log("❌ No user found for jwtUserId=" + jwtUserId);
-      return res.status(401).json({ error: "User not found" });
-    }
-
-    const dbUser = users[0];
-    const dbUserId = dbUser.id; // cuid - used as FK in Schedule table
-    const userFullName = ((dbUser.firstName || '') + ' ' + (dbUser.lastName || '')).trim();
-    // Also build "Last, First" format used in DailySnapshot events
-    const userFullNameReversed = ((dbUser.lastName || '') + ', ' + (dbUser.firstName || '')).trim();
-
-    console.log("👤 Resolved user: dbId=" + dbUserId + ", name=" + userFullName);
-
-    // Step 2: Build schedule query using real columns (no isPublished/serverTime)
-    let scheduleWhere = { userId: dbUserId };
-    if (date) {
-      scheduleWhere.date = date;
-    } else if (startDate || endDate) {
-      scheduleWhere.date = {};
-      if (startDate) scheduleWhere.date.gte = startDate;
-      if (endDate) scheduleWhere.date.lte = endDate;
-    }
-
-    const schedules = await db.schedule.findMany({
-      where: scheduleWhere,
-      orderBy: { date: 'asc' }
-    });
-
-    // Helper: convert decimal hours (e.g. 9.5) or HH:MM string to "HH:MM"
-    function toHHMM(val) {
-      if (!val && val !== 0) return "00:00";
-      if (typeof val === 'string' && /^\d{2}:\d{2}/.test(val)) return val.substring(0, 5);
-      const num = parseFloat(val);
-      if (isNaN(num)) return "00:00";
-      const h = Math.floor(num);
-      const m = Math.round((num - h) * 60);
-      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
-    }
-
-    // Helper: map event type string to iOS EventType enum values
-    function mapEventType(type) {
-      if (!type) return "Other";
-      const t = type.toLowerCase();
-      if (t === 'flight') return "Flight";
-      if (t === 'ftd' || t === 'simulator') return "FTD";
-      if (t === 'brief' || t === 'briefing') return "Brief";
-      if (t === 'duty') return "Duty";
-      if (t === 'ground') return "Ground";
-      return "Other";
-    }
-
-    // Helper: map role string to iOS EventRole enum values
-    function mapRole(role) {
-      if (!role) return null;
-      const r = role.toLowerCase();
-      if (r === 'student' || r === 'trainee') return "Student";
-      if (r === 'instructor') return "Instructor";
-      if (r === 'crew') return "Crew";
-      if (r === 'observer') return "Observer";
-      if (r === 'pilot') return "Pilot";
-      if (r === 'copilot' || r === 'co-pilot') return "Co-Pilot";
-      return null;
-    }
-
-    // Helper: extract events from Schedule.data JSON blob
-    function extractEventsFromData(dataJson) {
-      if (!dataJson) return [];
-      try {
-        const data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
-        // data could be an array of events or an object with an events array
-        let rawEvents = [];
-        if (Array.isArray(data)) {
-          rawEvents = data;
-        } else if (data.events && Array.isArray(data.events)) {
-          rawEvents = data.events;
-        } else if (data.scheduleEvents && Array.isArray(data.scheduleEvents)) {
-          rawEvents = data.scheduleEvents;
-        } else if (data.slots && Array.isArray(data.slots)) {
-          rawEvents = data.slots;
-        } else {
-          // Try to find any array property that looks like events
-          for (const key of Object.keys(data)) {
-            if (Array.isArray(data[key]) && data[key].length > 0 && data[key][0].startTime !== undefined) {
-              rawEvents = data[key];
-              break;
-            }
-          }
-        }
-        return rawEvents.map((e, idx) => ({
-          id: String(e.id || e.eventId || idx + 1),
-          startTime: toHHMM(e.startTime),
-          endTime: toHHMM(e.endTime || (e.startTime ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null)),
-          eventType: mapEventType(e.type || e.eventType || e.eventCode),
-          location: e.location || e.origin || null,
-          role: mapRole(e.role || (
-              (e.student && (e.student.toLowerCase().replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim() === userFullName.toLowerCase() || e.student.toLowerCase().replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim() === userFullNameReversed.toLowerCase())) ? 'Student' :
-              (e.instructor && (e.instructor.toLowerCase() === userFullName.toLowerCase() || e.instructor.toLowerCase() === userFullNameReversed.toLowerCase())) ? 'Instructor' :
-              null
-            )),
-          status: e.status || "Published",
-          notes: e.notes || e.eventDescription || null,
-          aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
-          instructor: e.instructor || null
-        }));
-      } catch (err) {
-        console.error("⚠️ Error parsing schedule data:", err.message);
-        return [];
-      }
-    }
-
-    // Step 3: If Schedule records exist, use them
-    if (schedules && schedules.length > 0) {
-      const transformedSchedules = schedules.map(schedule => {
-        const events = extractEventsFromData(schedule.data);
-        return {
-          id: String(schedule.id),
-          date: schedule.date,
-          isPublished: true,
-          events: events,
-          serverTime: new Date().toISOString()
-        };
-      });
-
-      if (date && transformedSchedules.length > 0) {
-        console.log("✅ GET /api/mobile/schedule - Single date: " + date + ", events: " + transformedSchedules[0].events.length);
-        return res.json({ schedule: transformedSchedules[0] });
-      }
-
-      console.log("✅ GET /api/mobile/schedule - Found " + transformedSchedules.length + " schedules for userId=" + jwtUserId);
-      return res.json({ success: true, schedules: transformedSchedules });
-    }
-
-    // Step 4: No Schedule record - check DailySnapshot for published events filtered to this user
-    if (date) {
-      const snapRows = await db.$queryRawUnsafe(
-        `SELECT "scheduleEvents", "traineeEvents", "staffEvents" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
-        date
-      );
-
-      if (snapRows && snapRows.length > 0) {
-        const snap = snapRows[0];
-        // Combine all event arrays and deduplicate by id
-        const allSnapshotEventsRaw = [
-          ...(Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []),
-          ...(Array.isArray(snap.staffEvents) ? snap.staffEvents : []),
-          ...(Array.isArray(snap.traineeEvents) ? snap.traineeEvents : [])
-        ];
-        const seenIds = new Set();
-        const allSnapshotEvents = allSnapshotEventsRaw.filter(e => {
-          const eid = e.id || e.eventId;
-          if (eid && seenIds.has(eid)) return false;
-          if (eid) seenIds.add(eid);
-          return true;
-        });
-
-        // Filter events for this user by name or traineeId matching userId
-        // Match by "First Last", "Last, First", or traineeId
-        const nameMatch = (nameField) => {
-          if (!nameField) return false;
-          const n = nameField.toLowerCase();
-          // Strip course suffix like "– ADF302" for student fields
-          const nClean = n.replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim();
-          return nClean === userFullName.toLowerCase() ||
-                 nClean === userFullNameReversed.toLowerCase() ||
-                 n === userFullName.toLowerCase() ||
-                 n === userFullNameReversed.toLowerCase();
-        };
-        const userEvents = allSnapshotEvents.filter(e =>
-          nameMatch(e.student) ||
-          nameMatch(e.instructor) ||
-            (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
-        );
-
-        if (userEvents.length > 0) {
-          const mappedEvents = userEvents.map((e, idx) => {
-            const isStandby = (e.resourceId && e.resourceId.toLowerCase().includes('stby')) ||
-                              (e.flightNumber && e.flightNumber.toLowerCase().includes('stby')) ||
-                              (e.status && e.status.toLowerCase() === 'stby');
-            const endTimeVal = e.endTime != null ? e.endTime :
-              (e.startTime != null ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null);
-            return {
-              id: String(e.id || e.eventId || idx + 1),
-              title: e.flightNumber || e.resourceId || e.eventCode || null,
-              startTime: toHHMM(e.startTime),
-              endTime: toHHMM(endTimeVal),
-              eventType: mapEventType(e.type || e.eventType || e.eventCode),
-              location: e.location || e.origin || null,
-              role: mapRole(nameMatch(e.student) ? 'Student' : nameMatch(e.instructor) ? 'Instructor' : e.role || null),
-              status: isStandby ? "STBY" : "Published",
-              isStandby: isStandby,
-              notes: e.notes || e.eventDescription || null,
-              aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
-              instructor: e.instructor || null,
-              student: e.student || null,
-              pilot: e.pilot || null,
-              resourceId: e.resourceId || null
-            };
-          });
-
-          console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
-          return res.json({
-            schedule: {
-              id: date,
-              date: date,
-              isPublished: true,
-              events: mappedEvents,
-              serverTime: new Date().toISOString()
-            }
-          });
-        }
-      }
-    }
-
-    // Step 5: Nothing found
-    console.log("❌ No schedule found for jwtUserId=" + jwtUserId + ", date=" + (date || 'range'));
-    return res.json({
-      schedule: null,
-      message: date ? "Schedule not published for this date" : "No schedules found"
-    });
-
-  } catch (error) {
-    console.error("❌ GET /api/mobile/schedule error:", error);
-    res.status(500).json({ 
-      error: "Internal server error", 
-      details: error.message 
-    });
-  }
-});
-
-
-
+// Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');
   if (fs.existsSync(indexPath)) {
@@ -7390,9 +7026,6 @@ app.get('*', (req, res) => {
 
 // ============================================================
 // START SERVER
-// ============================================================
-
-
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 DFP-NEO V2 Server running on port ${PORT} [theme-system-v1 build:${new Date().toISOString()}]`);
