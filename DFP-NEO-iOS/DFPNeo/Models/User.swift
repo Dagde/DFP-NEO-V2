@@ -2,25 +2,11 @@
 //  User.swift
 //  DFP-NEO Mobile
 //
-//  User authentication and profile models
+//  NOTE: struct User is defined in Models/CompatibilityModels.swift
+//  This file contains only the auth response and request models used by AuthService.
 //
 
 import Foundation
-
-struct User: Codable, Identifiable {
-    let id: String
-    let userId: String
-    let displayName: String?
-    let email: String?
-    let isActive: Bool?
-    let role: String?
-    let firstName: String?
-    let lastName: String?
-
-    var effectiveDisplayName: String {
-        displayName ?? userId
-    }
-}
 
 // MARK: - Auth Response
 // Server returns: { success, message, data: { accessToken, refreshToken, user } }
