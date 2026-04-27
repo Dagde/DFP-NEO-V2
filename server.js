@@ -7156,6 +7156,8 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     const dbUser = users[0];
     const dbUserId = dbUser.id; // cuid - used as FK in Schedule table
     const userFullName = ((dbUser.firstName || '') + ' ' + (dbUser.lastName || '')).trim();
+    // Also build "Last, First" format used in DailySnapshot events
+    const userFullNameReversed = ((dbUser.lastName || '') + ', ' + (dbUser.firstName || '')).trim();
 
     console.log("👤 Resolved user: dbId=" + dbUserId + ", name=" + userFullName);
 
@@ -7240,7 +7242,11 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           endTime: toHHMM(e.endTime || (e.startTime ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null)),
           eventType: mapEventType(e.type || e.eventType || e.eventCode),
           location: e.location || e.origin || null,
-          role: mapRole(e.role || (e.student === userFullName ? 'Student' : e.instructor === userFullName ? 'Instructor' : null)),
+          role: mapRole(e.role || (
+              (e.student && (e.student.toLowerCase().replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim() === userFullName.toLowerCase() || e.student.toLowerCase().replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim() === userFullNameReversed.toLowerCase())) ? 'Student' :
+              (e.instructor && (e.instructor.toLowerCase() === userFullName.toLowerCase() || e.instructor.toLowerCase() === userFullNameReversed.toLowerCase())) ? 'Instructor' :
+              null
+            )),
           status: e.status || "Published",
           notes: e.notes || e.eventDescription || null,
           aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
@@ -7290,25 +7296,49 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         ];
 
         // Filter events for this user by name or traineeId matching userId
+        // Match by "First Last", "Last, First", or traineeId
+        const nameMatch = (nameField) => {
+          if (!nameField) return false;
+          const n = nameField.toLowerCase();
+          // Strip course suffix like "– ADF302" for student fields
+          const nClean = n.replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim();
+          return nClean === userFullName.toLowerCase() ||
+                 nClean === userFullNameReversed.toLowerCase() ||
+                 n === userFullName.toLowerCase() ||
+                 n === userFullNameReversed.toLowerCase();
+        };
         const userEvents = allSnapshotEvents.filter(e =>
-          (e.student && (e.student === userFullName || e.student.toLowerCase() === userFullName.toLowerCase())) ||
-          (e.instructor && (e.instructor === userFullName || e.instructor.toLowerCase() === userFullName.toLowerCase())) ||
+          nameMatch(e.student) ||
+          nameMatch(e.instructor) ||
+          nameMatch(e.pilot) ||
           (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
         );
 
         if (userEvents.length > 0) {
-          const mappedEvents = userEvents.map((e, idx) => ({
-            id: String(e.id || e.eventId || idx + 1),
-            startTime: toHHMM(e.startTime),
-            endTime: toHHMM(e.endTime || (e.startTime ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null)),
-            eventType: mapEventType(e.type || e.eventType || e.eventCode),
-            location: e.location || e.origin || null,
-            role: mapRole(e.student === userFullName ? 'Student' : e.instructor === userFullName ? 'Instructor' : e.role || null),
-            status: "Published",
-            notes: e.notes || e.eventDescription || null,
-            aircraft: e.aircraft || e.aircraftNumber || null,
-            instructor: e.instructor || null
-          }));
+          const mappedEvents = userEvents.map((e, idx) => {
+            const isStandby = (e.resourceId && e.resourceId.toLowerCase().includes('stby')) ||
+                              (e.flightNumber && e.flightNumber.toLowerCase().includes('stby')) ||
+                              (e.status && e.status.toLowerCase() === 'stby');
+            const endTimeVal = e.endTime != null ? e.endTime :
+              (e.startTime != null ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null);
+            return {
+              id: String(e.id || e.eventId || idx + 1),
+              title: e.flightNumber || e.resourceId || e.eventCode || null,
+              startTime: toHHMM(e.startTime),
+              endTime: toHHMM(endTimeVal),
+              eventType: mapEventType(e.type || e.eventType || e.eventCode),
+              location: e.location || e.origin || null,
+              role: mapRole(nameMatch(e.student) ? 'Student' : nameMatch(e.instructor) ? 'Instructor' : e.role || null),
+              status: isStandby ? "STBY" : "Published",
+              isStandby: isStandby,
+              notes: e.notes || e.eventDescription || null,
+              aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
+              instructor: e.instructor || null,
+              student: e.student || null,
+              pilot: e.pilot || null,
+              resourceId: e.resourceId || null
+            };
+          });
 
           console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
           return res.json({
