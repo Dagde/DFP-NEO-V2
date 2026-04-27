@@ -7070,6 +7070,49 @@ app.post('/api/mobile/auth/refresh', async (req, res) => {
   }
 });
 
+
+// GET /api/mobile/auth/me - Validate token and return current user info
+app.get('/api/mobile/auth/me', authenticateMobileJWT, async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const jwtUserId = req.userId; // human-readable userId from JWT
+
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", "firstName", "lastName", email, "role", "isActive" FROM "User" WHERE "userId" = $1 LIMIT 1`,
+      jwtUserId
+    );
+
+    if (!users || users.length === 0) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+
+    let mappedRole = 'OTHER';
+    if (user.role) {
+      const roleUpper = user.role.toUpperCase();
+      if (roleUpper === 'ADMIN') mappedRole = 'ADMIN';
+      else if (roleUpper === 'INSTRUCTOR' || roleUpper === 'STAFFINSTRUCTOR') mappedRole = 'INSTRUCTOR';
+      else if (roleUpper === 'STUDENT' || roleUpper === 'TRAINEE') mappedRole = 'STUDENT';
+    }
+
+    console.log('✅ GET /api/mobile/auth/me - userId=' + jwtUserId);
+    res.json({
+      id: String(user.id),
+      userId: user.userId,
+      displayName: ((user.firstName || '') + ' ' + (user.lastName || '')).trim(),
+      email: user.email,
+      isActive: user.isActive,
+      role: mappedRole,
+      firstName: user.firstName,
+      lastName: user.lastName
+    });
+  } catch (error) {
+    console.error('❌ GET /api/mobile/auth/me error:', error);
+    res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
 // Helper function to format time from database to HH:mm format
 function formatTime(timeValue) {
   if (!timeValue) return "00:00";
