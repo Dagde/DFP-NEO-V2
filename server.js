@@ -7318,8 +7318,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         const userEvents = allSnapshotEvents.filter(e =>
           nameMatch(e.student) ||
           nameMatch(e.instructor) ||
-          nameMatch(e.pilot) ||
-          (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
+            (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
         );
 
         if (userEvents.length > 0) {
