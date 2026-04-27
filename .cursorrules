@@ -1,0 +1,16 @@
+# DFP-NEO-V2 Development Rules
+
+## CRITICAL DEPLOYMENT RULE - MUST FOLLOW EVERY TIME
+
+Railway deploys from `DFP-NEO-V2-fresh/` subdirectory ONLY.
+NEVER make changes at the repository root - they will not be deployed.
+
+### Before Every Commit:
+1. Verify working directory is `/workspace/DFP-NEO-V2-fresh/`
+2. Run `npm run build` if any React component was changed
+3. Push to `feature/comprehensive-build-algorithm` branch ONLY (never `main`)
+
+### Push Command:
+```bash
+git push https://x-access-token:$GITHUB_TOKEN@github.com/Dagde/DFP-NEO-V2.git HEAD:feature/comprehensive-build-algorithm
+```
