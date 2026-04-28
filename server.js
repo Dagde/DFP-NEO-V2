@@ -3709,6 +3709,36 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
 
       // Append to existing unavailability array
       const existing = Array.isArray(record.unavailability) ? record.unavailability : [];
+         // ── Deduplication check ───────────────────────────────────────────────
+         // Prevent duplicate entries if the iOS app retries or the user submits twice.
+         const isDuplicate = existing.some(e =>
+           e.startDate === date &&
+           e.endDate   === date &&
+           e.startTime === '08:00' &&
+           e.endTime   === '23:00' &&
+           e.reason    === reasonId
+         );
+
+         if (isDuplicate) {
+           const existingEntry = existing.find(e =>
+             e.startDate === date && e.endDate === date &&
+             e.startTime === '08:00' && e.endTime === '23:00' && e.reason === reasonId
+           );
+           console.log('\u26a0\ufe0f POST /api/mobile/unavailability/quick - DUPLICATE for userId=' + humanUserId + ', date=' + date + ' - returning existing entry');
+           return res.json({
+             id: existingEntry.id,
+             status: 'approved',
+             startDateTime: `${date}T08:00:00.000Z`,
+             endDateTime: `${date}T23:00:00.000Z`,
+             reason: { id: reasonId, code: reasonId, description: reasonId, requiresApproval: false },
+             notes: notes || null,
+             submittedAt: new Date().toISOString(),
+             message: `Quick unavailability already registered for ${date} (0800-2300)`,
+           });
+         }
+         // ── End deduplication check ───────────────────────────────────────────
+
+
       const updated = [...existing, newPeriod];
 
       if (recordType === 'personnel') {
@@ -3846,6 +3876,43 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
 
       // Append to existing unavailability array
       const existing = Array.isArray(record.unavailability) ? record.unavailability : [];
+         // ── Deduplication check ───────────────────────────────────────────────
+         // Prevent duplicate entries if the iOS app retries or the user submits twice.
+         // For custom unavailability, match on startDate, endDate, startTime, endTime, reason.
+         const startDateOnly = startDateTime ? startDateTime.split('T')[0] : '';
+         const endDateOnly   = endDateTime   ? endDateTime.split('T')[0]   : '';
+         const startTimeOnly = startDateTime && startDateTime.includes('T')
+           ? startDateTime.split('T')[1].substring(0, 5) : startTime;
+         const endTimeOnly   = endDateTime   && endDateTime.includes('T')
+           ? endDateTime.split('T')[1].substring(0, 5)   : endTime;
+
+         const isDuplicate = existing.some(e =>
+           e.startDate === startDateOnly &&
+           e.endDate   === endDateOnly   &&
+           String(e.startTime || '').replace(':', '') === String(startTimeOnly || '').replace(':', '') &&
+           String(e.endTime   || '').replace(':', '') === String(endTimeOnly   || '').replace(':', '') &&
+           e.reason    === reasonId
+         );
+
+         if (isDuplicate) {
+           const existingEntry = existing.find(e =>
+             e.startDate === startDateOnly && e.endDate === endDateOnly && e.reason === reasonId
+           );
+           console.log('\u26a0\ufe0f POST /api/mobile/unavailability/create - DUPLICATE for userId=' + humanUserId + ', start=' + startDateTime + ' - returning existing entry');
+           return res.json({
+             id: existingEntry.id,
+             status: 'approved',
+             startDateTime,
+             endDateTime,
+             reason: { id: reasonId, code: reasonId, description: reasonId, requiresApproval: false },
+             notes: notes || null,
+             submittedAt: new Date().toISOString(),
+             message: `Unavailability already registered from ${startDateOnly} to ${endDateOnly}`,
+           });
+         }
+         // ── End deduplication check ───────────────────────────────────────────
+
+
       const updated = [...existing, newPeriod];
 
       if (recordType === 'personnel') {
