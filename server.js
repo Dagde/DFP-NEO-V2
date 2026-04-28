@@ -3343,7 +3343,8 @@ app.post('/api/auth/verify-password', async (req, res) => {
       return res.status(401).json({ error: 'Invalid or expired access token' });
     }
 
-    req.mobileUserId = userId;
+    req.userId = userId;
+    req.mobileUserId = userId; // kept for compatibility
     next();
   }
 
