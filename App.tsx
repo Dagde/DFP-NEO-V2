@@ -13859,9 +13859,7 @@ updates.forEach(update => {
                                 
                                 const dbId = (data as any).id;
                                 try {
-                                const dbId = (data as any).id;
 
-                                try {
                                     if (dbId) {
                                         // Existing record — use PATCH to update
                                         const response = await fetch(`/api/personnel/${dbId}`, {
@@ -13969,8 +13967,6 @@ updates.forEach(update => {
                                     unavailability: data.unavailability,
                                     unavailabilityLength: data.unavailability?.length || 0
                                 });
-                                
-                                try {
                                 const dbId = (data as any).id;
 
                                 try {
