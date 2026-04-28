@@ -3628,52 +3628,72 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       if (!date || !reasonId) {
         return res.status(400).json({ error: 'Missing required fields', message: 'date and reasonId are required' });
       }
-
-      // Step 1: Look up User record to get cuid (used as FK in Personnel/Trainee)
+      // Look up Personnel or Trainee record by multiple strategies
+      // Strategy 1: Try userId FK (cuid) match via User table
       const userRows = await db.$queryRawUnsafe(
-        `SELECT id FROM "User" WHERE "userId" = $1 LIMIT 1`,
+        `SELECT id, "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
         humanUserId
       );
       const userCuid = userRows && userRows.length > 0 ? userRows[0].id : null;
+      const dbFirstName = userRows && userRows.length > 0 ? (userRows[0].firstName || '') : '';
+      const dbLastName  = userRows && userRows.length > 0 ? (userRows[0].lastName  || '') : '';
 
-      // Step 2: Find personnel or trainee record linked to this user
+      // Build name variants from userId (e.g. "alexander.burns" -> "Burns, Alexander" / "Alexander Burns")
+      const parts = humanUserId.split('.');
+      const firstFromId = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
+      const lastFromId  = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
+      const firstName = dbFirstName || firstFromId;
+      const lastName  = dbLastName  || lastFromId;
+      // Personnel name format: "Last, First"
+      const nameLastFirst = lastName && firstName ? `${lastName}, ${firstName}` : '';
+      // Personnel name format: "First Last"
+      const nameFirstLast = firstName && lastName ? `${firstName} ${lastName}` : '';
+
       let record = null;
       let recordType = null;
 
-      // Try Personnel first (userId FK = User.id cuid)
+      // Strategy 1: userId FK (cuid)
       if (userCuid) {
-        const personnel = await db.personnel.findFirst({ where: { userId: userCuid } });
-        if (personnel) {
-          record = personnel;
-          recordType = 'personnel';
-        } else {
-          const trainee = await db.trainee.findFirst({ where: { userId: userCuid } });
-          if (trainee) {
-            record = trainee;
-            recordType = 'trainee';
-          }
+        const p = await db.personnel.findFirst({ where: { userId: userCuid } });
+        if (p) { record = p; recordType = 'personnel'; }
+        if (!record) {
+          const t = await db.trainee.findFirst({ where: { userId: userCuid } });
+          if (t) { record = t; recordType = 'trainee'; }
         }
       }
 
-      // Fallback: try matching by name or direct userId string
-      if (!record) {
-        const personnelDirect = await db.personnel.findFirst({ where: { userId: humanUserId } });
-        if (personnelDirect) {
-          record = personnelDirect;
-          recordType = 'personnel';
-        } else {
-          const traineeDirect = await db.trainee.findFirst({ where: { userId: humanUserId } });
-          if (traineeDirect) {
-            record = traineeDirect;
-            recordType = 'trainee';
-          }
+      // Strategy 2: name match "Last, First"
+      if (!record && nameLastFirst) {
+        const p = await db.personnel.findFirst({ where: { name: { equals: nameLastFirst, mode: 'insensitive' } } });
+        if (p) { record = p; recordType = 'personnel'; }
+        if (!record) {
+          const t = await db.trainee.findFirst({ where: { fullName: { equals: nameLastFirst, mode: 'insensitive' } } });
+          if (t) { record = t; recordType = 'trainee'; }
         }
       }
 
+      // Strategy 3: name match "First Last"
+      if (!record && nameFirstLast) {
+        const p = await db.personnel.findFirst({ where: { name: { equals: nameFirstLast, mode: 'insensitive' } } });
+        if (p) { record = p; recordType = 'personnel'; }
+        if (!record) {
+          const t = await db.trainee.findFirst({ where: { fullName: { equals: nameFirstLast, mode: 'insensitive' } } });
+          if (t) { record = t; recordType = 'trainee'; }
+        }
+      }
+
+      // Strategy 4: email match (userId often matches email prefix)
       if (!record) {
-        console.log('\u274c Unavailability: No personnel/trainee found for humanUserId=' + humanUserId + ', userCuid=' + userCuid);
+        const p = await db.personnel.findFirst({ where: { email: { contains: humanUserId, mode: 'insensitive' } } });
+        if (p) { record = p; recordType = 'personnel'; }
+      }
+
+      if (!record) {
+        console.log('\u274c Unavailability: No record found for humanUserId=' + humanUserId + ', tried cuid=' + userCuid + ', nameLastFirst="' + nameLastFirst + '", nameFirstLast="' + nameFirstLast + '"');
         return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account. UserID: ' + humanUserId });
       }
+
+      console.log('\u2705 Unavailability: Found ' + recordType + ' record id=' + record.id + ' name=' + (record.name || record.fullName) + ' for userId=' + humanUserId);
 
       // Build the unavailability period entry
       const newPeriod = {
@@ -3745,51 +3765,72 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       const endTime = `${pad(endDt.getUTCHours())}:${pad(endDt.getUTCMinutes())}`;
       const allDay = startDate !== endDate && startTime === '00:00' && endTime === '00:00';
 
-      // Step 1: Look up User record to get cuid (used as FK in Personnel/Trainee)
+      // Look up Personnel or Trainee record by multiple strategies
+      // Strategy 1: Try userId FK (cuid) match via User table
       const userRows = await db.$queryRawUnsafe(
-        `SELECT id FROM "User" WHERE "userId" = $1 LIMIT 1`,
+        `SELECT id, "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
         humanUserId
       );
       const userCuid = userRows && userRows.length > 0 ? userRows[0].id : null;
+      const dbFirstName = userRows && userRows.length > 0 ? (userRows[0].firstName || '') : '';
+      const dbLastName  = userRows && userRows.length > 0 ? (userRows[0].lastName  || '') : '';
 
-      // Step 2: Find personnel or trainee record linked to this user
+      // Build name variants from userId (e.g. "alexander.burns" -> "Burns, Alexander" / "Alexander Burns")
+      const parts = humanUserId.split('.');
+      const firstFromId = parts[0] ? parts[0].charAt(0).toUpperCase() + parts[0].slice(1) : '';
+      const lastFromId  = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
+      const firstName = dbFirstName || firstFromId;
+      const lastName  = dbLastName  || lastFromId;
+      // Personnel name format: "Last, First"
+      const nameLastFirst = lastName && firstName ? `${lastName}, ${firstName}` : '';
+      // Personnel name format: "First Last"
+      const nameFirstLast = firstName && lastName ? `${firstName} ${lastName}` : '';
+
       let record = null;
       let recordType = null;
 
-      // Try Personnel first (userId FK = User.id cuid)
+      // Strategy 1: userId FK (cuid)
       if (userCuid) {
-        const personnel = await db.personnel.findFirst({ where: { userId: userCuid } });
-        if (personnel) {
-          record = personnel;
-          recordType = 'personnel';
-        } else {
-          const trainee = await db.trainee.findFirst({ where: { userId: userCuid } });
-          if (trainee) {
-            record = trainee;
-            recordType = 'trainee';
-          }
+        const p = await db.personnel.findFirst({ where: { userId: userCuid } });
+        if (p) { record = p; recordType = 'personnel'; }
+        if (!record) {
+          const t = await db.trainee.findFirst({ where: { userId: userCuid } });
+          if (t) { record = t; recordType = 'trainee'; }
         }
       }
 
-      // Fallback: try matching by direct userId string
-      if (!record) {
-        const personnelDirect = await db.personnel.findFirst({ where: { userId: humanUserId } });
-        if (personnelDirect) {
-          record = personnelDirect;
-          recordType = 'personnel';
-        } else {
-          const traineeDirect = await db.trainee.findFirst({ where: { userId: humanUserId } });
-          if (traineeDirect) {
-            record = traineeDirect;
-            recordType = 'trainee';
-          }
+      // Strategy 2: name match "Last, First"
+      if (!record && nameLastFirst) {
+        const p = await db.personnel.findFirst({ where: { name: { equals: nameLastFirst, mode: 'insensitive' } } });
+        if (p) { record = p; recordType = 'personnel'; }
+        if (!record) {
+          const t = await db.trainee.findFirst({ where: { fullName: { equals: nameLastFirst, mode: 'insensitive' } } });
+          if (t) { record = t; recordType = 'trainee'; }
         }
       }
 
+      // Strategy 3: name match "First Last"
+      if (!record && nameFirstLast) {
+        const p = await db.personnel.findFirst({ where: { name: { equals: nameFirstLast, mode: 'insensitive' } } });
+        if (p) { record = p; recordType = 'personnel'; }
+        if (!record) {
+          const t = await db.trainee.findFirst({ where: { fullName: { equals: nameFirstLast, mode: 'insensitive' } } });
+          if (t) { record = t; recordType = 'trainee'; }
+        }
+      }
+
+      // Strategy 4: email match
       if (!record) {
-        console.log('\u274c Unavailability: No personnel/trainee found for humanUserId=' + humanUserId + ', userCuid=' + userCuid);
+        const p = await db.personnel.findFirst({ where: { email: { contains: humanUserId, mode: 'insensitive' } } });
+        if (p) { record = p; recordType = 'personnel'; }
+      }
+
+      if (!record) {
+        console.log('\u274c Unavailability: No record found for humanUserId=' + humanUserId + ', tried cuid=' + userCuid + ', nameLastFirst="' + nameLastFirst + '", nameFirstLast="' + nameFirstLast + '"');
         return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account. UserID: ' + humanUserId });
       }
+
+      console.log('\u2705 Unavailability: Found ' + recordType + ' record id=' + record.id + ' name=' + (record.name || record.fullName) + ' for userId=' + humanUserId);
 
       // Build the unavailability period entry
       const newPeriod = {
