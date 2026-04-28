@@ -3348,45 +3348,221 @@ app.post('/api/auth/verify-password', async (req, res) => {
   }
 
   // GET /api/mobile/schedule - Get user's schedule for a specific date
-  app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
-    try {
-      const db = await getPrisma();
-      const userId = req.mobileUserId;
-      const { date } = req.query;
+// GET /api/mobile/schedule - Get user's schedule (authenticated)
+app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const jwtUserId = req.userId; // This is the human-readable userId (e.g. "alexander.burns")
+    const { date, startDate, endDate } = req.query;
 
-      if (!date) {
-        return res.status(400).json({ 
-          error: 'Date parameter is required (format: YYYY-MM-DD)' 
-        });
-      }
+    console.log("📅 Fetching schedule for jwtUserId=" + jwtUserId + ", params: " + JSON.stringify(req.query));
 
-      // Find schedule for this user and date
-      const schedules = await db.schedule.findMany({
-        where: {
-          userId: userId,
-          date: date
-        },
-        orderBy: {
-          updatedAt: 'desc'
+    // Step 1: Look up the User record by userId to get the DB id (cuid)
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
+      jwtUserId
+    );
+
+    if (!users || users.length === 0) {
+      console.log("❌ No user found for jwtUserId=" + jwtUserId);
+      return res.status(401).json({ error: "User not found" });
+    }
+
+    const dbUser = users[0];
+    const dbUserId = dbUser.id; // cuid - used as FK in Schedule table
+    const userFullName = ((dbUser.firstName || '') + ' ' + (dbUser.lastName || '')).trim();
+    // Also build "Last, First" format used in DailySnapshot events
+    const userFullNameReversed = ((dbUser.lastName || '') + ', ' + (dbUser.firstName || '')).trim();
+
+    console.log("👤 Resolved user: dbId=" + dbUserId + ", name=" + userFullName);
+
+    // Step 2: Build schedule query using real columns (no isPublished/serverTime)
+    let scheduleWhere = { userId: dbUserId };
+    if (date) {
+      scheduleWhere.date = date;
+    } else if (startDate || endDate) {
+      scheduleWhere.date = {};
+      if (startDate) scheduleWhere.date.gte = startDate;
+      if (endDate) scheduleWhere.date.lte = endDate;
+    }
+
+    const schedules = await db.schedule.findMany({
+      where: scheduleWhere,
+      orderBy: { date: 'asc' }
+    });
+
+    // Helper: convert decimal hours (e.g. 9.5) or HH:MM string to "HH:MM"
+    function toHHMM(val) {
+      if (!val && val !== 0) return "00:00";
+      if (typeof val === 'string' && /^\d{2}:\d{2}/.test(val)) return val.substring(0, 5);
+      const num = parseFloat(val);
+      if (isNaN(num)) return "00:00";
+      const h = Math.floor(num);
+      const m = Math.round((num - h) * 60);
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+
+    // Helper: map event type string to iOS EventType enum values
+    function mapEventType(type) {
+      if (!type) return "Other";
+      const t = type.toLowerCase();
+      if (t === 'flight') return "Flight";
+      if (t === 'ftd' || t === 'simulator') return "FTD";
+      if (t === 'brief' || t === 'briefing') return "Brief";
+      if (t === 'duty') return "Duty";
+      if (t === 'ground') return "Ground";
+      return "Other";
+    }
+
+    // Helper: map role string to iOS EventRole enum values
+    function mapRole(role) {
+      if (!role) return null;
+      const r = role.toLowerCase();
+      if (r === 'student' || r === 'trainee') return "Student";
+      if (r === 'instructor') return "Instructor";
+      if (r === 'crew') return "Crew";
+      if (r === 'observer') return "Observer";
+      if (r === 'pilot') return "Pilot";
+      if (r === 'copilot' || r === 'co-pilot') return "Co-Pilot";
+      return null;
+    }
+
+    // Helper: extract events from Schedule.data JSON blob
+    function extractEventsFromData(dataJson) {
+      if (!dataJson) return [];
+      try {
+        const data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
+        // data could be an array of events or an object with an events array
+        let rawEvents = [];
+        if (Array.isArray(data)) {
+          rawEvents = data;
+        } else if (data.events && Array.isArray(data.events)) {
+          rawEvents = data.events;
+        } else if (data.scheduleEvents && Array.isArray(data.scheduleEvents)) {
+          rawEvents = data.scheduleEvents;
+        } else if (data.slots && Array.isArray(data.slots)) {
+          rawEvents = data.slots;
+        } else {
+          // Try to find any array property that looks like events
+          for (const key of Object.keys(data)) {
+            if (Array.isArray(data[key]) && data[key].length > 0 && data[key][0].startTime !== undefined) {
+              rawEvents = data[key];
+              break;
+            }
+          }
         }
+        return rawEvents.map((e, idx) => ({
+          id: String(e.id || e.eventId || idx + 1),
+          startTime: toHHMM(e.startTime),
+          endTime: toHHMM(e.endTime || (e.startTime ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null)),
+          eventType: mapEventType(e.type || e.eventType || e.eventCode),
+          location: e.location || e.origin || null,
+          role: mapRole(e.role || (
+              (e.student && (e.student.toLowerCase().replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim() === userFullName.toLowerCase() || e.student.toLowerCase().replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim() === userFullNameReversed.toLowerCase())) ? 'Student' :
+              (e.instructor && (e.instructor.toLowerCase() === userFullName.toLowerCase() || e.instructor.toLowerCase() === userFullNameReversed.toLowerCase())) ? 'Instructor' :
+              null
+            )),
+          status: e.status || "Published",
+          notes: e.notes || e.eventDescription || null,
+          aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
+          instructor: e.instructor || null
+        }));
+      } catch (err) {
+        console.error("⚠️ Error parsing schedule data:", err.message);
+        return [];
+      }
+    }
+
+    // Step 3: If Schedule records exist, use them
+    if (schedules && schedules.length > 0) {
+      const transformedSchedules = schedules.map(schedule => {
+        const events = extractEventsFromData(schedule.data);
+        return {
+          id: String(schedule.id),
+          date: schedule.date,
+          isPublished: true,
+          events: events,
+          serverTime: new Date().toISOString()
+        };
       });
 
-      if (!schedules || schedules.length === 0) {
-        console.log(`ℹ️ No schedule found for userId=${userId}, date=${date}`);
-        return res.json({
-          events: [],
-          message: `No schedule found for this date.`
-        });
+      if (date && transformedSchedules.length > 0) {
+        console.log("✅ GET /api/mobile/schedule - Single date: " + date + ", events: " + transformedSchedules[0].events.length);
+        return res.json({ schedule: transformedSchedules[0] });
       }
 
-      // Get the most recent schedule for this date
-      const schedule = schedules[0];
+      console.log("✅ GET /api/mobile/schedule - Found " + transformedSchedules.length + " schedules for userId=" + jwtUserId);
+      return res.json({ success: true, schedules: transformedSchedules });
+    }
 
-      // Extract events from schedule data
-      const events = (schedule.data && schedule.data.events) ? schedule.data.events : [];
+    // Step 4: No Schedule record - check DailySnapshot for published events filtered to this user
+    if (date) {
+      const snapRows = await db.$queryRawUnsafe(
+        `SELECT "scheduleEvents", "traineeEvents", "staffEvents" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+        date
+      );
 
-      console.log(`✅ Mobile schedule retrieved for userId=${userId}, date=${date}, events=${events.length}`);
+      if (snapRows && snapRows.length > 0) {
+        const snap = snapRows[0];
+        // Combine all event arrays and deduplicate by id
+        const allSnapshotEventsRaw = [
+          ...(Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []),
+          ...(Array.isArray(snap.staffEvents) ? snap.staffEvents : []),
+          ...(Array.isArray(snap.traineeEvents) ? snap.traineeEvents : [])
+        ];
+        const seenIds = new Set();
+        const allSnapshotEvents = allSnapshotEventsRaw.filter(e => {
+          const eid = e.id || e.eventId;
+          if (eid && seenIds.has(eid)) return false;
+          if (eid) seenIds.add(eid);
+          return true;
+        });
 
+        // Filter events for this user by name or traineeId matching userId
+        // Match by "First Last", "Last, First", or traineeId
+        const nameMatch = (nameField) => {
+          if (!nameField) return false;
+          const n = nameField.toLowerCase();
+          // Strip course suffix like "– ADF302" for student fields
+          const nClean = n.replace(/\s*[–-]\s*\w+\d+\s*$/, '').trim();
+          return nClean === userFullName.toLowerCase() ||
+                 nClean === userFullNameReversed.toLowerCase() ||
+                 n === userFullName.toLowerCase() ||
+                 n === userFullNameReversed.toLowerCase();
+        };
+        const userEvents = allSnapshotEvents.filter(e =>
+          nameMatch(e.student) ||
+          nameMatch(e.instructor) ||
+            (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
+        );
+
+        if (userEvents.length > 0) {
+          const mappedEvents = userEvents.map((e, idx) => {
+            const isStandby = (e.resourceId && e.resourceId.toLowerCase().includes('stby')) ||
+                              (e.flightNumber && e.flightNumber.toLowerCase().includes('stby')) ||
+                              (e.status && e.status.toLowerCase() === 'stby');
+            const endTimeVal = e.endTime != null ? e.endTime :
+              (e.startTime != null ? parseFloat(e.startTime) + (parseFloat(e.duration) || 1) : null);
+            return {
+              id: String(e.id || e.eventId || idx + 1),
+              title: e.flightNumber || e.resourceId || e.eventCode || null,
+              startTime: toHHMM(e.startTime),
+              endTime: toHHMM(endTimeVal),
+              eventType: mapEventType(e.type || e.eventType || e.eventCode),
+              location: e.location || e.origin || null,
+              role: mapRole(nameMatch(e.student) ? 'Student' : nameMatch(e.instructor) ? 'Instructor' : e.role || null),
+              status: isStandby ? "STBY" : "Published",
+              isStandby: isStandby,
+              notes: e.notes || e.eventDescription || null,
+              aircraft: e.aircraft || e.aircraftNumber || e.resourceId || null,
+              instructor: e.instructor || null,
+              student: e.student || null,
+              pilot: e.pilot || null,
+              resourceId: e.resourceId || null
+            };
+          });
+
+          console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
       res.json({
         events: events,
         message: `Found ${events.length} events for ${date}`
