@@ -3717,7 +3717,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         await db.trainee.update({ where: { id: record.id }, data: { unavailability: updated } });
       }
 
-      console.log(`✅ POST /api/mobile/unavailability/quick - userId=${userId}, date=${date}, reason=${reasonId}`);
+      console.log(`✅ POST /api/mobile/unavailability/quick - userId=${humanUserId}, date=${date}, reason=${reasonId}`);
 
       res.json({
         id: newPeriod.id,
@@ -3854,7 +3854,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         await db.trainee.update({ where: { id: record.id }, data: { unavailability: updated } });
       }
 
-      console.log(`✅ POST /api/mobile/unavailability/create - userId=${userId}, start=${startDateTime}, end=${endDateTime}, reason=${reasonId}`);
+      console.log(`✅ POST /api/mobile/unavailability/create - userId=${humanUserId}, start=${startDateTime}, end=${endDateTime}, reason=${reasonId}`);
 
       res.json({
         id: newPeriod.id,
