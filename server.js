@@ -718,9 +718,27 @@ app.patch('/api/personnel/:id', async (req, res) => {
       return res.status(404).json({ error: 'Personnel not found' });
     }
 
+    // Sanitize: only include fields that exist in the Personnel schema
+    // Strip client-side fields like _dataSource, id (managed by DB), currencyStatus, scores, etc.
+    const PERSONNEL_FIELDS = [
+      'name', 'rank', 'role', 'qualifications', 'availability', 'preferences',
+      'isActive', 'callsignNumber', 'category', 'email', 'flight', 'idNumber',
+      'isAdminStaff', 'isCFI', 'isCommandingOfficer', 'isContractor',
+      'isDeputyFlightCommander', 'isExecutive', 'isFlyingSupervisor', 'isIRE',
+      'isOFI', 'isQFI', 'isTestingOfficer', 'location', 'permissions',
+      'phoneNumber', 'priorExperience', 'seatConfig', 'service', 'unavailability',
+      'unit', 'photoUrl', 'userId'
+    ];
+    const sanitizedUpdates = {};
+    for (const field of PERSONNEL_FIELDS) {
+      if (field in updates) {
+        sanitizedUpdates[field] = updates[field];
+      }
+    }
+
     const updated = await db.personnel.update({
       where: { id },
-      data: updates
+      data: sanitizedUpdates
     });
 
     console.log(`✅ PATCH /api/personnel/${id} - updated: ${updated.name}`);
@@ -2215,10 +2233,26 @@ app.patch('/api/trainees/:id', async (req, res) => {
       return res.status(404).json({ error: 'Trainee not found' });
     }
 
+    // Sanitize: only include fields that exist in the Trainee schema
+    // Strip client-side fields like _dataSource, id (managed by DB), scores, etc.
+    const TRAINEE_FIELDS = [
+      'name', 'fullName', 'rank', 'service', 'course', 'lmpType', 'traineeCallsign',
+      'seatConfig', 'isPaused', 'unavailability', 'unit', 'flight', 'location',
+      'phoneNumber', 'email', 'primaryInstructor', 'secondaryInstructor',
+      'lastEventDate', 'lastFlightDate', 'currencyStatus', 'permissions',
+      'priorExperience', 'isActive', 'userId'
+    ];
+    const sanitizedUpdates = {};
+    for (const field of TRAINEE_FIELDS) {
+      if (field in updates) {
+        sanitizedUpdates[field] = updates[field];
+      }
+    }
+
     // Update the trainee record
     const updated = await db.trainee.update({
       where: { id },
-      data: updates
+      data: sanitizedUpdates
     });
 
     console.log(`✅ PATCH /api/trainees/${id} - updated: ${updated.name}`);
