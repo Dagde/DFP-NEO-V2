@@ -11208,8 +11208,9 @@ updates.forEach(update => {
             }
         };
 
-        // Poll every 30 seconds
-        const pollInterval = setInterval(pollUnavailability, 30 * 1000);
+        // Poll immediately on load, then every 5 seconds for near-instant updates
+        pollUnavailability();
+        const pollInterval = setInterval(pollUnavailability, 5 * 1000);
         return () => clearInterval(pollInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

@@ -3618,11 +3618,27 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     }
   });
 
+  // ── Per-user submission lock to prevent race-condition duplicates ──────────
+  // When the iOS app fires multiple simultaneous requests (retries/network),
+  // this map ensures only ONE request per user runs at a time.
+  const _unavailLocks = new Map(); // userId -> Promise
+  function withUnavailLock(userId, fn) {
+    const prev = _unavailLocks.get(userId) || Promise.resolve();
+    const next = prev.then(fn).finally(() => {
+      // Clean up the map entry once the chain is idle
+      if (_unavailLocks.get(userId) === next) _unavailLocks.delete(userId);
+    });
+    _unavailLocks.set(userId, next);
+    return next;
+  }
+
   // POST /api/mobile/unavailability/quick - Submit quick unavailability (today 0800-2300)
   app.post('/api/mobile/unavailability/quick', authenticateMobileJWT, async (req, res) => {
+    const humanUserId = req.mobileUserId;
+    // Serialise concurrent requests from the same user to prevent race-condition duplicates
+    return withUnavailLock(humanUserId, async () => {
     try {
       const db = await getPrisma();
-      const humanUserId = req.mobileUserId; // human-readable e.g. "alexander.burns"
       const { date, reasonId, notes } = req.body;
 
       if (!date || !reasonId) {
@@ -3763,13 +3779,16 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       console.error('❌ POST /api/mobile/unavailability/quick error:', error);
       res.status(500).json({ error: 'Failed to submit unavailability', message: error.message });
     }
+    }); // end withUnavailLock
   });
 
   // POST /api/mobile/unavailability/create - Submit custom unavailability
   app.post('/api/mobile/unavailability/create', authenticateMobileJWT, async (req, res) => {
+    const humanUserId = req.mobileUserId;
+    // Serialise concurrent requests from the same user to prevent race-condition duplicates
+    return withUnavailLock(humanUserId, async () => {
     try {
       const db = await getPrisma();
-      const humanUserId = req.mobileUserId; // human-readable e.g. "alexander.burns"
       const { startDateTime, endDateTime, reasonId, notes } = req.body;
 
       if (!startDateTime || !endDateTime || !reasonId) {
@@ -3937,6 +3956,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       console.error('❌ POST /api/mobile/unavailability/create error:', error);
       res.status(500).json({ error: 'Failed to submit unavailability', message: error.message });
     }
+    }); // end withUnavailLock
   });
 
   // ============================================================
