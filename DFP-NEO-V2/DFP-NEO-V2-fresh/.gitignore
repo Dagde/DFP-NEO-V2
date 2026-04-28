@@ -1,0 +1,69 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Backup files
+*.backup
+*.backup_before_v2
+*.backup_currency_fix
+*.corrupt
+*.original
+*.disabled
+
+# Env files - keep .env.example but not .env
+.env
+.env.local
+.env.production
+
+# Build and cache
+dist/
+.next/
+.cache/
+
+# Database
+*.db
+*.sqlite
+dev.db
+
+# Output directories
+outputs/
+summarized_conversations/
+
+# Screenshot and image files
+Screenshot*.jpg
+Screenshot*.png
+*.jpg
+*.png
+*.gif
+!public/**/*.jpg
+!public/**/*.png
+!public/**/*.gif
+!dfp-neo-platform/public/**/*.jpg
+!dfp-neo-platform/public/**/*.png
+
+# Temp and debug files
+temp_*.txt
+debug*.html
+test*.html
+preview.html
+status.html

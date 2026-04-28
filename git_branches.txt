@@ -1,0 +1,22 @@
+* feature/comprehensive-build-algorithm
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/aircraft-availability-freeze-fix
+  remotes/origin/copilot/featurecomprehensive-build-algorithm
+  remotes/origin/copilot/fix-staff-profile-layout
+  remotes/origin/copilot/fix-staff-profile-layout-again
+  remotes/origin/copilot/move-trainees-into-profile-card
+  remotes/origin/copilot/redesign-instructor-profile-flyout
+  remotes/origin/copilot/redesign-instructor-profile-flyout-again
+  remotes/origin/copilot/redesign-instructor-profile-page
+  remotes/origin/copilot/redesign-instructor-profile-page-again
+  remotes/origin/copilot/redesign-instructor-profile-page-another-one
+  remotes/origin/deploy-data-source-toggle
+  remotes/origin/feature/comprehensive-build-algorithm
+  remotes/origin/feature/restore-pause-flight-ops
+  remotes/origin/main
+  remotes/origin/master
+  remotes/origin/restore-stable-version
+  remotes/origin/rollback-stable
+  remotes/origin/snapshot/pre-mockdata-removal-step1
+  remotes/origin/snapshot/pre-mockdata-removal-step2
+  remotes/origin/snapshot/pre-mockdata-removal-step3

@@ -1,0 +1,5 @@
+f0eb3c56 feat: My Dashboard Today's Schedule - show STBY badge beside standby events
+722a2b54 fix: apply timezoneOffset to currentTime in TraineeSchedule, InstructorSchedule, NextDayTraineeSchedule - tile border colors now use correct local time
+fe6363c8 fix: TraineeColumn convertTailwindToHex now handles /80 opacity variants (course tile colors)
+1b4a44a1 fix: TraineeColumn course color lookup from traineesData for DB trainees without course suffix in fullName
+49037c49 fix: use PATCH+id to update instructors, fix name corruption bug in App.tsx (was using POST+idNumber)

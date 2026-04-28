@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-9_x", "openssl"]
+
+[phases.install]
+cmds = ["cd DFP-NEO-V2-fresh && npm ci --ignore-scripts"]
+
+[phases.build]
+cmds = ["echo 'Build complete - using pre-built static assets'"]
+
+[start]
+cmd = "node DFP-NEO-V2-fresh/server.js"

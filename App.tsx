@@ -13858,8 +13858,6 @@ updates.forEach(update => {
                                 });
                                 
                                 const dbId = (data as any).id;
-                                console.log("📝 [APP] Instructor DB ID:", dbId);
-                                
                                 try {
                                 const dbId = (data as any).id;
 
@@ -13971,9 +13969,6 @@ updates.forEach(update => {
                                     unavailability: data.unavailability,
                                     unavailabilityLength: data.unavailability?.length || 0
                                 });
-                                
-                                const dbId = (data as any).id;
-                                console.log("📝 [APP] Instructor DB ID:", dbId);
                                 
                                 try {
                                 const dbId = (data as any).id;

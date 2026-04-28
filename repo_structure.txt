@@ -1,0 +1,812 @@
+.
+├── 20 Mar PIN Fixed commit active but change not displayingworking.jpg
+├── ANALYSIS_SUMMARY.md
+├── AUDIT_BUTTONS_COMPLETE.md
+├── AUDIT_BUTTONS_SIDEBAR_FIX.md
+├── AUDIT_BUTTON_IMPLEMENTATION_PLAN.md
+├── AUDIT_DEBOUNCE_IMPLEMENTATION.md
+├── AUDIT_DEBOUNCING.md
+├── AUDIT_DETAILED_FIELD_TRACKING.md
+├── AUDIT_FIXES_SUMMARY.md
+├── AUDIT_IMPLEMENTATION_COMPLETE.md
+├── AUDIT_IMPLEMENTATION_SUMMARY.md
+├── AUDIT_LOGGING_IMPLEMENTATION_SUMMARY.md
+├── AUDIT_LOGGING_TODO.md
+├── AUDIT_PHASE1_IMPLEMENTATION.md
+├── AUDIT_PRIORITIES_PAGE.md
+├── AUDIT_SYSTEM_IMPROVEMENTS.md
+├── AUDIT_SYSTEM_INTEGRATION_GUIDE.md
+├── AUDIT_TODO.md
+├── Adobe Express - file.png
+├── App.tsx
+├── App.tsx.backup
+├── App.tsx.backup_before_v2
+├── App_debug.tsx
+├── BIF_FTD_FIX_VERIFICATION.md
+├── BUILD_ALGORITHM_ANALYSIS.md
+├── BUILD_ANALYSIS_ENHANCEMENT.md
+├── BUILD_ANALYSIS_IMPLEMENTATION_PLAN.md
+├── BUILD_ANALYSIS_INTEGRATION_COMPLETE.md
+├── BUILD_RESULTS_ANALYSIS_COMPLETE.md
+├── COMPLETE_BIF_FTD_FIX_SUMMARY.md
+├── DATA_SOURCE_FIX_SUMMARY.md
+├── DAY_NIGHT_SCHEDULING_ISSUE.md
+├── DAY_NIGHT_SEPARATION_HARD_WIRED.md
+├── DEPLOYED_RESOURCE_LINE_IMPLEMENTATION.md
+├── DEPLOYMENT_CHECKLIST.md
+├── DEPLOYMENT_FIX_SUMMARY.md
+├── DEPLOYMENT_LEGS_REMOVAL.md
+├── DEPLOYMENT_RESOURCE_LINE_CHANGE.md
+├── DFP---NEO
+│   ├── App.tsx
+│   └── DEPLOYMENT_TRIGGER.txt
+├── DFP-Build-Algorithm-Flow.md
+├── DFP-NEO-V2
+├── DFP-NEO-V2-fix
+├── DFP-NEO-V2-fresh
+│   ├── 3000-266375c4-e167-4965-8379-f82e010676b1.app.super.myninja.ai-1
+│   ├── App.tsx
+│   ├── App.tsx.backup
+│   ├── App.tsx.backup_before_v2
+│   ├── App.tsx.original
+│   ├── App_debug.tsx
+│   ├── App_remote.tsx
+│   ├── B300 copy.png
+│   ├── C-17 copy.png
+│   ├── DFP---NEO
+│   ├── DFP-NEO-iOS
+│   ├── Let
+│   ├── Logo Final copy.png
+│   ├── Metal plate 1 copy.png
+│   ├── P-8 copy.png
+│   ├── PRIORITY_ALGORITHM_ANALYSIS.txt
+│   ├── Password 2 copy.png
+│   ├── RAILWAY_ENV_VARIABLES.txt
+│   ├── REBUILD_TRIGGER
+│   ├── Trainer Aircraft copy.png
+│   ├── Username 1 copy.png
+│   ├── add_all_conditionals.sh
+│   ├── add_audit_buttons.sh
+│   ├── analyze-staff-trainees.js
+│   ├── api-staff-trainee-analysis.js
+│   ├── buildAlgorithmV2.ts
+│   ├── burns_analysis.js
+│   ├── burns_analysis.mjs
+│   ├── calculation_button.txt
+│   ├── check-db-users.sh
+│   ├── check-users.ts
+│   ├── check_bif_ftd.mjs
+│   ├── check_course_schema.js
+│   ├── check_pt051.mjs
+│   ├── check_user_linkage.ts
+│   ├── clean_mock_scores.mjs
+│   ├── cleanup_adf301.mjs
+│   ├── cleanup_adf301_v2.mjs
+│   ├── components
+│   ├── config
+│   ├── context
+│   ├── current_build_algorithm.ts
+│   ├── current_build_algorithm.ts.backup
+│   ├── current_build_algorithm.ts.disabled
+│   ├── current_neo_algorithm.txt
+│   ├── data
+│   ├── data_loading_useeffect.txt
+│   ├── database_staff_use_effect.txt
+│   ├── db_query.ts
+│   ├── debug.html
+│   ├── debug_timezone.js
+│   ├── dev.db
+│   ├── dfp-feature-branch-build.tar.gz
+│   ├── dfp-neo-deployment.tar.gz
+│   ├── dfp-neo-platform
+│   ├── dist
+│   ├── docs
+│   ├── final_bnf_fix.mjs
+│   ├── fix-all-permissionsRole.sh
+│   ├── fix_bif3_group.mjs
+│   ├── fix_seat_configs.cjs
+│   ├── git-automation.js
+│   ├── git-status.js
+│   ├── git-sync-once.js
+│   ├── git-sync.sh
+│   ├── globals.d.ts
+│   ├── hooks
+│   ├── index.html
+│   ├── index.tsx
+│   ├── index_debug.tsx
+│   ├── index_original.html
+│   ├── investigate_burns_api.js
+│   ├── lib
+│   ├── logo.png
+│   ├── metadata.json
+│   ├── migration-scripts
+│   ├── mockData.ts
+│   ├── nixpacks.toml
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── password.png
+│   ├── plate.png
+│   ├── porkbun.com | Domain Management.pdf
+│   ├── preview.html
+│   ├── prisma
+│   ├── privacy-setup-test.txt
+│   ├── public
+│   ├── railway.json
+│   ├── reassign_to_bif3.mjs
+│   ├── reset-admin-password.cjs
+│   ├── reset-admin-password.ts
+│   ├── scripts
+│   ├── server.js
+│   ├── server.js.backup_currency_fix
+│   ├── static-demo
+│   ├── status.html
+│   ├── temp_compute_next.txt
+│   ├── temp_part1.txt
+│   ├── temp_read_html.sh
+│   ├── test-db-query.js
+│   ├── test-staff-trainee-analysis.sh
+│   ├── test.html
+│   ├── theme.css
+│   ├── tie-engine.cjs
+│   ├── todo.md
+│   ├── tsconfig.json
+│   ├── types
+│   ├── types.ts
+│   ├── update_css.js
+│   ├── update_seat_configs.sh
+│   ├── update_student_configs.sh
+│   ├── username.png
+│   ├── utils
+│   ├── vite.config.backup.ts
+│   └── vite.config.ts
+├── DFP-NEO-V2-new
+├── DFP-NEO-Website
+│   ├── ARCHITECTURE_CHANGE_DIAGRAM.md
+│   ├── CLEAR_STEP2_EXPLANATION.md
+│   ├── DEPLOYMENT_SUMMARY.md
+│   ├── ENVIRONMENT_VARIABLES_REFERENCE.md
+│   ├── QUICK_START.md
+│   ├── RAILWAY_DEPLOYMENT_GUIDE.md
+│   ├── README.md
+│   ├── STEP2_FLOWCHART.md
+│   ├── STEP_BY_STEP_DEPLOYMENT.md
+│   ├── app
+│   ├── lib
+│   ├── middleware.ts
+│   ├── next.config.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── prisma
+│   ├── public
+│   ├── railway.json
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   └── tsconfig.tsbuildinfo
+├── DFP-NEO-Website-fresh
+│   ├── ARCHITECTURE_CHANGE_DIAGRAM.md
+│   ├── CLEAR_STEP2_EXPLANATION.md
+│   ├── DEPLOYMENT_SUMMARY.md
+│   ├── ENVIRONMENT_VARIABLES_REFERENCE.md
+│   ├── QUICK_START.md
+│   ├── RAILWAY_DEPLOYMENT_GUIDE.md
+│   ├── README.md
+│   ├── STEP2_FLOWCHART.md
+│   ├── STEP_BY_STEP_DEPLOYMENT.md
+│   ├── app
+│   ├── lib
+│   ├── middleware.ts
+│   ├── next.config.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── prisma
+│   ├── public
+│   ├── railway.json
+│   ├── tailwind.config.js
+│   └── tsconfig.json
+├── DFP-NEO-iOS
+│   ├── DFPNeo
+│   └── DFPNeo.xcodeproj
+├── DRAG_COLLAPSE_ANALYSIS.md
+├── ENHANCEMENT_SUMMARY.md
+├── FINAL_FIX_SUMMARY.md
+├── FLIGHT_DETAILS_COMPLETE.md
+├── FLIGHT_DETAILS_REDESIGN.md
+├── FLIGHT_HOURS_SOURCE_DOCUMENTATION.md
+├── GIT_AUTOMATION_README.md
+├── IMPLEMENTATION_SUMMARY.md
+├── IMPLEMENTATION_SUMMARY_PRIORITY_ANALYSIS.md
+├── INDIVIDUAL_LMP_COMPLETION_FIX.md
+├── INDIVIDUAL_LMP_INITIALIZATION.md
+├── LMP_CURRENCY_IMPLEMENTATION.md
+├── MORNING_BRIEFING.md
+├── NEO_BUILD_INDIVIDUAL_LMP_ISSUE.md
+├── ORACLE_BUTTON_ANALYSIS.md
+├── ORACLE_FIX_SUMMARY.md
+├── ORACLE_TRAINEE_FILTERING_ANALYSIS.md
+├── PAUSE_FLIGHT_OPS_RESTORATION.md
+├── PIN - Another fix for change not active - 6 Apr 26.jpg
+├── PIN - Change not being displayed.jpg
+├── PIN Fix change not active - 5 Apr 26.jpg
+├── PIN Fix not active in the App - 3 Apr 26.jpg
+├── PIN Latest Commit not being used:active in the App.jpg
+├── PIN of the Commit problem fix.jpg
+├── PIN to fix App not using latest Commit.jpg
+├── PINNED_SOLUTIONS.md
+├── PINNED_SOLUTION_DATABASE_PERSISTENCE.md
+├── PRIORITY_ALGORITHM_ANALYSIS.txt
+├── PROGRESS_GRAPH_REWORK.md
+├── PROGRESS_GRAPH_VISUAL_GUIDE.md
+├── PT051_SCORE_FIX_INSTRUCTIONS.md
+├── QFI.jpg
+├── RAILWAY_ENV_VARIABLES.txt
+├── README.md
+├── REBUILD_INSTRUCTIONS.md
+├── REMEDIAL_QUEUE_ERROR.md
+├── RESTORE_INSTRUCTIONS.md
+├── SCT_EVENTS_FEATURE.md
+├── SCT_EVENTS_USER_GUIDE.md
+├── SCT_FORM_CRITICAL_FIX.md
+├── SCT_FORM_IMPLEMENTATION_SUMMARY.md
+├── Screen Shot 2026-01-10 at 11.33.14 pm.jpg
+├── Screen Shot 2026-01-10 at 5.36.40 pm.jpg
+├── Screen Shot 2026-01-10 at 7.29.02 pm.jpg
+├── Screen Shot 2026-01-10 at 8.54.15 pm.jpg
+├── Screenshot 2026-04-06 at 10.22.14 pm.jpg
+├── Screenshot 2026-04-07 at 9.01.14 pm.jpg
+├── Screenshot 2026-04-08 at 1.56.51 pm.jpg
+├── Screenshot 2026-04-08 at 1.56.58 pm.jpg
+├── Screenshot 2026-04-08 at 1.57.08 pm.jpg
+├── Screenshot 2026-04-08 at 1.57.16 pm.jpg
+├── Screenshot 2026-04-08 at 10.44.50 pm.jpg
+├── Screenshot 2026-04-08 at 11.00.15 am.jpg
+├── Screenshot 2026-04-08 at 11.34.37 pm.jpg
+├── Screenshot 2026-04-08 at 11.34.49 pm.jpg
+├── Screenshot 2026-04-08 at 11.49.39 am.jpg
+├── Screenshot 2026-04-08 at 12.19.47 pm.jpg
+├── Screenshot 2026-04-08 at 12.19.51 pm.jpg
+├── Screenshot 2026-04-08 at 4.07.48 pm.jpg
+├── Screenshot 2026-04-08 at 4.08.39 pm.jpg
+├── Screenshot 2026-04-08 at 4.09.37 pm.jpg
+├── Screenshot 2026-04-08 at 6.47.10 pm.jpg
+├── Screenshot 2026-04-08 at 6.48.38 pm.jpg
+├── Screenshot_2026-04-08_at_1.56.51_pm.jpg
+├── Screenshot_2026-04-08_at_1.56.58_pm.jpg
+├── Screenshot_2026-04-08_at_1.57.08_pm.jpg
+├── Screenshot_2026-04-08_at_1.57.16_pm.jpg
+├── Screenshot_2026-04-08_at_11.00.15_am.jpg
+├── Screenshot_2026-04-08_at_11.49.39_am.jpg
+├── Screenshot_2026-04-08_at_12.19.47_pm.jpg
+├── Screenshot_2026-04-08_at_12.19.51_pm.jpg
+├── TASK_COMPLETE_SCT_STAFF_CAT_DROPDOWNS.md
+├── TRAINEE_ROSTER_COLOR_CODING.md
+├── TWR_DI_FIXES_SUMMARY.md
+├── Trainer Aircraft copy.png
+├── UNAVAILABILITY_VALIDATION_SYSTEM.md
+├── USERID_MIGRATION_SUMMARY.md
+├── USER_IDENTITY_FIX_DEPLOYMENT.md
+├── USER_PERSONNEL_LINKAGE_ANALYSIS.md
+├── USER_PERSONNEL_LINKAGE_DEBUG.md
+├── Username 1 copy.png
+├── V2_RAILWAY_DEPLOYMENT_SUMMARY.md
+├── VALIDATE_NEO_INTEGRATION.md
+├── VISUAL_ADJUST_FIX.md
+├── WEIGHTED_PRIORITY_IMPLEMENTATION_PLAN.md
+├── WEIGHTED_PRIORITY_IMPLEMENTATION_SUMMARY.md
+├── add_all_conditionals.sh
+├── add_audit_buttons.sh
+├── add_conditional_rendering.py
+├── add_data_source_menu.py
+├── add_data_source_section.py
+├── add_data_source_title.py
+├── audit_fixes_todo.md
+├── audit_implementation_todo.md
+├── buildAlgorithmV2.ts
+├── clean_all_headers.py
+├── components
+│   ├── ACHistoryAircraftAvailability.tsx
+│   ├── ACHistoryAnalytics.tsx
+│   ├── ACHistoryPage.tsx
+│   ├── AIBuildLoadingFlyout.tsx
+│   ├── AcademicMasterSchedule.tsx
+│   ├── AcademicsTab.tsx
+│   ├── AddCourseFlyout.tsx
+│   ├── AddFlightTileModal.tsx
+│   ├── AddGroundEventFlyout.tsx
+│   ├── AddInstructorChoiceFlyout.tsx
+│   ├── AddRemedialPackageFlyout.tsx
+│   ├── AddUnavailabilityFlyout.tsx
+│   ├── AdminPanel.tsx
+│   ├── AircraftAvailabilityCalculator.tsx
+│   ├── AircraftAvailabilityOverlay.tsx
+│   ├── AircraftAvailabilityOverlay.tsx.new
+│   ├── AircraftAvailabilityPanel.tsx
+│   ├── AircraftAvailabilitySettings.tsx
+│   ├── AircraftAvailabilitySettings.tsx.backup2
+│   ├── AircraftAvailabilitySettings_old.tsx
+│   ├── AirframeColumn.tsx
+│   ├── App.tsx
+│   ├── AppearanceSettings.tsx
+│   ├── ArchiveConfirmationFlyout.tsx
+│   ├── ArchivedCoursesView.tsx
+│   ├── ArchivedInstructorsFlyout.tsx
+│   ├── AuditButton.tsx
+│   ├── AuditFlyout.tsx
+│   ├── AuditLogsView.tsx
+│   ├── AuthorisationConfirmation.tsx
+│   ├── AuthorisationFlyout.tsx
+│   ├── AuthorisationView.tsx
+│   ├── BuildAnalysisView.tsx
+│   ├── BuildDateWarningFlyout.tsx
+│   ├── BuildDfpLoadingFlyout.tsx
+│   ├── BuildIntelligenceView.tsx
+│   ├── BulkUpdateFlyout.tsx
+│   ├── CancelConfirmationFlyout.tsx
+│   ├── CancelEventFlyout.tsx
+│   ├── CancellationCodesTable.tsx
+│   ├── ChangePasswordModal.tsx
+│   ├── ClearAuthConfirmation.tsx
+│   ├── ConflictModal.tsx
+│   ├── CourseDataWindow.tsx
+│   ├── CourseEditFlyout.tsx
+│   ├── CourseProgressGraph.tsx
+│   ├── CourseProgressView.tsx
+│   ├── CourseRosterView.tsx
+│   ├── CourseSelectionDialog.tsx
+│   ├── CourseSelectionFlyout.tsx
+│   ├── CourseTraineeSelectionFlyout.tsx
+│   ├── CoursesManagementView.tsx
+│   ├── CptConflictWarningFlyout.tsx
+│   ├── CurrencyAuditFlyout.tsx
+│   ├── CurrencyBuilderView.tsx
+│   ├── CurrencyPanel.tsx
+│   ├── CurrencySetupFlyout.tsx
+│   ├── CurrencyStatusPage.tsx
+│   ├── CurrencyView.tsx
+│   ├── DailySummaryFlyout.tsx
+│   ├── DarkMessageModal.tsx
+│   ├── DataLoadingMonitor.tsx
+│   ├── DataSourcesSettings.tsx
+│   ├── DataValidationReport.tsx
+│   ├── DeleteFileConfirmationFlyout.tsx
+│   ├── DeleteTraineeConfirmation.tsx
+│   ├── DownloadConfirmationFlyout.tsx
+│   ├── DutyTurnaroundSection.tsx
+│   ├── DutyWarningFlyout.tsx
+│   ├── EditCourseFlyout.tsx
+│   ├── EmergencyPage.tsx
+│   ├── ErrorBoundary.tsx
+│   ├── EventDetailModal.tsx
+│   ├── EventDetailModal.tsx.backup
+│   ├── EventDisplayColumn.tsx
+│   ├── EventTimeResourceColumn.tsx
+│   ├── EventsView.tsx
+│   ├── Explosion.tsx
+│   ├── ExportReportsView.tsx
+│   ├── FlightCrewRoster.tsx
+│   ├── FlightDetailModal.tsx
+│   ├── FlightDetailModal.tsx.backup
+│   ├── FlightInfoFlyout.tsx
+│   ├── FlightTile.tsx
+│   ├── FormationCallsignsSection.tsx
+│   ├── FullPageProgressGraph.tsx
+│   ├── HateSheetView.tsx
+│   ├── Header.tsx
+│   ├── HistoricalDataSeeder.tsx
+│   ├── IndividualProgressView.tsx
+│   ├── InfoNotification.tsx
+│   ├── InstructorListView.tsx
+│   ├── InstructorProfileFlyout.tsx
+│   ├── InstructorScheduleView.tsx
+│   ├── LocalityChangeFlyout.tsx
+│   ├── LockoutView.tsx
+│   ├── LogbookView.tsx
+│   ├── LoginModal.tsx
+│   ├── Magnifier.tsx
+│   ├── MassBriefCompleteFlyout.tsx
+│   ├── MyDashboard.css
+│   ├── MyDashboard.tsx
+│   ├── NeoOverview.tsx
+│   ├── NeoOverviewStudent.tsx
+│   ├── NeoRemedyFlyout.tsx
+│   ├── NewRecordConfirmationFlyout.tsx
+│   ├── NextDayBuildView.tsx
+│   ├── NextDayInstructorScheduleView.tsx
+│   ├── NextDayTraineeScheduleView.tsx
+│   ├── NextFlightEventListFlyout.tsx
+│   ├── NightFlyingInfoFlyout.tsx
+│   ├── OpsOrderView.tsx
+│   ├── OraclePreviewTile.tsx
+│   ├── OrganisationSettings.tsx
+│   ├── PT051HateSheetView.tsx
+│   ├── PT051View.tsx
+│   ├── PauseConfirmationFlyout.tsx
+│   ├── PauseFlightOpsModal.tsx
+│   ├── PercentageWarningFlyout.tsx
+│   ├── PermissionsManagerFlyout.tsx
+│   ├── PermissionsManagerWindow.tsx
+│   ├── PersonnelColumn.tsx
+│   ├── PhraseBankFlyout.tsx
+│   ├── PinEntryFlyout.tsx
+│   ├── PinEntryFlyout_BACKUP.tsx
+│   ├── PinEntryFlyout_NEW.tsx
+│   ├── PostFlightModal.tsx
+│   ├── PostFlightView.tsx
+│   ├── PrioritiesView.tsx
+│   ├── PrioritiesViewWithMenu.tsx
+│   ├── ProgramDataView.tsx
+│   ├── PublishConfirmationFlyout.tsx
+│   ├── RecentCancellationsTable.tsx
+│   ├── RemedialRequestsView.tsx
+│   ├── RemoveCourseFlyout.tsx
+│   ├── RestoreConfirmationFlyout.tsx
+│   ├── RestoreCourseConfirmation.tsx
+│   ├── RestoreCourseFlyout.tsx
+│   ├── RightSidebar.tsx
+│   ├── SafeStaffTraineeScheduleView.tsx
+│   ├── ScheduleView.tsx
+│   ├── ScheduleWarningFlyout.tsx
+│   ├── ScoreDetailView.tsx
+│   ├── ScoreHistoryChart.tsx
+│   ├── ScoringMatrixFlyout.tsx
+│   ├── SctRequestFlyout.tsx
+│   ├── SelectDestinationFlyout.tsx
+│   ├── SettingsView.tsx
+│   ├── SettingsView.tsx.backup
+│   ├── SettingsViewWithMenu.tsx
+│   ├── Sidebar.tsx
+│   ├── StaffCombinedDataTable.tsx
+│   ├── StaffDatabaseTable.tsx
+│   ├── StaffMockDataTable.tsx
+│   ├── StaffSearchDropdown.tsx
+│   ├── StaffView.tsx
+│   ├── StudentAssignmentsView.tsx
+│   ├── StudentProgressView.tsx
+│   ├── StudentStatsView.tsx
+│   ├── SuccessNotification.tsx
+│   ├── SupervisorDashboard.css
+│   ├── SupervisorDashboard.tsx
+│   ├── SyllabusDetailFlyout.tsx
+│   ├── SyllabusDetailView.tsx
+│   ├── SyllabusListView.tsx
+│   ├── SyllabusView.tsx
+│   ├── SystemFreezeBanner.tsx
+│   ├── TafWeatherWidget.tsx
+│   ├── TraineeColumn.tsx
+│   ├── TraineeDatabaseTable.tsx
+│   ├── TraineeListView.tsx
+│   ├── TraineeLmpView.tsx
+│   ├── TraineeMockDataTable.tsx
+│   ├── TraineeProfileFlyout.tsx
+│   ├── TraineeScheduleView.tsx
+│   ├── TraineeView.tsx
+│   ├── TrainingRecordsExportView.tsx
+│   ├── TrainingRecordsView.tsx
+│   ├── UnavailabilitiesWindow.tsx
+│   ├── UnavailabilityConflictFlyout.tsx
+│   ├── UnavailabilityReportModal.tsx
+│   ├── UnavailabilityView.tsx
+│   ├── UnsavedChangesWarning.tsx
+│   ├── UpdateConfirmationFlyout.tsx
+│   ├── UpdateErrorFlyout.tsx
+│   ├── UpdateSummaryFlyout.tsx
+│   ├── UpdateSummaryFlyout_old.tsx
+│   ├── UploadFileFlyout.tsx
+│   ├── UserListSection.tsx
+│   ├── ValidationErrorDisplay.tsx
+│   ├── VisualAdjustGuide.tsx
+│   ├── VisualAdjustModal.tsx
+│   ├── shared
+│   └── tabs
+├── config
+│   └── phraseBankConfig.ts
+├── context
+│   ├── SystemFreezeContext.tsx
+│   └── ThemeContext.tsx
+├── course_progress_graph_dimensions.md
+├── course_progress_graph_dimensions_update_summary.md
+├── current_build_algorithm.ts
+├── current_neo_algorithm.txt
+├── data
+│   ├── ESLDATA.ts
+│   ├── cancellationCodes.ts
+│   └── currencies.ts
+├── debug.html
+├── dfp-neo-platform
+│   ├── app
+│   ├── lib
+│   ├── next-env.d.ts
+│   ├── next.config.js
+│   ├── next.config.js.backup
+│   ├── package.json
+│   ├── prisma
+│   ├── public
+│   ├── railway.json
+│   └── tsconfig.json
+├── dfp-neo-v2
+│   ├── V2_DATABASE_MIRRORING_GUIDE.md
+│   ├── V2_DATABASE_SETUP_QUICKSTART.md
+│   ├── app
+│   ├── package.json
+│   └── prisma
+├── docs
+│   ├── ERROR_HANDLING.md
+│   └── USER_GUIDE_DATA_ISSUES.md
+├── error_screenshot.jpg
+├── fix_aircraft_logs.py
+├── fix_callsign_and_persist.py
+├── fix_callsign_issues.py
+├── fix_date_selector.py
+├── fix_db_persistence.py
+├── fix_drag_emoji_logs.py
+├── fix_drag_performance.py
+├── fix_dropdown_callsign.py
+├── fix_event_dropdown_portal.py
+├── fix_font_sizes.py
+├── fix_lift_layout_state.py
+├── fix_pause.py
+├── fix_pause_publish.py
+├── fix_persist_and_callsign.py
+├── fix_portal_dropdown.py
+├── fix_schedule_view.py
+├── fix_settings_layout.py
+├── git-automation.js
+├── git-status.js
+├── git-sync-once.js
+├── git-sync.sh
+├── globals.d.ts
+├── hooks
+│   ├── useAutocompleteDisabled.ts
+│   └── useSystemFreeze.ts
+├── hybrid_syllabus_strategy.md
+├── index.html
+├── index.tsx
+├── index_debug.tsx
+├── index_original.html
+├── insert_data_source.py
+├── lib
+│   ├── api.ts
+│   ├── auth.ts
+│   ├── dataService.ts
+│   ├── syllabusService.ts
+│   └── traineeAssignmentService.ts
+├── logo.png
+├── metadata.json
+├── migration-scripts
+│   ├── DEPLOY_AND_SEED_INSTRUCTIONS.md
+│   ├── add_trainee_performance_table.sql
+│   ├── check-duplicates.cjs
+│   ├── import_trainee_performance.py
+│   └── seed_trainee_performance.js
+├── mockData.ts
+├── mock_data_analysis.md
+├── mock_data_migration_strategy_analysis.md
+├── mock_data_off_analysis.md
+├── neo1.jpg
+├── neo2.jpg
+├── neo_screenshot.jpg
+├── new_algorithm_section.ts
+├── nixpacks.toml
+├── outputs
+│   ├── workspace_output_1768025168_9131.txt
+│   ├── workspace_output_1768025180_782.txt
+│   ├── workspace_output_1768025196_6932.txt
+│   ├── workspace_output_1768025208_4808.txt
+│   ├── workspace_output_1768025220_9806.txt
+│   ├── workspace_output_1768025232_8114.txt
+│   ├── workspace_output_1768025244_2123.txt
+│   ├── workspace_output_1768025253_7976.txt
+│   ├── workspace_output_1768025274_4712.txt
+│   ├── workspace_output_1768025287_9124.txt
+│   ├── workspace_output_1768025307_9276.txt
+│   ├── workspace_output_1768025310_26.txt
+│   ├── workspace_output_1768027060_5500.txt
+│   ├── workspace_output_1768027075_6053.txt
+│   ├── workspace_output_1768027078_9281.txt
+│   ├── workspace_output_1768027087_9438.txt
+│   ├── workspace_output_1768027100_290.txt
+│   ├── workspace_output_1768027103_3283.txt
+│   ├── workspace_output_1768027115_4241.txt
+│   ├── workspace_output_1768027128_4883.txt
+│   ├── workspace_output_1768027146_7946.txt
+│   ├── workspace_output_1768027172_3096.txt
+│   ├── workspace_output_1768027191_8377.txt
+│   ├── workspace_output_1768027210_4940.txt
+│   ├── workspace_output_1768027217_1172.txt
+│   ├── workspace_output_1768027221_2668.txt
+│   ├── workspace_output_1768027233_2361.txt
+│   ├── workspace_output_1768027245_6353.txt
+│   ├── workspace_output_1768027260_5146.txt
+│   ├── workspace_output_1768027282_1310.txt
+│   ├── workspace_output_1768027312_3069.txt
+│   ├── workspace_output_1768027324_44.txt
+│   ├── workspace_output_1768027350_4724.txt
+│   ├── workspace_output_1768027354_7766.txt
+│   ├── workspace_output_1768027365_8201.txt
+│   ├── workspace_output_1768027379_5765.txt
+│   ├── workspace_output_1768027383_7148.txt
+│   ├── workspace_output_1768027388_7384.txt
+│   ├── workspace_output_1768027396_5158.txt
+│   ├── workspace_output_1768027408_1649.txt
+│   ├── workspace_output_1768027422_4601.txt
+│   ├── workspace_output_1768033889_6580.txt
+│   ├── workspace_output_1768033894_3082.txt
+│   ├── workspace_output_1768033899_7442.txt
+│   ├── workspace_output_1768033930_5432.txt
+│   ├── workspace_output_1768033935_1558.txt
+│   ├── workspace_output_1768033966_870.txt
+│   ├── workspace_output_1768033983_7489.txt
+│   ├── workspace_output_1768033996_5876.txt
+│   ├── workspace_output_1768034000_203.txt
+│   ├── workspace_output_1768034004_9631.txt
+│   ├── workspace_output_1768034007_5362.txt
+│   ├── workspace_output_1768034010_8721.txt
+│   ├── workspace_output_1768034014_1876.txt
+│   ├── workspace_output_1768034046_9649.txt
+│   ├── workspace_output_1768034049_99.txt
+│   ├── workspace_output_1768034053_9610.txt
+│   ├── workspace_output_1768034056_8358.txt
+│   ├── workspace_output_1768034059_8310.txt
+│   ├── workspace_output_1768034100_6566.txt
+│   ├── workspace_output_1768034103_7422.txt
+│   ├── workspace_output_1768034106_6446.txt
+│   ├── workspace_output_1768034120_61.txt
+│   ├── workspace_output_1768034126_6064.txt
+│   ├── workspace_output_1768034140_336.txt
+│   ├── workspace_output_1768034143_182.txt
+│   ├── workspace_output_1768038927_7595.txt
+│   ├── workspace_output_1768038971_3065.txt
+│   ├── workspace_output_1768038976_4441.txt
+│   ├── workspace_output_1768038979_3503.txt
+│   ├── workspace_output_1768038983_226.txt
+│   ├── workspace_output_1768038989_1456.txt
+│   ├── workspace_output_1768039003_4957.txt
+│   ├── workspace_output_1768039007_1876.txt
+│   ├── workspace_output_1768039014_3294.txt
+│   ├── workspace_output_1768039018_3208.txt
+│   ├── workspace_output_1768039021_757.txt
+│   ├── workspace_output_1768048513_7106.txt
+│   ├── workspace_output_1768048597_9089.txt
+│   ├── workspace_output_1768048601_5620.txt
+│   ├── workspace_output_1768048620_1382.txt
+│   ├── workspace_output_1768048626_4730.txt
+│   ├── workspace_output_1768048634_7009.txt
+│   ├── workspace_output_1768048639_9308.txt
+│   └── workspace_output_1768048645_5243.txt
+├── package-lock.json
+├── package.json
+├── password.png
+├── patch_app.py
+├── pause_handlers.py
+├── pin1.jpg
+├── pin2.jpg
+├── pin3.jpg
+├── pin4.jpg
+├── pin5.jpg
+├── pin6.jpg
+├── pin_active.jpg
+├── pin_change.jpg
+├── pin_commit_fix.jpg
+├── pin_fix.jpg
+├── pin_fix_not_active.jpg
+├── plate.png
+├── prisma
+│   ├── schema.prisma
+│   └── seed.ts
+├── public
+│   ├── LMP_Syllabus_Template.xlsx
+│   ├── Staff_Bulk_Update_Template.xlsx
+│   ├── Trainee_Bulk_Update_Template.xlsx
+│   ├── aircraft-icon.png
+│   ├── assets
+│   ├── icons
+│   ├── index.html
+│   ├── multi-select-icon.png
+│   ├── priority-analysis.html
+│   ├── sso.html
+│   ├── test-formation.html
+│   └── warning-icon.png
+├── push.sh
+├── railway.json
+├── railway_screenshot.jpg
+├── remove_section_headers.py
+├── replace_tile.py
+├── replace_tile_v2.py
+├── replace_tile_v3.py
+├── screenshot_curr.jpg
+├── screenshot_drag_artifact.jpg
+├── screenshot_latest.jpg
+├── server.js
+├── src
+│   └── context
+├── ss1.jpg
+├── ss2.jpg
+├── ss3.jpg
+├── ss_1134_37.jpg
+├── ss_1134_49.jpg
+├── summarized_conversations
+│   └── original_conversation_1768033866_5036.txt
+├── syllabus_migration_analysis.md
+├── temp_compute_next.txt
+├── temp_part1.txt
+├── test.html
+├── theme.css
+├── tmp
+│   ├── apply_patch3.py
+│   ├── check_all_setcourses.py
+│   ├── check_card_color.py
+│   ├── check_coursecolors.py
+│   ├── check_coursemgmt.py
+│   ├── check_handlers.py
+│   ├── check_handlers2.py
+│   ├── check_mapping.py
+│   ├── check_save_course.py
+│   ├── check_sort.py
+│   ├── check_timing.py
+│   ├── final_verify.py
+│   ├── final_verify2.py
+│   ├── final_verify3.py
+│   ├── find_insertion.py
+│   ├── fix_bundle_post.py
+│   ├── fix_bundle_post2.py
+│   ├── fix_mapping.py
+│   ├── fix_sort_color.py
+│   ├── inspect_handlers.py
+│   ├── patch3.py
+│   ├── patch_course_handlers.py
+│   ├── patch_course_handlers2.py
+│   ├── patch_coursecolors.py
+│   ├── patch_courses_load.py
+│   ├── reallocation.py
+│   ├── sanity_check.py
+│   ├── trace_course_load.py
+│   ├── trace_courses2.py
+│   ├── trace_courses_init.py
+│   ├── trace_db_courses.py
+│   ├── trace_init_content.py
+│   ├── trace_init_find.py
+│   ├── trace_init_full.py
+│   ├── trace_init_raw.py
+│   ├── trace_init_return.py
+│   ├── trace_initialize.py
+│   ├── verify2.py
+│   ├── verify_course_load.py
+│   └── verify_patches.py
+├── todo.md
+├── tsconfig.json
+├── types
+│   ├── AircraftAvailability.ts
+│   └── audit.ts
+├── types.ts
+├── username.png
+├── utils
+│   ├── aircraftAvailabilityCalculator.ts
+│   ├── aircraftAvailabilityUtils.ts
+│   ├── auditDebounce.ts
+│   ├── auditLogger.ts
+│   ├── buildAlgorithmUtils.ts
+│   ├── courseRequirements.ts
+│   ├── courseStatistics.ts
+│   ├── dataRepair.ts
+│   ├── dataValidation.ts
+│   ├── db.ts
+│   ├── errorHandlingTest.ts
+│   ├── flightSchedulerUtils.ts
+│   ├── formatUtils.ts
+│   ├── globalConstraintSolver.ts
+│   ├── passwordPrevention.ts
+│   ├── safeSort.ts
+│   ├── seedAuditLogs.ts
+│   ├── settingsService.ts
+│   ├── sounds.ts
+│   ├── syllabusFilter.ts
+│   ├── traineeDataValidator.ts
+│   ├── unavailabilityValidation.ts
+│   ├── userPreferencesService.ts
+│   └── validationUtils.ts
+├── verification.txt
+├── vite.config.backup.ts
+└── vite.config.ts
+
+66 directories, 744 files

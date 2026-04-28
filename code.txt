@@ -1,0 +1,1376 @@
+//
+
+// APIService.swift
+
+// DFP-NEO App
+
+//
+
+import Foundation
+
+enum HTTPMethod: String {
+
+case GET, POST, PUT, PATCH, DELETE
+
+}
+
+enum APIServiceError: LocalizedError {
+
+case invalidBaseURL
+
+case invalidURL
+
+case invalidResponse
+
+case httpStatus(Int, String?)
+
+case missingRefreshToken
+
+case decodingFailed
+
+case encodingFailed
+
+var errorDescription: String? {
+
+switch self {
+
+case .invalidBaseURL: return "API base URL is invalid."
+
+case .invalidURL: return "Request URL is invalid."
+
+case .invalidResponse: return "Invalid server response."
+
+case .httpStatus(let code, let msg):
+
+return msg ?? "Server returned HTTP \(code)"
+
+case .missingRefreshToken: return "Missing refresh token. Please log in
+again."
+
+case .decodingFailed: return "Failed to decode server response."
+
+case .encodingFailed: return "Failed to encode request body."
+
+}
+
+}
+
+}
+
+final class APIService {
+
+static let shared = APIService()
+
+private let baseURLString = "https://dfp-neo.com"
+
+private let apiPrefix = "/api"
+
+private let session: URLSession
+
+private let decoder: JSONDecoder
+
+private let encoder: JSONEncoder
+
+private let defaults = UserDefaults.standard
+
+private let accessTokenKey = "dfpneo_access_token"
+
+private let refreshTokenKey = "dfpneo_refresh_token"
+
+private let userIdKey = "dfpneo_user_id"
+
+private init(session: URLSession = .shared) {
+
+self.session = session
+
+self.decoder = JSONDecoder()
+
+self.encoder = JSONEncoder()
+
+}
+
+private var accessToken: String? {
+
+get { defaults.string(forKey: accessTokenKey) }
+
+set { defaults.setValue(newValue, forKey: accessTokenKey) }
+
+}
+
+private var refreshToken: String? {
+
+get { defaults.string(forKey: refreshTokenKey) }
+
+set { defaults.setValue(newValue, forKey: refreshTokenKey) }
+
+}
+
+func setTokens(access: String, refresh: String) {
+
+self.accessToken = access
+
+self.refreshToken = refresh
+
+}
+
+func setUserId(_ userId: String) {
+
+defaults.setValue(userId, forKey: userIdKey)
+
+}
+
+func clearTokens() {
+
+self.accessToken = nil
+
+self.refreshToken = nil
+
+}
+
+// MARK: - Public request helpers
+
+func get<T: Decodable>(endpoint: String, authenticated: Bool = true)
+async throws -> T {
+
+try await request(endpoint: endpoint, method: .GET, body: nil,
+authenticated: authenticated)
+
+}
+
+func post<T: Decodable, B: Encodable>(endpoint: String, body: B,
+authenticated: Bool = true) async throws -> T {
+
+do {
+
+let data = try encoder.encode(body)
+
+return try await request(endpoint: endpoint, method: .POST, body: data,
+authenticated: authenticated)
+
+} catch {
+
+throw APIServiceError.encodingFailed
+
+}
+
+}
+
+// MARK: - Core request (401 refresh retry)
+
+private func request<T: Decodable>(
+
+endpoint: String,
+
+method: HTTPMethod,
+
+body: Data?,
+
+authenticated: Bool,
+
+hasRetriedAfterRefresh: Bool = false
+
+) async throws -> T {
+
+guard let baseURL = URL(string: baseURLString) else {
+
+throw APIServiceError.invalidBaseURL
+
+}
+
+let finalPath = fullEndpoint(endpoint)
+
+let cleaned = finalPath.hasPrefix("/") ? String(finalPath.dropFirst()) :
+finalPath
+
+guard let url = URL(string: cleaned, relativeTo: baseURL) else {
+
+throw APIServiceError.invalidURL
+
+}
+
+var urlRequest = URLRequest(url: url)
+
+urlRequest.httpMethod = method.rawValue
+
+urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+
+if let body = body {
+
+urlRequest.httpBody = body
+
+urlRequest.setValue("application/json", forHTTPHeaderField:
+"Content-Type")
+
+}
+
+let token = accessToken
+
+let uid = defaults.string(forKey: userIdKey)
+
+if authenticated, let token, !token.isEmpty {
+
+urlRequest.setValue("Bearer \(token)", forHTTPHeaderField:
+"Authorization")
+
+urlRequest.setValue(token, forHTTPHeaderField: "x-access-token")
+
+urlRequest.setValue(token, forHTTPHeaderField: "X-Authorization")
+
+}
+
+if let uid, !uid.isEmpty {
+
+urlRequest.setValue(uid, forHTTPHeaderField: "X-DFP-UserId")
+
+}
+
+debugLogRequest(urlRequest, authenticated: authenticated, token: token,
+userId: uid)
+
+let (data, response) = try await session.data(for: urlRequest)
+
+guard let http = response as? HTTPURLResponse else {
+
+throw APIServiceError.invalidResponse
+
+}
+
+if http.statusCode == 401, authenticated, !hasRetriedAfterRefresh {
+
+debugLogResponse(status: http.statusCode, url: url, data: data, note:
+"401 received — attempting refresh then retry")
+
+try await refreshAccessToken()
+
+return try await request(
+
+endpoint: endpoint,
+
+method: method,
+
+body: body,
+
+authenticated: authenticated,
+
+hasRetriedAfterRefresh: true
+
+)
+
+}
+
+guard (200...299).contains(http.statusCode) else {
+
+debugLogResponse(status: http.statusCode, url: url, data: data, note:
+"Non-2xx response")
+
+let msg = String(data: data, encoding: .utf8)
+
+throw APIServiceError.httpStatus(http.statusCode, msg)
+
+}
+
+do {
+
+return try decoder.decode(T.self, from: data)
+
+} catch {
+
+debugLogResponse(status: http.statusCode, url: url, data: data, note:
+"Decoding failed for \(String(describing: T.self))")
+
+throw APIServiceError.decodingFailed
+
+}
+
+}
+
+private func fullEndpoint(_ endpoint: String) -> String {
+
+let e = endpoint.hasPrefix("/") ? endpoint : "/" + endpoint
+
+let p = apiPrefix.isEmpty ? "" : (apiPrefix.hasPrefix("/") ? apiPrefix :
+"/" + apiPrefix)
+
+return p + e
+
+}
+
+// MARK: - Token refresh
+
+private func refreshAccessToken() async throws {
+
+guard let refresh = refreshToken, !refresh.isEmpty else {
+
+throw APIServiceError.missingRefreshToken
+
+}
+
+struct RefreshRequest: Encodable {
+
+let refreshToken: String
+
+}
+
+let response: TokenRefreshResponse = try await post(
+
+endpoint: "/mobile/auth/refresh",
+
+body: RefreshRequest(refreshToken: refresh),
+
+authenticated: false
+
+)
+
+self.accessToken = response.accessToken
+
+if let newRefresh = response.refreshToken, !newRefresh.isEmpty {
+
+self.refreshToken = newRefresh
+
+}
+
+}
+
+// MARK: - Debug logging
+
+private func debugLogRequest(_ req: URLRequest, authenticated: Bool,
+token: String?, userId: String?) {
+
+let url = req.url?.absoluteString ?? "(nil)"
+
+let hasToken = (token?.isEmpty == false)
+
+let tokenPrefix = token.map { String($0.prefix(16)) } ?? "(nil)"
+
+let uidValue = userId ?? "(nil)"
+
+print("➡️ [API] \(req.httpMethod ?? "?") \(url)")
+
+print("➡️ [API] authenticated=\(authenticated) tokenPresent=\(hasToken)
+tokenPrefix=\(tokenPrefix) userId=\(uidValue)")
+
+}
+
+private func debugLogResponse(status: Int, url: URL, data: Data, note:
+String) {
+
+let body = String(data: data, encoding: .utf8) ?? "(non-utf8 body)"
+
+print("⬅️ [API] HTTP \(status) \(url.absoluteString) — \(note)")
+
+print("⬅️ [API] Body: \(body)")
+
+}
+
+}
+
+// Services/AuthService.swift
+
+// PASTE THIS ENTIRE FILE (uses TokenRefreshResponse from
+TokenRefreshResponse.swift)
+
+import Foundation
+
+final class AuthService {
+
+private let baseURL = URL(string: "https://dfp-neo.com")!
+
+func login(userId: String, password: String) async throws ->
+AuthResponse {
+
+let url = baseURL.appendingPathComponent("/api/mobile/auth/login")
+
+var request = URLRequest(url: url)
+
+request.httpMethod = "POST"
+
+request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+struct Payload: Encodable {
+
+let userId: String
+
+let password: String
+
+}
+
+request.httpBody = try JSONEncoder().encode(Payload(userId: userId,
+password: password))
+
+let (data, response) = try await URLSession.shared.data(for: request)
+
+let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+let raw = String(data: data, encoding: .utf8) ?? "<non-utf8 response>"
+
+guard (200...299).contains(status) else {
+
+throw NSError(domain: "AuthService", code: status, userInfo: [
+
+NSLocalizedDescriptionKey: "Login failed (HTTP \(status)): \(raw)"
+
+])
+
+}
+
+do {
+
+return try JSONDecoder().decode(AuthResponse.self, from: data)
+
+} catch {
+
+throw NSError(domain: "AuthService", code: -2, userInfo: [
+
+NSLocalizedDescriptionKey: "Failed to decode login response: \(raw)"
+
+])
+
+}
+
+}
+
+func refreshAccessToken(refreshToken: String) async throws ->
+TokenRefreshResponse {
+
+let url = baseURL.appendingPathComponent("/api/mobile/auth/refresh")
+
+var request = URLRequest(url: url)
+
+request.httpMethod = "POST"
+
+request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+request.httpBody = try JSONEncoder().encode(["refreshToken":
+refreshToken])
+
+let (data, response) = try await URLSession.shared.data(for: request)
+
+let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+let raw = String(data: data, encoding: .utf8) ?? "<non-utf8 response>"
+
+guard (200...299).contains(status) else {
+
+throw NSError(domain: "AuthService", code: status, userInfo: [
+
+NSLocalizedDescriptionKey: "Refresh failed (HTTP \(status)): \(raw)"
+
+])
+
+}
+
+do {
+
+return try JSONDecoder().decode(TokenRefreshResponse.self, from: data)
+
+} catch {
+
+throw NSError(domain: "AuthService", code: -3, userInfo: [
+
+NSLocalizedDescriptionKey: "Failed to decode refresh response: \(raw)"
+
+])
+
+}
+
+}
+
+}
+
+// ViewModels/ScheduleViewModel.swift
+
+// PASTE THIS ENTIRE FILE (replaces your current
+ScheduleViewModel.swift)
+
+//
+
+// Fix: The 401 is coming from the WEB endpoint (/api/schedule). That
+endpoint is cookie/NextAuth only.
+
+// So we must NOT call /api/schedule from iOS.
+
+// We go back to ONLY calling /api/mobile/schedule?date=YYYY-MM-DD
+
+// and we DISPLAY a clear message that the backend has no schedule for
+that date/user.
+
+//
+
+// This is now the truth:
+
+// - JWT login works
+
+// - /api/mobile/schedule accepts JWT (HTTP 200 previously)
+
+// - But it returns schedule:null -> meaning the backend mobile route is
+not returning the user's events.
+
+// You need backend work: mobile schedule route must query by the JWT
+userId and return that user's schedule/events.
+
+import Foundation
+
+import Combine
+
+@MainActor
+
+final class ScheduleViewModel: ObservableObject {
+
+@Published var selectedDate: Date = Date()
+
+@Published var events: [ScheduleEvent] = []
+
+@Published var isLoading: Bool = false
+
+@Published var errorMessage: String? = nil
+
+@Published var lastHTTPStatus: Int? = nil
+
+@Published var lastRawResponse: String? = nil
+
+private let baseURL = URL(string: "https://dfp-neo.com")!
+
+private let mobileSchedulePath = "/api/mobile/schedule"
+
+private let refreshPath = "/api/mobile/auth/refresh"
+
+func load() async { await loadSchedule(for: selectedDate) }
+
+func goToToday() {
+
+selectedDate = Date()
+
+Task { await loadSchedule(for: selectedDate) }
+
+}
+
+func goToPreviousDay() {
+
+selectedDate = Calendar.current.date(byAdding: .day, value: -1, to:
+selectedDate) ?? selectedDate
+
+Task { await loadSchedule(for: selectedDate) }
+
+}
+
+func goToNextDay() {
+
+selectedDate = Calendar.current.date(byAdding: .day, value: 1, to:
+selectedDate) ?? selectedDate
+
+Task { await loadSchedule(for: selectedDate) }
+
+}
+
+private func loadSchedule(for date: Date) async {
+
+isLoading = true
+
+errorMessage = nil
+
+defer { isLoading = false }
+
+guard let token = DFPTokens.accessToken else {
+
+events = []
+
+errorMessage = "Missing access token. Please log in again."
+
+return
+
+}
+
+let dateStr = DateHelpers.yyyyMMddLocal(date)
+
+do {
+
+let resp = try await fetchMobileSchedule(dateStr: dateStr, accessToken:
+token)
+
+self.events = resp.events.enumerated().map { idx, dto in
+
+dto.toUIModel(fallbackId: "evt-\(dateStr)-\(idx)")
+
+}
+
+if self.events.isEmpty {
+
+// This is the key signal from your backend right now.
+
+// It is not returning the schedule for the logged-in user.
+
+let msg = resp.message ?? "No schedule returned by /api/mobile/schedule"
+
+self.errorMessage =
+
+"""
+
+\(msg)
+
+Backend fix required:
+
+/api/mobile/schedule must use the JWT userId and query that user's
+schedule/events for this date.
+
+"""
+
+} else {
+
+self.errorMessage = nil
+
+}
+
+} catch {
+
+events = []
+
+errorMessage = error.localizedDescription
+
+}
+
+}
+
+private func fetchMobileSchedule(dateStr: String, accessToken: String)
+async throws -> MobileScheduleResponse {
+
+var components = URLComponents(url:
+baseURL.appendingPathComponent(mobileSchedulePath),
+resolvingAgainstBaseURL: false)!
+
+components.queryItems = [URLQueryItem(name: "date", value: dateStr)]
+
+let url = components.url!
+
+return try await performGET(url: url, accessToken: accessToken,
+allowRefreshOnce: true)
+
+}
+
+private func performGET(url: URL, accessToken: String, allowRefreshOnce:
+Bool) async throws -> MobileScheduleResponse {
+
+var request = URLRequest(url: url)
+
+request.httpMethod = "GET"
+
+request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+request.setValue("Bearer \(accessToken)", forHTTPHeaderField:
+"Authorization")
+
+let (data, response) = try await URLSession.shared.data(for: request)
+
+let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+let raw = String(data: data, encoding: .utf8) ?? "<non-utf8 response>"
+
+self.lastHTTPStatus = status
+
+self.lastRawResponse = raw
+
+if status == 401, allowRefreshOnce {
+
+try await refreshAccessToken()
+
+guard let newToken = DFPTokens.accessToken else {
+
+throw NSError(domain: "Schedule", code: 401, userInfo: [
+
+NSLocalizedDescriptionKey: "401 Unauthorized. Refresh failed or token
+missing."
+
+])
+
+}
+
+return try await performGET(url: url, accessToken: newToken,
+allowRefreshOnce: false)
+
+}
+
+guard (200...299).contains(status) else {
+
+throw NSError(domain: "Schedule", code: status, userInfo: [
+
+NSLocalizedDescriptionKey: "Schedule failed (HTTP \(status)). Raw shown
+in Debug box."
+
+])
+
+}
+
+do {
+
+return try JSONDecoder().decode(MobileScheduleResponse.self, from: data)
+
+} catch {
+
+throw NSError(domain: "Schedule", code: -2, userInfo: [
+
+NSLocalizedDescriptionKey: "Decode failed. Raw JSON shown in Debug box."
+
+])
+
+}
+
+}
+
+private func refreshAccessToken() async throws {
+
+guard let refreshToken = DFPTokens.refreshToken else { return }
+
+let url = baseURL.appendingPathComponent(refreshPath)
+
+var request = URLRequest(url: url)
+
+request.httpMethod = "POST"
+
+request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+request.httpBody = try JSONEncoder().encode(["refreshToken":
+refreshToken])
+
+let (data, response) = try await URLSession.shared.data(for: request)
+
+let status = (response as? HTTPURLResponse)?.statusCode ?? -1
+
+let raw = String(data: data, encoding: .utf8) ?? "<non-utf8 response>"
+
+self.lastHTTPStatus = status
+
+self.lastRawResponse = raw
+
+guard (200...299).contains(status) else { return }
+
+let decoded = try JSONDecoder().decode(TokenRefreshResponse.self, from:
+data)
+
+DFPTokens.accessToken = decoded.accessToken
+
+}
+
+}
+
+// Models/Schedule.swift
+
+// Paste this ENTIRE file (replaces your current Models/Schedule.swift)
+
+// Fixes TWO things:
+
+// 1) Date formatting was using GMT and sending the previous day (your
+screenshot shows 18 Jan but request uses 17 Jan)
+
+// 2) Mobile endpoint returns { "schedule": ... } (not { "schedules":
+... } / { "events": ... })
+
+import Foundation
+
+// MARK: - UI Model
+
+struct ScheduleEvent: Identifiable, Equatable {
+
+let id: String
+
+let title: String
+
+let startTime: String?
+
+let endTime: String?
+
+let type: String?
+
+let aircraftType: String?
+
+let instructorId: String?
+
+}
+
+// MARK: - API Decoding
+
+struct MobileScheduleResponse: Decodable {
+
+let events: [EventDTO]
+
+let message: String?
+
+enum CodingKeys: String, CodingKey {
+
+case schedule
+
+case schedules
+
+case events
+
+case message
+
+}
+
+init(from decoder: Decoder) throws {
+
+let c = try decoder.container(keyedBy: CodingKeys.self)
+
+self.message = try? c.decode(String.self, forKey: .message)
+
+// Case A: { "events": [...] }
+
+if let direct = try? c.decode([EventDTO].self, forKey: .events) {
+
+self.events = direct
+
+return
+
+}
+
+// Case B: { "schedule": { ... } }
+
+if let single = try? c.decode(ScheduleDTO.self, forKey: .schedule) {
+
+self.events = single.data?.events ?? []
+
+return
+
+}
+
+// Case C: { "schedules": [ ... ] }
+
+if let many = try? c.decode([ScheduleDTO].self, forKey: .schedules) {
+
+self.events = many.flatMap { $0.data?.events ?? [] }
+
+return
+
+}
+
+self.events = []
+
+}
+
+}
+
+struct ScheduleDTO: Decodable {
+
+let id: String?
+
+let userId: String?
+
+let date: String?
+
+let data: ScheduleDataDTO?
+
+}
+
+struct ScheduleDataDTO: Decodable {
+
+let events: [EventDTO]?
+
+let notes: String?
+
+let overrides: [String]?
+
+}
+
+struct EventDTO: Decodable {
+
+let id: String?
+
+let title: String?
+
+let startTime: String?
+
+let endTime: String?
+
+let instructorId: String?
+
+let aircraftType: String?
+
+let type: String?
+
+}
+
+extension EventDTO {
+
+func toUIModel(fallbackId: String) -> ScheduleEvent {
+
+ScheduleEvent(
+
+id: (id?.isEmpty == false ? id! : fallbackId),
+
+title: title ?? "Untitled event",
+
+startTime: startTime,
+
+endTime: endTime,
+
+type: type,
+
+aircraftType: aircraftType,
+
+instructorId: instructorId
+
+)
+
+}
+
+}
+
+// MARK: - Date Helpers (LOCAL TIMEZONE FIX)
+
+enum DateHelpers {
+
+// IMPORTANT: This must be LOCAL timezone (NOT GMT/UTC),
+
+// otherwise at 00:xx in Australia it will send yesterday.
+
+static func yyyyMMddLocal(_ date: Date) -> String {
+
+let localStartOfDay = Calendar.current.startOfDay(for: date)
+
+let f = DateFormatter()
+
+f.locale = Locale(identifier: "en_US_POSIX")
+
+f.timeZone = TimeZone.current
+
+f.dateFormat = "yyyy-MM-dd"
+
+return f.string(from: localStartOfDay)
+
+}
+
+static func displayLongAU(_ date: Date) -> String {
+
+let f = DateFormatter()
+
+f.locale = Locale(identifier: "en_AU")
+
+f.timeZone = TimeZone.current
+
+f.dateStyle = .full
+
+return f.string(from: date)
+
+}
+
+}
+
+// Views/ContentView.swift
+
+// Paste this ENTIRE file (keeps it simple and correct).
+
+import SwiftUI
+
+struct ContentView: View {
+
+@EnvironmentObject var auth: AuthViewModel
+
+var body: some View {
+
+Group {
+
+if auth.isAuthenticated {
+
+MainTabView()
+
+} else {
+
+LoginView()
+
+}
+
+}
+
+}
+
+}
+
+// Models/User.swift
+
+// PASTE THIS ENTIRE FILE (fixes PermissionsRole + Decodable issues)
+
+import Foundation
+
+enum PermissionsRole: String, Codable {
+
+case ADMIN
+
+case INSTRUCTOR
+
+case STUDENT
+
+case OTHER
+
+}
+
+struct User: Codable, Identifiable, Equatable {
+
+let id: String
+
+let userId: String
+
+let displayName: String
+
+let email: String
+
+let isActive: Bool
+
+let role: PermissionsRole
+
+}
+
+//
+
+// UnavailabilityModels.swift
+
+// DFP-NEO App
+
+//
+
+// Created by Daniel Dawe on 6/1/2026.
+
+//
+
+import Foundation
+
+struct UnavailabilityRequest: Codable {
+
+let startDate: String
+
+let endDate: String
+
+let reasonId: String
+
+let notes: String?
+
+}
+
+//
+
+// KeychainService.swift
+
+// DFP-NEO App
+
+//
+
+// Created by Daniel Dawe on 5/1/2026.
+
+//
+
+import Foundation
+
+class KeychainService {
+
+static let shared = KeychainService()
+
+private init() {}
+
+private let service = "com.dfpneo.app"
+
+func save(key: String, data: Data) -> Bool {
+
+let query = [
+
+kSecClass as String: kSecClassGenericPassword,
+
+kSecAttrService as String: service,
+
+kSecAttrAccount as String: key,
+
+kSecValueData as String: data
+
+] as [String: Any]
+
+SecItemDelete(query as CFDictionary)
+
+let status = SecItemAdd(query as CFDictionary, nil)
+
+return status == errSecSuccess
+
+}
+
+func read(key: String) -> Data? {
+
+let query = [
+
+kSecClass as String: kSecClassGenericPassword,
+
+kSecAttrService as String: service,
+
+kSecAttrAccount as String: key,
+
+kSecReturnData as String: kCFBooleanTrue!,
+
+kSecMatchLimit as String: kSecMatchLimitOne
+
+] as [String: Any]
+
+var dataTypeRef: AnyObject?
+
+let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
+
+if status == errSecSuccess {
+
+return dataTypeRef as? Data
+
+}
+
+return nil
+
+}
+
+func delete(key: String) -> Bool {
+
+let query = [
+
+kSecClass as String: kSecClassGenericPassword,
+
+kSecAttrService as String: service,
+
+kSecAttrAccount as String: key
+
+] as [String: Any]
+
+let status = SecItemDelete(query as CFDictionary)
+
+return status == errSecSuccess
+
+}
+
+}
+
+// Views/ProfileView.swift
+
+// Create NEW file and paste this ENTIRE file (simple dark placeholder
+that shows who is logged in).
+
+import SwiftUI
+
+struct ProfileView: View {
+
+@EnvironmentObject var auth: AuthViewModel
+
+var body: some View {
+
+ZStack {
+
+Color.black.ignoresSafeArea()
+
+VStack(spacing: 12) {
+
+Text("Profile")
+
+.font(.system(size: 28, weight: .bold))
+
+.foregroundColor(.white)
+
+if let u = auth.currentUser {
+
+Text(u.displayName)
+
+.foregroundColor(.white)
+
+.font(.system(size: 20, weight: .semibold))
+
+Text("User ID: \(u.userId)")
+
+.foregroundColor(.white.opacity(0.75))
+
+Text("Role: \(u.role.rawValue)")
+
+.foregroundColor(.white.opacity(0.75))
+
+} else {
+
+Text("No user loaded")
+
+.foregroundColor(.white.opacity(0.75))
+
+}
+
+Button {
+
+auth.logout()
+
+} label: {
+
+Text("Logout")
+
+.frame(maxWidth: .infinity)
+
+.padding()
+
+.background(Color.white)
+
+.foregroundColor(.black)
+
+.cornerRadius(12)
+
+}
+
+.padding(.horizontal, 20)
+
+.padding(.top, 18)
+
+Spacer()
+
+}
+
+.padding(.top, 30)
+
+}
+
+}
+
+}
+
+// Views/LoginView.swift
+
+// Paste this ENTIRE file to get you back to a dark UI quickly (no
+images, but black theme + consistent text).
+
+import SwiftUI
+
+struct LoginView: View {
+
+@EnvironmentObject var auth: AuthViewModel
+
+var body: some View {
+
+ZStack {
+
+Color.black.ignoresSafeArea()
+
+VStack(spacing: 16) {
+
+Text("DFP-NEO")
+
+.font(.system(size: 34, weight: .bold))
+
+.foregroundColor(.white)
+
+VStack(spacing: 12) {
+
+TextField("User ID", text: $auth.userId)
+
+.textInputAutocapitalization(.never)
+
+.autocorrectionDisabled(true)
+
+.padding()
+
+.background(Color.white.opacity(0.08))
+
+.foregroundColor(.white)
+
+.overlay(
+
+RoundedRectangle(cornerRadius: 10)
+
+.stroke(Color.white.opacity(0.20), lineWidth: 1)
+
+)
+
+.cornerRadius(10)
+
+SecureField("Password", text: $auth.password)
+
+.padding()
+
+.background(Color.white.opacity(0.08))
+
+.foregroundColor(.white)
+
+.overlay(
+
+RoundedRectangle(cornerRadius: 10)
+
+.stroke(Color.white.opacity(0.20), lineWidth: 1)
+
+)
+
+.cornerRadius(10)
+
+}
+
+.padding(.horizontal, 20)
+
+if let err = auth.errorMessage, !err.isEmpty {
+
+Text(err)
+
+.foregroundColor(.red)
+
+.multilineTextAlignment(.center)
+
+.padding(.horizontal, 20)
+
+}
+
+Button {
+
+Task { await auth.login() }
+
+} label: {
+
+HStack {
+
+if auth.isLoggingIn { ProgressView().tint(.black) }
+
+Text(auth.isLoggingIn ? "Logging in..." : "Login")
+
+.font(.system(size: 18, weight: .semibold))
+
+}
+
+.frame(maxWidth: .infinity)
+
+.padding()
+
+.background(Color.white)
+
+.foregroundColor(.black)
+
+.cornerRadius(12)
+
+}
+
+.disabled(auth.isLoggingIn)
+
+.padding(.horizontal, 20)
+
+.padding(.top, 6)
+
+if auth.enableBiometricLogin {
+
+Button {
+
+auth.loginWithBiometrics()
+
+} label: {
+
+Text("Login with Biometrics")
+
+.foregroundColor(.white)
+
+.padding(.top, 4)
+
+}
+
+}
+
+Spacer()
+
+}
+
+.padding(.top, 30)
+
+}
+
+}
+
+}

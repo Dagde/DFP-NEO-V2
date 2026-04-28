@@ -1,0 +1,6 @@
+2026/04/08-11:14:07.475 5cc Reusing MANIFEST /workspace/.browser_data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/04/08-11:14:07.499 5cc Recovering log #3
+2026/04/08-11:14:07.526 5cc Reusing old log /workspace/.browser_data/Default/Local Storage/leveldb/000003.log 
+2026/04/08-11:17:25.517 5dc Level-0 table #5: started
+2026/04/08-11:17:25.519 5dc Level-0 table #5: 17682 bytes OK
+2026/04/08-11:17:25.519 5dc Delete type=0 #3

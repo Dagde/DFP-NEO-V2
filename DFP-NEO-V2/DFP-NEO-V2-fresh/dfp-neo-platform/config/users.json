@@ -1,0 +1,20 @@
+{
+  "newUsers": [
+    {
+      "username": "mike.pilot",
+      "email": "mike@dfp-neo.com",
+      "role": "PILOT",
+      "firstName": "Mike",
+      "lastName": "Johnson",
+      "temporaryPassword": "Pilot2024!Secure"
+    },
+    {
+      "username": "sarah.instructor", 
+      "email": "sarah@dfp-neo.com",
+      "role": "INSTRUCTOR",
+      "firstName": "Sarah",
+      "lastName": "Davis",
+      "temporaryPassword": "Instructor2024!Secure"
+    }
+  ]
+}

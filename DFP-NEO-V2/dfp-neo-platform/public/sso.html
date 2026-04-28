@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DFP-NEO | Authenticating...</title>
+  <style>
+    body {
+      background: #000;
+      color: #fff;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #333;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status { color: #aaa; font-size: 14px; }
+    .error { color: #f87171; font-size: 14px; text-align: center; max-width: 400px; }
+  </style>
+<script src="https://sites.super.myninja.ai/_assets/ninja-daytona-script.js"></script>
+</head>
+<body>
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Authenticating...</div>
+  <div class="error" id="error" style="display:none"></div>
+
+  <script>
+    function setStatus(msg) {
+      document.getElementById('status').textContent = msg;
+      console.log('[SSO]', msg);
+    }
+    function setError(msg) {
+      document.getElementById('spinner').style.display = 'none';
+      document.getElementById('status').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+      document.getElementById('error').textContent = msg;
+      console.error('[SSO Error]', msg);
+    }
+    function redirectToLogin() {
+      setTimeout(() => { window.location.href = 'https://dfp-neo.com/login'; }, 2000);
+    }
+
+    async function authenticate() {
+      console.log('[SSO] Page loaded, URL:', window.location.href);
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const userId = urlParams.get('userId');
+      const username = urlParams.get('username');
+      const firstName = urlParams.get('firstName');
+      const lastName = urlParams.get('lastName');
+      const email = urlParams.get('email');
+      const role = urlParams.get('role');
+      const isActive = urlParams.get('isActive');
+
+      console.log('[SSO] URL params - userId:', userId, 'username:', username);
+
+      // Strategy 1: Use URL parameters passed from website
+      if (userId && username) {
+        setStatus('Setting up session...');
+
+        // Build user object matching AuthUser interface expected by App.tsx
+        const userData = {
+          id: userId,
+          userId: userId,
+          username: username,
+          firstName: firstName || '',
+          lastName: lastName || '',
+          displayName: (firstName && lastName) ? `${lastName}, ${firstName}` : username,
+          email: email || null,
+          role: role || 'USER',
+          isActive: isActive !== 'false',
+          mustChangePassword: false,
+          permissionsRoleId: ''
+        };
+
+        // Store authUser for flight-school page
+        localStorage.setItem('authUser', JSON.stringify(userData));
+
+        // Also store a synthetic session token so App.tsx skips the login modal
+        // The token from the website is stored as dfp_session_token
+        // We also store the user data so checkSession can return it without an API call
+        if (token) {
+          localStorage.setItem('dfp_session_token', token);
+          localStorage.setItem('dfp_session_expires', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+          localStorage.setItem('dfp_sso_user', JSON.stringify(userData));
+        }
+
+        console.log('[SSO] Session stored, redirecting to flight-school');
+        setStatus('Loading application...');
+        setTimeout(() => { window.location.href = '/flight-school'; }, 300);
+        return;
+      }
+
+      // Strategy 2: Check if already have valid authUser in localStorage
+      const existingUser = localStorage.getItem('authUser');
+      if (existingUser) {
+        try {
+          const userData = JSON.parse(existingUser);
+          if (userData.userId && userData.username) {
+            console.log('[SSO] Found existing authUser for:', userData.userId);
+            setStatus('Loading application...');
+            setTimeout(() => { window.location.href = '/flight-school'; }, 300);
+            return;
+          }
+        } catch(e) {
+          console.error('[SSO] Failed to parse existing authUser:', e);
+        }
+      }
+
+      // No valid session found
+      console.error('[SSO] No user data found in URL params or localStorage');
+      setError('Session expired. Please log in again.');
+      redirectToLogin();
+    }
+
+    authenticate();
+  </script>
+</body>
+</html>
