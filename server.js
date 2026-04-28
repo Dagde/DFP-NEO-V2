@@ -4586,22 +4586,28 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
     // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
-    const { date, availableCount, notes, timestamp } = req.body;
+    const { date, availableCount, notes, timestamp, changeType, recordedBy } = req.body;
     const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
     if (!date || availableCount === undefined || !totalFleet) {
       return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
     }
-    const ts = timestamp ? new Date(timestamp).toISOString() : new Date().toISOString();
-    await db.$executeRawUnsafe(
-      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes")
-       VALUES ($1::text, $2::text::timestamp, $3::int, $4::int, $5::text)`,
-      date, ts, availableCount, totalFleet, notes || null
-    );
-    const inserted = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "id" DESC LIMIT 1`, date
-    );
-    const record = inserted[0];
-    res.json({ event: { ...record, id: Number(record.id) } });
+    const ts = timestamp ? new Date(timestamp) : new Date();
+    
+    // Use Prisma create() instead of raw SQL to auto-generate id field
+    const event = await db.aircraftAvailabilityEvent.create({
+      data: {
+        date,
+        timestamp: ts,
+        availableCount,
+        totalAircraft: totalFleet,
+        notes: notes ?? null,
+        changeType: changeType ?? 'change',
+        recordedBy: recordedBy ?? null,
+      },
+    });
+    
+    console.log(`✅ POST /api/aircraft-availability-events - created event with id: ${event.id}`);
+    res.json({ event });
   } catch (error) {
     console.error('❌ POST /api/aircraft-availability-events error:', error);
     res.status(500).json({ error: 'Failed to create event', details: error.message });
