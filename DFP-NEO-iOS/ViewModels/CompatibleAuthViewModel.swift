@@ -27,6 +27,32 @@ final class AuthViewModel: ObservableObject {
     init() {
         // Clear any stale biometrics flag that caused session lock loop
         UserDefaults.standard.set(false, forKey: "biometricsEnabled")
+
+        // ✅ Restore session from stored tokens (so user stays logged in between launches)
+        restoreSessionIfPossible()
+    }
+
+    private func restoreSessionIfPossible() {
+        let api = APIService.shared
+        guard api.hasValidToken, let uid = api.storedUserId, !uid.isEmpty else {
+            print("ℹ️ No stored session found - showing login screen")
+            return
+        }
+        // Restore authenticated state from stored tokens
+        // Use minimal User object - full details will load when schedule fetches
+        self.currentUser = User(
+            id: uid,
+            userId: uid,
+            displayName: uid,
+            email: "",
+            role: .other,
+            isActive: true,
+            firstName: nil,
+            lastName: nil
+        )
+        self.isAuthenticated = true
+        self.isSessionLocked = false
+        print("✅ Session restored from stored tokens for userId: \(uid)")
     }
 
     func login() async {

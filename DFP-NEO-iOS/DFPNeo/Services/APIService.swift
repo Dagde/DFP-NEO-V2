@@ -76,6 +76,23 @@ final class APIService {
     func clearTokens() {
         self.accessToken = nil
         self.refreshToken = nil
+        defaults.removeObject(forKey: userIdKey)
+    }
+
+    /// Returns true if a non-empty access token is stored
+    var hasValidToken: Bool {
+        guard let token = accessToken, !token.isEmpty else { return false }
+        return true
+    }
+
+    /// Returns the stored userId (human-readable), if any
+    var storedUserId: String? {
+        defaults.string(forKey: userIdKey)
+    }
+
+    /// Returns the stored access token, if any
+    var storedAccessToken: String? {
+        accessToken
     }
 
     // MARK: - Public request helpers
