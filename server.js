@@ -4506,17 +4506,23 @@ async function ensureAircraftAvailabilityTable(db) {
 // Ensure AircraftAvailabilityEvent table exists
 async function ensureAircraftAvailabilityEventTable(db) {
   try {
+    // Create table if it doesn't exist - use SERIAL id for auto-increment (compatible with old schema)
     await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "AircraftAvailabilityEvent" (
-        "id" SERIAL NOT NULL,
+        "id" BIGSERIAL NOT NULL,
         "date" TEXT NOT NULL,
         "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "availableCount" INTEGER NOT NULL,
         "totalAircraft" INTEGER NOT NULL,
         "notes" TEXT,
+        "changeType" TEXT NOT NULL DEFAULT 'change',
+        "recordedBy" TEXT,
         CONSTRAINT "AircraftAvailabilityEvent_pkey" PRIMARY KEY ("id")
       );
     `);
+    // Add missing columns if table was created with old schema (idempotent)
+    await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityEvent" ADD COLUMN IF NOT EXISTS "changeType" TEXT NOT NULL DEFAULT 'change'`);
+    await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityEvent" ADD COLUMN IF NOT EXISTS "recordedBy" TEXT`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_date ON "AircraftAvailabilityEvent"("date")`);
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS idx_event_timestamp ON "AircraftAvailabilityEvent"("timestamp")`);
     console.log('✅ AircraftAvailabilityEvent table ready');
@@ -4627,20 +4633,28 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     }
     const ts = timestamp ? new Date(timestamp) : new Date();
     
-    // Use Prisma create() instead of raw SQL to auto-generate id field
-    const event = await db.aircraftAvailabilityEvent.create({
-      data: {
-        date,
-        timestamp: ts,
-        availableCount,
-        totalAircraft: totalFleet,
-        notes: notes ?? null,
-        changeType: changeType ?? 'change',
-        recordedBy: recordedBy ?? null,
-      },
-    });
-    
-    console.log(`✅ POST /api/aircraft-availability-events - created event with id: ${event.id}`);
+    // Use raw SQL since AircraftAvailabilityEvent is not in Prisma schema.
+    // Omit "id" so it uses the column default (SERIAL auto-increment or UUID default).
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes", "changeType", "recordedBy")
+       VALUES ($1::text, $2::timestamptz, $3::int, $4::int, $5::text, $6::text, $7::text)`,
+      date,
+      ts.toISOString(),
+      parseInt(availableCount),
+      parseInt(totalFleet),
+      notes ?? null,
+      changeType ?? 'change',
+      recordedBy ?? null,
+    );
+
+    // Fetch the just-inserted row to return it
+    const rows = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
+      date
+    );
+    const event = rows[0] ?? { date, availableCount, totalAircraft: totalFleet };
+
+    console.log(`✅ POST /api/aircraft-availability-events - created event for date: ${date}`);
     res.json({ event });
   } catch (error) {
     console.error('❌ POST /api/aircraft-availability-events error:', error);
