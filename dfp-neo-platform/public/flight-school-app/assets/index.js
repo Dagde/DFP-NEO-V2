@@ -75518,11 +75518,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
     isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed top-0 left-0 right-0 z-[9999] bg-red-600 text-white text-2xl font-bold py-3 px-4 text-center", children: "FIXES LOADED - APRIL 28 2026" }),
-    isAuthenticated && lastPollTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none", children: [
+    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full ${lastPollChanged ? "bg-green-400" : "bg-gray-500"}` }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
         "Sync ",
-        lastPollTime
+        lastPollTime || "Wait..."
       ] })
     ] })
   ] });

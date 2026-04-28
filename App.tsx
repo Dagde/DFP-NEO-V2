@@ -15567,10 +15567,10 @@ updates.forEach(update => {
         )}
 
         {/* Live sync indicator - shows last poll time so users can confirm iOS sync is running */}
-        {isAuthenticated && lastPollTime && (
+        {isAuthenticated && (
             <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none">
                 <span className={`w-1.5 h-1.5 rounded-full ${lastPollChanged ? 'bg-green-400' : 'bg-gray-500'}`}></span>
-                <span>Sync {lastPollTime}</span>
+                <span>Sync {lastPollTime || "Wait..."}</span>
             </div>
         )}
     </>
