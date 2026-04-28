@@ -4634,18 +4634,61 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     const ts = timestamp ? new Date(timestamp) : new Date();
     
     // Use raw SQL since AircraftAvailabilityEvent is not in Prisma schema.
-    // Omit "id" so it uses the column default (SERIAL auto-increment or UUID default).
-    await db.$executeRawUnsafe(
-      `INSERT INTO "AircraftAvailabilityEvent" ("date", "timestamp", "availableCount", "totalAircraft", "notes", "changeType", "recordedBy")
-       VALUES ($1::text, $2::timestamptz, $3::int, $4::int, $5::text, $6::text, $7::text)`,
-      date,
-      ts.toISOString(),
-      parseInt(availableCount),
-      parseInt(totalFleet),
-      notes ?? null,
-      changeType ?? 'change',
-      recordedBy ?? null,
-    );
+    // The table schema on Railway may differ from local (unknown columns/types).
+    // Introspect actual columns first, then build a safe INSERT.
+    const colRows = await db.$queryRawUnsafe(`
+      SELECT column_name, column_default, is_nullable, data_type
+      FROM information_schema.columns
+      WHERE table_name = 'AircraftAvailabilityEvent'
+      ORDER BY ordinal_position
+    `);
+    const colNames = colRows.map((c) => c.column_name);
+    console.log('[AV] AircraftAvailabilityEvent columns:', colNames);
+
+    // Build INSERT dynamically based on what columns exist
+    const insertCols = [];
+    const insertVals = [];
+    const insertParams = [];
+    let paramIdx = 1;
+
+    // id - only include if column exists and has no auto-default
+    const idCol = colRows.find(c => c.column_name === 'id');
+    if (idCol && !idCol.column_default) {
+      insertCols.push('"id"');
+      insertVals.push(`gen_random_uuid()::${idCol.data_type === 'integer' || idCol.data_type === 'bigint' ? 'bigint' : 'text'}`);
+      // For integer id, use nextval from sequence if possible
+      if (idCol.data_type === 'integer' || idCol.data_type === 'bigint') {
+        insertVals[insertVals.length - 1] = `nextval('"AircraftAvailabilityEvent_id_seq"')`;
+      }
+    }
+    // date
+    if (colNames.includes('date')) { insertCols.push('"date"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(date); }
+    // timestamp
+    if (colNames.includes('timestamp')) { insertCols.push('"timestamp"'); insertVals.push(`$${paramIdx++}::timestamptz`); insertParams.push(ts.toISOString()); }
+    // availableCount
+    if (colNames.includes('availableCount')) { insertCols.push('"availableCount"'); insertVals.push(`$${paramIdx++}::int`); insertParams.push(parseInt(availableCount)); }
+    // totalAircraft
+    if (colNames.includes('totalAircraft')) { insertCols.push('"totalAircraft"'); insertVals.push(`$${paramIdx++}::int`); insertParams.push(parseInt(totalFleet)); }
+    // notes
+    if (colNames.includes('notes')) { insertCols.push('"notes"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(notes ?? null); }
+    // changeType
+    if (colNames.includes('changeType')) { insertCols.push('"changeType"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(changeType ?? 'change'); }
+    // recordedBy
+    if (colNames.includes('recordedBy')) { insertCols.push('"recordedBy"'); insertVals.push(`$${paramIdx++}::text`); insertParams.push(recordedBy ?? null); }
+    // createdAt (if exists and has no default)
+    const createdAtCol = colRows.find(c => c.column_name === 'createdAt');
+    if (createdAtCol && !createdAtCol.column_default && createdAtCol.is_nullable === 'NO') {
+      insertCols.push('"createdAt"'); insertVals.push('NOW()');
+    }
+    // updatedAt (if exists and has no default)
+    const updatedAtCol = colRows.find(c => c.column_name === 'updatedAt');
+    if (updatedAtCol && !updatedAtCol.column_default && updatedAtCol.is_nullable === 'NO') {
+      insertCols.push('"updatedAt"'); insertVals.push('NOW()');
+    }
+
+    const insertSQL = `INSERT INTO "AircraftAvailabilityEvent" (${insertCols.join(', ')}) VALUES (${insertVals.join(', ')})`;
+    console.log('[AV] INSERT SQL:', insertSQL, 'params:', insertParams);
+    await db.$executeRawUnsafe(insertSQL, ...insertParams);
 
     // Fetch the just-inserted row to return it
     const rows = await db.$queryRawUnsafe(
