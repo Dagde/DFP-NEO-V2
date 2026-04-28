@@ -3575,6 +3575,21 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           }
         }
     }
+
+      // No schedule found for this user/date - return empty schedule instead of hanging
+      const queryDate = date || new Date().toISOString().split('T')[0];
+      console.log("\\u2705 GET /api/mobile/schedule - No events found for userId=" + jwtUserId + ", date=" + queryDate);
+      return res.json({
+        schedule: {
+          id: "empty-" + queryDate,
+          date: queryDate,
+          isPublished: false,
+          events: [],
+          serverTime: new Date().toISOString()
+        },
+        message: "No events scheduled for " + queryDate
+      });
+
   } catch (error) {
     console.error('\u274c GET /api/mobile/schedule error:', error);
     res.status(500).json({ error: 'Failed to fetch schedule', details: error.message });
@@ -3607,31 +3622,57 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   app.post('/api/mobile/unavailability/quick', authenticateMobileJWT, async (req, res) => {
     try {
       const db = await getPrisma();
-      const userId = req.mobileUserId;
+      const humanUserId = req.mobileUserId; // human-readable e.g. "alexander.burns"
       const { date, reasonId, notes } = req.body;
 
       if (!date || !reasonId) {
         return res.status(400).json({ error: 'Missing required fields', message: 'date and reasonId are required' });
       }
 
-      // Find the personnel or trainee record linked to this userId
+      // Step 1: Look up User record to get cuid (used as FK in Personnel/Trainee)
+      const userRows = await db.$queryRawUnsafe(
+        `SELECT id FROM "User" WHERE "userId" = $1 LIMIT 1`,
+        humanUserId
+      );
+      const userCuid = userRows && userRows.length > 0 ? userRows[0].id : null;
+
+      // Step 2: Find personnel or trainee record linked to this user
       let record = null;
       let recordType = null;
 
-      const personnel = await db.personnel.findFirst({ where: { userId } });
-      if (personnel) {
-        record = personnel;
-        recordType = 'personnel';
-      } else {
-        const trainee = await db.trainee.findFirst({ where: { userId } });
-        if (trainee) {
-          record = trainee;
-          recordType = 'trainee';
+      // Try Personnel first (userId FK = User.id cuid)
+      if (userCuid) {
+        const personnel = await db.personnel.findFirst({ where: { userId: userCuid } });
+        if (personnel) {
+          record = personnel;
+          recordType = 'personnel';
+        } else {
+          const trainee = await db.trainee.findFirst({ where: { userId: userCuid } });
+          if (trainee) {
+            record = trainee;
+            recordType = 'trainee';
+          }
+        }
+      }
+
+      // Fallback: try matching by name or direct userId string
+      if (!record) {
+        const personnelDirect = await db.personnel.findFirst({ where: { userId: humanUserId } });
+        if (personnelDirect) {
+          record = personnelDirect;
+          recordType = 'personnel';
+        } else {
+          const traineeDirect = await db.trainee.findFirst({ where: { userId: humanUserId } });
+          if (traineeDirect) {
+            record = traineeDirect;
+            recordType = 'trainee';
+          }
         }
       }
 
       if (!record) {
-        return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account' });
+        console.log('\u274c Unavailability: No personnel/trainee found for humanUserId=' + humanUserId + ', userCuid=' + userCuid);
+        return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account. UserID: ' + humanUserId });
       }
 
       // Build the unavailability period entry
@@ -3678,7 +3719,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   app.post('/api/mobile/unavailability/create', authenticateMobileJWT, async (req, res) => {
     try {
       const db = await getPrisma();
-      const userId = req.mobileUserId;
+      const humanUserId = req.mobileUserId; // human-readable e.g. "alexander.burns"
       const { startDateTime, endDateTime, reasonId, notes } = req.body;
 
       if (!startDateTime || !endDateTime || !reasonId) {
@@ -3704,24 +3745,50 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
       const endTime = `${pad(endDt.getUTCHours())}:${pad(endDt.getUTCMinutes())}`;
       const allDay = startDate !== endDate && startTime === '00:00' && endTime === '00:00';
 
-      // Find the personnel or trainee record linked to this userId
+      // Step 1: Look up User record to get cuid (used as FK in Personnel/Trainee)
+      const userRows = await db.$queryRawUnsafe(
+        `SELECT id FROM "User" WHERE "userId" = $1 LIMIT 1`,
+        humanUserId
+      );
+      const userCuid = userRows && userRows.length > 0 ? userRows[0].id : null;
+
+      // Step 2: Find personnel or trainee record linked to this user
       let record = null;
       let recordType = null;
 
-      const personnel = await db.personnel.findFirst({ where: { userId } });
-      if (personnel) {
-        record = personnel;
-        recordType = 'personnel';
-      } else {
-        const trainee = await db.trainee.findFirst({ where: { userId } });
-        if (trainee) {
-          record = trainee;
-          recordType = 'trainee';
+      // Try Personnel first (userId FK = User.id cuid)
+      if (userCuid) {
+        const personnel = await db.personnel.findFirst({ where: { userId: userCuid } });
+        if (personnel) {
+          record = personnel;
+          recordType = 'personnel';
+        } else {
+          const trainee = await db.trainee.findFirst({ where: { userId: userCuid } });
+          if (trainee) {
+            record = trainee;
+            recordType = 'trainee';
+          }
+        }
+      }
+
+      // Fallback: try matching by direct userId string
+      if (!record) {
+        const personnelDirect = await db.personnel.findFirst({ where: { userId: humanUserId } });
+        if (personnelDirect) {
+          record = personnelDirect;
+          recordType = 'personnel';
+        } else {
+          const traineeDirect = await db.trainee.findFirst({ where: { userId: humanUserId } });
+          if (traineeDirect) {
+            record = traineeDirect;
+            recordType = 'trainee';
+          }
         }
       }
 
       if (!record) {
-        return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account' });
+        console.log('\u274c Unavailability: No personnel/trainee found for humanUserId=' + humanUserId + ', userCuid=' + userCuid);
+        return res.status(404).json({ error: 'User not found', message: 'No personnel or trainee record linked to this account. UserID: ' + humanUserId });
       }
 
       // Build the unavailability period entry
