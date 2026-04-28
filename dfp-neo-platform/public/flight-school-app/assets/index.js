@@ -68256,12 +68256,15 @@ ${"=".repeat(60)}`);
     return uniqueSegments;
   }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
   reactExports.useEffect(() => {
-    const todayStr = getLocalDateString();
-    const initialEvents = events.filter((e) => e.date === todayStr);
-    if (Object.keys(baselineSchedules).length === 0 && initialEvents.length > 0) {
-      setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(initialEvents)) });
+    const dateStr = date;
+    const eventsForCurrentDate = events.filter((e) => e.date === dateStr);
+    if (eventsForCurrentDate.length > 0 && !baselineSchedules[dateStr]) {
+      setBaselineSchedules((prev) => ({
+        ...prev,
+        [dateStr]: JSON.parse(JSON.stringify(eventsForCurrentDate))
+      }));
     }
-  }, [events, baselineSchedules]);
+  }, [events, date, baselineSchedules]);
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     const callsignPrefix = school === "ESL" ? "ROLR" : "VIPR";
@@ -75517,7 +75520,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
-    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed top-0 left-0 right-0 z-[9999] bg-red-600 text-white text-2xl font-bold py-3 px-4 text-center", children: "FIXES LOADED - APRIL 28 2026" }),
     isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `w-1.5 h-1.5 rounded-full ${lastPollChanged ? "bg-green-400" : "bg-gray-500"}` }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [

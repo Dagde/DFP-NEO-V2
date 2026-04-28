@@ -9,5 +9,5 @@
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
-  } /* Force rebuild: live-sync + availability-persistence fixes - 28 Apr 2026 */
+  } /* Force redeploy: GIANT red banner test - 18:02 UTC */
 }

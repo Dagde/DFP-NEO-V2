@@ -1,24 +1,17 @@
-# DFP-NEO Fix Tasks
+# Todo List
 
-## Issues to Fix
-- [x] Read resultMessage() function - DONE
-- [x] Read quickUnavailabilityForm TextEditor - DONE
-- [x] Understand browser data flow - DONE
+## Change Bar Investigation
+- [x] Find where `isChanged` prop is calculated/passed to FlightTile
+- [x] Understand how original published time is tracked
+- [x] Identify why change bar isn't showing for published Daily DFP events
+- [ ] Fix the isChanged logic for published Daily DFP
+- [ ] Build and test the changes
 
-## Fix 1: iOS Notes Text Color (White → Black)
-- [x] Fix TextEditor .foregroundColor(.white) → .foregroundColor(.black) in quickUnavailabilityForm
-- [x] Check if same issue exists in custom unavailability form - YES, same fix needed
+## Problem Found
+- `baselineSchedules` only initialized for "today" when empty
+- For published Daily DFP on other dates, `baselineSchedules[date]` is undefined
+- This causes `checkIsChanged` to return false
 
-## Fix 2: iOS Success Popup (Remove STATUS, add proper dates)
-- [x] Rewrite resultMessage() to remove Status/ID, show unavailability dates + registration time
-
-## Fix 3: Browser Live Refresh (Polling)
-- [x] Add polling to App.tsx that re-fetches /api/personnel every 30s and updates allInstructorsData
-
-## Fix 4: Duplicate Submissions
-- [x] Add server-side dedup check in quick unavailability endpoint
-- [x] Add server-side dedup check in custom unavailability endpoint
-
-## Delivery
-- [x] Commit and push server.js + App.tsx changes (commit 6b09a5f)
-- [x] Prepare Xcode fix file for user
+## Solution
+- Initialize `baselineSchedules[date]` when loading published Daily DFP for any date
+- Ensure baseline is preserved when navigating between dates
