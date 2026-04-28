@@ -3347,8 +3347,7 @@ app.post('/api/auth/verify-password', async (req, res) => {
     next();
   }
 
-  // GET /api/mobile/schedule - Get user's schedule for a specific date
-// GET /api/mobile/schedule - Get user's schedule (authenticated)
+  // GET /api/mobile/schedule - Get user's schedule (authenticated)
 app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
   try {
     const db = await getPrisma();
@@ -3563,16 +3562,18 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
           });
 
           console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
-      res.json({
-        events: events,
-        message: `Found ${events.length} events for ${date}`
-      });
-    } catch (error) {
-      console.error('❌ GET /api/mobile/schedule error:', error);
-      res.status(500).json({ error: 'Failed to fetch schedule', details: error.message });
+          res.json({
+            events: mappedEvents,
+            message: `Found ${mappedEvents.length} events for ${date}`
+          });
+        }
+      }
     }
-  });
-
+  } catch (error) {
+    console.error('\u274c GET /api/mobile/schedule error:', error);
+    res.status(500).json({ error: 'Failed to fetch schedule', details: error.message });
+  }
+});
   // ============================================================
   // MOBILE UNAVAILABILITY ENDPOINTS
   // ============================================================
