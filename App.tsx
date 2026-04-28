@@ -11173,22 +11173,22 @@ updates.forEach(update => {
     // ── Mobile unavailability live-refresh polling ────────────────────────
     // Poll every 5 seconds so that unavailability submitted from the iOS app
     // appears in the browser without a hard refresh.
-    // Uses content hashing (JSON of unavailability arrays) for reliable change detection.
     useEffect(() => {
-        // Build a hash string from all unavailability data for reliable change detection
         const buildUnavailHash = (records: any[]): string => {
             return records
-                .map(r => `${r.id}:${JSON.stringify(r.unavailability || [])}`)
+                .map(r => `${r.id}:${JSON.stringify((r.unavailability || []).map((u: any) => u.id).sort())}`)
                 .sort()
                 .join('|');
         };
 
         const pollUnavailability = async () => {
             try {
+                console.log('[Poll] Polling /api/personnel and /api/trainees...');
                 const [personnelRes, traineesRes] = await Promise.all([
                     fetch('/api/personnel', { credentials: 'include' }),
                     fetch('/api/trainees',  { credentials: 'include' }),
                 ]);
+                console.log('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
                 if (personnelRes.ok) {
                     const personnelData = await personnelRes.json();
                     const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
@@ -11199,13 +11199,14 @@ updates.forEach(update => {
                             ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
                             : p.unavailability,
                     }));
+                    console.log('[Poll] Fetched', dbPersonnel.length, 'personnel from DB. Total unavailability entries:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
                     setInstructorsData(prev => {
-                        // Compare full unavailability content hash, not just length
                         const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
                         const prevHash = buildUnavailHash(prevDbPersonnel);
                         const newHash  = buildUnavailHash(dbPersonnel);
+                        console.log('[Poll] Personnel hash match:', prevHash === newHash, 'prevDB:', prevDbPersonnel.length, 'new:', dbPersonnel.length);
                         if (prevHash === newHash) return prev;
-                        console.log('[UnavailabilityPoll] Personnel unavailability changed - updating state');
+                        console.log('[Poll] Personnel unavailability CHANGED - updating React state NOW');
                         const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
                         return [...nonDbInstructors, ...dbPersonnel];
                     });
@@ -11219,19 +11220,20 @@ updates.forEach(update => {
                             ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
                             : t.unavailability,
                     }));
+                    console.log('[Poll] Fetched', dbTrainees.length, 'trainees from DB. Total unavailability entries:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                     setTraineesData(prev => {
-                        // Compare full unavailability content hash, not just length
                         const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
                         const prevHash = buildUnavailHash(prevDbTrainees);
                         const newHash  = buildUnavailHash(dbTrainees);
+                        console.log('[Poll] Trainee hash match:', prevHash === newHash);
                         if (prevHash === newHash) return prev;
-                        console.log('[UnavailabilityPoll] Trainee unavailability changed - updating state');
+                        console.log('[Poll] Trainee unavailability CHANGED - updating React state NOW');
                         const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
                         return [...mockTrainees, ...dbTrainees];
                     });
                 }
             } catch (e) {
-                // Silently ignore polling errors - network hiccup should not affect UX
+                console.error('[Poll] Error during poll:', e);
             }
         };
 
@@ -11242,6 +11244,7 @@ updates.forEach(update => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     // ── End mobile unavailability polling ─────────────────────────────────
+
 
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
