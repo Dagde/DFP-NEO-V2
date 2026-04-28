@@ -10,5 +10,5 @@
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
   }
-} /* Force rebuild show sync indicator with fallback */
+} /* Force rebuild v4 - sync with Wait... */
  
