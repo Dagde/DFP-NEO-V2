@@ -11171,9 +11171,18 @@ updates.forEach(update => {
     
 
     // ── Mobile unavailability live-refresh polling ────────────────────────
-    // Poll every 30 seconds so that unavailability submitted from the iOS app
+    // Poll every 5 seconds so that unavailability submitted from the iOS app
     // appears in the browser without a hard refresh.
+    // Uses content hashing (JSON of unavailability arrays) for reliable change detection.
     useEffect(() => {
+        // Build a hash string from all unavailability data for reliable change detection
+        const buildUnavailHash = (records: any[]): string => {
+            return records
+                .map(r => `${r.id}:${JSON.stringify(r.unavailability || [])}`)
+                .sort()
+                .join('|');
+        };
+
         const pollUnavailability = async () => {
             try {
                 const [personnelRes, traineesRes] = await Promise.all([
@@ -11191,18 +11200,12 @@ updates.forEach(update => {
                             : p.unavailability,
                     }));
                     setInstructorsData(prev => {
-                        // Only update if unavailability counts changed (avoids needless re-renders)
-                        const prevMap = new Map(prev.map(i => [(i as any).id, i]));
-                        let changed = false;
-                        for (const p of dbPersonnel) {
-                            const existing = prevMap.get(p.id);
-                            if (!existing) { changed = true; break; }
-                            const prevLen = (existing.unavailability || []).length;
-                            const newLen  = (p.unavailability   || []).length;
-                            if (prevLen !== newLen) { changed = true; break; }
-                        }
-                        if (!changed) return prev;
-                        console.log('\u{1F504} [UnavailabilityPoll] Detected new unavailability \u2013 updating state');
+                        // Compare full unavailability content hash, not just length
+                        const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
+                        const prevHash = buildUnavailHash(prevDbPersonnel);
+                        const newHash  = buildUnavailHash(dbPersonnel);
+                        if (prevHash === newHash) return prev;
+                        console.log('[UnavailabilityPoll] Personnel unavailability changed - updating state');
                         const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
                         return [...nonDbInstructors, ...dbPersonnel];
                     });
@@ -11217,22 +11220,18 @@ updates.forEach(update => {
                             : t.unavailability,
                     }));
                     setTraineesData(prev => {
-                        const prevMap = new Map(prev.map(t => [(t as any).id, t]));
-                        let changed = false;
-                        for (const t of dbTrainees) {
-                            const existing = prevMap.get(t.id);
-                            if (!existing) { changed = true; break; }
-                            const prevLen = (existing.unavailability || []).length;
-                            const newLen  = (t.unavailability   || []).length;
-                            if (prevLen !== newLen) { changed = true; break; }
-                        }
-                        if (!changed) return prev;
+                        // Compare full unavailability content hash, not just length
+                        const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
+                        const prevHash = buildUnavailHash(prevDbTrainees);
+                        const newHash  = buildUnavailHash(dbTrainees);
+                        if (prevHash === newHash) return prev;
+                        console.log('[UnavailabilityPoll] Trainee unavailability changed - updating state');
                         const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
                         return [...mockTrainees, ...dbTrainees];
                     });
                 }
             } catch (e) {
-                // Silently ignore polling errors – network hiccup should not affect UX
+                // Silently ignore polling errors - network hiccup should not affect UX
             }
         };
 

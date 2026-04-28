@@ -148,17 +148,31 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   useEffect(() => {
     if (selectedInstructor) {
-        const updatedInstructor = instructorsData.find(i => i.name === selectedInstructor.name);
-        if (updatedInstructor && JSON.stringify(updatedInstructor) !== JSON.stringify(selectedInstructor)) {
-            // Preserve any locally-edited currencyStatus so a background instructorsData refresh
-            // doesn't overwrite currency saves that haven't propagated back to the master array yet
-            setSelectedInstructor({
-              ...updatedInstructor,
-              currencyStatus: selectedInstructor.currencyStatus ?? updatedInstructor.currencyStatus,
-            });
+        const updatedInstructor = instructorsData.find(i => (i as any).id
+            ? (i as any).id === (selectedInstructor as any).id
+            : i.name === selectedInstructor.name);
+        if (updatedInstructor) {
+            // Compare unavailability content specifically to detect iOS-submitted changes
+            const prevUnavailHash = JSON.stringify((selectedInstructor.unavailability || []).map((u: any) => u.id).sort());
+            const newUnavailHash  = JSON.stringify((updatedInstructor.unavailability  || []).map((u: any) => u.id).sort());
+            const unavailChanged = prevUnavailHash !== newUnavailHash;
+
+            // Also check other key fields
+            const otherChanged = updatedInstructor.name !== selectedInstructor.name ||
+                (updatedInstructor as any).isActive !== (selectedInstructor as any).isActive;
+
+            if (unavailChanged || otherChanged) {
+                console.log('[InstructorListView] Syncing selectedInstructor from updated instructorsData - unavailChanged:', unavailChanged);
+                // Preserve any locally-edited currencyStatus so a background instructorsData refresh
+                // doesn't overwrite currency saves that haven't propagated back to the master array yet
+                setSelectedInstructor({
+                    ...updatedInstructor,
+                    currencyStatus: selectedInstructor.currencyStatus ?? updatedInstructor.currencyStatus,
+                });
+            }
         }
     }
-  }, [instructorsData, selectedInstructor]);
+  }, [instructorsData]);
 
   const qfis = useMemo(() => {
       const rankOrder: { [key: string]: number } = {
