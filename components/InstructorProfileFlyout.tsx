@@ -398,8 +398,29 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleRemoveUnavailability = (idToRemove: string) => {
+    console.log('🗑️ [INSTRUCTOR] DELETE START - idToRemove:', idToRemove);
+    console.log('🗑️ [INSTRUCTOR] Current unavailabilityPeriods state:', unavailabilityPeriods);
+    console.log('🗑️ [INSTRUCTOR] Instructor object:', { id: (instructor as any).id, name: instructor.name });
+    
+    const periodToRemove = unavailabilityPeriods.find(p => p.id === idToRemove);
+    console.log('🗑️ [INSTRUCTOR] Period to remove:', periodToRemove);
+    
+    const updatedPeriods = unavailabilityPeriods.filter(p => p.id !== idToRemove);
+    console.log('🗑️ [INSTRUCTOR] Updated periods after filter:', updatedPeriods);
+    
+    console.log('🗑️ [INSTRUCTOR] Calling setUnavailabilityPeriods');
     setUnavailabilityPeriods(prev => prev.filter(p => p.id !== idToRemove));
-    onUpdateInstructor({ ...instructor, unavailability: unavailabilityPeriods.filter(p => p.id !== idToRemove) });
+    
+    console.log('🗑️ [INSTRUCTOR] Calling onUpdateInstructor with instructor object');
+    console.log('🗑️ [INSTRUCTOR] Instructor object to update:', {
+        id: (instructor as any).id,
+        name: instructor.name,
+        unavailability: updatedPeriods
+    });
+    
+    onUpdateInstructor({ ...instructor, unavailability: updatedPeriods });
+    
+    console.log('🗑️ [INSTRUCTOR] DELETE COMPLETE');
   };
 
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';

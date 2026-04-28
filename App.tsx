@@ -7344,47 +7344,74 @@ const App: React.FC = () => {
 
     // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
     const handleUpdateTrainee = useCallback(async (data: Trainee) => {
+        console.log('📝 [APP] handleUpdateTrainee called');
+        console.log('📝 [APP] Trainee data received:', {
+            id: (data as any).id,
+            idNumber: data.idNumber,
+            name: data.name,
+            _dataSource: (data as any)._dataSource,
+            unavailability: data.unavailability,
+            unavailabilityLength: data.unavailability?.length || 0
+        });
+        
         // Update in-memory state immediately
         setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
 
         // If this is a DB trainee, persist changes to the database
         const dbId = (data as any).id;
+        console.log('📝 [APP] DB ID:', dbId);
+        console.log('📝 [APP] Is DB trainee?', dbId && (data as any)._dataSource === 'database');
+        
         if (dbId && (data as any)._dataSource === 'database') {
             try {
+                const patchBody = {
+                    name: data.name,
+                    fullName: data.fullName,
+                    rank: data.rank,
+                    course: data.course,
+                    lmpType: data.lmpType,
+                    academicLmpType: (data as any).academicLmpType || '',
+                    unit: data.unit,
+                    flight: data.flight,
+                    location: data.location,
+                    service: data.service,
+                    seatConfig: data.seatConfig,
+                    isPaused: data.isPaused,
+                    traineeCallsign: data.traineeCallsign,
+                    primaryInstructor: data.primaryInstructor,
+                    secondaryInstructor: data.secondaryInstructor,
+                    phoneNumber: data.phoneNumber,
+                    email: data.email,
+                    unavailability: data.unavailability || [],
+                };
+                
+                console.log('📝 [APP] PATCH body to send:', patchBody);
+                console.log('📝 [APP] PATCH unavailability field:', patchBody.unavailability);
+                
                 const response = await fetch(`/api/trainees/${dbId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({
-                        name: data.name,
-                        fullName: data.fullName,
-                        rank: data.rank,
-                        course: data.course,
-                        lmpType: data.lmpType,
-                        academicLmpType: (data as any).academicLmpType || '',
-                        unit: data.unit,
-                        flight: data.flight,
-                        location: data.location,
-                        service: data.service,
-                        seatConfig: data.seatConfig,
-                        isPaused: data.isPaused,
-                        traineeCallsign: data.traineeCallsign,
-                        primaryInstructor: data.primaryInstructor,
-                        secondaryInstructor: data.secondaryInstructor,
-                        phoneNumber: data.phoneNumber,
-                        email: data.email,
-                        unavailability: data.unavailability || [],
-                    })
+                    body: JSON.stringify(patchBody)
                 });
+                
+                console.log('📝 [APP] PATCH response status:', response.status);
+                console.log('📝 [APP] PATCH response ok:', response.ok);
+                
                 if (response.ok) {
                     console.log(`✅ DB trainee updated: ${data.name}`);
+                    const responseData = await response.json();
+                    console.log('📝 [APP] Response data:', responseData);
                 } else {
                     const err = await response.text();
                     console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
+                    console.error('❌ Response status:', response.status);
                 }
             } catch (err) {
                 console.error(`❌ Error updating DB trainee ${data.name}:`, err);
             }
+        } else {
+            console.log('⚠️ [APP] Skipping DB update - not a DB trainee or no ID');
         }
     }, []);
 
@@ -13822,6 +13849,18 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
+                                console.log("📝 [APP] handleUpdateInstructor called");
+                                console.log("📝 [APP] Instructor data received:", {
+                                    id: (data as any).id,
+                                    name: data.name,
+                                    unavailability: data.unavailability,
+                                    unavailabilityLength: data.unavailability?.length || 0
+                                });
+                                
+                                const dbId = (data as any).id;
+                                console.log("📝 [APP] Instructor DB ID:", dbId);
+                                
+                                try {
                                 const dbId = (data as any).id;
 
                                 try {
@@ -13833,6 +13872,19 @@ updates.forEach(update => {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify(data),
                                         });
+                                        
+                                        console.log('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
+                                        console.log('📝 [APP] PATCH body:', JSON.stringify(data));
+                                        console.log('📝 [APP] PATCH body unavailability field:', data.unavailability);
+                                        
+                                        console.log('📝 [APP] PATCH response status:', response.status);
+                                        console.log('📝 [APP] PATCH response ok:', response.ok);
+                                        
+                                        if (response.ok) {
+                                            const responseData = await response.json();
+                                            console.log('📝 [APP] PATCH response data:', responseData);
+                                        }
+                                        
                                         if (!response.ok) {
                                             const errorData = await response.json().catch(() => ({}));
                                             throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
@@ -13912,6 +13964,18 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
+                                console.log("📝 [APP] handleUpdateInstructor called (Instance 2)");
+                                console.log("📝 [APP] Instructor data received:", {
+                                    id: (data as any).id,
+                                    name: data.name,
+                                    unavailability: data.unavailability,
+                                    unavailabilityLength: data.unavailability?.length || 0
+                                });
+                                
+                                const dbId = (data as any).id;
+                                console.log("📝 [APP] Instructor DB ID:", dbId);
+                                
+                                try {
                                 const dbId = (data as any).id;
 
                                 try {
@@ -13923,6 +13987,19 @@ updates.forEach(update => {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify(data),
                                         });
+                                        
+                                        console.log('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
+                                        console.log('📝 [APP] PATCH body:', JSON.stringify(data));
+                                        console.log('📝 [APP] PATCH body unavailability field:', data.unavailability);
+                                        
+                                        console.log('📝 [APP] PATCH response status:', response.status);
+                                        console.log('📝 [APP] PATCH response ok:', response.ok);
+                                        
+                                        if (response.ok) {
+                                            const responseData = await response.json();
+                                            console.log('📝 [APP] PATCH response data:', responseData);
+                                        }
+                                        
                                         if (!response.ok) {
                                             const errorData = await response.json().catch(() => ({}));
                                             throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
