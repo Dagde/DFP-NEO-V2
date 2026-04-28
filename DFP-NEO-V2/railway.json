@@ -9,5 +9,5 @@
     "healthcheckPath": "/api/health",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
-  } /* Force rebuild for PT-051 filtering */
+  } /* Force rebuild: live-sync + availability-persistence fixes - 28 Apr 2026 */
 }
