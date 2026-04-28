@@ -729,6 +729,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 page: 'Trainee Roster'
             });
             const updatedUnavailability = [...unavailability, newPeriod];
+            setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
             setShowAddUnavailability(false);
         }
@@ -764,6 +765,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             });
             const updatedUnavailability = [...unavailability, newPeriod];
             console.log('Calling onUpdateTrainee with updated unavailability', updatedUnavailability);
+            setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
     };
@@ -772,7 +774,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (isCreating) {
             setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
         } else {
-            const periodToRemove = unavailability?.find(p => p.id === idToRemove);
+            const periodToRemove = unavailability.find(p => p.id === idToRemove);
             if (periodToRemove) {
                 const dateRange = periodToRemove.startDate === periodToRemove.endDate 
                     ? periodToRemove.startDate 
@@ -786,6 +788,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 });
             }
             const updatedUnavailability = unavailability.filter(p => p.id !== idToRemove);
+            setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
     };
@@ -1000,7 +1003,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                         </div>
                         <div className="space-y-2">
-                          {unavailability.length > 0 ? unavailability.map(p => {
+                          {(unavailability || []).length > 0 ? (unavailability || []).map(p => {
                             let periodDisplay = '';
                             if (p.allDay) {
                               const sd = formatDate(p.startDate);

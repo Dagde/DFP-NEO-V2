@@ -388,39 +388,23 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     const todayStr = new Date().toISOString().split('T')[0];
     const newPeriod: UnavailabilityPeriod = { id: uuidv4(), startDate: todayStr, endDate: todayStr, allDay: false, startTime: '0001', endTime: '2359', reason: 'Other', notes: 'Today Only' };
     logAudit({ action: 'Add', description: `Added unavailability for ${instructor.rank} ${instructor.name}`, changes: `Today Only - ${todayStr}`, page: 'Staff' });
-    onUpdateInstructor({ ...instructor, unavailability: [...(instructor.unavailability || []), newPeriod] });
+    const updated = [...unavailabilityPeriods, newPeriod];
+    setUnavailabilityPeriods(updated);
+    onUpdateInstructor({ ...instructor, unavailability: updated });
     setShowAddUnavailability(false);
   };
 
   const handleSaveUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
     const newPeriod = { ...periodData, id: uuidv4(), startTime: periodData.allDay ? undefined : periodData.startTime, endTime: periodData.allDay ? undefined : periodData.endTime };
-    onUpdateInstructor({ ...instructor, unavailability: [...(instructor.unavailability || []), newPeriod] });
+    const updated = [...unavailabilityPeriods, newPeriod];
+    setUnavailabilityPeriods(updated);
+    onUpdateInstructor({ ...instructor, unavailability: updated });
   };
 
   const handleRemoveUnavailability = (idToRemove: string) => {
-    console.log('🗑️ [INSTRUCTOR] DELETE START - idToRemove:', idToRemove);
-    console.log('🗑️ [INSTRUCTOR] Current unavailabilityPeriods state:', unavailabilityPeriods);
-    console.log('🗑️ [INSTRUCTOR] Instructor object:', { id: (instructor as any).id, name: instructor.name });
-    
-    const periodToRemove = unavailabilityPeriods.find(p => p.id === idToRemove);
-    console.log('🗑️ [INSTRUCTOR] Period to remove:', periodToRemove);
-    
-    const updatedPeriods = unavailabilityPeriods.filter(p => p.id !== idToRemove);
-    console.log('🗑️ [INSTRUCTOR] Updated periods after filter:', updatedPeriods);
-    
-    console.log('🗑️ [INSTRUCTOR] Calling setUnavailabilityPeriods');
-    setUnavailabilityPeriods(prev => prev.filter(p => p.id !== idToRemove));
-    
-    console.log('🗑️ [INSTRUCTOR] Calling onUpdateInstructor with instructor object');
-    console.log('🗑️ [INSTRUCTOR] Instructor object to update:', {
-        id: (instructor as any).id,
-        name: instructor.name,
-        unavailability: updatedPeriods
-    });
-    
-    onUpdateInstructor({ ...instructor, unavailability: updatedPeriods });
-    
-    console.log('🗑️ [INSTRUCTOR] DELETE COMPLETE');
+    const updated = unavailabilityPeriods.filter(p => p.id !== idToRemove);
+    setUnavailabilityPeriods(updated);
+    onUpdateInstructor({ ...instructor, unavailability: updated });
   };
 
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';

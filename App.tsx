@@ -7438,7 +7438,26 @@ const App: React.FC = () => {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify(patchBody)
+                    body: JSON.stringify({
+                        name: data.name,
+                        fullName: data.fullName,
+                        rank: data.rank,
+                        course: data.course,
+                        lmpType: data.lmpType,
+                        academicLmpType: (data as any).academicLmpType || '',
+                        unit: data.unit,
+                        flight: data.flight,
+                        location: data.location,
+                        service: data.service,
+                        seatConfig: data.seatConfig,
+                        isPaused: data.isPaused,
+                        traineeCallsign: data.traineeCallsign,
+                        primaryInstructor: data.primaryInstructor,
+                        secondaryInstructor: data.secondaryInstructor,
+                        phoneNumber: data.phoneNumber,
+                        email: data.email,
+                        unavailability: data.unavailability || [],
+                    })
                 });
                 
                 console.log('📝 [APP] PATCH response status:', response.status);
