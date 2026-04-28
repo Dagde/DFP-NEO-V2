@@ -4033,27 +4033,54 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
 });
 
 // GET /api/aircraft-availability-current - Get the current aircraft availability
+// Returns the most recent event across ALL dates (not just today) so availability persists across days
 app.get('/api/aircraft-availability-current', async (req, res) => {
   try {
     const db = await getPrisma();
     const today = new Date().toISOString().split('T')[0];
-    const events = await db.$queryRawUnsafe(
+
+    // First try today's events
+    let events = await db.$queryRawUnsafe(
       `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
       today
     );
+
+    // If no events today, get the most recent event from any date
     if (events.length === 0) {
-      return res.json({ current: null, date: today });
+      events = await db.$queryRawUnsafe(
+        `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
+      );
     }
+
+    if (events.length === 0) {
+      // No events at all - return default
+      return res.json({
+        success: true,
+        isDefault: true,
+        availableCount: 15,
+        totalAircraft: 15,
+        date: today,
+        current: null
+      });
+    }
+
     const latest = events[0];
+    const availableCount = Number(latest.availableCount);
+    const totalAircraft = Number(latest.totalAircraft ?? latest.totalFleet ?? 15);
+
     res.json({
+      success: true,
+      isDefault: false,
+      availableCount,
+      totalAircraft,
+      date: latest.date || today,
       current: {
-        availableCount: latest.availableCount,
-        totalFleet: latest.totalAircraft ?? latest.totalFleet,
-        totalAircraft: latest.totalAircraft ?? latest.totalFleet,
+        availableCount,
+        totalFleet: totalAircraft,
+        totalAircraft,
         timestamp: latest.timestamp,
-        id: Number(latest.id)
-      },
-      date: today
+        id: latest.id ? String(latest.id) : null
+      }
     });
   } catch (error) {
     console.error('❌ GET /api/aircraft-availability-current error:', error);

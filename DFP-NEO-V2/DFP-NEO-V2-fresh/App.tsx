@@ -5737,11 +5737,20 @@ const App: React.FC = () => {
     const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = useState(false);
     // Ref to hold the loaded availability value immediately (avoids async state issue)
     const loadedAvailabilityRef = useRef<number | null>(null);
+    // Track whether the events table has provided a value (prevents settings from overriding it)
+    const availabilityLoadedFromEventsRef = useRef<boolean>(false);
+
+    // Settings loaded flag - declared here (before fetchCurrentAvailability) so we can depend on it
+    // This ensures fetchCurrentAvailability always runs AFTER loadSettings, overriding stale settings values
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     // Fetch current availability from database on startup
     // This ensures the availability persists across app restarts/hard refreshes
+    // Depends on settingsLoaded so it always overrides any stale value from loadSettings
     useEffect(() => {
         if (!sessionUser?.userId) return;
+        // Wait until settings have been loaded so we always override with the events-table value
+        if (!settingsLoaded) return;
 
         const fetchCurrentAvailability = async () => {
             try {
@@ -5760,6 +5769,7 @@ const App: React.FC = () => {
                             setAvailableAircraftCount(data.availableCount);
                             // Store in ref for immediate use in startup
                             loadedAvailabilityRef.current = data.availableCount;
+                            availabilityLoadedFromEventsRef.current = true;
                         } else {
                             console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
                             loadedAvailabilityRef.current = 15; // Explicit default
@@ -5775,7 +5785,7 @@ const App: React.FC = () => {
         };
 
         fetchCurrentAvailability();
-    }, [sessionUser?.userId]);
+    }, [sessionUser?.userId, settingsLoaded]);
 
     // Startup: fire once when user logs in AND after persisted availability is loaded
     // - Posts a "startup" event with current availability
@@ -5993,7 +6003,6 @@ const App: React.FC = () => {
 
 
     // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
-    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -6025,7 +6034,13 @@ const App: React.FC = () => {
                 if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
                 if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
                 if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
-                if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
+                // NOTE: availableAircraftCount is intentionally NOT restored from settings here.
+                // It is always loaded from the AircraftAvailabilityEvent table via fetchCurrentAvailability
+                // (which runs after settingsLoaded becomes true), ensuring the events-table value always wins.
+                // Settings value is kept as a secondary fallback only if events table has no data.
+                if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
+                    setAvailableAircraftCount(saved.availableAircraftCount);
+                }
                 if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
@@ -7344,46 +7359,74 @@ const App: React.FC = () => {
 
     // Shared trainee update handler — updates in-memory state AND persists to DB if record is a DB trainee
     const handleUpdateTrainee = useCallback(async (data: Trainee) => {
+        console.log('📝 [APP] handleUpdateTrainee called');
+        console.log('📝 [APP] Trainee data received:', {
+            id: (data as any).id,
+            idNumber: data.idNumber,
+            name: data.name,
+            _dataSource: (data as any)._dataSource,
+            unavailability: data.unavailability,
+            unavailabilityLength: data.unavailability?.length || 0
+        });
+        
         // Update in-memory state immediately
         setTraineesData(prev => prev.map(t => t.idNumber === data.idNumber ? data : t));
 
         // If this is a DB trainee, persist changes to the database
         const dbId = (data as any).id;
+        console.log('📝 [APP] DB ID:', dbId);
+        console.log('📝 [APP] Is DB trainee?', dbId && (data as any)._dataSource === 'database');
+        
         if (dbId && (data as any)._dataSource === 'database') {
             try {
+                const patchBody = {
+                    name: data.name,
+                    fullName: data.fullName,
+                    rank: data.rank,
+                    course: data.course,
+                    lmpType: data.lmpType,
+                    academicLmpType: (data as any).academicLmpType || '',
+                    unit: data.unit,
+                    flight: data.flight,
+                    location: data.location,
+                    service: data.service,
+                    seatConfig: data.seatConfig,
+                    isPaused: data.isPaused,
+                    traineeCallsign: data.traineeCallsign,
+                    primaryInstructor: data.primaryInstructor,
+                    secondaryInstructor: data.secondaryInstructor,
+                    phoneNumber: data.phoneNumber,
+                    email: data.email,
+                    unavailability: data.unavailability || [],
+                };
+                
+                console.log('📝 [APP] PATCH body to send:', patchBody);
+                console.log('📝 [APP] PATCH unavailability field:', patchBody.unavailability);
+                
                 const response = await fetch(`/api/trainees/${dbId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({
-                        name: data.name,
-                        fullName: data.fullName,
-                        rank: data.rank,
-                        course: data.course,
-                        lmpType: data.lmpType,
-                        academicLmpType: (data as any).academicLmpType || '',
-                        unit: data.unit,
-                        flight: data.flight,
-                        location: data.location,
-                        service: data.service,
-                        seatConfig: data.seatConfig,
-                        isPaused: data.isPaused,
-                        traineeCallsign: data.traineeCallsign,
-                        primaryInstructor: data.primaryInstructor,
-                        secondaryInstructor: data.secondaryInstructor,
-                        phoneNumber: data.phoneNumber,
-                        email: data.email,
-                    })
+                    body: JSON.stringify(patchBody)
                 });
+                
+                console.log('📝 [APP] PATCH response status:', response.status);
+                console.log('📝 [APP] PATCH response ok:', response.ok);
+                
                 if (response.ok) {
                     console.log(`✅ DB trainee updated: ${data.name}`);
+                    const responseData = await response.json();
+                    console.log('📝 [APP] Response data:', responseData);
                 } else {
                     const err = await response.text();
                     console.error(`❌ Failed to update DB trainee ${data.name}:`, err);
+                    console.error('❌ Response status:', response.status);
                 }
             } catch (err) {
                 console.error(`❌ Error updating DB trainee ${data.name}:`, err);
             }
+        } else {
+            console.log('⚠️ [APP] Skipping DB update - not a DB trainee or no ID');
         }
     }, []);
 
@@ -11141,6 +11184,92 @@ updates.forEach(update => {
     }, [handleDatabaseDataChanged]);
     
     
+
+    // ── Mobile unavailability live-refresh polling ────────────────────────
+    // Poll every 5 seconds so that unavailability submitted from the iOS app
+    // appears in the browser without a hard refresh.
+    // lastPollTime/lastPollChanged are displayed in UI to confirm sync is running.
+    const [lastPollTime, setLastPollTime] = useState<string>('');
+    const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
+
+    useEffect(() => {
+        const buildUnavailHash = (records: any[]): string => {
+            return records
+                .map(r => `${r.id}:${JSON.stringify((r.unavailability || []).map((u: any) => u.id).sort())}`)
+                .sort()
+                .join('|');
+        };
+
+        const pollUnavailability = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const [personnelRes, traineesRes] = await Promise.all([
+                    fetch(`${apiBase}/personnel`, { credentials: 'include' }),
+                    fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
+                ]);
+                console.log('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
+                let pollChanged = false;
+                if (personnelRes.ok) {
+                    const personnelData = await personnelRes.json();
+                    const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
+                        ...p,
+                        currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+                        _dataSource: 'database' as const,
+                        unavailability: Array.isArray(p.unavailability)
+                            ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                            : p.unavailability,
+                    }));
+                    console.log('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
+                    setInstructorsData(prev => {
+                        const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
+                        const prevHash = buildUnavailHash(prevDbPersonnel);
+                        const newHash  = buildUnavailHash(dbPersonnel);
+                        if (prevHash === newHash) return prev;
+                        console.log('[Poll] Personnel unavailability CHANGED - updating state');
+                        pollChanged = true;
+                        const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
+                        return [...nonDbInstructors, ...dbPersonnel];
+                    });
+                }
+                if (traineesRes.ok) {
+                    const traineesData = await traineesRes.json();
+                    const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
+                        ...t,
+                        _dataSource: 'database' as const,
+                        unavailability: Array.isArray(t.unavailability)
+                            ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                            : t.unavailability,
+                    }));
+                    console.log('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
+                    setTraineesData(prev => {
+                        const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
+                        const prevHash = buildUnavailHash(prevDbTrainees);
+                        const newHash  = buildUnavailHash(dbTrainees);
+                        if (prevHash === newHash) return prev;
+                        console.log('[Poll] Trainee unavailability CHANGED - updating state');
+                        pollChanged = true;
+                        const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
+                        return [...mockTrainees, ...dbTrainees];
+                    });
+                }
+                // Update visible poll timestamp so UI confirms sync is running
+                const now = new Date();
+                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                setLastPollTime(timeStr);
+                setLastPollChanged(pollChanged);
+            } catch (e) {
+                console.error('[Poll] Error during poll:', e);
+            }
+        };
+
+        // Poll immediately on load, then every 5 seconds for near-instant updates
+        pollUnavailability();
+        const pollInterval = setInterval(pollUnavailability, 5 * 1000);
+        return () => clearInterval(pollInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
         setSyllabusDetails(prevSyllabus => {
@@ -13746,9 +13875,17 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
+                                console.log("📝 [APP] handleUpdateInstructor called");
+                                console.log("📝 [APP] Instructor data received:", {
+                                    id: (data as any).id,
+                                    name: data.name,
+                                    unavailability: data.unavailability,
+                                    unavailabilityLength: data.unavailability?.length || 0
+                                });
+                                
                                 const dbId = (data as any).id;
-
                                 try {
+
                                     if (dbId) {
                                         // Existing record — use PATCH to update
                                         const response = await fetch(`/api/personnel/${dbId}`, {
@@ -13757,6 +13894,19 @@ updates.forEach(update => {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify(data),
                                         });
+                                        
+                                        console.log('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
+                                        console.log('📝 [APP] PATCH body:', JSON.stringify(data));
+                                        console.log('📝 [APP] PATCH body unavailability field:', data.unavailability);
+                                        
+                                        console.log('📝 [APP] PATCH response status:', response.status);
+                                        console.log('📝 [APP] PATCH response ok:', response.ok);
+                                        
+                                        if (response.ok) {
+                                            const responseData = await response.json();
+                                            console.log('📝 [APP] PATCH response data:', responseData);
+                                        }
+                                        
                                         if (!response.ok) {
                                             const errorData = await response.json().catch(() => ({}));
                                             throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
@@ -13836,6 +13986,13 @@ updates.forEach(update => {
                             school={school}
                             personnelData={personnelData}
                             onUpdateInstructor={async (data) => {
+                                console.log("📝 [APP] handleUpdateInstructor called (Instance 2)");
+                                console.log("📝 [APP] Instructor data received:", {
+                                    id: (data as any).id,
+                                    name: data.name,
+                                    unavailability: data.unavailability,
+                                    unavailabilityLength: data.unavailability?.length || 0
+                                });
                                 const dbId = (data as any).id;
 
                                 try {
@@ -13847,6 +14004,19 @@ updates.forEach(update => {
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify(data),
                                         });
+                                        
+                                        console.log('📝 [APP] PATCHing existing instructor to /api/personnel/' + dbId);
+                                        console.log('📝 [APP] PATCH body:', JSON.stringify(data));
+                                        console.log('📝 [APP] PATCH body unavailability field:', data.unavailability);
+                                        
+                                        console.log('📝 [APP] PATCH response status:', response.status);
+                                        console.log('📝 [APP] PATCH response ok:', response.ok);
+                                        
+                                        if (response.ok) {
+                                            const responseData = await response.json();
+                                            console.log('📝 [APP] PATCH response data:', responseData);
+                                        }
+                                        
                                         if (!response.ok) {
                                             const errorData = await response.json().catch(() => ({}));
                                             throw new Error(`Failed to save: ${response.status} ${errorData.error || 'Unknown error'}`);
@@ -15386,6 +15556,14 @@ updates.forEach(update => {
                     <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-400 text-sm">Loading DFP-NEO...</p>
                 </div>
+            </div>
+        )}
+
+        {/* Live sync indicator - shows last poll time so users can confirm iOS sync is running */}
+        {isAuthenticated && lastPollTime && (
+            <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none">
+                <span className={`w-1.5 h-1.5 rounded-full ${lastPollChanged ? 'bg-green-400' : 'bg-gray-500'}`}></span>
+                <span>Sync {lastPollTime}</span>
             </div>
         )}
     </>
