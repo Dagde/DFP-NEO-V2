@@ -728,7 +728,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 changes: `Today Only - ${todayStr}`,
                 page: 'Trainee Roster'
             });
-            const updatedUnavailability = [...(trainee.unavailability || []), newPeriod];
+            const updatedUnavailability = [...unavailability, newPeriod];
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
             setShowAddUnavailability(false);
         }
@@ -762,7 +762,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 changes: `${dateRange} @ ${timeRange} - ${periodData.reason}`,
                 page: 'Trainee Roster'
             });
-            const updatedUnavailability = [...(trainee.unavailability || []), newPeriod];
+            const updatedUnavailability = [...unavailability, newPeriod];
             console.log('Calling onUpdateTrainee with updated unavailability', updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
@@ -772,7 +772,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (isCreating) {
             setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
         } else {
-            const periodToRemove = trainee.unavailability?.find(p => p.id === idToRemove);
+            const periodToRemove = unavailability?.find(p => p.id === idToRemove);
             if (periodToRemove) {
                 const dateRange = periodToRemove.startDate === periodToRemove.endDate 
                     ? periodToRemove.startDate 
@@ -785,7 +785,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     page: 'Trainee Roster'
                 });
             }
-            const updatedUnavailability = (trainee.unavailability || []).filter(p => p.id !== idToRemove);
+            const updatedUnavailability = unavailability.filter(p => p.id !== idToRemove);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
     };
@@ -958,7 +958,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                         </div>
                         <div className="space-y-2">
-                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => {
+                          {unavailability.length > 0 ? unavailability.map(p => {
                             let periodDisplay = '';
                             if (p.allDay) {
                               const sd = formatDate(p.startDate);
@@ -1349,7 +1349,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                   </div>
                 </div>
               </div>
-            {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
+            {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
         </>

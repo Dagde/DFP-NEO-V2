@@ -7373,6 +7373,7 @@ const App: React.FC = () => {
                         secondaryInstructor: data.secondaryInstructor,
                         phoneNumber: data.phoneNumber,
                         email: data.email,
+                        unavailability: data.unavailability || [],
                     })
                 });
                 if (response.ok) {

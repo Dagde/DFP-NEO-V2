@@ -1206,7 +1206,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
         </div>
       </div>
       {showAddUnavailability && !isCreating && (
-        <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={instructor.unavailability || []} onRemove={handleRemoveUnavailability} />
+        <AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnly} onSave={handleSaveUnavailability} unavailabilityPeriods={unavailabilityPeriods} onRemove={handleRemoveUnavailability} />
       )}
     </>
   );
