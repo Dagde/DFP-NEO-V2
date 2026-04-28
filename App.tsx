@@ -15559,6 +15559,13 @@ updates.forEach(update => {
             </div>
         )}
 
+        {/* Visible deployment indicator - confirms code changes are active */}
+        {isAuthenticated && (
+            <div className="fixed top-0 left-0 right-0 z-[9999] bg-red-600 text-white text-2xl font-bold py-3 px-4 text-center">
+                FIXES LOADED - APRIL 28 2026
+            </div>
+        )}
+
         {/* Live sync indicator - shows last poll time so users can confirm iOS sync is running */}
         {isAuthenticated && lastPollTime && (
             <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none">
