@@ -398,7 +398,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   const handleRemoveUnavailability = (idToRemove: string) => {
-    onUpdateInstructor({ ...instructor, unavailability: (instructor.unavailability || []).filter(p => p.id !== idToRemove) });
+    setUnavailabilityPeriods(prev => prev.filter(p => p.id !== idToRemove));
+    onUpdateInstructor({ ...instructor, unavailability: unavailabilityPeriods.filter(p => p.id !== idToRemove) });
   };
 
   const formatMilitaryTime = (t: string | undefined) => t ? t.replace(':', '') : '';

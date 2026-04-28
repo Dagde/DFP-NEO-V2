@@ -790,6 +790,24 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         }
     };
 
+    const handleRemoveUnavailability = (idToRemove: string) => {
+        const periodToRemove = unavailability?.find(p => p.id === idToRemove);
+        if (periodToRemove) {
+            const dateRange = periodToRemove.startDate === periodToRemove.endDate 
+                ? periodToRemove.startDate 
+                : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
+            
+            logAudit({
+                action: 'Delete',
+                description: `Removed unavailability for ${trainee.rank} ${trainee.name}`,
+                changes: `${dateRange} - ${periodToRemove.reason}`,
+                page: 'Trainee Profile'
+            });
+        }
+        setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
+        onUpdateTrainee({ ...trainee, unavailability: unavailability.filter(p => p.id !== idToRemove) });
+    };
+
     const formatMilitaryTime = (timeString: string | undefined): string => {
         if (!timeString) return '';
         return timeString.replace(':', '');
@@ -973,6 +991,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                                 <span className="text-white font-medium">{p.reason}</span>
                                 <span className="text-gray-300 font-mono">{periodDisplay}</span>
+                                <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
                               </div>
                             );
                           }) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
