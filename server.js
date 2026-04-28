@@ -3562,13 +3562,18 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
             };
           });
 
-          console.log("✅ GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
-          res.json({
-            events: mappedEvents,
-            message: `Found ${mappedEvents.length} events for ${date}`
-          });
+            console.log("\u2705 GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
+            return res.json({
+              schedule: {
+                id: "snapshot-" + date,
+                date: date,
+                isPublished: true,
+                events: mappedEvents,
+                serverTime: new Date().toISOString()
+              }
+            });
+          }
         }
-      }
     }
   } catch (error) {
     console.error('\u274c GET /api/mobile/schedule error:', error);
