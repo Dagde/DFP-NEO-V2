@@ -5737,11 +5737,20 @@ const App: React.FC = () => {
     const [hasLoadedPersistedAvailability, setHasLoadedPersistedAvailability] = useState(false);
     // Ref to hold the loaded availability value immediately (avoids async state issue)
     const loadedAvailabilityRef = useRef<number | null>(null);
+    // Track whether the events table has provided a value (prevents settings from overriding it)
+    const availabilityLoadedFromEventsRef = useRef<boolean>(false);
+
+    // Settings loaded flag - declared here (before fetchCurrentAvailability) so we can depend on it
+    // This ensures fetchCurrentAvailability always runs AFTER loadSettings, overriding stale settings values
+    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     // Fetch current availability from database on startup
     // This ensures the availability persists across app restarts/hard refreshes
+    // Depends on settingsLoaded so it always overrides any stale value from loadSettings
     useEffect(() => {
         if (!sessionUser?.userId) return;
+        // Wait until settings have been loaded so we always override with the events-table value
+        if (!settingsLoaded) return;
 
         const fetchCurrentAvailability = async () => {
             try {
@@ -5760,6 +5769,7 @@ const App: React.FC = () => {
                             setAvailableAircraftCount(data.availableCount);
                             // Store in ref for immediate use in startup
                             loadedAvailabilityRef.current = data.availableCount;
+                            availabilityLoadedFromEventsRef.current = true;
                         } else {
                             console.log(`[AV] ℹ️ No saved availability found, using default: 15`);
                             loadedAvailabilityRef.current = 15; // Explicit default
@@ -5775,7 +5785,7 @@ const App: React.FC = () => {
         };
 
         fetchCurrentAvailability();
-    }, [sessionUser?.userId]);
+    }, [sessionUser?.userId, settingsLoaded]);
 
     // Startup: fire once when user logs in AND after persisted availability is loaded
     // - Posts a "startup" event with current availability
@@ -5993,7 +6003,6 @@ const App: React.FC = () => {
 
 
     // ─── SETTINGS: Load from DB on startup ───────────────────────────────────
-    const [settingsLoaded, setSettingsLoaded] = useState(false);
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -6025,7 +6034,13 @@ const App: React.FC = () => {
                 if (saved.allowNightFlying != null) setAllowNightFlying(saved.allowNightFlying);
                 if (saved.commenceNightFlying != null) setCommenceNightFlying(saved.commenceNightFlying);
                 if (saved.ceaseNightFlying != null) setCeaseNightFlying(saved.ceaseNightFlying);
-                if (saved.availableAircraftCount != null) setAvailableAircraftCount(saved.availableAircraftCount);
+                // NOTE: availableAircraftCount is intentionally NOT restored from settings here.
+                // It is always loaded from the AircraftAvailabilityEvent table via fetchCurrentAvailability
+                // (which runs after settingsLoaded becomes true), ensuring the events-table value always wins.
+                // Settings value is kept as a secondary fallback only if events table has no data.
+                if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
+                    setAvailableAircraftCount(saved.availableAircraftCount);
+                }
                 if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
@@ -11173,6 +11188,10 @@ updates.forEach(update => {
     // ── Mobile unavailability live-refresh polling ────────────────────────
     // Poll every 5 seconds so that unavailability submitted from the iOS app
     // appears in the browser without a hard refresh.
+    // lastPollTime/lastPollChanged are displayed in UI to confirm sync is running.
+    const [lastPollTime, setLastPollTime] = useState<string>('');
+    const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
+
     useEffect(() => {
         const buildUnavailHash = (records: any[]): string => {
             return records
@@ -11183,12 +11202,13 @@ updates.forEach(update => {
 
         const pollUnavailability = async () => {
             try {
-                console.log('[Poll] Polling /api/personnel and /api/trainees...');
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
                 const [personnelRes, traineesRes] = await Promise.all([
-                    fetch('/api/personnel', { credentials: 'include' }),
-                    fetch('/api/trainees',  { credentials: 'include' }),
+                    fetch(`${apiBase}/personnel`, { credentials: 'include' }),
+                    fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
                 ]);
                 console.log('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
+                let pollChanged = false;
                 if (personnelRes.ok) {
                     const personnelData = await personnelRes.json();
                     const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
@@ -11199,14 +11219,14 @@ updates.forEach(update => {
                             ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
                             : p.unavailability,
                     }));
-                    console.log('[Poll] Fetched', dbPersonnel.length, 'personnel from DB. Total unavailability entries:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
+                    console.log('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
                     setInstructorsData(prev => {
                         const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
                         const prevHash = buildUnavailHash(prevDbPersonnel);
                         const newHash  = buildUnavailHash(dbPersonnel);
-                        console.log('[Poll] Personnel hash match:', prevHash === newHash, 'prevDB:', prevDbPersonnel.length, 'new:', dbPersonnel.length);
                         if (prevHash === newHash) return prev;
-                        console.log('[Poll] Personnel unavailability CHANGED - updating React state NOW');
+                        console.log('[Poll] Personnel unavailability CHANGED - updating state');
+                        pollChanged = true;
                         const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
                         return [...nonDbInstructors, ...dbPersonnel];
                     });
@@ -11220,18 +11240,23 @@ updates.forEach(update => {
                             ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
                             : t.unavailability,
                     }));
-                    console.log('[Poll] Fetched', dbTrainees.length, 'trainees from DB. Total unavailability entries:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
+                    console.log('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                     setTraineesData(prev => {
                         const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
                         const prevHash = buildUnavailHash(prevDbTrainees);
                         const newHash  = buildUnavailHash(dbTrainees);
-                        console.log('[Poll] Trainee hash match:', prevHash === newHash);
                         if (prevHash === newHash) return prev;
-                        console.log('[Poll] Trainee unavailability CHANGED - updating React state NOW');
+                        console.log('[Poll] Trainee unavailability CHANGED - updating state');
+                        pollChanged = true;
                         const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
                         return [...mockTrainees, ...dbTrainees];
                     });
                 }
+                // Update visible poll timestamp so UI confirms sync is running
+                const now = new Date();
+                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+                setLastPollTime(timeStr);
+                setLastPollChanged(pollChanged);
             } catch (e) {
                 console.error('[Poll] Error during poll:', e);
             }
@@ -11243,7 +11268,6 @@ updates.forEach(update => {
         return () => clearInterval(pollInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    // ── End mobile unavailability polling ─────────────────────────────────
 
 
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
@@ -15532,6 +15556,14 @@ updates.forEach(update => {
                     <div className="w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4"></div>
                     <p className="text-gray-400 text-sm">Loading DFP-NEO...</p>
                 </div>
+            </div>
+        )}
+
+        {/* Live sync indicator - shows last poll time so users can confirm iOS sync is running */}
+        {isAuthenticated && lastPollTime && (
+            <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none">
+                <span className={`w-1.5 h-1.5 rounded-full ${lastPollChanged ? 'bg-green-400' : 'bg-gray-500'}`}></span>
+                <span>Sync {lastPollTime}</span>
             </div>
         )}
     </>
