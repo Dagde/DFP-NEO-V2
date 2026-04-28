@@ -10,5 +10,5 @@
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE"
   }
-} /* Force rebuild: GIANT red banner test */
+} /* Force rebuild show sync indicator with fallback */
  
