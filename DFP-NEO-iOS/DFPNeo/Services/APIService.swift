@@ -234,4 +234,19 @@ final class APIService {
         print("⬅️ [API] HTTP \(status) \(url.absoluteString) — \(note)")
         print("⬅️ [API] Body: \(body)")
     }
+
+    // MARK: - Alert API methods
+
+    /// Fetch all alerts for a given userId
+    func getAlerts(userId: String) async throws -> AlertsListResponse {
+        let encodedId = userId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? userId
+        return try await get(endpoint: "/alerts/\(encodedId)")
+    }
+
+    /// Respond to an alert (accept or reject)
+    func respondToAlert(alertId: String, userId: String, status: String) async throws -> AlertRespondResponse {
+        let body = AlertRespondRequest(userId: userId, status: status)
+        return try await post(endpoint: "/alerts/\(alertId)/respond", body: body)
+    }
+
 }

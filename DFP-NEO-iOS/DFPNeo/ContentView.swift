@@ -2,19 +2,20 @@
 //  ContentView.swift
 //  DFP-NEO Mobile
 //
-//  Main navigation controller
+//  Main navigation controller with TabView
 //
 
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
-    
+    @StateObject private var alertsViewModel = AlertsViewModel()
+
     var body: some View {
         Group {
             if authViewModel.isAuthenticated && !authViewModel.isSessionLocked {
-                // Main app interface
-                ScheduleView()
+                // Main app interface with tab navigation
+                mainTabView
             } else if authViewModel.isSessionLocked {
                 // Biometric unlock screen
                 BiometricUnlockView()
@@ -25,6 +26,35 @@ struct ContentView: View {
         }
         .animation(.easeInOut, value: authViewModel.isAuthenticated)
         .animation(.easeInOut, value: authViewModel.isSessionLocked)
+    }
+
+    // MARK: - Main Tab View
+
+    private var mainTabView: some View {
+        TabView {
+            // Schedule tab
+            ScheduleView()
+                .tabItem {
+                    Label("Schedule", systemImage: "calendar")
+                }
+
+            // Alerts tab
+            AlertsView()
+                .badge(alertsViewModel.pendingCount > 0 ? alertsViewModel.pendingCount : 0)
+                .tabItem {
+                    Label("Alerts", systemImage: alertsViewModel.pendingCount > 0 ? "bell.badge.fill" : "bell.fill")
+                }
+        }
+        .environmentObject(alertsViewModel)
+        .task {
+            // Start polling for alerts when app loads
+            alertsViewModel.startPolling()
+        }
+        .onDisappear {
+            alertsViewModel.stopPolling()
+        }
+        .accentColor(Color(red: 0.96, green: 0.62, blue: 0.0))
+        .preferredColorScheme(.dark)
     }
 }
 
