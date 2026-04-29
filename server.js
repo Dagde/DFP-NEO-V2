@@ -6048,6 +6048,10 @@ async function ensureDailySnapshotTable(db) {
         CONSTRAINT "DailySnapshot_pkey" PRIMARY KEY ("id")
       );
     `);
+    // Add baselineEvents column if it doesn't exist (for existing tables)
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "baselineEvents" JSONB DEFAULT NULL;
+    `);
     await db.$executeRawUnsafe(`
       CREATE UNIQUE INDEX IF NOT EXISTS "DailySnapshot_date_key"
       ON "DailySnapshot"("date");
@@ -6384,7 +6388,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       lmpCompletedIds,
       staffCurrency,
       staffLogbook,
-      savedBy
+      savedBy,
+      baselineEvents
     } = req.body;
 
     if (!date) {
@@ -6409,40 +6414,72 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
     const id = (existing && existing.length > 0) ? existing[0].id : (typeof cuid === 'function' ? cuid() : `snap_${Date.now()}`);
 
     if (existing && existing.length > 0) {
-      await db.$executeRawUnsafe(`
-        UPDATE "DailySnapshot"
-        SET
-          "scheduleEvents" = $1::jsonb,
-          "staffEvents" = $2::jsonb,
-          "traineeEvents" = $3::jsonb,
-          "pt051Assessments" = $4::jsonb,
-          "traineeProfiles" = $5::jsonb,
-          "lmpCompletedIds" = $6::jsonb,
-          "staffCurrency" = $7::jsonb,
-          "staffLogbook" = $8::jsonb,
-          "savedAt" = NOW(),
-          "savedBy" = $9::text
-        WHERE date = $10::text
-      `,
-        JSON.stringify(scheduleEvents || []),
-        JSON.stringify(staffEvents || []),
-        JSON.stringify(traineeEvents || []),
-        JSON.stringify(pt051Assessments || {}),
-        JSON.stringify(traineeProfiles || []),
-        JSON.stringify(lmpCompletedIds || {}),
-        JSON.stringify(staffCurrency || {}),
-        JSON.stringify(staffLogbook || {}),
-        savedBy || null,
-        date
-      );
+      // Only update baselineEvents if explicitly provided (preserves original published baseline)
+      if (baselineEvents !== undefined && baselineEvents !== null) {
+        await db.$executeRawUnsafe(`
+          UPDATE "DailySnapshot"
+          SET
+            "scheduleEvents" = $1::jsonb,
+            "staffEvents" = $2::jsonb,
+            "traineeEvents" = $3::jsonb,
+            "pt051Assessments" = $4::jsonb,
+            "traineeProfiles" = $5::jsonb,
+            "lmpCompletedIds" = $6::jsonb,
+            "staffCurrency" = $7::jsonb,
+            "staffLogbook" = $8::jsonb,
+            "savedAt" = NOW(),
+            "savedBy" = $9::text,
+            "baselineEvents" = $10::jsonb
+          WHERE date = $11::text
+        `,
+          JSON.stringify(scheduleEvents || []),
+          JSON.stringify(staffEvents || []),
+          JSON.stringify(traineeEvents || []),
+          JSON.stringify(pt051Assessments || {}),
+          JSON.stringify(traineeProfiles || []),
+          JSON.stringify(lmpCompletedIds || {}),
+          JSON.stringify(staffCurrency || {}),
+          JSON.stringify(staffLogbook || {}),
+          savedBy || null,
+          JSON.stringify(baselineEvents),
+          date
+        );
+      } else {
+        await db.$executeRawUnsafe(`
+          UPDATE "DailySnapshot"
+          SET
+            "scheduleEvents" = $1::jsonb,
+            "staffEvents" = $2::jsonb,
+            "traineeEvents" = $3::jsonb,
+            "pt051Assessments" = $4::jsonb,
+            "traineeProfiles" = $5::jsonb,
+            "lmpCompletedIds" = $6::jsonb,
+            "staffCurrency" = $7::jsonb,
+            "staffLogbook" = $8::jsonb,
+            "savedAt" = NOW(),
+            "savedBy" = $9::text
+          WHERE date = $10::text
+        `,
+          JSON.stringify(scheduleEvents || []),
+          JSON.stringify(staffEvents || []),
+          JSON.stringify(traineeEvents || []),
+          JSON.stringify(pt051Assessments || {}),
+          JSON.stringify(traineeProfiles || []),
+          JSON.stringify(lmpCompletedIds || {}),
+          JSON.stringify(staffCurrency || {}),
+          JSON.stringify(staffLogbook || {}),
+          savedBy || null,
+          date
+        );
+      }
       console.log(`✅ POST /api/daily-snapshot/save - Updated snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     } else {
       await db.$executeRawUnsafe(`
         INSERT INTO "DailySnapshot"
           ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
            "pt051Assessments", "traineeProfiles", "lmpCompletedIds",
-           "staffCurrency", "staffLogbook", "savedAt", "savedBy")
-        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, NOW(), $11::text)
+           "staffCurrency", "staffLogbook", "savedAt", "savedBy", "baselineEvents")
+        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, NOW(), $11::text, $12::jsonb)
       `,
         id, date,
         JSON.stringify(scheduleEvents || []),
@@ -6453,7 +6490,8 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         JSON.stringify(lmpCompletedIds || {}),
         JSON.stringify(staffCurrency || {}),
         JSON.stringify(staffLogbook || {}),
-        savedBy || null
+        savedBy || null,
+        JSON.stringify(baselineEvents !== undefined && baselineEvents !== null ? baselineEvents : (scheduleEvents || []))
       );
       console.log(`✅ POST /api/daily-snapshot/save - Created snapshot for ${date}, ${(scheduleEvents||[]).length} events`);
     }

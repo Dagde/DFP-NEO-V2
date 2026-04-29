@@ -5010,6 +5010,22 @@ const App: React.FC = () => {
                                 return merged;
                             });
 
+                            // Restore baselineSchedules from snapshots (enables change bar after page reload)
+                            setBaselineSchedules(prev => {
+                                const merged = { ...prev };
+                                snapshots.forEach(snap => {
+                                    const dateKey = snap.date;
+                                    // Use stored baselineEvents if available, otherwise fall back to scheduleEvents
+                                    const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
+                                        ? snap.baselineEvents
+                                        : (Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []);
+                                    if (baselineEvts.length > 0 && !merged[dateKey]) {
+                                        merged[dateKey] = JSON.parse(JSON.stringify(baselineEvts));
+                                    }
+                                });
+                                return merged;
+                            });
+
                             // Load PT-051 assessments from the most recent snapshot
                             const mostRecent = snapshots[0];
                             if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
@@ -5119,6 +5135,14 @@ const App: React.FC = () => {
                     const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
                     if (existingNonSeed.length > 0) return prev;
                     return { ...prev, [targetDate]: events };
+                });
+                // Restore baseline for this date too (enables change bar after navigation)
+                const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
+                    ? snap.baselineEvents
+                    : events;
+                setBaselineSchedules(prev => {
+                    if (prev[targetDate]) return prev; // don't overwrite existing baseline
+                    return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
                 });
                 console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
             }
@@ -6616,8 +6640,9 @@ const App: React.FC = () => {
     useEffect(() => {
         // Initialize baselineSchedules when viewing published Daily DFP
         // This enables change bar detection for moved events
-        const dateStr = date; // Current viewing date
-        const eventsForCurrentDate = events.filter(e => e.date === dateStr);
+        // Uses publishedSchedules (not events) as that's what ScheduleView renders from
+        const dateStr = date;
+        const eventsForCurrentDate = publishedSchedules[dateStr] || [];
 
         if (eventsForCurrentDate.length > 0 && !baselineSchedules[dateStr]) {
             setBaselineSchedules(prev => ({
@@ -6625,7 +6650,7 @@ const App: React.FC = () => {
                 [dateStr]: JSON.parse(JSON.stringify(eventsForCurrentDate))
             }));
         }
-    }, [events, date, baselineSchedules]);
+    }, [publishedSchedules, date, baselineSchedules]);
 
     const personnelData = useMemo(() => {
         const data = new Map<string, { callsignPrefix: string; callsignNumber: number }>();
@@ -8084,7 +8109,7 @@ const App: React.FC = () => {
     // persistScheduleForDate: saves the full schedule for a date to the DB.
     // Pass allEventsForDate directly (after setPublishedSchedules has been called)
     // to avoid race conditions with React's async state updates.
-    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[]) => {
+    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[], baselineEventsForDate?: ScheduleEvent[]) => {
         // Skip seed data
         if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
             console.log('[Persist] Skipped seed data for', targetDate);
@@ -8148,7 +8173,7 @@ const App: React.FC = () => {
             pt051AssessmentsObj[key] = assessment;
         });
 
-        const snapshotPayload = {
+        const snapshotPayload: Record<string, any> = {
             date: targetDate,
             scheduleEvents: allEventsForDate,
             staffEvents: staffEventsForDate,
@@ -8160,6 +8185,11 @@ const App: React.FC = () => {
             staffLogbook: {},
             savedBy,
         };
+        // Only include baselineEvents if explicitly provided (initial publish)
+        // This preserves the original published baseline for change-bar detection after page reload
+        if (baselineEventsForDate !== undefined) {
+            snapshotPayload.baselineEvents = baselineEventsForDate;
+        }
 
         console.log(`[Persist] Saving snapshot for ${targetDate}, ${allEventsForDate.length} events...`);
         fetch(`${apiBase}/daily-snapshot/save`, {
@@ -10461,6 +10491,8 @@ const App: React.FC = () => {
                 staffCurrency: staffCurrencyMap,
                 staffLogbook: staffLogbookMap,
                 savedBy: authUser?.userId || (authUser as any)?.username || null,
+                // Store the baseline (original published events) for change-bar detection after page reload
+                baselineEvents: newEventsForDate,
             };
 
             const apiBase = getApiBaseUrl();

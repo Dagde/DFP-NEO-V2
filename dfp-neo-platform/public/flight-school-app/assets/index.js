@@ -66956,6 +66956,17 @@ const App = () => {
                 });
                 return merged;
               });
+              setBaselineSchedules((prev) => {
+                const merged = { ...prev };
+                snapshots.forEach((snap2) => {
+                  const dateKey = snap2.date;
+                  const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+                  if (baselineEvts.length > 0 && !merged[dateKey]) {
+                    merged[dateKey] = JSON.parse(JSON.stringify(baselineEvts));
+                  }
+                });
+                return merged;
+              });
               const mostRecent = snapshots[0];
               if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
                 const assessments2 = mostRecent.pt051Assessments;
@@ -67048,6 +67059,11 @@ const App = () => {
           const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
           if (existingNonSeed.length > 0) return prev;
           return { ...prev, [targetDate]: events2 };
+        });
+        const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
+        setBaselineSchedules((prev) => {
+          if (prev[targetDate]) return prev;
+          return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
         console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events2.length} events`);
       }
@@ -68257,14 +68273,14 @@ ${"=".repeat(60)}`);
   }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
   reactExports.useEffect(() => {
     const dateStr = date;
-    const eventsForCurrentDate = events.filter((e) => e.date === dateStr);
+    const eventsForCurrentDate = publishedSchedules[dateStr] || [];
     if (eventsForCurrentDate.length > 0 && !baselineSchedules[dateStr]) {
       setBaselineSchedules((prev) => ({
         ...prev,
         [dateStr]: JSON.parse(JSON.stringify(eventsForCurrentDate))
       }));
     }
-  }, [events, date, baselineSchedules]);
+  }, [publishedSchedules, date, baselineSchedules]);
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     const callsignPrefix = school === "ESL" ? "ROLR" : "VIPR";
@@ -69337,7 +69353,7 @@ ${"=".repeat(60)}`);
       return newLMPs;
     });
   };
-  const persistScheduleForDate = (targetDate, allEventsForDate) => {
+  const persistScheduleForDate = (targetDate, allEventsForDate, baselineEventsForDate) => {
     if (allEventsForDate.some((e) => e.isHistoricalSeed === true)) {
       console.log("[Persist] Skipped seed data for", targetDate);
       return;
@@ -71158,7 +71174,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         lmpCompletedIds: lmpCompletedIdsMap,
         staffCurrency: staffCurrencyMap,
         staffLogbook: staffLogbookMap,
-        savedBy: authUser?.userId || authUser?.username || null
+        savedBy: authUser?.userId || authUser?.username || null,
+        // Store the baseline (original published events) for change-bar detection after page reload
+        baselineEvents: newEventsForDate
       };
       const apiBase2 = getApiBaseUrl();
       fetch(`${apiBase2}/daily-snapshot/save`, {
