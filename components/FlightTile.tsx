@@ -27,6 +27,7 @@ interface FlightTileProps {
   isChanged?: boolean;
   isPreview?: boolean;
   isPauseCompleted?: boolean;
+  alertStatus?: 'pending' | 'accepted' | 'rejected' | null;
 }
 
 const formatTime = (time: number): string => {
@@ -94,7 +95,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -878,7 +879,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
       
     >
         {isChanged && !isPreview && (
-            <div className="absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" />
+            <div className={`absolute right-0 top-0 bottom-0 w-1.5 z-20 pointer-events-none ${
+                alertStatus === 'accepted' ? 'alert-bar-accepted' :
+                alertStatus === 'rejected' ? 'alert-bar-rejected' :
+                alertStatus === 'pending' ? 'alert-bar-pending' :
+                'changed-bar-stripes'
+            }`} />
         )}
         {isPauseCompleted && !isPreview && (
             <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center pointer-events-none z-30">

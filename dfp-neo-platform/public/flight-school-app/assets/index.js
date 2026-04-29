@@ -3744,7 +3744,7 @@ const getAuthorizationTextColorClass = (event, currentTime) => {
   }
   return "";
 };
-const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false }) => {
+const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -4375,7 +4375,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
       onMouseEnter,
       onMouseLeave,
       children: [
-        isChanged && !isPreview && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute right-0 top-0 bottom-0 w-1.5 changed-bar-stripes z-20 pointer-events-none" }),
+        isChanged && !isPreview && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `absolute right-0 top-0 bottom-0 w-1.5 z-20 pointer-events-none ${alertStatus === "accepted" ? "alert-bar-accepted" : alertStatus === "rejected" ? "alert-bar-rejected" : alertStatus === "pending" ? "alert-bar-pending" : "changed-bar-stripes"}` }),
         isPauseCompleted && !isPreview && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute top-0.5 left-0.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center pointer-events-none z-30", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-2.5 h-2.5 text-white", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 3, children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M5 13l4 4L19 7" }) }) }),
         isStbyEvent && !isPreview && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
@@ -5304,6 +5304,7 @@ const ScheduleView = ({
   isPauseSelectMode = false,
   pauseCompletedEventIds,
   onPauseToggleCompleted,
+  alertsData,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -5892,6 +5893,16 @@ const ScheduleView = ({
         const isSelected = selectedEventIds.has(event.id);
         const isChanged = checkIsChanged(event, baselineEvents);
         const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
+        const alertEntry = alertsData?.[event.id];
+        let alertStatus = null;
+        if (alertEntry && alertEntry.responses) {
+          const statuses = Object.values(alertEntry.responses).map((r) => r.status);
+          if (statuses.length > 0) {
+            if (statuses.every((s) => s === "accepted")) alertStatus = "accepted";
+            else if (statuses.some((s) => s === "rejected")) alertStatus = "rejected";
+            else alertStatus = "pending";
+          }
+        }
         return /* @__PURE__ */ jsxRuntimeExports.jsx(
           FlightTile$1,
           {
@@ -5946,7 +5957,8 @@ const ScheduleView = ({
             currentTime,
             isSelected,
             isChanged,
-            isPauseCompleted
+            isPauseCompleted,
+            alertStatus
           },
           event.id
         );
@@ -11421,7 +11433,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, isChanged = false, alertData = null, onSendAlert, canSendAlert = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -11435,6 +11447,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [isEditing, setIsEditing] = reactExports.useState(isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
   const [showDeleteChoice, setShowDeleteChoice] = reactExports.useState(false);
+  const [showAlertPopout, setShowAlertPopout] = reactExports.useState(false);
+  const [alertSelectedRecipients, setAlertSelectedRecipients] = reactExports.useState([]);
   const [showCancelConfirm, setShowCancelConfirm] = reactExports.useState(false);
   const [showMassBriefComplete, setShowMassBriefComplete] = reactExports.useState(false);
   const [showMassBriefConfirmation, setShowMassBriefConfirmation] = reactExports.useState(false);
@@ -12920,7 +12934,25 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                 "Flight"
               ] }) })
-            ] })
+            ] }),
+            isChanged && canSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-[75px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  const pilots = [];
+                  if (event.flightType === "Solo" && event.pilot) {
+                    pilots.push(event.pilot);
+                  } else {
+                    if (event.instructor) pilots.push(event.instructor);
+                    if (event.student) pilots.push(event.student);
+                  }
+                  setAlertSelectedRecipients(pilots);
+                  setShowAlertPopout(true);
+                },
+                className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${alertData ? "active" : ""}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: alertData ? Object.values(alertData.responses || {}).some((r) => r.status === "rejected") ? "#ef4444" : Object.values(alertData.responses || {}).every((r) => r.status === "accepted") ? "#16a34a" : "#f59e0b" : "#f59e0b" }, children: "ALERT" })
+              }
+            ) })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-grow" }),
           " ",
@@ -12934,6 +12966,79 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           ] }) : null,
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Close" }) })
         ] })
+      ] })
+    ] }) }),
+    showAlertPopout && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowAlertPopout(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-amber-500/50", onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-amber-400", children: "Send Alert" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 text-sm", children: [
+          "Select the pilot(s) to notify about the schedule change for ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white", children: event.flightNumber }),
+          ":"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (() => {
+          const pilots = [];
+          if (event.flightType === "Solo" && event.pilot) {
+            pilots.push(event.pilot);
+          } else {
+            if (event.instructor) pilots.push(event.instructor);
+            if (event.student) pilots.push(event.student);
+          }
+          return pilots.map((pilot) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                className: "w-4 h-4 accent-amber-500",
+                checked: alertSelectedRecipients.includes(pilot),
+                onChange: (e) => {
+                  if (e.target.checked) {
+                    setAlertSelectedRecipients((prev) => [...prev, pilot]);
+                  } else {
+                    setAlertSelectedRecipients((prev) => prev.filter((p) => p !== pilot));
+                  }
+                }
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: pilot }),
+            alertData?.responses?.[pilot] && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto text-xs font-bold px-2 py-0.5 rounded ${alertData.responses[pilot].status === "accepted" ? "bg-green-800 text-green-200" : alertData.responses[pilot].status === "rejected" ? "bg-red-800 text-red-200" : "bg-amber-800 text-amber-200"}`, children: alertData.responses[pilot].status.toUpperCase() })
+          ] }, pilot));
+        })() }),
+        alertData && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-gray-700/30 rounded-lg border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
+          "Previously sent: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: new Date(alertData.sentAt).toLocaleString() })
+        ] }) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 flex gap-3 justify-end", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowAlertPopout(false),
+            className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Cancel" })
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            disabled: alertSelectedRecipients.length === 0,
+            onClick: () => {
+              if (onSendAlert && alertSelectedRecipients.length > 0) {
+                onSendAlert(event.id, alertSelectedRecipients);
+                setShowAlertPopout(false);
+              }
+            },
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertSelectedRecipients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
+              "SEND",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "ALERT"
+            ] })
+          }
+        )
       ] })
     ] }) }),
     showDeleteChoice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowDeleteChoice(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-red-500/50", onClick: (e) => e.stopPropagation(), children: [
@@ -66981,6 +67086,15 @@ const App = () => {
                   return merged;
                 });
               }
+              setAlertsDataByDate((prev) => {
+                const merged = { ...prev };
+                snapshots.forEach((snap2) => {
+                  if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
+                    merged[snap2.date] = snap2.alertsData;
+                  }
+                });
+                return merged;
+              });
             }
           }
         } catch (snapErr) {
@@ -67075,6 +67189,9 @@ const App = () => {
           });
           return merged;
         });
+      }
+      if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
+        setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
       }
     } catch (err) {
       console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
@@ -67968,6 +68085,7 @@ ${"=".repeat(60)}`);
     coursePercentages
   ]);
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
+  const [alertsDataByDate, setAlertsDataByDate] = reactExports.useState({});
   const isDirtyRef = reactExports.useRef(() => false);
   const onSaveRef = reactExports.useRef(() => {
   });
@@ -69872,6 +69990,47 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const changes = `Event: ${selectedEvent.syllabusItem || selectedEvent.flightNumber || eventType}, Time: ${selectedEvent.startTime}, Duration: ${selectedEvent.duration}hrs, Restored to active`;
     logAudit(pageName, "Restore", description, changes);
     setSelectedEvent(null);
+  };
+  const handleSendAlert = async (eventId, recipients) => {
+    try {
+      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+      const userId = getCurrentUserId() || currentUserName;
+      const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
+      const res = await fetch(`${apiBase2}/alerts/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date,
+          eventId,
+          sentBy: userId,
+          recipients,
+          eventDetails: eventForAlert ? {
+            flightNumber: eventForAlert.flightNumber,
+            startTime: eventForAlert.startTime,
+            duration: eventForAlert.duration,
+            resourceId: eventForAlert.resourceId,
+            instructor: eventForAlert.instructor,
+            student: eventForAlert.student,
+            pilot: eventForAlert.pilot
+          } : {}
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAlertsDataByDate((prev) => ({
+          ...prev,
+          [date]: {
+            ...prev[date] || {},
+            [eventId]: data.alertEntry || data
+          }
+        }));
+        console.log("[Alert] Alert sent for event", eventId);
+      } else {
+        console.warn("[Alert] Failed to send alert:", await res.text());
+      }
+    } catch (err) {
+      console.error("[Alert] Error sending alert:", err);
+    }
   };
   const handleVisualAdjustStart = async (event) => {
     console.log("Visual Adjust Start - Event:", event);
@@ -71821,6 +71980,27 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const pollInterval = setInterval(pollUnavailability, 5 * 1e3);
     return () => clearInterval(pollInterval);
   }, []);
+  reactExports.useEffect(() => {
+    const pollAlerts = async () => {
+      try {
+        const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        const res = await fetch(`${apiBase2}/daily-snapshot/${date}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const snap2 = data.snapshot;
+        if (!snap2) return;
+        if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
+          setAlertsDataByDate((prev) => ({
+            ...prev,
+            [date]: snap2.alertsData
+          }));
+        }
+      } catch (err) {
+      }
+    };
+    const interval = setInterval(pollAlerts, 15 * 1e3);
+    return () => clearInterval(interval);
+  }, [date]);
   const handleUpdateSyllabus = reactExports.useCallback((newSyllabus) => {
     const updatedMap = new Map(newSyllabus.map((s) => [s.code.trim().replace(/\s/g, "").toLowerCase(), s]));
     setSyllabusDetails((prevSyllabus) => {
@@ -72885,6 +73065,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             setSelectedEventIds,
             detectConflictsForEvent,
             baselineEvents: baselineSchedules[date],
+            alertsData: alertsDataByDate[date] || {},
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,
@@ -75247,7 +75428,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           cancellationCodes,
           onCancelEvent: handleCancelEvent,
           onRestoreEvent: handleRestoreEvent,
-          isPauseViewMode: showPausePanel && ["NextDayBuild", "Priorities", "ProgramData"].includes(activeView)
+          isPauseViewMode: showPausePanel && ["NextDayBuild", "Priorities", "ProgramData"].includes(activeView),
+          isChanged: selectedEvent ? !!(baselineSchedules[date]?.length > 0 && (() => {
+            const baseline = baselineSchedules[date]?.find((b) => b.id === selectedEvent.id);
+            if (!baseline) return !!baselineSchedules[date]?.length;
+            const epsilon = 1e-3;
+            return Math.abs(selectedEvent.startTime - baseline.startTime) > epsilon || Math.abs(selectedEvent.duration - baseline.duration) > epsilon || selectedEvent.resourceId !== baseline.resourceId;
+          })()) : false,
+          alertData: selectedEvent ? alertsDataByDate[date]?.[selectedEvent.id] || null : null,
+          onSendAlert: handleSendAlert,
+          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "DailyFlyingProgram"
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

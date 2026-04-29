@@ -1,23 +1,25 @@
-# Todo List
+# Alerts Feature Implementation
 
-## Change Bar Investigation
-- [x] Find where `isChanged` prop is calculated/passed to FlightTile
-- [x] Understand how original published time is tracked
-- [x] Identify why change bar isn't showing for published Daily DFP events
-- [x] Fix the isChanged logic for published Daily DFP
-- [x] Build and test the changes
-- [x] Deploy and verify change bar works
+## Phase 2: Browser App
+- [x] Review FlightDetailModal button structure
+- [x] Review FlightDetailModal props interface
+- [x] Review App.tsx EventDetailModal usage
+- [x] Find CSS classes (index.html)
+- [ ] Add CSS for solid green/red alert status bars to index.html
+- [ ] Add new props to FlightDetailModal interface (isChanged, alertData, onSendAlert, canSendAlert)
+- [ ] Add ALERT button + popout component inside FlightDetailModal.tsx
+- [ ] Add alertsData state and handlers in App.tsx
+- [ ] Pass new props to EventDetailModal in App.tsx
+- [ ] Update FlightTile.tsx to support alertStatus (green/red bar)
+- [ ] Pass alertStatus to FlightTile from ScheduleView
+- [ ] Build and commit
 
-## Problem Found
-- `baselineSchedules` only initialized for "today" when empty
-- For published Daily DFP on other dates, `baselineSchedules[date]` is undefined
-- This causes `checkIsChanged` to return false
+## Phase 3: iPhone App
+- [ ] Create AlertModel.swift
+- [ ] Create AlertsViewModel.swift
+- [ ] Create AlertsView.swift
+- [ ] Update ContentView.swift to add Alerts tab
+- [ ] Update APIService.swift with alert API methods
 
-## Solution Implemented
-- Updated useEffect to initialize `baselineSchedules[date]` for any date when viewing published Daily DFP
-- This enables change bar detection for all published DFP dates, not just today
-- Removed temporary red verification banner
-
-## Deployment
-- Changes committed and pushed to feature/comprehensive-build-algorithm
-- Railway build triggered - awaiting deployment completion
+## Phase 4: Deploy
+- [ ] Build, commit and push

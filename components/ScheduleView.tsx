@@ -67,6 +67,8 @@ interface ScheduleViewProps {
   isPauseSelectMode?: boolean;
   pauseCompletedEventIds?: Set<string>;
   onPauseToggleCompleted?: (eventId: string) => void;
+  // Alert status per event id
+  alertsData?: Record<string, { responses?: Record<string, { status: string }> }>;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -138,6 +140,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     detectConflictsForEvent, showDepartureDensityOverlay,
     showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
+    alertsData,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -860,6 +863,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 // Stay highlighted as long as event is in pauseCompletedEventIds (not just during selection mode)
                 const isPauseCompleted = !!(pauseCompletedEventIds?.size && pauseCompletedEventIds.has(event.id));
 
+                // Determine alert status for this event's change bar
+                const alertEntry = alertsData?.[event.id];
+                let alertStatus: 'pending' | 'accepted' | 'rejected' | null = null;
+                if (alertEntry && alertEntry.responses) {
+                    const statuses = Object.values(alertEntry.responses).map((r: any) => r.status);
+                    if (statuses.length > 0) {
+                        if (statuses.every(s => s === 'accepted')) alertStatus = 'accepted';
+                        else if (statuses.some(s => s === 'rejected')) alertStatus = 'rejected';
+                        else alertStatus = 'pending';
+                    }
+                }
+
                 return (
                     <FlightTile
                         key={event.id}
@@ -918,6 +933,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         isSelected={isSelected}
                         isChanged={isChanged}
                         isPauseCompleted={isPauseCompleted}
+                        alertStatus={alertStatus}
                     />
                 );
             });

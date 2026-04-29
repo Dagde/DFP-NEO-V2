@@ -5041,6 +5041,16 @@ const App: React.FC = () => {
                                     return merged;
                                 });
                             }
+                            // Load alertsData from all snapshots
+                            setAlertsDataByDate(prev => {
+                                const merged = { ...prev };
+                                snapshots.forEach(snap => {
+                                    if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+                                        merged[snap.date] = snap.alertsData;
+                                    }
+                                });
+                                return merged;
+                            });
                         }
                     }
                 } catch (snapErr) {
@@ -5155,6 +5165,10 @@ const App: React.FC = () => {
                     });
                     return merged;
                 });
+            }
+            // Load alertsData for this date
+            if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+                setAlertsDataByDate(prev => ({ ...prev, [targetDate]: snap.alertsData }));
             }
         } catch (err) {
             console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
@@ -6205,6 +6219,9 @@ const App: React.FC = () => {
 
     // Baseline schedule state
     const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+
+    // Alerts data state: { [date]: { [eventId]: alertEntry } }
+    const [alertsDataByDate, setAlertsDataByDate] = useState<Record<string, Record<string, any>>>({});
 
     const isDirtyRef = useRef<() => boolean>(() => false);
     const onSaveRef = useRef<() => void>(() => {});
@@ -8816,6 +8833,49 @@ const App: React.FC = () => {
     };
 
     
+    // handleSendAlert
+    const handleSendAlert = async (eventId: string, recipients: string[]) => {
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const userId = getCurrentUserId() || currentUserName;
+            const eventForAlert = events.find(e => e.id === eventId) || selectedEvent;
+            const res = await fetch(`${apiBase}/alerts/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date,
+                    eventId,
+                    sentBy: userId,
+                    recipients,
+                    eventDetails: eventForAlert ? {
+                        flightNumber: eventForAlert.flightNumber,
+                        startTime: eventForAlert.startTime,
+                        duration: eventForAlert.duration,
+                        resourceId: eventForAlert.resourceId,
+                        instructor: eventForAlert.instructor,
+                        student: eventForAlert.student,
+                        pilot: eventForAlert.pilot,
+                    } : {},
+                }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setAlertsDataByDate(prev => ({
+                    ...prev,
+                    [date]: {
+                        ...(prev[date] || {}),
+                        [eventId]: data.alertEntry || data,
+                    },
+                }));
+                console.log('[Alert] Alert sent for event', eventId);
+            } else {
+                console.warn('[Alert] Failed to send alert:', await res.text());
+            }
+        } catch (err) {
+            console.error('[Alert] Error sending alert:', err);
+        }
+    };
+
     // Visual Adjust handlers
     const handleVisualAdjustStart = async (event: ScheduleEvent) => {
         console.log('Visual Adjust Start - Event:', event);
@@ -11327,6 +11387,32 @@ updates.forEach(update => {
     }, []);
 
 
+    // ── Alert response polling ──────────────────────────────────────────────
+    // Poll alert statuses for the current date every 15 seconds
+    useEffect(() => {
+        const pollAlerts = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/daily-snapshot/${date}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const snap = data.snapshot;
+                if (!snap) return;
+                if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+                    setAlertsDataByDate(prev => ({
+                        ...prev,
+                        [date]: snap.alertsData,
+                    }));
+                }
+            } catch (err) {
+                // Silent fail - polling
+            }
+        };
+        const interval = setInterval(pollAlerts, 15 * 1000);
+        return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [date]);
+
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
         setSyllabusDetails(prevSyllabus => {
@@ -12722,6 +12808,7 @@ updates.forEach(update => {
                            setSelectedEventIds={setSelectedEventIds}
                            detectConflictsForEvent={detectConflictsForEvent}
                            baselineEvents={baselineSchedules[date]}
+                           alertsData={alertsDataByDate[date] || {}}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
@@ -15305,6 +15392,17 @@ updates.forEach(update => {
                     onCancelEvent={handleCancelEvent}
                     onRestoreEvent={handleRestoreEvent}
                     isPauseViewMode={showPausePanel && ['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView)}
+                    isChanged={selectedEvent ? !!(baselineSchedules[date]?.length > 0 && (() => {
+                        const baseline = baselineSchedules[date]?.find(b => b.id === selectedEvent.id);
+                        if (!baseline) return !!baselineSchedules[date]?.length;
+                        const epsilon = 0.001;
+                        return Math.abs(selectedEvent.startTime - baseline.startTime) > epsilon ||
+                               Math.abs(selectedEvent.duration - baseline.duration) > epsilon ||
+                               selectedEvent.resourceId !== baseline.resourceId;
+                    })()) : false}
+                    alertData={selectedEvent ? (alertsDataByDate[date]?.[selectedEvent.id] || null) : null}
+                    onSendAlert={handleSendAlert}
+                    canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'DailyFlyingProgram'}
                 />
             )}
             
