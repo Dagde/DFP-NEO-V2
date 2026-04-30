@@ -11413,7 +11413,7 @@ updates.forEach(update => {
 
 
     // ── Alert response polling ──────────────────────────────────────────────
-    // Poll alert statuses for the current date every 15 seconds
+    // Poll alert statuses for the current date every 5 seconds
     useEffect(() => {
         const pollAlerts = async () => {
             try {
@@ -11423,7 +11423,8 @@ updates.forEach(update => {
                 const data = await res.json();
                 const snap = data.snapshot;
                 if (!snap) return;
-                if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+                // Always update alertsData so responses (accept/reject) are reflected immediately
+                if (snap.alertsData) {
                     setAlertsDataByDate(prev => ({
                         ...prev,
                         [date]: snap.alertsData,
@@ -11433,7 +11434,9 @@ updates.forEach(update => {
                 // Silent fail - polling
             }
         };
-        const interval = setInterval(pollAlerts, 15 * 1000);
+        // Run immediately on mount/date change, then every 5 seconds
+        pollAlerts();
+        const interval = setInterval(pollAlerts, 5 * 1000);
         return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date]);

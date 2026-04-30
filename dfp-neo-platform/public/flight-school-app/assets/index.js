@@ -11436,7 +11436,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -12519,11 +12519,15 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               }
               const people = rawPeople.filter((p, i, arr) => arr.indexOf(p) === i);
               setAlertRecipients(people);
-              setAlertSent(false);
+              setAlertSent(!!alertData);
               setShowAlertPanel(true);
             },
-            className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertData ? "ring-1 ring-amber-500/50" : ""}`,
+            children: alertData ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#16a34a", fontSize: "10px" }, children: [
+              "✓ Alert",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Sent"
+            ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#000000" }, children: [
               "Send",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "Alert"
@@ -12983,57 +12987,104 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-amber-400", children: "Send Alert" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 text-sm", children: [
-          "Select recipients to notify about ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white", children: event.flightNumber }),
-          ":"
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5 space-y-4", children: alertSent || alertData ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-green-900/30 border border-green-600/40 rounded-lg p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 mb-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400 text-sm font-semibold", children: "✅ Alert Sent" }) }),
+          alertData?.sentAt && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: new Date(alertData.sentAt).toLocaleString("en-AU", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false
+          }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-          [event.instructor, event.student, event.pilot].filter(Boolean).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: alertRecipients.includes(person),
-                onChange: (e) => {
-                  if (e.target.checked) {
-                    setAlertRecipients((prev) => [...prev, person]);
-                  } else {
-                    setAlertRecipients((prev) => prev.filter((r) => r !== person));
-                  }
-                },
-                className: "w-4 h-4 accent-amber-500"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: person }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs ml-auto", children: person === event.instructor ? "Instructor" : person === event.student ? "Student" : "Pilot" })
-          ] }, person)),
-          ![event.instructor, event.student, event.pilot].some(Boolean) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm text-center py-2", children: "No personnel assigned to this event." })
+        alertData?.recipients && alertData.recipients.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1", children: "Recipients" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: alertData.recipients.map((r) => {
+            const response = alertData?.responses?.[r];
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: r }),
+              response ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-bold ${response.status === "accepted" ? "text-green-400" : "text-red-400"}`, children: response.status === "accepted" ? "✓ Accepted" : "✗ Rejected" }),
+                response.respondedAt && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-[10px]", children: new Date(response.respondedAt).toLocaleString("en-AU", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false
+                }) })
+              ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 text-xs", children: "Pending..." })
+            ] }, r);
+          }) })
         ] }),
-        alertSent && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-green-900/30 border border-green-600/40 rounded-lg p-3 text-green-300 text-sm text-center", children: "✅ Alert sent successfully!" })
-      ] }),
+        alertSent && !alertData && alertRecipients.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1", children: "Recipients" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: alertRecipients.map((r) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: r }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 text-xs", children: "Pending..." })
+          ] }, r)) })
+        ] })
+      ] }) : (
+        /* Not yet sent: show recipient selection */
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 text-sm", children: [
+            "Select recipients to notify about ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white", children: event.flightNumber }),
+            ":"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (() => {
+            const rawPeople = [];
+            if (event.flightType === "Solo" && event.pilot) {
+              rawPeople.push(event.pilot);
+            } else {
+              if (event.instructor) rawPeople.push(event.instructor);
+              if (event.student) rawPeople.push(event.student);
+              if (event.pilot) rawPeople.push(event.pilot);
+            }
+            const uniquePeople = rawPeople.filter((p, i, arr) => arr.indexOf(p) === i);
+            return uniquePeople.length > 0 ? uniquePeople.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: alertRecipients.includes(person),
+                  onChange: (e) => {
+                    if (e.target.checked) {
+                      setAlertRecipients((prev) => [...prev, person]);
+                    } else {
+                      setAlertRecipients((prev) => prev.filter((r) => r !== person));
+                    }
+                  },
+                  className: "w-4 h-4 accent-amber-500"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: person }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs ml-auto", children: person === event.instructor ? "Instructor" : person === event.student ? "Student" : "Pilot" })
+            ] }, person)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm text-center py-2", children: "No personnel assigned to this event." });
+          })() })
+        ] })
+      ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 flex gap-[1px] justify-end", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             onClick: () => setShowAlertPanel(false),
             className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Cancel" })
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Close" })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+        !(alertSent || alertData) && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            disabled: alertRecipients.length === 0 || alertSent,
+            disabled: alertRecipients.length === 0,
             onClick: async () => {
               console.log("🔔 [Alert] Send button clicked - eventId:", event.id, "recipients:", alertRecipients);
               await onSendAlert(event.id, alertRecipients);
               setAlertSent(true);
-              setTimeout(() => setShowAlertPanel(false), 1500);
             },
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 || alertSent ? "opacity-50 cursor-not-allowed" : ""}`,
-            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#000000" }, children: [
               "SEND",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
               "ALERT"
@@ -72097,7 +72148,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         const data = await res.json();
         const snap2 = data.snapshot;
         if (!snap2) return;
-        if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
+        if (snap2.alertsData) {
           setAlertsDataByDate((prev) => ({
             ...prev,
             [date]: snap2.alertsData
@@ -72106,7 +72157,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       } catch (err) {
       }
     };
-    const interval = setInterval(pollAlerts, 15 * 1e3);
+    pollAlerts();
+    const interval = setInterval(pollAlerts, 5 * 1e3);
     return () => clearInterval(interval);
   }, [date]);
   const handleUpdateSyllabus = reactExports.useCallback((newSyllabus) => {
