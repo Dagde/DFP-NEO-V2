@@ -5,6 +5,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import CancelEventFlyout from './CancelEventFlyout';
+import PinEntryFlyout from './PinEntryFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
 
@@ -370,9 +371,6 @@ interface EventDetailModalProps {
     cancellationCodes?: CancellationCode[];
     onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
     onRestoreEvent?: (eventId: string) => void;
-    // Alert props
-    isChanged?: boolean;
-    alertData?: { alertId: string; sentAt: string; sentBy: string; recipients: string[]; responses: Record<string, { status: string; respondedAt: string | null }> } | null;
     onSendAlert?: (eventId: string, recipients: string[]) => void;
     canSendAlert?: boolean;
 }
@@ -412,7 +410,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, isChanged = false, alertData = null, onSendAlert, canSendAlert = false }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -428,10 +426,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [isEditing, setIsEditing] = useState(isEditingDefault);
     const [localHighlight, setLocalHighlight] = useState(highlightedField);
     const [showDeleteChoice, setShowDeleteChoice] = useState(false);
-    // Alert popout state
-    const [showAlertPopout, setShowAlertPopout] = useState(false);
-    const [alertSelectedRecipients, setAlertSelectedRecipients] = useState<string[]>([]);
     const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [showRemovePin, setShowRemovePin] = useState(false);
+    const [showRestoreConfirm, setShowRestoreConfirm] = useState(false);
     const [showMassBriefComplete, setShowMassBriefComplete] = useState(false);
     const [showMassBriefConfirmation, setShowMassBriefConfirmation] = useState(false);
     const [completedTrainees, setCompletedTrainees] = useState<Trainee[]>([]);
@@ -556,6 +553,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     // Oracle state
     const [syllabusSelectionError, setSyllabusSelectionError] = useState(false);
     const [showTraineeScoresModal, setShowTraineeScoresModal] = useState(false);
+    const [showAlertPanel, setShowAlertPanel] = useState(false);
+    const [alertRecipients, setAlertRecipients] = useState<string[]>([]);
+    const [alertSent, setAlertSent] = useState(false);
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
     const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map(t => t.trainee.fullName) : trainees;
@@ -990,11 +990,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     }, [courses, traineesData]);
 
     const modalTitle = useMemo(() => {
-        if ((event as any)._academicTileClick || (event as any).isAcademic) return 'Ground School Details';
         if (eventType === 'flight') return 'Flight Details';
         if (eventType === 'ftd') return 'FTD Session Details';
         return 'Ground Event Details';
-    }, [eventType, event]);
+    }, [eventType]);
 
     useEffect(() => {
         setFlightNumber(event.flightNumber);
@@ -1561,37 +1560,23 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         // Check if this is a Mass Brief event
         if (event.flightNumber.includes('MB') || event.flightNumber.includes(' MB')) {
             setShowMassBriefComplete(true);
-            return;
-        }
-        // Academic session: open the same MassBriefCompleteFlyout so ALL attendees are marked DCO
-        if ((event as any).isAcademic || (event as any).academicTiles || (event as any)._academicTileClick) {
-            setShowMassBriefComplete(true);
-            return;
-        }
-        // For regular ground events, mark as complete and close
-        if (traineeObject) {
-            alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
         } else {
-            alert(`Ground event "${event.flightNumber}" marked as complete`);
+            // For regular ground events, mark as complete and close
+            // This would typically update the event status in the system
+            if (traineeObject) {
+                alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
+            } else {
+                alert(`Ground event "${event.flightNumber}" marked as complete`);
+            }
+            onClose();
         }
-        onClose();
     };
 
     const handleMassBriefComplete = (confirmedTrainees: Trainee[]) => {
         console.log('Mass Brief completed for trainees:', confirmedTrainees.map(t => t.fullName));
         
         const currentDate = new Date().toISOString().split('T')[0];
-        // For academic tile clicks, use the per-tile instructor if available
-        const instructor = (event as any)._tileInstructor || event.instructor || 'System';
-        
-        // For academic tile clicks, the flightNumber is the specific lesson code (e.g. "AERODY4").
-        // For regular academic sessions (outer tile complete), use the event flightNumber.
-        // For Mass Brief, use the event flightNumber.
-        const completionFlightNumber = event.flightNumber;
-        const isAcademicCompletion = (event as any).isAcademic || (event as any).academicTiles || (event as any)._academicTileClick;
-        const overallComments = isAcademicCompletion
-            ? `Academic lesson completed: ${completionFlightNumber} on ${currentDate}`
-            : `Ground event completed via Mass Brief completion on ${currentDate}`;
+        const instructor = event.instructor || 'System';
         
         // Create PT051 assessments for each trainee
         if (onSavePT051Assessment) {
@@ -1601,17 +1586,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                     traineeName: trainee.name,
                     traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
                     eventId: event.id,
-                    flightNumber: completionFlightNumber,
+                    flightNumber: event.flightNumber,
                     date: currentDate,
                     instructorName: instructor,
-                    dcoResult: 'DCO',
-                    overallGrade: 'No Grade',
-                    overallResult: null,
-                    overallComments,
-                    scores: [],
+                    dcoResult: 'DCO', // Check DCO box
+                    overallGrade: 'No Grade', // Set to "No Grade"
+                    overallResult: null, // null for ground events
+                    overallComments: `Ground event completed via Mass Brief completion on ${currentDate}`, // String format for compatibility
+                    scores: [], // Empty scores array for ground events
                     isCompleted: true,
                     groundSchoolAssessment: {
-                        isAssessment: isAcademicCompletion,
+                        isAssessment: false,
                         result: 0
                     }
                 };
@@ -1911,6 +1896,29 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <span className="text-center leading-tight">Trainee<br/>Scores</span>
                                         </button>
                                     </div>
+                                    {/* ALERT button - same style as Trainee Scores, shown to Super Admin/Admin/Scheduler */}
+                                    {canSendAlert && onSendAlert && (
+                                        <div className="relative w-[75px]">
+                                            <button
+                                                onClick={() => {
+                                                    const people: string[] = [];
+                                                    if (event.flightType === 'Solo' && event.pilot) {
+                                                        people.push(event.pilot);
+                                                    } else {
+                                                        if (event.instructor) people.push(event.instructor);
+                                                        if (event.student) people.push(event.student);
+                                                        if (event.pilot) people.push(event.pilot);
+                                                    }
+                                                    setAlertRecipients(people);
+                                                    setAlertSent(false);
+                                                    setShowAlertPanel(true);
+                                                }}
+                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
+                                            >
+                                                <span className="text-center leading-tight" style={{ color: '#f59e0b' }}>Send<br/>Alert</span>
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -2336,27 +2344,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
-                                    {/* ALERT button - only show when user can send alerts */}
-                                    {canSendAlert && (
-                                        <div className="relative w-[75px]">
-                                            <button
-                                                onClick={() => {
-                                                    const pilots: string[] = [];
-                                                    if (event.flightType === 'Solo' && event.pilot) {
-                                                        pilots.push(event.pilot);
-                                                    } else {
-                                                        if (event.instructor) pilots.push(event.instructor);
-                                                        if (event.student) pilots.push(event.student);
-                                                    }
-                                                    setAlertSelectedRecipients(pilots);
-                                                    setShowAlertPopout(true);
-                                                }}
-                                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${alertData ? 'active' : ''}`}
-                                            >
-                                                <span className="text-center leading-tight" style={{ color: alertData ? (Object.values(alertData.responses || {}).some((r: any) => r.status === 'rejected') ? '#ef4444' : Object.values(alertData.responses || {}).every((r: any) => r.status === 'accepted') ? '#16a34a' : '#f59e0b') : '#f59e0b' }}>ALERT</span>
-                                            </button>
-                                        </div>
-                                    )}
                                 </>
                             )}
                             <div className="flex-grow" /> {/* Spacer */}
@@ -2377,10 +2364,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     </div>
                 </div>
             </div>
-            {/* ── Delete Choice Modal ─────────────────────────────────────────── */}
-            {/* ── Alert Popout ─────────────────────────────────────────────────────── */}
-            {showAlertPopout && (
-                <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowAlertPopout(false)}>
+            {/* ── Alert Panel Modal ──────────────────────────────────────────────── */}
+            {showAlertPanel && canSendAlert && onSendAlert && (
+                <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowAlertPanel(false)}>
                     <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-amber-500/50" onClick={e => e.stopPropagation()}>
                         {/* Header */}
                         <div className="p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3">
@@ -2392,70 +2378,56 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         {/* Body */}
                         <div className="p-5 space-y-4">
                             <p className="text-gray-300 text-sm">
-                                Select the pilot(s) to notify about the schedule change for <span className="font-bold text-white">{event.flightNumber}</span>:
+                                Select recipients to notify about <span className="font-bold text-white">{event.flightNumber}</span>:
                             </p>
-                            {/* Recipient checkboxes */}
                             <div className="space-y-2">
-                                {(() => {
-                                    const pilots: string[] = [];
-                                    if (event.flightType === 'Solo' && event.pilot) {
-                                        pilots.push(event.pilot);
-                                    } else {
-                                        if (event.instructor) pilots.push(event.instructor);
-                                        if (event.student) pilots.push(event.student);
-                                    }
-                                    return pilots.map(pilot => (
-                                        <label key={pilot} className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                className="w-4 h-4 accent-amber-500"
-                                                checked={alertSelectedRecipients.includes(pilot)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setAlertSelectedRecipients(prev => [...prev, pilot]);
-                                                    } else {
-                                                        setAlertSelectedRecipients(prev => prev.filter(p => p !== pilot));
-                                                    }
-                                                }}
-                                            />
-                                            <span className="text-white text-sm font-medium">{pilot}</span>
-                                            {alertData?.responses?.[pilot] && (
-                                                <span className={`ml-auto text-xs font-bold px-2 py-0.5 rounded ${
-                                                    alertData.responses[pilot].status === 'accepted' ? 'bg-green-800 text-green-200' :
-                                                    alertData.responses[pilot].status === 'rejected' ? 'bg-red-800 text-red-200' :
-                                                    'bg-amber-800 text-amber-200'
-                                                }`}>
-                                                    {alertData.responses[pilot].status.toUpperCase()}
-                                                </span>
-                                            )}
-                                        </label>
-                                    ));
-                                })()}
+                                {[event.instructor, event.student, event.pilot].filter(Boolean).map((person) => (
+                                    <label key={person} className="flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors">
+                                        <input
+                                            type="checkbox"
+                                            checked={alertRecipients.includes(person!)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setAlertRecipients(prev => [...prev, person!]);
+                                                } else {
+                                                    setAlertRecipients(prev => prev.filter(r => r !== person));
+                                                }
+                                            }}
+                                            className="w-4 h-4 accent-amber-500"
+                                        />
+                                        <span className="text-white text-sm font-medium">{person}</span>
+                                        <span className="text-gray-400 text-xs ml-auto">
+                                            {person === event.instructor ? 'Instructor' : person === event.student ? 'Student' : 'Pilot'}
+                                        </span>
+                                    </label>
+                                ))}
+                                {![event.instructor, event.student, event.pilot].some(Boolean) && (
+                                    <p className="text-gray-400 text-sm text-center py-2">No personnel assigned to this event.</p>
+                                )}
                             </div>
-                            {/* Alert status summary if already sent */}
-                            {alertData && (
-                                <div className="p-3 bg-gray-700/30 rounded-lg border border-gray-600">
-                                    <p className="text-xs text-gray-400">Previously sent: <span className="text-gray-200">{new Date(alertData.sentAt).toLocaleString()}</span></p>
+                            {alertSent && (
+                                <div className="bg-green-900/30 border border-green-600/40 rounded-lg p-3 text-green-300 text-sm text-center">
+                                    ✅ Alert sent successfully!
                                 </div>
                             )}
                         </div>
                         {/* Footer */}
                         <div className="p-4 border-t border-gray-700 flex gap-3 justify-end">
                             <button
-                                onClick={() => setShowAlertPopout(false)}
+                                onClick={() => setShowAlertPanel(false)}
                                 className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
                             >
                                 <span className="text-center leading-tight">Cancel</span>
                             </button>
                             <button
-                                disabled={alertSelectedRecipients.length === 0}
-                                onClick={() => {
-                                    if (onSendAlert && alertSelectedRecipients.length > 0) {
-                                        onSendAlert(event.id, alertSelectedRecipients);
-                                        setShowAlertPopout(false);
-                                    }
+                                disabled={alertRecipients.length === 0 || alertSent}
+                                onClick={async () => {
+                                    console.log('🔔 [Alert] Send button clicked - eventId:', event.id, 'recipients:', alertRecipients);
+                                    await onSendAlert(event.id, alertRecipients);
+                                    setAlertSent(true);
+                                    setTimeout(() => setShowAlertPanel(false), 1500);
                                 }}
-                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertSelectedRecipients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 || alertSent ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <span className="text-center leading-tight" style={{ color: '#f59e0b' }}>SEND<br/>ALERT</span>
                             </button>
@@ -2464,6 +2436,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                 </div>
             )}
 
+            {/* ── Delete Choice Modal ─────────────────────────────────────────────────── */}
             {showDeleteChoice && (
                 <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowDeleteChoice(false)}>
                     <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-red-500/50" onClick={e => e.stopPropagation()}>
@@ -2472,37 +2445,66 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                             </svg>
-                            <h2 className="text-lg font-bold text-red-400">Delete Event</h2>
+                            <h2 className="text-lg font-bold text-red-400">
+                                {event.isCancelled ? 'Cancelled Event Options' : 'Delete Event'}
+                            </h2>
                         </div>
 
                         {/* Body */}
                         <div className="p-6 space-y-3">
-                            <p className="text-gray-300 text-sm">What would you like to do with this event?</p>
+                            <p className="text-gray-300 text-sm">
+                                {event.isCancelled
+                                    ? 'This event is cancelled. What would you like to do?'
+                                    : 'What would you like to do with this event?'}
+                            </p>
 
-                            {/* Cancel Flight option */}
+                            {/* CANCELLED TILE: Restore option */}
+                            {event.isCancelled && (
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteChoice(false);
+                                        setShowRestoreConfirm(true);
+                                    }}
+                                    className="w-full flex items-start gap-3 p-4 bg-green-900/20 border border-green-600/40 rounded-lg hover:bg-green-900/40 transition-colors text-left"
+                                >
+                                    <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-green-600/20 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div className="text-green-300 font-semibold text-sm">Restore to Schedule</div>
+                                        <div className="text-gray-400 text-xs mt-0.5">Removes the cancellation and restores this event to active status with full functionality.</div>
+                                    </div>
+                                </button>
+                            )}
+
+                            {/* ACTIVE TILE: Cancel Flight option */}
+                            {!event.isCancelled && (
+                                <button
+                                    onClick={() => {
+                                        setShowDeleteChoice(false);
+                                        setShowCancelConfirm(true);
+                                    }}
+                                    className="w-full flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-600/40 rounded-lg hover:bg-amber-900/40 transition-colors text-left"
+                                >
+                                    <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-amber-600/20 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <div className="text-amber-300 font-semibold text-sm">Cancel Flight</div>
+                                        <div className="text-gray-400 text-xs mt-0.5">Stays on the schedule with a redline through it. Requires a cancellation code.</div>
+                                    </div>
+                                </button>
+                            )}
+
+                            {/* Remove from Schedule option (always shown) */}
                             <button
                                 onClick={() => {
                                     setShowDeleteChoice(false);
-                                    setShowCancelConfirm(true);
-                                }}
-                                className="w-full flex items-start gap-3 p-4 bg-amber-900/20 border border-amber-600/40 rounded-lg hover:bg-amber-900/40 transition-colors text-left"
-                            >
-                                <div className="mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-amber-600/20 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div className="text-amber-300 font-semibold text-sm">Cancel Flight</div>
-                                    <div className="text-gray-400 text-xs mt-0.5">Stays on the schedule with a redline through it. Requires a cancellation code.</div>
-                                </div>
-                            </button>
-
-                            {/* Remove from Schedule option */}
-                            <button
-                                onClick={() => {
-                                    setShowDeleteChoice(false);
-                                    onDeleteRequest();
+                                    setShowRemovePin(true);
                                 }}
                                 className="w-full flex items-start gap-3 p-4 bg-red-900/20 border border-red-600/40 rounded-lg hover:bg-red-900/40 transition-colors text-left"
                             >
@@ -2525,6 +2527,80 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
                             >
                                 Back
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Remove from Schedule — Warning + PIN ────────────────────────────────── */}
+            {showRemovePin && (
+                <PinEntryFlyout
+                    correctPin="1111"
+                    onConfirm={() => {
+                        setShowRemovePin(false);
+                        onDeleteRequest();
+                    }}
+                    onCancel={() => setShowRemovePin(false)}
+                    title="Confirm Permanent Removal"
+                    message="⚠ This will permanently remove this event from the schedule and cannot be undone. Enter your PIN to confirm."
+                />
+            )}
+
+            {/* ── Restore Cancelled Event Confirmation ────────────────────────────────── */}
+            {showRestoreConfirm && (
+                <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowRestoreConfirm(false)}>
+                    <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-green-500/50" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="p-4 border-b border-gray-700 bg-green-900/20 flex items-center space-x-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <h2 className="text-xl font-bold text-green-400">Restore Event</h2>
+                        </div>
+                        {/* Body */}
+                        <div className="p-6 space-y-4">
+                            <p className="text-gray-300">
+                                You are about to restore this cancelled event back to the active schedule.
+                            </p>
+                            <div className="bg-green-900/20 border border-green-600/40 rounded-md p-3 space-y-1">
+                                <p className="text-green-300 text-sm font-semibold">What this will do:</p>
+                                <p className="text-gray-300 text-sm">• Remove the cancellation mark and redline</p>
+                                <p className="text-gray-300 text-sm">• Restore the event to its original position</p>
+                                <p className="text-gray-300 text-sm">• Re-enable full scheduling functionality</p>
+                            </div>
+                            {event.cancellationCode && (
+                                <div className="bg-gray-700/30 border border-gray-600 rounded-md p-3">
+                                    <p className="text-gray-400 text-sm">
+                                        <strong className="text-white">Previous cancellation code:</strong> {event.cancellationCode}
+                                        {(event as any).cancellationManualEntry && ` (${(event as any).cancellationManualEntry})`}
+                                    </p>
+                                    {(event as any).cancelledBy && (
+                                        <p className="text-gray-400 text-sm mt-1">
+                                            <strong className="text-white">Cancelled by:</strong> {(event as any).cancelledBy}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        {/* Footer */}
+                        <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowRestoreConfirm(false)}
+                                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowRestoreConfirm(false);
+                                    if (onRestoreEvent) {
+                                        onRestoreEvent(event.id);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold"
+                            >
+                                Yes, Restore Event
                             </button>
                         </div>
                     </div>
