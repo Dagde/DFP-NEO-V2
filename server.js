@@ -6694,6 +6694,25 @@ app.get('/api/alerts/:userId', async (req, res) => {
       return res.status(400).json({ error: 'userId is required' });
     }
 
+    // Look up the user's full name so we can match against event recipient names
+    // Recipients in alerts are stored as "Last, First" (full name from event tiles)
+    let userFullNameReversed = null; // "Burns, Alexander"
+    let userFullName = null;         // "Alexander Burns"
+    try {
+      const userRows = await db.$queryRawUnsafe(
+        `SELECT "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
+        userId
+      );
+      if (userRows && userRows.length > 0) {
+        const u = userRows[0];
+        userFullName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim();
+        userFullNameReversed = ((u.lastName || '') + ', ' + (u.firstName || '')).trim();
+        console.log(`🔔 [Alerts] Resolved userId=${userId} => "${userFullName}" / "${userFullNameReversed}"`);
+      }
+    } catch (e) {
+      console.warn(`🔔 [Alerts] Could not resolve user name for ${userId}:`, e.message);
+    }
+
     // Load last 14 days of snapshots to find alerts
     const rows = await db.$queryRawUnsafe(
       `SELECT date, "alertsData" FROM "DailySnapshot" 
@@ -6711,8 +6730,17 @@ app.get('/api/alerts/:userId', async (req, res) => {
 
       for (const [eventId, alert] of Object.entries(alertsData)) {
         console.log(`🔔 [Alerts]   Event ${eventId}: recipients=[${alert.recipients?.join(', ')}]`);
-        if (alert.recipients && alert.recipients.includes(userId)) {
-          const myResponse = alert.responses?.[userId];
+        // Match by userId, full name "First Last", or reversed "Last, First"
+        const isRecipient = alert.recipients && (
+          alert.recipients.includes(userId) ||
+          (userFullName && alert.recipients.includes(userFullName)) ||
+          (userFullNameReversed && alert.recipients.includes(userFullNameReversed))
+        );
+        if (isRecipient) {
+          // Response key may be stored under userId, fullName, or reversed name - check all
+          const myResponse = alert.responses?.[userId]
+            || (userFullName ? alert.responses?.[userFullName] : undefined)
+            || (userFullNameReversed ? alert.responses?.[userFullNameReversed] : undefined);
           console.log(`🔔 [Alerts]   Match for ${userId}: status=${myResponse?.status || 'pending'}`);
           alerts.push({
             alertId: alert.alertId,
@@ -6785,21 +6813,51 @@ app.post('/api/alerts/:alertId/respond', async (req, res) => {
 
     const alert = alertsData[targetEventId];
 
-    // Verify this pilot is a recipient
-    if (!alert.recipients.includes(userId)) {
+    // Resolve user full name for recipient matching
+    let responseKey = userId; // default key for storing response
+    let userFullName = null;
+    let userFullNameReversed = null;
+    try {
+      const userRows = await db.$queryRawUnsafe(
+        `SELECT "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
+        userId
+      );
+      if (userRows && userRows.length > 0) {
+        const u = userRows[0];
+        userFullName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim();
+        userFullNameReversed = ((u.lastName || '') + ', ' + (u.firstName || '')).trim();
+      }
+    } catch (e) {
+      console.warn(`[Alerts respond] Could not resolve name for ${userId}`);
+    }
+
+    // Verify this pilot is a recipient - check userId, full name, and reversed name
+    const isRecipient = alert.recipients.includes(userId) ||
+      (userFullName && alert.recipients.includes(userFullName)) ||
+      (userFullNameReversed && alert.recipients.includes(userFullNameReversed));
+
+    if (!isRecipient) {
       return res.status(403).json({ error: 'User is not a recipient of this alert' });
     }
 
+    // Find which key is used in responses (could be stored under full name)
+    if (alert.recipients.includes(userFullNameReversed)) {
+      responseKey = userFullNameReversed;
+    } else if (alert.recipients.includes(userFullName)) {
+      responseKey = userFullName;
+    }
+
     // Check if already responded
-    if (alert.responses[userId]?.status !== 'pending') {
+    const existingResponse = alert.responses[responseKey] || alert.responses[userId];
+    if (existingResponse?.status !== 'pending') {
       return res.status(409).json({ 
         error: 'Already responded to this alert',
-        status: alert.responses[userId].status
+        status: existingResponse.status
       });
     }
 
-    // Record the response
-    alert.responses[userId] = {
+    // Record the response under the matched key
+    alert.responses[responseKey] = {
       status,
       respondedAt: new Date().toISOString()
     };

@@ -44,6 +44,18 @@ struct ContentView: View {
                 .tabItem {
                     Label("Alerts", systemImage: alertsViewModel.pendingCount > 0 ? "bell.badge.fill" : "bell.fill")
                 }
+
+            // Unavailable tab
+            UnavailabilityView()
+                .tabItem {
+                    Label("Unavailable", systemImage: "calendar.badge.exclamationmark")
+                }
+
+            // Profile tab
+            ProfileView()
+                .tabItem {
+                    Label("Profile", systemImage: "person.fill")
+                }
         }
         .environmentObject(alertsViewModel)
         .task {

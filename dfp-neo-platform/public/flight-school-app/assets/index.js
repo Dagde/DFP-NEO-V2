@@ -12505,6 +12505,31 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-center justify-center", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 transform transition-all animate-fade-in flex flex-col max-h-[85vh]", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `py-[5px] px-2 border-b border-gray-700 flex justify-center items-center relative ${event.color} flex-shrink-0 min-h-[65px]`, children: [
+        canSendAlert && onSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-2 flex items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => {
+              const rawPeople = [];
+              if (event.flightType === "Solo" && event.pilot) {
+                rawPeople.push(event.pilot);
+              } else {
+                if (event.instructor) rawPeople.push(event.instructor);
+                if (event.student) rawPeople.push(event.student);
+                if (event.pilot) rawPeople.push(event.pilot);
+              }
+              const people = rawPeople.filter((p, i, arr) => arr.indexOf(p) === i);
+              setAlertRecipients(people);
+              setAlertSent(false);
+              setShowAlertPanel(true);
+            },
+            className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
+              "Send",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Alert"
+            ] })
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: modalTitle }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute right-2 flex items-center space-x-4", children: [
           isEditing && eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-black/20", children: [
@@ -12525,30 +12550,6 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Add Deployment" })
           ] }),
-          canSendAlert && onSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: () => {
-                const people = [];
-                if (event.flightType === "Solo" && event.pilot) {
-                  people.push(event.pilot);
-                } else {
-                  if (event.instructor) people.push(event.instructor);
-                  if (event.student) people.push(event.student);
-                  if (event.pilot) people.push(event.pilot);
-                }
-                setAlertRecipients(people);
-                setAlertSent(false);
-                setShowAlertPanel(true);
-              },
-              className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
-                "Send",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                "Alert"
-              ] })
-            }
-          ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
             isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowDeleteChoice(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md", style: { backgroundColor: "#FF6666", color: "white" }, "aria-label": "Delete Event", children: "Delete" })
@@ -13012,7 +13013,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         ] }),
         alertSent && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-green-900/30 border border-green-600/40 rounded-lg p-3 text-green-300 text-sm text-center", children: "✅ Alert sent successfully!" })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 flex gap-3 justify-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 flex gap-[1px] justify-end", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {

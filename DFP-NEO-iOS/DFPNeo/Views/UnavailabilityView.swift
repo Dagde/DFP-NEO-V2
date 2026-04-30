@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct UnavailabilityView: View {
-    @Environment(\.dismiss) var dismiss
     @StateObject private var viewModel = UnavailabilityViewModel()
     @State private var selectedTab = 0
     
@@ -45,18 +44,9 @@ struct UnavailabilityView: View {
             }
             .navigationTitle("Report Unavailability")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .foregroundColor(.white)
-                }
-            }
             .alert("Unavailability Submitted", isPresented: $viewModel.showingResult) {
                 Button("OK") {
                     viewModel.resetForm()
-                    dismiss()
                 }
             } message: {
                 if let result = viewModel.submissionResult {
