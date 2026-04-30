@@ -8835,31 +8835,55 @@ const App: React.FC = () => {
     
     // handleSendAlert
     const handleSendAlert = async (eventId: string, recipients: string[]) => {
+        // Always use relative /api - works on any domain
+        const apiBase = '/api';
+        const userId = getCurrentUserId() || currentUserName;
+        const eventForAlert = events.find(e => e.id === eventId) || selectedEvent;
+
+        console.log('🔔 [Alert] ========== SEND ALERT START ==========');
+        console.log('🔔 [Alert] eventId:', eventId);
+        console.log('🔔 [Alert] date:', date);
+        console.log('🔔 [Alert] sentBy:', userId);
+        console.log('🔔 [Alert] recipients:', recipients);
+        console.log('🔔 [Alert] URL:', `${apiBase}/alerts/send`);
+        console.log('🔔 [Alert] eventForAlert:', eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : 'NOT FOUND');
+
+        if (!recipients || recipients.length === 0) {
+            console.warn('🔔 [Alert] No recipients - alert not sent');
+            return;
+        }
+
         try {
-            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-            const userId = getCurrentUserId() || currentUserName;
-            const eventForAlert = events.find(e => e.id === eventId) || selectedEvent;
+            const payload = {
+                date,
+                eventId,
+                sentBy: userId,
+                recipients,
+                eventDetails: eventForAlert ? {
+                    flightNumber: eventForAlert.flightNumber,
+                    startTime: eventForAlert.startTime,
+                    duration: eventForAlert.duration,
+                    resourceId: eventForAlert.resourceId,
+                    instructor: eventForAlert.instructor,
+                    student: eventForAlert.student,
+                    pilot: eventForAlert.pilot,
+                } : {},
+            };
+
+            console.log('🔔 [Alert] Payload:', JSON.stringify(payload, null, 2));
+
             const res = await fetch(`${apiBase}/alerts/send`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    date,
-                    eventId,
-                    sentBy: userId,
-                    recipients,
-                    eventDetails: eventForAlert ? {
-                        flightNumber: eventForAlert.flightNumber,
-                        startTime: eventForAlert.startTime,
-                        duration: eventForAlert.duration,
-                        resourceId: eventForAlert.resourceId,
-                        instructor: eventForAlert.instructor,
-                        student: eventForAlert.student,
-                        pilot: eventForAlert.pilot,
-                    } : {},
-                }),
+                body: JSON.stringify(payload),
             });
+
+            const responseText = await res.text();
+            console.log('🔔 [Alert] Response status:', res.status);
+            console.log('🔔 [Alert] Response body:', responseText);
+
             if (res.ok) {
-                const data = await res.json();
+                const data = JSON.parse(responseText);
                 setAlertsDataByDate(prev => ({
                     ...prev,
                     [date]: {
@@ -8867,13 +8891,14 @@ const App: React.FC = () => {
                         [eventId]: data.alertEntry || data,
                     },
                 }));
-                console.log('[Alert] Alert sent for event', eventId);
+                console.log('🔔 [Alert] Alert sent successfully! alertId:', data.alertId);
             } else {
-                console.warn('[Alert] Failed to send alert:', await res.text());
+                console.warn('🔔 [Alert] Failed to send alert. Status:', res.status, 'Body:', responseText);
             }
         } catch (err) {
-            console.error('[Alert] Error sending alert:', err);
+            console.error('🔔 [Alert] Exception sending alert:', err);
         }
+        console.log('🔔 [Alert] ========== SEND ALERT END ==========');
     };
 
     // Visual Adjust handlers

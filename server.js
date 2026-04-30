@@ -6688,6 +6688,8 @@ app.get('/api/alerts/:userId', async (req, res) => {
     const db = await getPrisma();
     const { userId } = req.params;
 
+    console.log(`🔔 [Alerts] GET /api/alerts/${userId} - Request received`);
+
     if (!userId) {
       return res.status(400).json({ error: 'userId is required' });
     }
@@ -6699,13 +6701,19 @@ app.get('/api/alerts/:userId', async (req, res) => {
        ORDER BY date DESC LIMIT 14`
     );
 
+    console.log(`🔔 [Alerts] Found ${rows ? rows.length : 0} snapshots with alertsData`);
+
     const alerts = [];
     for (const row of rows || []) {
       const alertsData = row.alertsData || {};
+      const eventCount = Object.keys(alertsData).length;
+      console.log(`🔔 [Alerts] Snapshot ${row.date}: ${eventCount} alert entries`);
+
       for (const [eventId, alert] of Object.entries(alertsData)) {
+        console.log(`🔔 [Alerts]   Event ${eventId}: recipients=[${alert.recipients?.join(', ')}]`);
         if (alert.recipients && alert.recipients.includes(userId)) {
           const myResponse = alert.responses?.[userId];
-          // Only include if not yet responded (pending) OR include all for history
+          console.log(`🔔 [Alerts]   Match for ${userId}: status=${myResponse?.status || 'pending'}`);
           alerts.push({
             alertId: alert.alertId,
             eventId,
@@ -6727,7 +6735,7 @@ app.get('/api/alerts/:userId', async (req, res) => {
       return new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime();
     });
 
-    console.log(`✅ GET /api/alerts/${userId} - ${alerts.length} alerts found`);
+    console.log(`✅ GET /api/alerts/${userId} - returning ${alerts.length} alerts`);
     res.json({ alerts });
   } catch (error) {
     console.error('❌ GET /api/alerts/:userId error:', error);
