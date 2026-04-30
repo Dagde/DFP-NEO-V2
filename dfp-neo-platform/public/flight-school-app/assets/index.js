@@ -8902,6 +8902,7 @@ const TraineeProfileFlyout = ({
         page: "Trainee Roster"
       });
       const updatedUnavailability = [...unavailability, newPeriod];
+      setUnavailability(updatedUnavailability);
       onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
       setShowAddUnavailability(false);
     }
@@ -8930,6 +8931,7 @@ const TraineeProfileFlyout = ({
       });
       const updatedUnavailability = [...unavailability, newPeriod];
       console.log("Calling onUpdateTrainee with updated unavailability", updatedUnavailability);
+      setUnavailability(updatedUnavailability);
       onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
     }
   };
@@ -8937,7 +8939,7 @@ const TraineeProfileFlyout = ({
     if (isCreating) {
       setUnavailability((prev) => prev.filter((p) => p.id !== idToRemove));
     } else {
-      const periodToRemove = unavailability?.find((p) => p.id === idToRemove);
+      const periodToRemove = unavailability.find((p) => p.id === idToRemove);
       if (periodToRemove) {
         const dateRange = periodToRemove.startDate === periodToRemove.endDate ? periodToRemove.startDate : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
         logAudit({
@@ -8948,6 +8950,7 @@ const TraineeProfileFlyout = ({
         });
       }
       const updatedUnavailability = unavailability.filter((p) => p.id !== idToRemove);
+      setUnavailability(updatedUnavailability);
       onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
     }
   };
@@ -9120,7 +9123,7 @@ const TraineeProfileFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "text-gray-400 hover:text-white text-xs", children: "✕ Close" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: unavailability.length > 0 ? unavailability.map((p) => {
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (unavailability || []).length > 0 ? (unavailability || []).map((p) => {
               let periodDisplay = "";
               if (p.allDay) {
                 const sd = formatDate$4(p.startDate);
@@ -11433,7 +11436,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, isChanged = false, alertData = null, onSendAlert, canSendAlert = false }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -11447,9 +11450,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [isEditing, setIsEditing] = reactExports.useState(isEditingDefault);
   const [localHighlight, setLocalHighlight] = reactExports.useState(highlightedField);
   const [showDeleteChoice, setShowDeleteChoice] = reactExports.useState(false);
-  const [showAlertPopout, setShowAlertPopout] = reactExports.useState(false);
-  const [alertSelectedRecipients, setAlertSelectedRecipients] = reactExports.useState([]);
   const [showCancelConfirm, setShowCancelConfirm] = reactExports.useState(false);
+  const [showRemovePin, setShowRemovePin] = reactExports.useState(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = reactExports.useState(false);
   const [showMassBriefComplete, setShowMassBriefComplete] = reactExports.useState(false);
   const [showMassBriefConfirmation, setShowMassBriefConfirmation] = reactExports.useState(false);
   const [completedTrainees, setCompletedTrainees] = reactExports.useState([]);
@@ -11545,6 +11548,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const groupInputRef = reactExports.useRef(null);
   const [syllabusSelectionError, setSyllabusSelectionError] = reactExports.useState(false);
   const [showTraineeScoresModal, setShowTraineeScoresModal] = reactExports.useState(false);
+  const [showAlertPanel, setShowAlertPanel] = reactExports.useState(false);
+  const [alertRecipients, setAlertRecipients] = reactExports.useState([]);
+  const [alertSent, setAlertSent] = reactExports.useState(false);
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;
@@ -11846,11 +11852,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     }));
   }, [courses, traineesData]);
   const modalTitle = reactExports.useMemo(() => {
-    if (event._academicTileClick || event.isAcademic) return "Ground School Details";
     if (eventType === "flight") return "Flight Details";
     if (eventType === "ftd") return "FTD Session Details";
     return "Ground Event Details";
-  }, [eventType, event]);
+  }, [eventType]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
     if (isEditingDefault && !event.flightNumber) {
@@ -12276,26 +12281,19 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const handleCompleteClick = () => {
     if (event.flightNumber.includes("MB") || event.flightNumber.includes(" MB")) {
       setShowMassBriefComplete(true);
-      return;
-    }
-    if (event.isAcademic || event.academicTiles || event._academicTileClick) {
-      setShowMassBriefComplete(true);
-      return;
-    }
-    if (traineeObject) {
-      alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
     } else {
-      alert(`Ground event "${event.flightNumber}" marked as complete`);
+      if (traineeObject) {
+        alert(`Ground event "${event.flightNumber}" marked as complete for ${traineeObject.rank} ${traineeObject.name}`);
+      } else {
+        alert(`Ground event "${event.flightNumber}" marked as complete`);
+      }
+      onClose();
     }
-    onClose();
   };
   const handleMassBriefComplete = (confirmedTrainees) => {
     console.log("Mass Brief completed for trainees:", confirmedTrainees.map((t) => t.fullName));
     const currentDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    const instructor = event._tileInstructor || event.instructor || "System";
-    const completionFlightNumber = event.flightNumber;
-    const isAcademicCompletion = event.isAcademic || event.academicTiles || event._academicTileClick;
-    const overallComments = isAcademicCompletion ? `Academic lesson completed: ${completionFlightNumber} on ${currentDate}` : `Ground event completed via Mass Brief completion on ${currentDate}`;
+    const instructor = event.instructor || "System";
     if (onSavePT051Assessment) {
       confirmedTrainees.forEach((trainee) => {
         const assessment = {
@@ -12303,17 +12301,22 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           traineeName: trainee.name,
           traineeFullName: trainee.fullName || `${trainee.rank} ${trainee.name}`,
           eventId: event.id,
-          flightNumber: completionFlightNumber,
+          flightNumber: event.flightNumber,
           date: currentDate,
           instructorName: instructor,
           dcoResult: "DCO",
+          // Check DCO box
           overallGrade: "No Grade",
+          // Set to "No Grade"
           overallResult: null,
-          overallComments,
+          // null for ground events
+          overallComments: `Ground event completed via Mass Brief completion on ${currentDate}`,
+          // String format for compatibility
           scores: [],
+          // Empty scores array for ground events
           isCompleted: true,
           groundSchoolAssessment: {
-            isAssessment: isAcademicCompletion,
+            isAssessment: false,
             result: 0
           }
         };
@@ -12522,6 +12525,30 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Add Deployment" })
           ] }),
+          canSendAlert && onSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => {
+                const people = [];
+                if (event.flightType === "Solo" && event.pilot) {
+                  people.push(event.pilot);
+                } else {
+                  if (event.instructor) people.push(event.instructor);
+                  if (event.student) people.push(event.student);
+                  if (event.pilot) people.push(event.pilot);
+                }
+                setAlertRecipients(people);
+                setAlertSent(false);
+                setShowAlertPanel(true);
+              },
+              className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
+                "Send",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Alert"
+              ] })
+            }
+          ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
             isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setShowDeleteChoice(true), className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold rounded-md", style: { backgroundColor: "#FF6666", color: "white" }, "aria-label": "Delete Event", children: "Delete" })
@@ -12927,32 +12954,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               )
             ] }),
-            event.type === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
+            (event.type === "flight" || event.type === "ftd") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-[75px]", children: [
               isFrozen && !freezeAllowedActions.postFlightTimes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePostFlightClick, className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
                 "Post",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                 "Flight"
               ] }) })
-            ] }),
-            isChanged && canSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative w-[75px]", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => {
-                  const pilots = [];
-                  if (event.flightType === "Solo" && event.pilot) {
-                    pilots.push(event.pilot);
-                  } else {
-                    if (event.instructor) pilots.push(event.instructor);
-                    if (event.student) pilots.push(event.student);
-                  }
-                  setAlertSelectedRecipients(pilots);
-                  setShowAlertPopout(true);
-                },
-                className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px] ${alertData ? "active" : ""}`,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: alertData ? Object.values(alertData.responses || {}).some((r) => r.status === "rejected") ? "#ef4444" : Object.values(alertData.responses || {}).every((r) => r.status === "accepted") ? "#16a34a" : "#f59e0b" : "#f59e0b" }, children: "ALERT" })
-              }
-            ) })
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-grow" }),
           " ",
@@ -12968,55 +12977,46 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         ] })
       ] })
     ] }) }),
-    showAlertPopout && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowAlertPopout(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-amber-500/50", onClick: (e) => e.stopPropagation(), children: [
+    showAlertPanel && canSendAlert && onSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowAlertPanel(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-amber-500/50", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-amber-400", children: "Send Alert" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 text-sm", children: [
-          "Select the pilot(s) to notify about the schedule change for ",
+          "Select recipients to notify about ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-white", children: event.flightNumber }),
           ":"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (() => {
-          const pilots = [];
-          if (event.flightType === "Solo" && event.pilot) {
-            pilots.push(event.pilot);
-          } else {
-            if (event.instructor) pilots.push(event.instructor);
-            if (event.student) pilots.push(event.student);
-          }
-          return pilots.map((pilot) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          [event.instructor, event.student, event.pilot].filter(Boolean).map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
               {
                 type: "checkbox",
-                className: "w-4 h-4 accent-amber-500",
-                checked: alertSelectedRecipients.includes(pilot),
+                checked: alertRecipients.includes(person),
                 onChange: (e) => {
                   if (e.target.checked) {
-                    setAlertSelectedRecipients((prev) => [...prev, pilot]);
+                    setAlertRecipients((prev) => [...prev, person]);
                   } else {
-                    setAlertSelectedRecipients((prev) => prev.filter((p) => p !== pilot));
+                    setAlertRecipients((prev) => prev.filter((r) => r !== person));
                   }
-                }
+                },
+                className: "w-4 h-4 accent-amber-500"
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: pilot }),
-            alertData?.responses?.[pilot] && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto text-xs font-bold px-2 py-0.5 rounded ${alertData.responses[pilot].status === "accepted" ? "bg-green-800 text-green-200" : alertData.responses[pilot].status === "rejected" ? "bg-red-800 text-red-200" : "bg-amber-800 text-amber-200"}`, children: alertData.responses[pilot].status.toUpperCase() })
-          ] }, pilot));
-        })() }),
-        alertData && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-3 bg-gray-700/30 rounded-lg border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400", children: [
-          "Previously sent: ",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: new Date(alertData.sentAt).toLocaleString() })
-        ] }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: person }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs ml-auto", children: person === event.instructor ? "Instructor" : person === event.student ? "Student" : "Pilot" })
+          ] }, person)),
+          ![event.instructor, event.student, event.pilot].some(Boolean) && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm text-center py-2", children: "No personnel assigned to this event." })
+        ] }),
+        alertSent && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-green-900/30 border border-green-600/40 rounded-lg p-3 text-green-300 text-sm text-center", children: "✅ Alert sent successfully!" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 flex gap-3 justify-end", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => setShowAlertPopout(false),
+            onClick: () => setShowAlertPanel(false),
             className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Cancel" })
           }
@@ -13024,14 +13024,14 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            disabled: alertSelectedRecipients.length === 0,
-            onClick: () => {
-              if (onSendAlert && alertSelectedRecipients.length > 0) {
-                onSendAlert(event.id, alertSelectedRecipients);
-                setShowAlertPopout(false);
-              }
+            disabled: alertRecipients.length === 0 || alertSent,
+            onClick: async () => {
+              console.log("🔔 [Alert] Send button clicked - eventId:", event.id, "recipients:", alertRecipients);
+              await onSendAlert(event.id, alertRecipients);
+              setAlertSent(true);
+              setTimeout(() => setShowAlertPanel(false), 1500);
             },
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertSelectedRecipients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 || alertSent ? "opacity-50 cursor-not-allowed" : ""}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#f59e0b" }, children: [
               "SEND",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -13044,11 +13044,28 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     showDeleteChoice && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowDeleteChoice(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-red-500/50", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-red-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-red-400", children: "Delete Event" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-red-400", children: event.isCancelled ? "Cancelled Event Options" : "Delete Event" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: "What would you like to do with this event?" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: event.isCancelled ? "This event is cancelled. What would you like to do?" : "What would you like to do with this event?" }),
+        event.isCancelled && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => {
+              setShowDeleteChoice(false);
+              setShowRestoreConfirm(true);
+            },
+            className: "w-full flex items-start gap-3 p-4 bg-green-900/20 border border-green-600/40 rounded-lg hover:bg-green-900/40 transition-colors text-left",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 w-8 h-8 flex-shrink-0 rounded-full bg-green-600/20 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-green-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-green-300 font-semibold text-sm", children: "Restore to Schedule" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400 text-xs mt-0.5", children: "Removes the cancellation and restores this event to active status with full functionality." })
+              ] })
+            ]
+          }
+        ),
+        !event.isCancelled && /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             onClick: () => {
@@ -13070,7 +13087,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           {
             onClick: () => {
               setShowDeleteChoice(false);
-              onDeleteRequest();
+              setShowRemovePin(true);
             },
             className: "w-full flex items-start gap-3 p-4 bg-red-900/20 border border-red-600/40 rounded-lg hover:bg-red-900/40 transition-colors text-left",
             children: [
@@ -13091,6 +13108,70 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           children: "Back"
         }
       ) })
+    ] }) }),
+    showRemovePin && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      PinEntryFlyout,
+      {
+        correctPin: "1111",
+        onConfirm: () => {
+          setShowRemovePin(false);
+          onDeleteRequest();
+        },
+        onCancel: () => setShowRemovePin(false),
+        title: "Confirm Permanent Removal",
+        message: "⚠ This will permanently remove this event from the schedule and cannot be undone. Enter your PIN to confirm."
+      }
+    ),
+    showRestoreConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowRestoreConfirm(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-green-500/50", onClick: (e) => e.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-green-900/20 flex items-center space-x-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-green-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-green-400", children: "Restore Event" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: "You are about to restore this cancelled event back to the active schedule." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-green-900/20 border border-green-600/40 rounded-md p-3 space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-green-300 text-sm font-semibold", children: "What this will do:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: "• Remove the cancellation mark and redline" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: "• Restore the event to its original position" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: "• Re-enable full scheduling functionality" })
+        ] }),
+        event.cancellationCode && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 border border-gray-600 rounded-md p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Previous cancellation code:" }),
+            " ",
+            event.cancellationCode,
+            event.cancellationManualEntry && ` (${event.cancellationManualEntry})`
+          ] }),
+          event.cancelledBy && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Cancelled by:" }),
+            " ",
+            event.cancelledBy
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowRestoreConfirm(false),
+            className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold",
+            children: "Cancel"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => {
+              setShowRestoreConfirm(false);
+              if (onRestoreEvent) {
+                onRestoreEvent(event.id);
+              }
+            },
+            className: "px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold",
+            children: "Yes, Restore Event"
+          }
+        )
+      ] })
     ] }) }),
     showCancelConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(
       CancelEventFlyout,
@@ -22188,31 +22269,21 @@ const InstructorProfileFlyout = ({
     const todayStr = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
     const newPeriod = { id: v4(), startDate: todayStr, endDate: todayStr, allDay: false, startTime: "0001", endTime: "2359", reason: "Other", notes: "Today Only" };
     logAudit({ action: "Add", description: `Added unavailability for ${instructor.rank} ${instructor.name}`, changes: `Today Only - ${todayStr}`, page: "Staff" });
-    onUpdateInstructor({ ...instructor, unavailability: [...instructor.unavailability || [], newPeriod] });
+    const updated = [...unavailabilityPeriods, newPeriod];
+    setUnavailabilityPeriods(updated);
+    onUpdateInstructor({ ...instructor, unavailability: updated });
     setShowAddUnavailability(false);
   };
   const handleSaveUnavailability = (periodData) => {
     const newPeriod = { ...periodData, id: v4(), startTime: periodData.allDay ? void 0 : periodData.startTime, endTime: periodData.allDay ? void 0 : periodData.endTime };
-    onUpdateInstructor({ ...instructor, unavailability: [...instructor.unavailability || [], newPeriod] });
+    const updated = [...unavailabilityPeriods, newPeriod];
+    setUnavailabilityPeriods(updated);
+    onUpdateInstructor({ ...instructor, unavailability: updated });
   };
   const handleRemoveUnavailability = (idToRemove) => {
-    console.log("🗑️ [INSTRUCTOR] DELETE START - idToRemove:", idToRemove);
-    console.log("🗑️ [INSTRUCTOR] Current unavailabilityPeriods state:", unavailabilityPeriods);
-    console.log("🗑️ [INSTRUCTOR] Instructor object:", { id: instructor.id, name: instructor.name });
-    const periodToRemove = unavailabilityPeriods.find((p) => p.id === idToRemove);
-    console.log("🗑️ [INSTRUCTOR] Period to remove:", periodToRemove);
-    const updatedPeriods = unavailabilityPeriods.filter((p) => p.id !== idToRemove);
-    console.log("🗑️ [INSTRUCTOR] Updated periods after filter:", updatedPeriods);
-    console.log("🗑️ [INSTRUCTOR] Calling setUnavailabilityPeriods");
-    setUnavailabilityPeriods((prev) => prev.filter((p) => p.id !== idToRemove));
-    console.log("🗑️ [INSTRUCTOR] Calling onUpdateInstructor with instructor object");
-    console.log("🗑️ [INSTRUCTOR] Instructor object to update:", {
-      id: instructor.id,
-      name: instructor.name,
-      unavailability: updatedPeriods
-    });
-    onUpdateInstructor({ ...instructor, unavailability: updatedPeriods });
-    console.log("🗑️ [INSTRUCTOR] DELETE COMPLETE");
+    const updated = unavailabilityPeriods.filter((p) => p.id !== idToRemove);
+    setUnavailabilityPeriods(updated);
+    onUpdateInstructor({ ...instructor, unavailability: updated });
   };
   const formatMilitaryTime2 = (t) => t ? t.replace(":", "") : "";
   const [activeTab, setActiveTab] = reactExports.useState(null);
@@ -68946,7 +69017,26 @@ ${"=".repeat(60)}`);
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify(patchBody)
+          body: JSON.stringify({
+            name: data.name,
+            fullName: data.fullName,
+            rank: data.rank,
+            course: data.course,
+            lmpType: data.lmpType,
+            academicLmpType: data.academicLmpType || "",
+            unit: data.unit,
+            flight: data.flight,
+            location: data.location,
+            service: data.service,
+            seatConfig: data.seatConfig,
+            isPaused: data.isPaused,
+            traineeCallsign: data.traineeCallsign,
+            primaryInstructor: data.primaryInstructor,
+            secondaryInstructor: data.secondaryInstructor,
+            phoneNumber: data.phoneNumber,
+            email: data.email,
+            unavailability: data.unavailability || []
+          })
         });
         console.log("📝 [APP] PATCH response status:", response.status);
         console.log("📝 [APP] PATCH response ok:", response.ok);
@@ -69992,31 +70082,47 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setSelectedEvent(null);
   };
   const handleSendAlert = async (eventId, recipients) => {
+    const apiBase2 = "/api";
+    const userId = getCurrentUserId() || currentUserName;
+    const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
+    console.log("🔔 [Alert] ========== SEND ALERT START ==========");
+    console.log("🔔 [Alert] eventId:", eventId);
+    console.log("🔔 [Alert] date:", date);
+    console.log("🔔 [Alert] sentBy:", userId);
+    console.log("🔔 [Alert] recipients:", recipients);
+    console.log("🔔 [Alert] URL:", `${apiBase2}/alerts/send`);
+    console.log("🔔 [Alert] eventForAlert:", eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : "NOT FOUND");
+    if (!recipients || recipients.length === 0) {
+      console.warn("🔔 [Alert] No recipients - alert not sent");
+      return;
+    }
     try {
-      const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
-      const userId = getCurrentUserId() || currentUserName;
-      const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
+      const payload = {
+        date,
+        eventId,
+        sentBy: userId,
+        recipients,
+        eventDetails: eventForAlert ? {
+          flightNumber: eventForAlert.flightNumber,
+          startTime: eventForAlert.startTime,
+          duration: eventForAlert.duration,
+          resourceId: eventForAlert.resourceId,
+          instructor: eventForAlert.instructor,
+          student: eventForAlert.student,
+          pilot: eventForAlert.pilot
+        } : {}
+      };
+      console.log("🔔 [Alert] Payload:", JSON.stringify(payload, null, 2));
       const res = await fetch(`${apiBase2}/alerts/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          date,
-          eventId,
-          sentBy: userId,
-          recipients,
-          eventDetails: eventForAlert ? {
-            flightNumber: eventForAlert.flightNumber,
-            startTime: eventForAlert.startTime,
-            duration: eventForAlert.duration,
-            resourceId: eventForAlert.resourceId,
-            instructor: eventForAlert.instructor,
-            student: eventForAlert.student,
-            pilot: eventForAlert.pilot
-          } : {}
-        })
+        body: JSON.stringify(payload)
       });
+      const responseText = await res.text();
+      console.log("🔔 [Alert] Response status:", res.status);
+      console.log("🔔 [Alert] Response body:", responseText);
       if (res.ok) {
-        const data = await res.json();
+        const data = JSON.parse(responseText);
         setAlertsDataByDate((prev) => ({
           ...prev,
           [date]: {
@@ -70024,13 +70130,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             [eventId]: data.alertEntry || data
           }
         }));
-        console.log("[Alert] Alert sent for event", eventId);
+        console.log("🔔 [Alert] Alert sent successfully! alertId:", data.alertId);
       } else {
-        console.warn("[Alert] Failed to send alert:", await res.text());
+        console.warn("🔔 [Alert] Failed to send alert. Status:", res.status, "Body:", responseText);
       }
     } catch (err) {
-      console.error("[Alert] Error sending alert:", err);
+      console.error("🔔 [Alert] Exception sending alert:", err);
     }
+    console.log("🔔 [Alert] ========== SEND ALERT END ==========");
   };
   const handleVisualAdjustStart = async (event) => {
     console.log("Visual Adjust Start - Event:", event);

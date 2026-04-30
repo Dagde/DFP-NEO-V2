@@ -1867,6 +1867,29 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     <span className="text-sm font-semibold text-white">Add Deployment</span>
                                 </label>
                             )}
+                            {/* ALERT button in header - same size/theme as Trainee Scores, amber colour */}
+                            {canSendAlert && onSendAlert && (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => {
+                                            const people: string[] = [];
+                                            if (event.flightType === 'Solo' && event.pilot) {
+                                                people.push(event.pilot);
+                                            } else {
+                                                if (event.instructor) people.push(event.instructor);
+                                                if (event.student) people.push(event.student);
+                                                if (event.pilot) people.push(event.pilot);
+                                            }
+                                            setAlertRecipients(people);
+                                            setAlertSent(false);
+                                            setShowAlertPanel(true);
+                                        }}
+                                        className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+                                    >
+                                        <span className="text-center leading-tight" style={{ color: '#f59e0b' }}>Send<br/>Alert</span>
+                                    </button>
+                                </div>
+                            )}
                             <div className="relative">
                                 {isFrozen && (
                                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -1896,29 +1919,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <span className="text-center leading-tight">Trainee<br/>Scores</span>
                                         </button>
                                     </div>
-                                    {/* ALERT button - same style as Trainee Scores, shown to Super Admin/Admin/Scheduler */}
-                                    {canSendAlert && onSendAlert && (
-                                        <div className="relative w-[75px]">
-                                            <button
-                                                onClick={() => {
-                                                    const people: string[] = [];
-                                                    if (event.flightType === 'Solo' && event.pilot) {
-                                                        people.push(event.pilot);
-                                                    } else {
-                                                        if (event.instructor) people.push(event.instructor);
-                                                        if (event.student) people.push(event.student);
-                                                        if (event.pilot) people.push(event.pilot);
-                                                    }
-                                                    setAlertRecipients(people);
-                                                    setAlertSent(false);
-                                                    setShowAlertPanel(true);
-                                                }}
-                                                className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md mb-[1px]"
-                                            >
-                                                <span className="text-center leading-tight" style={{ color: '#f59e0b' }}>Send<br/>Alert</span>
-                                            </button>
-                                        </div>
-                                    )}
+                                    
                                     <div className="relative w-[75px]">
                                         {isFrozen && (
                                             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -2334,7 +2335,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </div>
                                     )}
                                     {/* Post Flight button - frozen unless postFlightTimes is allowed */}
-                                    {event.type === 'flight' && (
+                                    {(event.type === 'flight' || event.type === 'ftd') && (
                                         <div className="relative w-[75px]">
                                             {isFrozen && !freezeAllowedActions.postFlightTimes && (
                                                 <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
