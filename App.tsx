@@ -8834,7 +8834,7 @@ const App: React.FC = () => {
 
     
     // handleSendAlert
-    const handleSendAlert = async (eventId: string, recipients: string[]) => {
+    const handleSendAlert = async (eventId: string, recipients: string[], description: string = '') => {
         // Always use relative /api - works on any domain
         const apiBase = '/api';
         const userId = getCurrentUserId() || currentUserName;
@@ -8859,6 +8859,7 @@ const App: React.FC = () => {
                 eventId,
                 sentBy: userId,
                 recipients,
+                description,
                 eventDetails: eventForAlert ? {
                     flightNumber: eventForAlert.flightNumber,
                     startTime: eventForAlert.startTime,
@@ -8899,6 +8900,31 @@ const App: React.FC = () => {
             console.error('🔔 [Alert] Exception sending alert:', err);
         }
         console.log('🔔 [Alert] ========== SEND ALERT END ==========');
+    };
+
+    // handleClearAlert - Clear alert history for an event to allow re-sending
+    const handleClearAlert = async (eventId: string) => {
+        const apiBase = '/api';
+        try {
+            const res = await fetch(`${apiBase}/alerts/clear`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId, date, clearedBy: getCurrentUserId() || currentUserName }),
+            });
+            if (res.ok) {
+                // Remove from local state immediately
+                setAlertsDataByDate(prev => {
+                    const dateData = { ...(prev[date] || {}) };
+                    delete dateData[eventId];
+                    return { ...prev, [date]: dateData };
+                });
+                console.log('🔔 [Alert] Alert cleared for event:', eventId);
+            } else {
+                console.warn('🔔 [Alert] Failed to clear alert:', res.status);
+            }
+        } catch (err) {
+            console.error('🔔 [Alert] Exception clearing alert:', err);
+        }
     };
 
     // Visual Adjust handlers
@@ -15430,6 +15456,7 @@ updates.forEach(update => {
                     })()) : false}
                     alertData={selectedEvent ? (alertsDataByDate[date]?.[selectedEvent.id] || null) : null}
                     onSendAlert={handleSendAlert}
+                    onClearAlert={handleClearAlert}
                     canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}
                 />
             )}

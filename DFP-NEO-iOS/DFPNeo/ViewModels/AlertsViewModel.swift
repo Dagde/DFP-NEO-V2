@@ -77,6 +77,23 @@ class AlertsViewModel: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Dismiss (delete) Alert from iOS list
+
+    func dismiss(alert: AlertResponse) async {
+        // Remove from local list immediately
+        alerts.removeAll { $0.id == alert.id }
+        pendingCount = alerts.filter { $0.isPending }.count
+
+        // Optionally notify server (fire-and-forget, non-critical)
+        guard let userId = APIService.shared.getUserId() else { return }
+        do {
+            try await APIService.shared.dismissAlert(alertId: alert.alertId, userId: userId)
+        } catch {
+            // Ignore - dismissal is local-only if server call fails
+            print("🔔 [Alerts] Dismiss server call failed (ignored): \(error)")
+        }
+    }
+
     // MARK: - Respond to Alert
 
     func respond(to alert: AlertResponse, status: AlertRecipientStatus) async {

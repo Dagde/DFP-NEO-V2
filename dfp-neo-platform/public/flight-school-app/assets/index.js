@@ -11436,7 +11436,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, onClearAlert }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -11551,6 +11551,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [showAlertPanel, setShowAlertPanel] = reactExports.useState(false);
   const [alertRecipients, setAlertRecipients] = reactExports.useState([]);
   const [alertSent, setAlertSent] = reactExports.useState(false);
+  const [alertDescription, setAlertDescription] = reactExports.useState("");
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;
@@ -12983,9 +12984,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       ] })
     ] }) }),
     showAlertPanel && canSendAlert && onSendAlert && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in", onClick: () => setShowAlertPanel(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-amber-500/50", onClick: (e) => e.stopPropagation(), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-amber-400", children: "Send Alert" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-amber-900/20 flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-6 w-6 text-amber-400", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-amber-400", children: "Send Alert" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Alert:${event.id}` })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5 space-y-4", children: alertSent || alertData ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-green-900/30 border border-green-600/40 rounded-lg p-3", children: [
@@ -12997,7 +13001,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             hour: "2-digit",
             minute: "2-digit",
             hour12: false
-          }) })
+          }) }),
+          alertData?.description && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-amber-300 text-xs mt-1 italic", children: [
+            "“",
+            alertData.description,
+            "”"
+          ] })
         ] }),
         alertData?.recipients && alertData.recipients.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1", children: "Recipients" }),
@@ -13026,7 +13035,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           ] }, r)) })
         ] })
       ] }) : (
-        /* Not yet sent: show recipient selection */
+        /* Not yet sent: show recipient selection + description */
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 text-sm", children: [
             "Select recipients to notify about ",
@@ -13062,7 +13071,23 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: person }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs ml-auto", children: person === event.instructor ? "Instructor" : person === event.student ? "Student" : "Pilot" })
             ] }, person)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm text-center py-2", children: "No personnel assigned to this event." });
-          })() })
+          })() }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide block mb-1", children: [
+              "Description of change ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400", children: "*" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                value: alertDescription,
+                onChange: (e) => setAlertDescription(e.target.value),
+                placeholder: "e.g. Start time moved from 08:00 to 09:30...",
+                rows: 2,
+                className: "w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500"
+              }
+            )
+          ] })
         ] })
       ) }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 flex gap-[1px] justify-end", children: [
@@ -13074,16 +13099,37 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Close" })
           }
         ),
+        (alertSent || alertData) && onClearAlert && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => {
+              if (window.confirm("Clear this alert? This will allow a new alert to be sent for this event.")) {
+                logAudit("Alert:" + event.id, "Delete", `Alert cleared for event ${event.flightNumber || event.id}`, `Recipients: ${alertData?.recipients?.join(", ") || alertRecipients.join(", ")}`);
+                onClearAlert(event.id);
+                setAlertSent(false);
+                setAlertDescription("");
+                setShowAlertPanel(false);
+              }
+            },
+            className: "w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight text-red-400", children: [
+              "Clear",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Alert"
+            ] })
+          }
+        ),
         !(alertSent || alertData) && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            disabled: alertRecipients.length === 0,
+            disabled: alertRecipients.length === 0 || alertDescription.trim().length === 0,
             onClick: async () => {
               console.log("🔔 [Alert] Send button clicked - eventId:", event.id, "recipients:", alertRecipients);
-              await onSendAlert(event.id, alertRecipients);
+              logAudit("Alert:" + event.id, "Add", `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(", ")} | Description: ${alertDescription}`);
+              await onSendAlert(event.id, alertRecipients, alertDescription);
               setAlertSent(true);
             },
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 || alertDescription.trim().length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#000000" }, children: [
               "SEND",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -70133,7 +70179,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     logAudit(pageName, "Restore", description, changes);
     setSelectedEvent(null);
   };
-  const handleSendAlert = async (eventId, recipients) => {
+  const handleSendAlert = async (eventId, recipients, description = "") => {
     const apiBase2 = "/api";
     const userId = getCurrentUserId() || currentUserName;
     const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
@@ -70154,6 +70200,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         eventId,
         sentBy: userId,
         recipients,
+        description,
         eventDetails: eventForAlert ? {
           flightNumber: eventForAlert.flightNumber,
           startTime: eventForAlert.startTime,
@@ -70190,6 +70237,28 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       console.error("🔔 [Alert] Exception sending alert:", err);
     }
     console.log("🔔 [Alert] ========== SEND ALERT END ==========");
+  };
+  const handleClearAlert = async (eventId) => {
+    const apiBase2 = "/api";
+    try {
+      const res = await fetch(`${apiBase2}/alerts/clear`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, date, clearedBy: getCurrentUserId() || currentUserName })
+      });
+      if (res.ok) {
+        setAlertsDataByDate((prev) => {
+          const dateData = { ...prev[date] || {} };
+          delete dateData[eventId];
+          return { ...prev, [date]: dateData };
+        });
+        console.log("🔔 [Alert] Alert cleared for event:", eventId);
+      } else {
+        console.warn("🔔 [Alert] Failed to clear alert:", res.status);
+      }
+    } catch (err) {
+      console.error("🔔 [Alert] Exception clearing alert:", err);
+    }
   };
   const handleVisualAdjustStart = async (event) => {
     console.log("Visual Adjust Start - Event:", event);
@@ -75597,6 +75666,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           })()) : false,
           alertData: selectedEvent ? alertsDataByDate[date]?.[selectedEvent.id] || null : null,
           onSendAlert: handleSendAlert,
+          onClearAlert: handleClearAlert,
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule"
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`

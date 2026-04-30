@@ -6620,7 +6620,7 @@ app.delete('/api/daily-snapshot/seed-cleanup', async (req, res) => {
 app.post('/api/alerts/send', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { eventId, date, sentBy, recipients, eventDetails } = req.body;
+    const { eventId, date, sentBy, recipients, description, eventDetails } = req.body;
 
     if (!eventId || !date || !sentBy || !recipients || recipients.length === 0) {
       return res.status(400).json({ error: 'eventId, date, sentBy, and recipients are required' });
@@ -6659,6 +6659,7 @@ app.post('/api/alerts/send', async (req, res) => {
       sentAt,
       sentBy,
       recipients,
+      description: description || '',
       eventDetails: eventDetails || {},
       responses
     };
@@ -6742,6 +6743,14 @@ app.get('/api/alerts/:userId', async (req, res) => {
             || (userFullName ? alert.responses?.[userFullName] : undefined)
             || (userFullNameReversed ? alert.responses?.[userFullNameReversed] : undefined);
           console.log(`🔔 [Alerts]   Match for ${userId}: status=${myResponse?.status || 'pending'}`);
+          // Skip if user has dismissed this alert
+          if (alert.dismissed && alert.dismissed.includes(userId)) {
+            continue;
+          }
+          if (alert.dismissed && userFullNameReversed && alert.dismissed.includes(userFullNameReversed)) {
+            continue;
+          }
+
           alerts.push({
             alertId: alert.alertId,
             eventId,
@@ -6928,6 +6937,104 @@ app.get('/api/alerts/event/:eventId', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/alerts/event/:eventId error:', error);
     res.status(500).json({ error: 'Failed to fetch alert status', details: error.message });
+  }
+});
+
+// POST /api/alerts/:alertId/dismiss - iOS user dismisses/deletes alert notification
+app.post('/api/alerts/:alertId/dismiss', async (req, res) => {
+  try {
+    const { alertId } = req.params;
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+    // Store dismissal in a lightweight way - just track in alertsData responses with 'dismissed' status
+    const db = await getPrisma();
+    const rows = await db.$queryRawUnsafe(
+      `SELECT date, "alertsData" FROM "DailySnapshot" 
+       WHERE "alertsData"::text LIKE $1
+       ORDER BY date DESC LIMIT 1`,
+      `%${alertId}%`
+    );
+    if (!rows || rows.length === 0) {
+      // Alert not found - that's OK, just acknowledge
+      return res.json({ success: true });
+    }
+    const row = rows[0];
+    const alertsData = row.alertsData || {};
+    // Find the event containing this alert
+    for (const [eventId, alert] of Object.entries(alertsData)) {
+      if (alert.alertId === alertId) {
+        // Add to dismissed list for this user
+        if (!alert.dismissed) alert.dismissed = [];
+        if (!alert.dismissed.includes(userId)) {
+          alert.dismissed.push(userId);
+          await db.$executeRawUnsafe(
+            `UPDATE "DailySnapshot" SET "alertsData" = $1::jsonb WHERE date = $2::text`,
+            JSON.stringify(alertsData),
+            row.date
+          );
+        }
+        break;
+      }
+    }
+    console.log(`✅ POST /api/alerts/${alertId}/dismiss - ${userId} dismissed alert`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ POST /api/alerts/:alertId/dismiss error:', error);
+    res.status(500).json({ error: 'Failed to dismiss alert', details: error.message });
+  }
+});
+
+// POST /api/alerts/clear - Clear alert for an event (allows re-sending)
+app.post('/api/alerts/clear', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { eventId, date, clearedBy } = req.body;
+
+    if (!eventId || !date) {
+      return res.status(400).json({ error: 'eventId and date are required' });
+    }
+
+    const rows = await db.$queryRawUnsafe(
+      `SELECT "alertsData" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+      date
+    );
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: `No snapshot found for date ${date}` });
+    }
+
+    const alertsData = rows[0].alertsData || {};
+
+    if (!alertsData[eventId]) {
+      return res.status(404).json({ error: `No alert found for event ${eventId}` });
+    }
+
+    // Archive the alert in audit trail before clearing
+    const clearedAlert = alertsData[eventId];
+    if (!alertsData._auditTrail) alertsData._auditTrail = [];
+    alertsData._auditTrail.push({
+      type: 'cleared',
+      clearedBy: clearedBy || 'unknown',
+      clearedAt: new Date().toISOString(),
+      originalAlert: clearedAlert
+    });
+
+    // Remove the event alert
+    delete alertsData[eventId];
+
+    await db.$executeRawUnsafe(
+      `UPDATE "DailySnapshot" SET "alertsData" = $1::jsonb WHERE date = $2::text`,
+      JSON.stringify(alertsData),
+      date
+    );
+
+    console.log(`✅ POST /api/alerts/clear - Alert cleared for event ${eventId} on ${date} by ${clearedBy}`);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ POST /api/alerts/clear error:', error);
+    res.status(500).json({ error: 'Failed to clear alert', details: error.message });
   }
 });
 

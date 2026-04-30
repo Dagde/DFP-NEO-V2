@@ -76,15 +76,24 @@ struct AlertsView: View {
     // MARK: - Alert List
 
     private var alertListView: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(viewModel.alerts) { alert in
-                    AlertCardView(alert: alert, viewModel: viewModel)
-                }
+        List {
+            ForEach(viewModel.alerts) { alert in
+                AlertCardView(alert: alert, viewModel: viewModel)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task { await viewModel.dismiss(alert: alert) }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
         }
+        .listStyle(.plain)
+        .background(Color.black)
+        .scrollContentBackground(.hidden)
     }
 
     // MARK: - Loading

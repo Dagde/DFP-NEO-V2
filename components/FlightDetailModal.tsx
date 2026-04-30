@@ -1,6 +1,8 @@
 import { showDarkAlert } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import AuditButton from './AuditButton';
+import { logAudit } from '../utils/auditLogger';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, OracleTraineeAnalysis, SctRequest, FormationCallsign, CancellationCode } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -371,9 +373,10 @@ interface EventDetailModalProps {
     cancellationCodes?: CancellationCode[];
     onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
     onRestoreEvent?: (eventId: string) => void;
-    onSendAlert?: (eventId: string, recipients: string[]) => void;
+    onSendAlert?: (eventId: string, recipients: string[], description: string) => void;
     canSendAlert?: boolean;
     alertData?: any | null;
+    onClearAlert?: (eventId: string) => void;
 }
 
 interface CrewMember {
@@ -411,7 +414,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, onClearAlert }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -557,6 +560,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [showAlertPanel, setShowAlertPanel] = useState(false);
     const [alertRecipients, setAlertRecipients] = useState<string[]>([]);
     const [alertSent, setAlertSent] = useState(false);
+    const [alertDescription, setAlertDescription] = useState('');
     const isOracleContext = !!oracleContextForModal;
     const instructorList = oracleContextForModal?.availableInstructors || instructors;
     const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map(t => t.trainee.fullName) : trainees;
@@ -2377,11 +2381,15 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                 <div className="fixed inset-0 bg-black/75 z-[85] flex items-center justify-center animate-fade-in" onClick={() => setShowAlertPanel(false)}>
                     <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-amber-500/50" onClick={e => e.stopPropagation()}>
                         {/* Header */}
-                        <div className="p-4 border-b border-gray-700 bg-amber-900/20 flex items-center space-x-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                            </svg>
-                            <h2 className="text-lg font-bold text-amber-400">Send Alert</h2>
+                        <div className="p-4 border-b border-gray-700 bg-amber-900/20 flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <h2 className="text-lg font-bold text-amber-400">Send Alert</h2>
+                            </div>
+                            {/* Audit button - top right of header */}
+                            <AuditButton pageName={`Alert:${event.id}`} />
                         </div>
                         {/* Body */}
                         <div className="p-5 space-y-4">
@@ -2399,6 +2407,12 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     day: '2-digit', month: 'short', year: 'numeric',
                                                     hour: '2-digit', minute: '2-digit', hour12: false
                                                 })}
+                                            </p>
+                                        )}
+                                        {/* Description of the change */}
+                                        {alertData?.description && (
+                                            <p className="text-amber-300 text-xs mt-1 italic">
+                                                &ldquo;{alertData.description}&rdquo;
                                             </p>
                                         )}
                                     </div>
@@ -2451,7 +2465,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     )}
                                 </div>
                             ) : (
-                                /* Not yet sent: show recipient selection */
+                                /* Not yet sent: show recipient selection + description */
                                 <>
                                     <p className="text-gray-300 text-sm">
                                         Select recipients to notify about <span className="font-bold text-white">{event.flightNumber}</span>:
@@ -2491,6 +2505,19 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             );
                                         })()}
                                     </div>
+                                    {/* Description of the change - required */}
+                                    <div>
+                                        <label className="text-gray-400 text-xs font-semibold uppercase tracking-wide block mb-1">
+                                            Description of change <span className="text-amber-400">*</span>
+                                        </label>
+                                        <textarea
+                                            value={alertDescription}
+                                            onChange={(e) => setAlertDescription(e.target.value)}
+                                            placeholder="e.g. Start time moved from 08:00 to 09:30..."
+                                            rows={2}
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500"
+                                        />
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -2502,15 +2529,34 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             >
                                 <span className="text-center leading-tight">Close</span>
                             </button>
+                            {/* Clear Alert button - only shown when alert already sent */}
+                            {(alertSent || alertData) && onClearAlert && (
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('Clear this alert? This will allow a new alert to be sent for this event.')) {
+                                            logAudit('Alert:' + event.id, 'Delete', `Alert cleared for event ${event.flightNumber || event.id}`, `Recipients: ${alertData?.recipients?.join(', ') || alertRecipients.join(', ')}`);
+                                            onClearAlert(event.id);
+                                            setAlertSent(false);
+                                            setAlertDescription('');
+                                            setShowAlertPanel(false);
+                                        }
+                                    }}
+                                    className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                >
+                                    <span className="text-center leading-tight text-red-400">Clear<br/>Alert</span>
+                                </button>
+                            )}
+                            {/* Send button - only when not yet sent */}
                             {!(alertSent || alertData) && (
                                 <button
-                                    disabled={alertRecipients.length === 0}
+                                    disabled={alertRecipients.length === 0 || alertDescription.trim().length === 0}
                                     onClick={async () => {
                                         console.log('\ud83d\udd14 [Alert] Send button clicked - eventId:', event.id, 'recipients:', alertRecipients);
-                                        await onSendAlert(event.id, alertRecipients);
+                                        logAudit('Alert:' + event.id, 'Add', `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(', ')} | Description: ${alertDescription}`);
+                                        await onSendAlert(event.id, alertRecipients, alertDescription);
                                         setAlertSent(true);
                                     }}
-                                    className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 || alertDescription.trim().length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     <span className="text-center leading-tight" style={{ color: '#000000' }}>SEND<br/>ALERT</span>
                                 </button>

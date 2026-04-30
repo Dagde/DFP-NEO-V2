@@ -206,6 +206,18 @@ final class APIService {
         }
     }
 
+    // MARK: - Root-relative helpers (bypass /mobile prefix, use /api directly)
+
+    /// GET from /api{endpoint} (alerts live at /api/alerts/, not /api/mobile/alerts/)
+    func getRoot<T: Decodable>(_ endpoint: String) async throws -> T {
+        return try await self.get(endpoint: endpoint)
+    }
+
+    /// POST to /api{endpoint}
+    func postRoot<T: Decodable, Body: Encodable>(_ endpoint: String, body: Body) async throws -> T {
+        return try await self.post(endpoint: endpoint, body: body)
+    }
+
     // MARK: - Alert API methods
 
     /// Fetch all alerts for a given userId
@@ -218,6 +230,20 @@ final class APIService {
     public func respondToAlert(alertId: String, userId: String, status: String) async throws -> AlertRespondResponse {
         let requestBody = AlertRespondRequest(userId: userId, status: status)
         return try await self.post(endpoint: "/alerts/\(alertId)/respond", body: requestBody)
+    }
+
+    /// Dismiss (delete) an alert notification from the iOS app (local only)
+    public func dismissAlert(alertId: String, userId: String) async throws {
+        struct DismissRequest: Encodable {
+            let userId: String
+        }
+        struct DismissResponse: Decodable {
+            let success: Bool?
+        }
+        let _: DismissResponse = try await self.post(
+            endpoint: "/alerts/\(alertId)/dismiss",
+            body: DismissRequest(userId: userId)
+        )
     }
 
 
