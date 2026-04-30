@@ -15427,7 +15427,7 @@ updates.forEach(update => {
                     })()) : false}
                     alertData={selectedEvent ? (alertsDataByDate[date]?.[selectedEvent.id] || null) : null}
                     onSendAlert={handleSendAlert}
-                    canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'DailyFlyingProgram'}
+                    canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}
                 />
             )}
             

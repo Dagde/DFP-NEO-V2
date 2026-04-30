@@ -75544,7 +75544,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           })()) : false,
           alertData: selectedEvent ? alertsDataByDate[date]?.[selectedEvent.id] || null : null,
           onSendAlert: handleSendAlert,
-          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "DailyFlyingProgram"
+          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule"
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
