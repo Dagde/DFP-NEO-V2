@@ -6720,6 +6720,7 @@ app.get('/api/alerts/:userId', async (req, res) => {
             date: row.date,
             sentAt: alert.sentAt,
             sentBy: alert.sentBy,
+            recipients: alert.recipients || [],
             eventDetails: alert.eventDetails || {},
             myStatus: myResponse?.status || 'pending',
             respondedAt: myResponse?.respondedAt || null

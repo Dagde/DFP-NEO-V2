@@ -2336,8 +2336,8 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </button>
                                         </div>
                                     )}
-                                    {/* ALERT button - only show when event has changed and user can send alerts */}
-                                    {isChanged && canSendAlert && (
+                                    {/* ALERT button - only show when user can send alerts */}
+                                    {canSendAlert && (
                                         <div className="relative w-[75px]">
                                             <button
                                                 onClick={() => {
