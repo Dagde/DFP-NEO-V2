@@ -23,7 +23,7 @@ class ScheduleViewModel: ObservableObject {
     
     // MARK: - Schedule Loading
     
-    func loadSchedule(for date: Date? = nil) async {
+    public func loadSchedule(for date: Date? = nil) async {
         let targetDate = date ?? currentDate
         isLoading = true
         errorMessage = nil
@@ -52,7 +52,7 @@ class ScheduleViewModel: ObservableObject {
         isLoading = false
     }
     
-    func refreshSchedule() async {
+    public func refreshSchedule() async {
         isRefreshing = true
         await loadSchedule(for: currentDate)
         isRefreshing = false

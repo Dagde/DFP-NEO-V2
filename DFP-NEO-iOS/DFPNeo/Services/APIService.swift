@@ -35,7 +35,7 @@ enum APIServiceError: LocalizedError {
 final class APIService {
     static let shared = APIService()
 
-    private let baseURLString = "https://app.dfp-neo.com"  // ✅ CORRECTED: Changed from "https://dfp-neo.com"
+    private let baseURLString = "https://app.dfp-neo.com"
     private let apiPrefix = "/api"
 
     private let session: URLSession
@@ -79,18 +79,15 @@ final class APIService {
         defaults.removeObject(forKey: userIdKey)
     }
 
-    /// Returns true if a non-empty access token is stored
     var hasValidToken: Bool {
         guard let token = accessToken, !token.isEmpty else { return false }
         return true
     }
 
-    /// Returns the stored userId (human-readable), if any
     var storedUserId: String? {
         defaults.string(forKey: userIdKey)
     }
 
-    /// Returns the stored access token, if any
     var storedAccessToken: String? {
         accessToken
     }
@@ -98,63 +95,55 @@ final class APIService {
     // MARK: - Public request helpers
 
     func get<T: Decodable>(endpoint: String, authenticated: Bool = true) async throws -> T {
-        try await request(endpoint: endpoint, method: .GET, body: nil, authenticated: authenticated)
+        return try await self.request(endpoint: endpoint, method: .GET, authenticated: authenticated)
     }
 
-    func post<T: Decodable, B: Encodable>(endpoint: String, body: B, authenticated: Bool = true) async throws -> T {
-        let data: Data
-        do {
-            data = try encoder.encode(body)
-        } catch {
-            throw APIServiceError.encodingFailed
-        }
-        return try await request(endpoint: endpoint, method: .POST, body: data, authenticated: authenticated)
+    func post<T: Decodable, Body: Encodable>(endpoint: String, body: Body, authenticated: Bool = true) async throws -> T {
+        return try await self.request(endpoint: endpoint, method: .POST, body: body, authenticated: authenticated)
     }
 
-    // MARK: - Core request (401 refresh retry)
+    func put<T: Decodable, Body: Encodable>(endpoint: String, body: Body, authenticated: Bool = true) async throws -> T {
+        return try await self.request(endpoint: endpoint, method: .PUT, body: body, authenticated: authenticated)
+    }
 
-    private func request<T: Decodable>(
+    func patch<T: Decodable, Body: Encodable>(endpoint: String, body: Body, authenticated: Bool = true) async throws -> T {
+        return try await self.request(endpoint: endpoint, method: .PATCH, body: body, authenticated: authenticated)
+    }
+
+    func delete<T: Decodable>(endpoint: String, authenticated: Bool = true) async throws -> T {
+        return try await self.request(endpoint: endpoint, method: .DELETE, authenticated: authenticated)
+    }
+
+    // MARK: - Core request method
+
+    private func request<T: Decodable, Body: Encodable>(
         endpoint: String,
         method: HTTPMethod,
-        body: Data?,
-        authenticated: Bool,
+        body: Body? = nil,
+        authenticated: Bool = true,
         hasRetriedAfterRefresh: Bool = false
     ) async throws -> T {
-
-        guard let baseURL = URL(string: baseURLString) else {
-            throw APIServiceError.invalidBaseURL
-        }
-
-        let finalPath = fullEndpoint(endpoint)
-        let cleaned = finalPath.hasPrefix("/") ? String(finalPath.dropFirst()) : finalPath
-
-        guard let url = URL(string: cleaned, relativeTo: baseURL) else {
+        guard let url = URL(string: fullEndpoint(endpoint)) else {
             throw APIServiceError.invalidURL
         }
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = method.rawValue
-        urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if let body = body {
-            urlRequest.httpBody = body
-            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            do {
+                urlRequest.httpBody = try self.encoder.encode(body)
+                urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            } catch {
+                throw APIServiceError.encodingFailed
+            }
         }
 
-        let token = accessToken
-        let uid = defaults.string(forKey: userIdKey)
-
-        if authenticated, let token, !token.isEmpty {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-            urlRequest.setValue(token, forHTTPHeaderField: "x-access-token")
-            urlRequest.setValue(token, forHTTPHeaderField: "X-Authorization")
+        if authenticated, let token = accessToken {
+            urlRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
-        if let uid, !uid.isEmpty {
-            urlRequest.setValue(uid, forHTTPHeaderField: "X-DFP-UserId")
-        }
-
-        debugLogRequest(urlRequest, authenticated: authenticated, token: token, userId: uid)
+        debugLogRequest(urlRequest, authenticated, token: accessToken, userId: storedUserId)
 
         let (data, response) = try await session.data(for: urlRequest)
 
@@ -165,7 +154,7 @@ final class APIService {
         if http.statusCode == 401, authenticated, !hasRetriedAfterRefresh {
             debugLogResponse(status: http.statusCode, url: url, data: data, note: "401 received — attempting refresh then retry")
             try await refreshAccessToken()
-            return try await request(
+            return try await self.request(
                 endpoint: endpoint,
                 method: method,
                 body: body,
@@ -181,7 +170,7 @@ final class APIService {
         }
 
         do {
-            return try decoder.decode(T.self, from: data)
+            return try self.decoder.decode(T.self, from: data)
         } catch {
             debugLogResponse(status: http.statusCode, url: url, data: data, note: "Decoding failed for \(String(describing: T.self))")
             throw APIServiceError.decodingFailed
@@ -205,7 +194,7 @@ final class APIService {
             let refreshToken: String
         }
 
-        let response: TokenRefreshResponse = try await post(
+        let response: TokenRefreshResponse = try await self.post(
             endpoint: "/mobile/auth/refresh",
             body: RefreshRequest(refreshToken: refresh),
             authenticated: false
@@ -217,6 +206,21 @@ final class APIService {
         }
     }
 
+    // MARK: - Alert API methods
+
+    /// Fetch all alerts for a given userId
+    public func getAlerts(userId: String) async throws -> AlertsListResponse {
+        let encodedId = userId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? userId
+        return try await self.get(endpoint: "/alerts/\(encodedId)")
+    }
+
+    /// Respond to an alert (accept or reject)
+    public func respondToAlert(alertId: String, userId: String, status: String) async throws -> AlertRespondResponse {
+        let requestBody = AlertRespondRequest(userId: userId, status: status)
+        return try await self.post(endpoint: "/alerts/\(alertId)/respond", body: requestBody)
+    }
+
+
     // MARK: - Debug logging
 
     private func debugLogRequest(_ req: URLRequest, authenticated: Bool, token: String?, userId: String?) {
@@ -225,28 +229,13 @@ final class APIService {
         let tokenPrefix = token.map { String($0.prefix(16)) } ?? "(nil)"
         let uidValue = userId ?? "(nil)"
 
-        print("➡️ [API] \(req.httpMethod ?? "?") \(url)")
-        print("➡️ [API] authenticated=\(authenticated) tokenPresent=\(hasToken) tokenPrefix=\(tokenPrefix) userId=\(uidValue)")
+        print("→ [API] \(req.httpMethod ?? "?") \(url)")
+        print("→ [API] authenticated=\(authenticated) tokenPresent=\(hasToken) tokenPrefix=\(tokenPrefix) userId=\(uidValue)")
     }
 
     private func debugLogResponse(status: Int, url: URL, data: Data, note: String) {
         let body = String(data: data, encoding: .utf8) ?? "(non-utf8 body)"
-        print("⬅️ [API] HTTP \(status) \(url.absoluteString) — \(note)")
-        print("⬅️ [API] Body: \(body)")
+        print("← [API] HTTP \(status) \(url.absoluteString) — \(note)")
+        print("← [API] Body: \(body)")
     }
-
-    // MARK: - Alert API methods
-
-    /// Fetch all alerts for a given userId
-    func getAlerts(userId: String) async throws -> AlertsListResponse {
-        let encodedId = userId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? userId
-        return try await get(endpoint: "/alerts/\(encodedId)")
-    }
-
-    /// Respond to an alert (accept or reject)
-    func respondToAlert(alertId: String, userId: String, status: String) async throws -> AlertRespondResponse {
-        let body = AlertRespondRequest(userId: userId, status: status)
-        return try await post(endpoint: "/alerts/\(alertId)/respond", body: body)
-    }
-
 }

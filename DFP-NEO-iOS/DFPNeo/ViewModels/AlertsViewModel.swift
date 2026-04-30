@@ -3,6 +3,7 @@
 //  DFP-NEO Mobile
 //
 //  Manages fetching and responding to schedule change alerts
+//  Alerts API lives at /api/alerts/ (NOT /api/mobile/alerts/)
 //
 
 import Foundation
@@ -40,27 +41,37 @@ class AlertsViewModel: ObservableObject {
     }
 
     // MARK: - Load Alerts
+    // NOTE: Alerts API is at https://app.dfp-neo.com/api/alerts/:userId
+    // This is OUTSIDE the /api/mobile/ prefix - uses getRoot() method
 
     func loadAlerts() async {
-        guard let userId = APIService.shared.storedUserId, !userId.isEmpty else {
+        guard let userId = APIService.shared.getUserId(), !userId.isEmpty else {
+            print("🔔 [Alerts] No userId available - skipping load")
             return
         }
 
         if alerts.isEmpty { isLoading = true }
 
+        let encodedUserId = userId.addingPercentEncoding(
+            withAllowedCharacters: .urlPathAllowed
+        ) ?? userId
+
+        let endpoint = "/alerts/\(encodedUserId)"
+        print("🔔 [Alerts] Loading alerts from: https://app.dfp-neo.com/api\(endpoint)")
+
         do {
-            let encodedUserId = userId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? userId
-            let response: AlertsListResponse = try await APIService.shared.get(
-                endpoint: "/alerts/\(encodedUserId)"
-            )
+            let response: AlertsListResponse = try await APIService.shared.getRoot(endpoint)
             self.alerts = response.alerts
             self.pendingCount = response.alerts.filter { $0.isPending }.count
             self.errorMessage = nil
+            print("🔔 [Alerts] ✅ Loaded \(response.alerts.count) alerts (\(pendingCount) pending)")
+
         } catch {
+            print("🔔 [Alerts] ❌ Failed to load: \(error)")
+            print("🔔 [Alerts] ❌ Error description: \(error.localizedDescription)")
             if alerts.isEmpty {
                 errorMessage = "Could not load alerts"
             }
-            // Otherwise silent fail on polling
         }
 
         isLoading = false
@@ -69,7 +80,12 @@ class AlertsViewModel: ObservableObject {
     // MARK: - Respond to Alert
 
     func respond(to alert: AlertResponse, status: AlertRecipientStatus) async {
-        guard let userId = APIService.shared.storedUserId else { return }
+        guard let userId = APIService.shared.getUserId() else {
+            print("🔔 [Alerts] No userId - cannot respond")
+            return
+        }
+
+        print("🔔 [Alerts] Responding to alert \(alert.alertId) with status: \(status.rawValue)")
 
         // Optimistically update UI
         if let idx = alerts.firstIndex(where: { $0.id == alert.id }) {
@@ -90,14 +106,14 @@ class AlertsViewModel: ObservableObject {
 
         do {
             let body = AlertRespondRequest(userId: userId, status: status.rawValue)
-            let _: AlertRespondResponse = try await APIService.shared.post(
-                endpoint: "/alerts/\(alert.alertId)/respond",
+            let _: AlertRespondResponse = try await APIService.shared.postRoot(
+                "/alerts/\(alert.alertId)/respond",
                 body: body
             )
-            // Refresh from server to confirm
+            print("🔔 [Alerts] ✅ Response recorded successfully")
             await loadAlerts()
         } catch {
-            // Revert optimistic update on error
+            print("🔔 [Alerts] ❌ Failed to respond: \(error)")
             await loadAlerts()
             errorMessage = "Failed to respond. Please try again."
         }

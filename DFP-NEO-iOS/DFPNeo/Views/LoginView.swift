@@ -1,151 +1,181 @@
-//
-//  LoginView.swift
-//  DFP-NEO Mobile
-//
-//  Login screen with DFP-NEO branding
-//
+// Views/LoginView.swift
+// Updated with native Face ID / Touch ID login support
 
 import SwiftUI
+import LocalAuthentication
 
 struct LoginView: View {
-    @EnvironmentObject var authViewModel: AuthViewModel
-    @State private var userId = ""
-    @State private var password = ""
-    @FocusState private var focusedField: Field?
-    
-    enum Field {
-        case userId, password
+
+    @EnvironmentObject var auth: AuthViewModel
+    @State private var biometricType: BiometricType = .none
+
+    enum BiometricType {
+        case none, faceID, touchID
+
+        var label: String {
+            switch self {
+            case .faceID:  return "Sign in with Face ID"
+            case .touchID: return "Sign in with Touch ID"
+            case .none:    return ""
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .faceID:  return "faceid"
+            case .touchID: return "touchid"
+            case .none:    return ""
+            }
+        }
     }
-    
+
     var body: some View {
         ZStack {
-            // Black background
             Color.black.ignoresSafeArea()
-            
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Logo
-                    Image("dfp-neo-logo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 300)
-                        .padding(.top, 80)
-                        .padding(.bottom, 60)
-                    
-                    // Login form
-                    VStack(spacing: 20) {
-                        // User ID field
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("USER ID")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white.opacity(0.7))
-                                .tracking(2)
-                            
-                            TextField("", text: $userId)
-                                .textFieldStyle(DFPTextFieldStyle())
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .focused($focusedField, equals: .userId)
-                                .submitLabel(.next)
-                                .onSubmit {
-                                    focusedField = .password
-                                }
+
+            VStack(spacing: 16) {
+
+                Spacer().frame(height: 20)
+
+                // App title
+                VStack(spacing: 6) {
+                    Text("DFP-NEO")
+                        .font(.system(size: 38, weight: .bold))
+                        .foregroundColor(.white)
+                    Text("Flight Scheduler")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.white.opacity(0.5))
+                        .tracking(2)
+                }
+                .padding(.bottom, 20)
+
+                // Input fields
+                VStack(spacing: 12) {
+                    TextField("User ID", text: $auth.userId)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.emailAddress)
+                        .padding()
+                        .background(Color.white.opacity(0.08))
+                        .foregroundColor(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                        )
+                        .cornerRadius(10)
+
+                    SecureField("Password", text: $auth.password)
+                        .padding()
+                        .background(Color.white.opacity(0.08))
+                        .foregroundColor(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                        )
+                        .cornerRadius(10)
+                }
+                .padding(.horizontal, 24)
+
+                // Error message
+                if let err = auth.errorMessage, !err.isEmpty {
+                    Text(err)
+                        .foregroundColor(.red)
+                        .font(.system(size: 14))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                }
+
+                // Login button
+                Button {
+                    Task { await auth.login() }
+                } label: {
+                    HStack {
+                        if auth.isLoggingIn {
+                            ProgressView().tint(.black)
                         }
-                        
-                        // Password field
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("PASSWORD")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white.opacity(0.7))
-                                .tracking(2)
-                            
-                            SecureField("", text: $password)
-                                .textFieldStyle(DFPTextFieldStyle())
-                                .focused($focusedField, equals: .password)
-                                .submitLabel(.go)
-                                .onSubmit {
-                                    login()
-                                }
-                        }
-                        
-                        // Error message
-                        if let error = authViewModel.errorMessage {
-                            Text(error)
-                                .font(.subheadline)
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                                .padding(.top, 8)
-                        }
-                        
-                        // Login button
-                        Button(action: login) {
-                            HStack {
-                                if authViewModel.isLoading {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .black))
-                                } else {
-                                    Text("LOG IN")
-                                        .fontWeight(.bold)
-                                        .tracking(2)
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.white)
-                            .foregroundColor(.black)
-                            .cornerRadius(8)
-                        }
-                        .disabled(authViewModel.isLoading || !isFormValid)
-                        .opacity(isFormValid ? 1.0 : 0.5)
-                        .padding(.top, 20)
+                        Text(auth.isLoggingIn ? "Signing in..." : "Sign In")
+                            .font(.system(size: 17, weight: .semibold))
                     }
-                    .padding(.horizontal, 40)
-                    
-                    Spacer()
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.white)
+                    .foregroundColor(.black)
+                    .cornerRadius(12)
+                }
+                .disabled(auth.isLoggingIn || auth.userId.isEmpty || auth.password.isEmpty)
+                .opacity((auth.userId.isEmpty || auth.password.isEmpty) ? 0.5 : 1.0)
+                .padding(.horizontal, 24)
+                .padding(.top, 4)
+
+                // Divider
+                if biometricType != .none && auth.hasSavedCredentials {
+                    HStack {
+                        Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
+                        Text("or")
+                            .font(.system(size: 13))
+                            .foregroundColor(.white.opacity(0.4))
+                            .padding(.horizontal, 12)
+                        Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+
+                    // Face ID / Touch ID button
+                    Button {
+                        Task { await auth.loginWithBiometrics() }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Text(biometricType.label)
+                                .font(.system(size: 16, weight: .medium))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.white.opacity(0.08))
+                        .foregroundColor(.white)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                        )
+                        .cornerRadius(12)
+                    }
+                    .padding(.horizontal, 24)
+                }
+
+                Spacer()
+
+                // Save credentials hint
+                if !auth.hasSavedCredentials && biometricType != .none {
+                    Text("Sign in once to enable \(biometricType == .faceID ? "Face ID" : "Touch ID") for future logins")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.35))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 20)
                 }
             }
         }
         .onAppear {
-            // Auto-focus on user ID field
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                focusedField = .userId
+            biometricType = detectBiometricType()
+            // Auto-trigger Face ID if credentials are saved
+            if auth.hasSavedCredentials && biometricType != .none {
+                Task {
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    await auth.loginWithBiometrics()
+                }
             }
         }
     }
-    
-    private var isFormValid: Bool {
-        !userId.isEmpty && !password.isEmpty
-    }
-    
-    private func login() {
-        focusedField = nil // Dismiss keyboard
-        
-        Task {
-            await authViewModel.login(userId: userId, password: password)
+
+    private func detectBiometricType() -> BiometricType {
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            return .none
+        }
+        switch context.biometryType {
+        case .faceID:  return .faceID
+        case .touchID: return .touchID
+        default:       return .none
         }
     }
-}
-
-// MARK: - Custom Text Field Style
-
-struct DFPTextFieldStyle: TextFieldStyle {
-    func _body(configuration: TextField<Self._Label>) -> some View {
-        configuration
-            .padding()
-            .background(Color.white.opacity(0.1))
-            .foregroundColor(.white)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
-            )
-    }
-}
-
-#Preview {
-    LoginView()
-        .environmentObject(AuthViewModel())
 }

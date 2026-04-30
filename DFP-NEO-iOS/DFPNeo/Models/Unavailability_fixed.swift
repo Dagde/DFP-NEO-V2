@@ -23,10 +23,10 @@ struct UnavailabilityRequest: Codable {
     // Custom encoding to bypass global snake_case encoder
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: RawCodingKey.self)
-        try container.encode(startDateTime, forKey: RawCodingKey(stringValue: "startDateTime"))
-        try container.encode(endDateTime, forKey: RawCodingKey(stringValue: "endDateTime"))
-        try container.encode(reasonId, forKey: RawCodingKey(stringValue: "reasonId"))
-        try container.encodeIfPresent(notes, forKey: RawCodingKey(stringValue: "notes"))
+        try container.encode(startDateTime, forKey: RawCodingKey("startDateTime"))
+        try container.encode(endDateTime, forKey: RawCodingKey("endDateTime"))
+        try container.encode(reasonId, forKey: RawCodingKey("reasonId"))
+        try container.encodeIfPresent(notes, forKey: RawCodingKey("notes"))
     }
 }
 
@@ -49,12 +49,10 @@ struct QuickUnavailabilityRequest: Codable {
     // Custom encoding to bypass global snake_case encoder
     // This ensures reasonId is sent as "reasonId" not "reason_id"
     func encode(to encoder: Encoder) throws {
-        print("🔵 [QuickUnavailabilityRequest] Custom encode() CALLED!")
         var container = encoder.container(keyedBy: RawCodingKey.self)
-        try container.encode(date, forKey: RawCodingKey(stringValue: "date"))
-        try container.encode(reasonId, forKey: RawCodingKey(stringValue: "reasonId"))
-        try container.encodeIfPresent(notes, forKey: RawCodingKey(stringValue: "notes"))
-        print("🔵 [QuickUnavailabilityRequest] encode() completed!")
+        try container.encode(date, forKey: RawCodingKey("date"))
+        try container.encode(reasonId, forKey: RawCodingKey("reasonId"))
+        try container.encodeIfPresent(notes, forKey: RawCodingKey("notes"))
     }
 }
 

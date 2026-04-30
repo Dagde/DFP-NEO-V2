@@ -55,7 +55,7 @@ final class AuthViewModel: ObservableObject {
         print("✅ Session restored from stored tokens for userId: \(uid)")
     }
 
-    func login() async {
+    public func login() async {
         isLoggingIn = true
         isLoading = true
         errorMessage = nil
@@ -88,26 +88,26 @@ final class AuthViewModel: ObservableObject {
         }
     }
 
-    func login(userId: String, password: String) async {
+    public func login(userId: String, password: String) async {
         self.userId = userId
         self.password = password
         await login()
     }
 
-    func loginWithBiometrics() {
+    public func loginWithBiometrics() {
         showBiometricPrompt = true
     }
 
-    func unlockWithBiometrics() async {
+    public func unlockWithBiometrics() async {
         // Biometric unlock disabled - just clear the lock
         isSessionLocked = false
     }
 
-    func lockSession() {
+    public func lockSession() {
         // Session locking disabled - was causing "No refresh token" loop
     }
 
-    func logout() {
+    public func logout() {
         // Clear tokens from APIService
         APIService.shared.clearTokens()
 
