@@ -11436,7 +11436,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, onClearAlert }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -11552,6 +11552,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [alertRecipients, setAlertRecipients] = reactExports.useState([]);
   const [alertSent, setAlertSent] = reactExports.useState(false);
   const [alertDescription, setAlertDescription] = reactExports.useState("");
+  const [alertUserNote, setAlertUserNote] = reactExports.useState("");
   const isOracleContext = !!oracleContextForModal;
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;
@@ -12518,8 +12519,40 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 if (event.student) rawPeople.push(event.student);
                 if (event.pilot) rawPeople.push(event.pilot);
               }
-              const people = rawPeople.filter((p, i, arr) => arr.indexOf(p) === i);
+              if (baselineEvent) {
+                if (baselineEvent.instructor && baselineEvent.instructor !== event.instructor) rawPeople.push(baselineEvent.instructor);
+                if (baselineEvent.student && baselineEvent.student !== event.student) rawPeople.push(baselineEvent.student);
+                if (baselineEvent.pilot && baselineEvent.pilot !== event.pilot) rawPeople.push(baselineEvent.pilot);
+              }
+              const people = rawPeople.filter((p, i, arr) => arr.indexOf(p) === i).filter(Boolean);
               setAlertRecipients(people);
+              if (!alertData && baselineEvent) {
+                const epsilon = 1 / 120;
+                const fmt = (t) => {
+                  const h = Math.floor(t);
+                  const m = Math.round(t % 1 * 60);
+                  return String(h).padStart(2, "0") + String(m).padStart(2, "0");
+                };
+                const flightId = event.flightNumber || event.id;
+                const changes = [];
+                if (Math.abs(event.startTime - baselineEvent.startTime) > epsilon)
+                  changes.push("New start time " + fmt(event.startTime) + " (was " + fmt(baselineEvent.startTime) + ")");
+                const newEnd = event.startTime + event.duration;
+                const oldEnd = baselineEvent.startTime + baselineEvent.duration;
+                if (Math.abs(newEnd - oldEnd) > epsilon)
+                  changes.push("New end time " + fmt(newEnd) + " (was " + fmt(oldEnd) + ")");
+                if (event.resourceId !== baselineEvent.resourceId && baselineEvent.resourceId)
+                  changes.push("Aircraft changed to " + event.resourceId + " (was " + baselineEvent.resourceId + ")");
+                if (event.instructor !== baselineEvent.instructor && baselineEvent.instructor)
+                  changes.push("New instructor: " + (event.instructor || "unassigned") + " (was " + baselineEvent.instructor + ")");
+                if (event.student !== baselineEvent.student && baselineEvent.student)
+                  changes.push("New student: " + (event.student || "unassigned") + " (was " + baselineEvent.student + ")");
+                if (event.pilot !== baselineEvent.pilot && baselineEvent.pilot)
+                  changes.push("New pilot: " + (event.pilot || "unassigned") + " (was " + baselineEvent.pilot + ")");
+                const autoDesc = changes.length > 0 ? flightId + ": " + changes.join(". ") + "." : "Change to " + flightId + " at " + fmt(event.startTime);
+                setAlertDescription(autoDesc);
+              }
+              setAlertUserNote("");
               setAlertSent(!!alertData);
               setShowAlertPanel(true);
             },
@@ -13051,7 +13084,22 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               if (event.student) rawPeople.push(event.student);
               if (event.pilot) rawPeople.push(event.pilot);
             }
-            const uniquePeople = rawPeople.filter((p, i, arr) => arr.indexOf(p) === i);
+            const oldCrew = [];
+            if (baselineEvent) {
+              if (baselineEvent.instructor && baselineEvent.instructor !== event.instructor) {
+                rawPeople.push(baselineEvent.instructor);
+                oldCrew.push(baselineEvent.instructor);
+              }
+              if (baselineEvent.student && baselineEvent.student !== event.student) {
+                rawPeople.push(baselineEvent.student);
+                oldCrew.push(baselineEvent.student);
+              }
+              if (baselineEvent.pilot && baselineEvent.pilot !== event.pilot) {
+                rawPeople.push(baselineEvent.pilot);
+                oldCrew.push(baselineEvent.pilot);
+              }
+            }
+            const uniquePeople = rawPeople.filter((p, i, arr) => p && arr.indexOf(p) === i);
             return uniquePeople.length > 0 ? uniquePeople.map((person) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-3 p-3 bg-gray-700/50 rounded-lg cursor-pointer hover:bg-gray-700 transition-colors", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
@@ -13069,20 +13117,24 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm font-medium", children: person }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs ml-auto", children: person === event.instructor ? "Instructor" : person === event.student ? "Student" : "Pilot" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs ml-auto", children: oldCrew.includes(person) ? "Previous crew" : person === event.instructor ? "Instructor" : person === event.student ? "Student" : "Pilot" })
             ] }, person)) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm text-center py-2", children: "No personnel assigned to this event." });
           })() }),
+          alertDescription ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-900/20 border border-amber-600/40 rounded-lg p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-amber-400 text-xs font-semibold uppercase tracking-wide block mb-1", children: "Change Detected" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-200 text-sm", children: alertDescription })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/30 border border-gray-600/40 rounded-lg p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm italic", children: "No baseline data — describe the change manually below." }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide block mb-1", children: [
-              "Description of change ",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400", children: "*" })
+              "Additional message ",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "(optional)" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "textarea",
               {
-                value: alertDescription,
-                onChange: (e) => setAlertDescription(e.target.value),
-                placeholder: "e.g. Start time moved from 08:00 to 09:30...",
+                value: alertUserNote,
+                onChange: (e) => setAlertUserNote(e.target.value),
+                placeholder: "Add any extra information for recipients...",
                 rows: 2,
                 className: "w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 resize-none focus:outline-none focus:border-amber-500"
               }
@@ -13122,14 +13174,15 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         !(alertSent || alertData) && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            disabled: alertRecipients.length === 0 || alertDescription.trim().length === 0,
+            disabled: alertRecipients.length === 0,
             onClick: async () => {
+              const finalDesc = alertDescription && alertUserNote ? alertDescription + " | " + alertUserNote : alertDescription || alertUserNote || "";
               console.log("🔔 [Alert] Send button clicked - eventId:", event.id, "recipients:", alertRecipients);
-              logAudit("Alert:" + event.id, "Add", `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(", ")} | Description: ${alertDescription}`);
-              await onSendAlert(event.id, alertRecipients, alertDescription);
+              logAudit("Alert:" + event.id, "Add", `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(", ")} | Description: ${finalDesc}`);
+              await onSendAlert(event.id, alertRecipients, finalDesc);
               setAlertSent(true);
             },
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 || alertDescription.trim().length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#000000" }, children: [
               "SEND",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -75665,6 +75718,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             return Math.abs(selectedEvent.startTime - baseline.startTime) > epsilon || Math.abs(selectedEvent.duration - baseline.duration) > epsilon || selectedEvent.resourceId !== baseline.resourceId;
           })()) : false,
           alertData: selectedEvent ? alertsDataByDate[date]?.[selectedEvent.id] || null : null,
+          baselineEvent: selectedEvent ? baselineSchedules[date]?.find((b) => b.id === selectedEvent.id) || null : null,
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule"

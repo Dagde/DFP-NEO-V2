@@ -15455,6 +15455,7 @@ updates.forEach(update => {
                                selectedEvent.resourceId !== baseline.resourceId;
                     })()) : false}
                     alertData={selectedEvent ? (alertsDataByDate[date]?.[selectedEvent.id] || null) : null}
+                    baselineEvent={selectedEvent ? (baselineSchedules[date]?.find(b => b.id === selectedEvent.id) || null) : null}
                     onSendAlert={handleSendAlert}
                     onClearAlert={handleClearAlert}
                     canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}

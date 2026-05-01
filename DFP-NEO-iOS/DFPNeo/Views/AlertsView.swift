@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AlertsView: View {
     @EnvironmentObject var viewModel: AlertsViewModel
+    @State private var alertToDelete: AlertResponse? = nil
 
     var body: some View {
         NavigationView {
@@ -33,6 +34,22 @@ struct AlertsView: View {
         }
         .task {
             await viewModel.loadAlerts()
+        }
+        .confirmationDialog("Delete Alert", isPresented: Binding(
+            get: { alertToDelete != nil },
+            set: { if !$0 { alertToDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let alert = alertToDelete {
+                    Task { await viewModel.dismiss(alert: alert) }
+                    alertToDelete = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                alertToDelete = nil
+            }
+        } message: {
+            Text("This alert will be removed from your list.")
         }
     }
 
@@ -82,9 +99,9 @@ struct AlertsView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
-                            Task { await viewModel.dismiss(alert: alert) }
+                            alertToDelete = alert
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
