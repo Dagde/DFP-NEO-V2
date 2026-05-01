@@ -10,6 +10,7 @@ import SwiftUI
 struct AlertsView: View {
     @EnvironmentObject var viewModel: AlertsViewModel
     @State private var alertToDelete: AlertResponse? = nil
+    @State private var showDeleteConfirm: Bool = false
 
     var body: some View {
         NavigationView {
@@ -35,10 +36,7 @@ struct AlertsView: View {
         .task {
             await viewModel.loadAlerts()
         }
-        .confirmationDialog("Delete Alert", isPresented: Binding(
-            get: { alertToDelete != nil },
-            set: { if !$0 { alertToDelete = nil } }
-        ), titleVisibility: .visible) {
+        .alert("Delete Alert", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 if let alert = alertToDelete {
                     Task { await viewModel.dismiss(alert: alert) }
@@ -102,6 +100,7 @@ struct AlertsView: View {
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
                             alertToDelete = alert
+                            showDeleteConfirm = true
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
