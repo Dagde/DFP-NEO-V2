@@ -9,8 +9,6 @@ import SwiftUI
 
 struct AlertsView: View {
     @EnvironmentObject var viewModel: AlertsViewModel
-    @State private var alertToDelete: AlertResponse? = nil
-    @State private var showDeleteConfirm: Bool = false
 
     var body: some View {
         NavigationView {
@@ -35,19 +33,6 @@ struct AlertsView: View {
         }
         .task {
             await viewModel.loadAlerts()
-        }
-        .alert("Delete Alert", isPresented: $showDeleteConfirm) {
-            Button("Delete", role: .destructive) {
-                if let alert = alertToDelete {
-                    Task { await viewModel.dismiss(alert: alert) }
-                    alertToDelete = nil
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                alertToDelete = nil
-            }
-        } message: {
-            Text("This alert will be removed from your list.")
         }
     }
 
@@ -97,14 +82,6 @@ struct AlertsView: View {
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            alertToDelete = alert
-                            showDeleteConfirm = true
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
             }
         }
         .listStyle(.plain)
@@ -154,6 +131,7 @@ struct AlertCardView: View {
     let alert: AlertResponse
     @ObservedObject var viewModel: AlertsViewModel
     @State private var isResponding: Bool = false
+    @State private var showDeleteConfirm: Bool = false
 
     private var status: AlertRecipientStatus {
         return alert.myStatusEnum
@@ -180,6 +158,9 @@ struct AlertCardView: View {
                 if alert.isPending {
                     responseButtons
                 }
+
+                // Delete button
+                deleteButton
             }
             .padding(16)
         }
@@ -192,6 +173,14 @@ struct AlertCardView: View {
                 )
         )
         .opacity(isResponding ? 0.6 : 1.0)
+        .alert("Delete Alert", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task { await viewModel.dismiss(alert: alert) }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This alert will be removed from your list.")
+        }
     }
 
     // MARK: - Status Bar
@@ -325,6 +314,34 @@ struct AlertCardView: View {
                 .cornerRadius(8)
             }
             .disabled(isResponding)
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - Delete Button
+
+    private var deleteButton: some View {
+        HStack {
+            Spacer()
+            Button(action: {
+                showDeleteConfirm = true
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 13))
+                    Text("Delete")
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundColor(Color.red.opacity(0.7))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.red.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color.red.opacity(0.25), lineWidth: 1)
+                )
+                .cornerRadius(6)
+            }
         }
         .padding(.top, 4)
     }
