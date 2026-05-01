@@ -1404,12 +1404,21 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 <div className="flex justify-between text-[10px]"><span className="text-gray-400">Instructor</span><span className="text-white font-medium">{exp.instructor.toFixed(1)}</span></div>
                               </div>
                             </div>
-                            {/* Instrument */}
+                            {/* Inst Sim */}
                             <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
-                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Instrument</div>
-                              <div className="w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2">
-                                <span className="text-gray-400 text-[9px] leading-none">Sim</span>
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Inst Sim</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-purple-500/60 flex items-center justify-center mb-2">
                                 <span className="text-white font-bold text-sm">{exp.instrument.sim.toFixed(1)}</span>
+                              </div>
+                              <div className="w-full space-y-0.5">
+                                <div className="flex justify-between text-[10px]"><span className="text-gray-400">Sim</span><span className="text-white font-medium">{exp.instrument.sim.toFixed(1)}</span></div>
+                              </div>
+                            </div>
+                            {/* Inst Actual */}
+                            <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Inst Actual</div>
+                              <div className="w-14 h-14 rounded-full border-4 border-purple-500/60 flex items-center justify-center mb-2">
+                                <span className="text-white font-bold text-sm">{exp.instrument.actual.toFixed(1)}</span>
                               </div>
                               <div className="w-full space-y-0.5">
                                 <div className="flex justify-between text-[10px]"><span className="text-gray-400">Actual</span><span className="text-white font-medium">{exp.instrument.actual.toFixed(1)}</span></div>

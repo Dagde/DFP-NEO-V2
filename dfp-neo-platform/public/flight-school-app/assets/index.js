@@ -10206,11 +10206,16 @@ const TraineeProfileFlyout = ({
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Instrument" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-14 h-14 rounded-full border-4 border-purple-500/60 flex flex-col items-center justify-center mb-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-[9px] leading-none", children: "Sim" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-sm", children: exp.instrument.sim.toFixed(1) })
-                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Inst Sim" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-14 rounded-full border-4 border-purple-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-sm", children: exp.instrument.sim.toFixed(1) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full space-y-0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-[10px]", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Sim" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: exp.instrument.sim.toFixed(1) })
+                ] }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Inst Actual" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-14 rounded-full border-4 border-purple-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-sm", children: exp.instrument.actual.toFixed(1) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full space-y-0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-[10px]", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Actual" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: exp.instrument.actual.toFixed(1) })
@@ -22573,51 +22578,37 @@ const ExperienceInput = ({ label, value, onChange }) => /* @__PURE__ */ jsxRunti
     }
   )
 ] });
-const CircularGauge = ({ title, mainValue, subItems }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md", style: { boxShadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)" }, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-semibold mb-2", children: title }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-center justify-center mb-2", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "64", height: "64", viewBox: "0 0 64 64", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "32", cy: "32", r: "26", fill: "none", stroke: "#374151", strokeWidth: "6" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "circle",
-        {
-          cx: "32",
-          cy: "32",
-          r: "26",
-          fill: "none",
-          stroke: "#4b5563",
-          strokeWidth: "6",
-          strokeDasharray: `${Math.min(mainValue / 100 * 163, 163)} 163`,
-          strokeLinecap: "round",
-          transform: "rotate(-90 32 32)"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "32", cy: "56", r: "3", fill: "#ef4444" })
+const CircularGauge = ({ title, mainValue, subItems, borderColor }) => {
+  const strokeColor = borderColor === "border-purple-500/60" ? "#a855f7" : "#4b5563";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md", style: { boxShadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-semibold mb-2", children: title }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-center justify-center mb-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "64", height: "64", viewBox: "0 0 64 64", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "32", cy: "32", r: "26", fill: "none", stroke: "#374151", strokeWidth: "6" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "circle",
+          {
+            cx: "32",
+            cy: "32",
+            r: "26",
+            fill: "none",
+            stroke: strokeColor,
+            strokeWidth: "6",
+            strokeDasharray: `${Math.min(mainValue / 100 * 163, 163)} 163`,
+            strokeLinecap: "round",
+            transform: "rotate(-90 32 32)"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "32", cy: "56", r: "3", fill: "#ef4444" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute text-white font-bold text-sm", children: mainValue.toFixed(1) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute text-white font-bold text-sm", children: mainValue.toFixed(1) })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full space-y-0.5", children: subItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: item.label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: item.value.toFixed(1) })
-  ] }, item.label)) })
-] });
-const InstrumentGauge = ({ sim, actual }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md", style: { boxShadow: "0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)" }, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-semibold mb-2", children: "Instrument" }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex items-center justify-center mb-2", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "64", height: "64", viewBox: "0 0 64 64", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "32", cy: "32", r: "26", fill: "none", stroke: "#374151", strokeWidth: "6" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "32", cy: "56", r: "3", fill: "#ef4444" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute flex flex-col items-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-[9px]", children: "Sim" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-xs", children: sim.toFixed(1) })
-    ] })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full space-y-0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Actual" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: actual.toFixed(1) })
-  ] }) })
-] });
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full space-y-0.5", children: subItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-xs", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: item.label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: item.value.toFixed(1) })
+    ] }, item.label)) })
+  ] });
+};
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = /* @__PURE__ */ new Date(`${dateString}T00:00:00Z`);
@@ -23192,7 +23183,7 @@ const InstructorProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[8px] font-bold text-gray-400 uppercase leading-tight text-center", children: l }),
                 sub && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[7px] text-gray-500 leading-tight", children: sub })
               ] });
-              return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto max-h-72 overflow-y-auto rounded border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 min-w-max", children: [
+              return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto rounded border border-gray-600", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 min-w-max", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(H, { l: "Year", w: "w-10" }),
@@ -23651,15 +23642,40 @@ const InstructorProfileFlyout = ({
                   subItems: [{ label: "TOTAL", value: exp.total }, { label: "Captain", value: exp.captain }, { label: "Instructor", value: exp.instructor }]
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InstrumentGauge, { sim: exp.instrument.sim, actual: exp.instrument.actual }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 CircularGauge,
                 {
-                  title: "Simulator",
-                  mainValue: exp.simulator.total,
-                  subItems: [{ label: "P1", value: exp.simulator.p1 }, { label: "P2", value: exp.simulator.p2 }, { label: "Dual", value: exp.simulator.dual }, { label: "Total", value: exp.simulator.total }]
+                  title: "Inst Sim",
+                  mainValue: exp.instrument.sim,
+                  borderColor: "border-purple-500/60",
+                  subItems: [{ label: "Sim", value: exp.instrument.sim }]
                 }
-              )
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                CircularGauge,
+                {
+                  title: "Inst Actual",
+                  mainValue: exp.instrument.actual,
+                  borderColor: "border-purple-500/60",
+                  subItems: [{ label: "Actual", value: exp.instrument.actual }]
+                }
+              ),
+              (() => {
+                const ftdTotal = logbookEntries.filter((e) => e.isFtdLog === true).reduce((sum, e) => {
+                  const snap2 = e.captainLogSnapshot || e.crewLogSnapshot || {};
+                  const val = snap2.simTotal != null ? parseFloat(snap2.simTotal) : e.totalTime != null ? Number(e.totalTime) : 0;
+                  return sum + (isNaN(val) ? 0 : val);
+                }, 0);
+                const simMainValue = exp.simulator.total + ftdTotal;
+                const simSubItems = [
+                  { label: "Prior P1", value: exp.simulator.p1 },
+                  { label: "Prior P2", value: exp.simulator.p2 },
+                  { label: "Prior Dual", value: exp.simulator.dual },
+                  { label: "Prior Total", value: exp.simulator.total },
+                  ...ftdTotal > 0 ? [{ label: "FTD", value: ftdTotal }] : []
+                ];
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: "Simulator", mainValue: simMainValue, subItems: simSubItems });
+              })()
             ] })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [

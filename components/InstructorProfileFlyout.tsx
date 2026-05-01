@@ -60,13 +60,15 @@ const ExperienceInput: React.FC<{ label: string; value: number; onChange: (val: 
   </div>
 );
 
-const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { label: string; value: number }[] }> = ({ title, mainValue, subItems }) => (
+const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { label: string; value: number }[]; borderColor?: string }> = ({ title, mainValue, subItems, borderColor }) => {
+  const strokeColor = borderColor === 'border-purple-500/60' ? '#a855f7' : '#4b5563';
+  return (
   <div className="flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md" style={{boxShadow:'0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)'}}>
     <span className="text-xs text-gray-300 font-semibold mb-2">{title}</span>
     <div className="relative flex items-center justify-center mb-2">
       <svg width="64" height="64" viewBox="0 0 64 64">
         <circle cx="32" cy="32" r="26" fill="none" stroke="#374151" strokeWidth="6" />
-        <circle cx="32" cy="32" r="26" fill="none" stroke="#4b5563" strokeWidth="6"
+        <circle cx="32" cy="32" r="26" fill="none" stroke={strokeColor} strokeWidth="6"
           strokeDasharray={`${Math.min(mainValue / 100 * 163, 163)} 163`}
           strokeLinecap="round" transform="rotate(-90 32 32)" />
         <circle cx="32" cy="56" r="3" fill="#ef4444" />
@@ -82,7 +84,8 @@ const CircularGauge: React.FC<{ title: string; mainValue: number; subItems: { la
       ))}
     </div>
   </div>
-);
+  );
+};
 
 const InstrumentGauge: React.FC<{ sim: number; actual: number }> = ({ sim, actual }) => (
   <div className="flex flex-col items-center bg-[#1a2a3a] border border-gray-500/50 rounded-lg p-3 flex-1 shadow-md" style={{boxShadow:'0 4px 8px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.07)'}}>
@@ -687,7 +690,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </div>
                     );
                     return (
-                      <div className="overflow-x-auto max-h-72 overflow-y-auto rounded border border-gray-600">
+                      <div className="overflow-x-auto rounded border border-gray-600">
                         <div className="inline-flex flex-col bg-gray-900 min-w-max">
                           <div className="flex flex-nowrap border-b border-gray-600 sticky top-0 z-10 bg-gray-900">
                             <div className="w-14 flex-shrink-0 border-r border-gray-600 bg-gray-900/60" />
@@ -1115,9 +1118,28 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       subItems={[{ label: 'P1', value: exp.night.p1 }, { label: 'P2', value: exp.night.p2 }, { label: 'Dual', value: exp.night.dual }]} />
                     <CircularGauge title="Totals" mainValue={exp.total}
                       subItems={[{ label: 'TOTAL', value: exp.total }, { label: 'Captain', value: exp.captain }, { label: 'Instructor', value: exp.instructor }]} />
-                    <InstrumentGauge sim={exp.instrument.sim} actual={exp.instrument.actual} />
-                    <CircularGauge title="Simulator" mainValue={exp.simulator.total}
-                      subItems={[{ label: 'P1', value: exp.simulator.p1 }, { label: 'P2', value: exp.simulator.p2 }, { label: 'Dual', value: exp.simulator.dual }, { label: 'Total', value: exp.simulator.total }]} />
+                    <CircularGauge title="Inst Sim" mainValue={exp.instrument.sim} borderColor="border-purple-500/60"
+                      subItems={[{ label: 'Sim', value: exp.instrument.sim }]} />
+                    <CircularGauge title="Inst Actual" mainValue={exp.instrument.actual} borderColor="border-purple-500/60"
+                      subItems={[{ label: 'Actual', value: exp.instrument.actual }]} />
+                    {(() => {
+                      const ftdTotal = logbookEntries
+                        .filter((e: any) => e.isFtdLog === true)
+                        .reduce((sum: number, e: any) => {
+                          const snap: any = e.captainLogSnapshot || e.crewLogSnapshot || {};
+                          const val = snap.simTotal != null ? parseFloat(snap.simTotal) : (e.totalTime != null ? Number(e.totalTime) : 0);
+                          return sum + (isNaN(val) ? 0 : val);
+                        }, 0);
+                      const simMainValue = exp.simulator.total + ftdTotal;
+                      const simSubItems: { label: string; value: number }[] = [
+                        { label: 'Prior P1', value: exp.simulator.p1 },
+                        { label: 'Prior P2', value: exp.simulator.p2 },
+                        { label: 'Prior Dual', value: exp.simulator.dual },
+                        { label: 'Prior Total', value: exp.simulator.total },
+                        ...(ftdTotal > 0 ? [{ label: 'FTD', value: ftdTotal }] : []),
+                      ];
+                      return <CircularGauge title="Simulator" mainValue={simMainValue} subItems={simSubItems} />;
+                    })()}
                   </div>
                 </div>
               )}
