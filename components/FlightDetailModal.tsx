@@ -1,4 +1,4 @@
-import { showDarkAlert } from './DarkMessageModal';
+import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import AuditButton from './AuditButton';
@@ -2590,8 +2590,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                             {/* Clear Alert button - only shown when alert already sent */}
                             {(alertSent || alertData) && onClearAlert && (
                                 <button
-                                    onClick={() => {
-                                        if (window.confirm('Clear this alert? This will allow a new alert to be sent for this event.')) {
+                                    onClick={async () => {
+                                        const confirmed = await showDarkConfirm('This will allow a new alert to be sent for this event.', 'Clear this alert?', 'warning');
+                                        if (confirmed) {
                                             logAudit('Alert:' + event.id, 'Delete', `Alert cleared for event ${event.flightNumber || event.id}`, `Recipients: ${alertData?.recipients?.join(', ') || alertRecipients.join(', ')}`);
                                             onClearAlert(event.id);
                                             setAlertSent(false);
