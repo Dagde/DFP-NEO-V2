@@ -49,5 +49,23 @@ export default defineConfig({
     sourcemap: true,
     outDir: 'dfp-neo-platform/public/flight-school-app',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/index.js',
+        chunkFileNames: (chunkInfo: { name: string }) => {
+          if (chunkInfo.name === 'vendor-react') return 'assets/vendor-react.js';
+          if (chunkInfo.name === 'vendor-pdf') return 'assets/vendor-pdf.js';
+          return 'assets/[name].js';
+        },
+        assetFileNames: (assetInfo: { name?: string }) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.css')) return 'assets/index.css';
+          return 'assets/[name][extname]';
+        },
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-pdf': ['jspdf'],
+        },
+      },
+    },
   }
 });

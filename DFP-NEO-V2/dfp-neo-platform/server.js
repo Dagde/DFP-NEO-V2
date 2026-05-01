@@ -2423,21 +2423,37 @@ async function ensureAppSettingsTable(db) {
   }
 }
 
-// ── GET /api/flight-log?scheduleEventId=... ───────────────────────────────────
+// ── GET /api/flight-log ───────────────────────────────────────────────────────
+// Accepts: scheduleEventId, traineeId, personnelId, personName, eventCode, fromDate, toDate
 app.get('/api/flight-log', async (req, res) => {
   try {
     const db = await getPrisma();
     await ensureFlightLogSnapshotColumns(db);
-    const { scheduleEventId } = req.query;
-    if (!scheduleEventId) {
-      return res.status(400).json({ error: 'scheduleEventId query param required' });
+    const { scheduleEventId, traineeId, personnelId, personName, eventCode, fromDate, toDate } = req.query;
+
+    // Require at least one filter
+    if (!scheduleEventId && !traineeId && !personnelId && !personName && !eventCode) {
+      return res.status(400).json({ error: 'At least one filter param required: scheduleEventId, traineeId, personnelId, personName, or eventCode' });
     }
+
+    const where = {};
+    if (scheduleEventId) where.scheduleEventId = scheduleEventId;
+    if (traineeId)       where.traineeId       = traineeId;
+    if (personnelId)     where.personnelId     = personnelId;
+    if (personName)      where.personName      = { contains: personName, mode: 'insensitive' };
+    if (eventCode)       where.eventCode       = eventCode;
+    if (fromDate || toDate) {
+      where.eventDate = {};
+      if (fromDate) where.eventDate.gte = fromDate;
+      if (toDate)   where.eventDate.lte = toDate;
+    }
+
     const entries = await db.flightLogEntry.findMany({
-      where: { scheduleEventId },
-      orderBy: { createdAt: 'asc' },
+      where,
+      orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
     });
-    console.log(`✅ GET /api/flight-log scheduleEventId=${scheduleEventId} → ${entries.length} rows`);
-    res.json({ entries });
+    console.log(`✅ GET /api/flight-log filters=${JSON.stringify({scheduleEventId,traineeId,personnelId,personName,eventCode})} → ${entries.length} rows`);
+    res.json({ entries, count: entries.length });
   } catch (error) {
     console.error('❌ GET /api/flight-log error:', error);
     res.status(500).json({ error: 'Failed to fetch flight log entries', details: error.message });

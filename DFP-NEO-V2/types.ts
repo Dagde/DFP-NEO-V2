@@ -57,6 +57,11 @@ export interface Course {
   raafStart: number;
   navyStart: number;
   armyStart: number;
+  location?: string;
+  unit?: string;
+  lmpType?: string;         // determines which syllabus events populate the Individual LMP (NEO Build)
+  academicLmpType?: string; // determines which Academics events populate the Academic LMP tab
+  status?: string;
 }
 
 export type InstructorRank = 'WGCDR' | 'SQNLDR' | 'FLTLT' | 'FLGOFF' | 'PLTOFF' | 'Mr';
@@ -65,7 +70,7 @@ export type TraineeRank = 'OCDT' | 'MIDN' | 'PLTOFF' | 'FLGOFF' | 'SBLT' | '2LT'
 export type InstructorCategory = 'UnCat' | 'D' | 'C' | 'B' | 'A';
 export type SeatConfig = 'Normal' | 'FWD/SHORT' | 'REAR/SHORT' | 'FWD/LONG';
 
-export type UnavailabilityReason = 'TMUF' | 'TMUF - Ground Duties only' | 'Leave' | 'Appointment' | 'Other';
+export type UnavailabilityReason = 'TMUF' | 'TMUF - Ground Duties only' | 'Leave' | 'Appointment' | 'Deployed' | 'Other';
 
 export interface UnavailabilityPeriod {
   id: string;
@@ -113,9 +118,11 @@ export interface LogbookExperience {
 }
 
 export interface Instructor {
+  id?: string;           // DB primary key (cuid) — present for database-sourced records
   idNumber: number;
   name: string;
   rank: InstructorRank;
+  photoUrl?: string | null;  // Profile photo — base64 data URI or https URL; null/undefined = no photo
   role: 'QFI' | 'SIM IP';
   callsignNumber: number;
   service?: 'RAAF' | 'RAN' | 'ARA';
@@ -141,7 +148,8 @@ export interface Instructor {
   email?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
-     flightEntries?: FlightEntry[];
+  callsign?: string;           // Primary callsign string (e.g. "ROLR042")
+  secondaryCallsign?: string;  // Secondary callsign string (e.g. "VIPR007")
 }
 
 export interface ScheduleEvent {
@@ -197,6 +205,8 @@ export interface ScheduleEvent {
       dateCreated?: string;
       notes?: string;
       isSctRequest?: boolean;
+  isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
+      academicTiles?: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }[]; // Inset lesson tiles for academic day tile
       sctRequestId?: string;
       sctRequestType?: 'flight' | 'ftd';
       isRemedialForceSchedule?: boolean;
@@ -234,7 +244,7 @@ export interface SyllabusItemDetail {
   duration: number;
   preFlightTime: number;
   postFlightTime: number;
-  type: 'Flight' | 'FTD' | 'Ground School';
+  type: 'Flight' | 'FTD' | 'Ground School' | 'Academics';
   sortieType?: 'Dual' | 'Solo';
      twrDiReqd?: 'YES' | 'NO'; // NEW: TWR DI Required field
      cctOnly?: 'YES' | 'NO'; // NEW: CCT Only field
@@ -270,11 +280,11 @@ export interface Trainee {
   primaryInstructor?: string | string[];
   secondaryInstructor?: string | string[];
   lmpType?: string;
+  academicLmpType?: string; // Academic LMP tab assignment
   
      traineeCallsign?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
-     flightEntries?: FlightEntry[];
 }
 
 export interface Score {
@@ -502,17 +512,3 @@ export interface CancellationAnalytics {
 }
 
 export type TimePeriod = 'week' | 'month' | '6months' | 'year' | '2years' | '5years' | 'lastFY' | 'lastCY';
-
-export interface FlightEntry {
-  id: string;
-  year: number;  // Will store full year (e.g., 2030)
-  date: string;  // Format: "26 Apr"
-  type: string;  // e.g., "PC-21"
-  tail: string;  // e.g., "A6-001"
-  captain: string;
-  copilot: string;
-  duty: string;
-  dayFlying: number;
-  nightFlying: number;
-  total: number;
-}

@@ -13311,6 +13311,8 @@ updates.forEach(update => {
                             currencyRequirements={currencyRequirements}
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
+                            pt051Assessments={pt051Assessments}
+                            userProfile={currentUser}
                         />;
             case 'CourseRoster':
                 return <CourseRosterView 
@@ -13438,6 +13440,8 @@ updates.forEach(update => {
                             currencyRequirements={currencyRequirements}
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
+                            pt051Assessments={pt051Assessments}
+                            userProfile={currentUser}
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {

@@ -37,6 +37,8 @@ interface TraineeViewProps {
   currencyRequirements?: any[];
   currentUserId?: string;
   currentUserName?: string;
+  pt051Assessments?: Map<string, any>;
+  userProfile?: any;
   
   // Props for TraineeScheduleView
   date: string;
@@ -132,6 +134,8 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             currencyRequirements={props.currencyRequirements}
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
+            pt051Assessments={props.pt051Assessments}
+            userProfile={props.userProfile}
           />
         )}
         {activeTab === 'schedule' && (
