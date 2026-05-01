@@ -13,6 +13,7 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
+// ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
 
 interface TraineeProfileFlyoutProps {
   trainee: Trainee;
@@ -264,6 +265,17 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const { isFrozen } = useSystemFreeze();
     const [showAddUnavailability, setShowAddUnavailability] = useState(false);
 
+    // Dynamic Academic LMP courses: extract unique course codes from Academics-type syllabus items (DB only)
+    const academicLmpCourses = useMemo(() => {
+        const courseCodes = new Set<string>();
+        syllabusDetails.forEach(s => {
+            if (s.type === 'Academics' && s.courses) {
+                s.courses.forEach(c => courseCodes.add(c));
+            }
+        });
+        return Array.from(courseCodes).sort();
+    }, [syllabusDetails]);
+
     // Shared 3D card style (matches Staff Profile)
     const card3d = "rounded-lg border border-gray-500/60 shadow-md";
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
@@ -302,6 +314,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
+  const [academicLmpType, setAcademicLmpType] = useState((trainee as any).academicLmpType || '');
     const [seatConfig, setSeatConfig] = useState<SeatConfig>(trainee.seatConfig);
     const [isPaused, setIsPaused] = useState(trainee.isPaused);
     const [unavailability, setUnavailability] = useState<UnavailabilityPeriod[]>(trainee.unavailability || []);
@@ -420,6 +433,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         setService(trainee.service || '');
         setCourse(trainee.course || activeCourses[0] || '');
         setLmpType(trainee.lmpType || 'BPC+IPC');
+        setAcademicLmpType((trainee as any).academicLmpType || '');
         setSeatConfig(trainee.seatConfig);
         setIsPaused(trainee.isPaused);
         setUnavailability(trainee.unavailability || []);
@@ -571,6 +585,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             fullName,
             course,
             lmpType,
+            academicLmpType,
             rank,
             seatConfig,
             isPaused,
@@ -713,7 +728,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 changes: `Today Only - ${todayStr}`,
                 page: 'Trainee Roster'
             });
-            const updatedUnavailability = [...(trainee.unavailability || []), newPeriod];
+            const updatedUnavailability = [...unavailability, newPeriod];
+            setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
             setShowAddUnavailability(false);
         }
@@ -747,8 +763,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 changes: `${dateRange} @ ${timeRange} - ${periodData.reason}`,
                 page: 'Trainee Roster'
             });
-            const updatedUnavailability = [...(trainee.unavailability || []), newPeriod];
+            const updatedUnavailability = [...unavailability, newPeriod];
             console.log('Calling onUpdateTrainee with updated unavailability', updatedUnavailability);
+            setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
     };
@@ -757,7 +774,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         if (isCreating) {
             setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
         } else {
-            const periodToRemove = trainee.unavailability?.find(p => p.id === idToRemove);
+            const periodToRemove = unavailability.find(p => p.id === idToRemove);
             if (periodToRemove) {
                 const dateRange = periodToRemove.startDate === periodToRemove.endDate 
                     ? periodToRemove.startDate 
@@ -770,9 +787,52 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     page: 'Trainee Roster'
                 });
             }
-            const updatedUnavailability = (trainee.unavailability || []).filter(p => p.id !== idToRemove);
+            const updatedUnavailability = unavailability.filter(p => p.id !== idToRemove);
+            setUnavailability(updatedUnavailability);
             onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
         }
+    };
+
+    const handleRemoveUnavailability = (idToRemove: string) => {
+        console.log('🗑️ [TRAINEE] DELETE START - idToRemove:', idToRemove);
+        console.log('🗑️ [TRAINEE] Current unavailability state:', unavailability);
+        console.log('🗑️ [TRAINEE] isCreating:', isCreating);
+        
+        const periodToRemove = unavailability?.find(p => p.id === idToRemove);
+        console.log('🗑️ [TRAINEE] Period to remove:', periodToRemove);
+        
+        if (periodToRemove) {
+            const dateRange = periodToRemove.startDate === periodToRemove.endDate 
+                ? periodToRemove.startDate 
+                : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
+            
+            console.log('🗑️ [TRAINEE] Logging audit for:', { trainee, dateRange, reason: periodToRemove.reason });
+            
+            logAudit({
+                action: 'Delete',
+                description: `Removed unavailability for ${trainee.rank} ${trainee.name}`,
+                changes: `${dateRange} - ${periodToRemove.reason}`,
+                page: 'Trainee Profile'
+            });
+        }
+        
+        const updatedUnavailability = unavailability.filter(p => p.id !== idToRemove);
+        console.log('🗑️ [TRAINEE] Updated unavailability after filter:', updatedUnavailability);
+        console.log('🗑️ [TRAINEE] Calling setUnavailability with filtered list');
+        
+        setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
+        
+        console.log('🗑️ [TRAINEE] Calling onUpdateTrainee with trainee object');
+        console.log('🗑️ [TRAINEE] Trainee object to update:', {
+            id: (trainee as any).id,
+            idNumber: trainee.idNumber,
+            name: trainee.name,
+            unavailability: updatedUnavailability
+        });
+        
+        onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
+        
+        console.log('🗑️ [TRAINEE] DELETE COMPLETE');
     };
 
     const formatMilitaryTime = (timeString: string | undefined): string => {
@@ -943,7 +1003,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => setActiveTab(null)} className="text-gray-400 hover:text-white text-xs">✕ Close</button>
                         </div>
                         <div className="space-y-2">
-                          {(trainee.unavailability || []).length > 0 ? (trainee.unavailability || []).map(p => {
+                          {(unavailability || []).length > 0 ? (unavailability || []).map(p => {
                             let periodDisplay = '';
                             if (p.allDay) {
                               const sd = formatDate(p.startDate);
@@ -958,6 +1018,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <div key={p.id} className="flex justify-between items-center p-2 bg-gray-700/40 rounded text-xs">
                                 <span className="text-white font-medium">{p.reason}</span>
                                 <span className="text-gray-300 font-mono">{periodDisplay}</span>
+                                <button onClick={() => handleRemoveUnavailability(p.id)} className="text-red-400 hover:text-red-300 text-xs ml-2">✕</button>
                               </div>
                             );
                           }) : <p className="text-gray-500 text-xs italic text-center py-4">No unavailability periods scheduled.</p>}
@@ -1029,6 +1090,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
                               {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
                             </Dropdown>
+                            <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
+                              <option value="">— None —</option>
+                              {academicLmpCourses.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                            </Dropdown>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
@@ -1099,6 +1164,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                                 style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
                               >{trainee.course}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">LMP</span><span className="text-sky-300 font-medium">{trainee.lmpType || 'BPC+IPC'}</span></div>
+                              <div><span className="text-gray-400 block text-[10px]">Academic LMP</span><span className="text-purple-300 font-medium">{(trainee as any).academicLmpType || <span className="text-gray-500 italic">None</span>}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{trainee.traineeCallsign || `${callsignData?.callsignPrefix || ''}${callsignData?.callsignNumber || ''}`}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-white font-medium">{trainee.secondaryCallsign || '-'}</span></div>
                               <div><span className="text-gray-400 block text-[10px]">Seat Config</span><span className="text-white font-medium">{trainee.seatConfig}</span></div>
@@ -1329,7 +1395,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                   </div>
                 </div>
               </div>
-            {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={trainee.unavailability || []} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
+            {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
             {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
         </>

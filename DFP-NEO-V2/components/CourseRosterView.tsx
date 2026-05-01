@@ -156,25 +156,38 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     // while the profile flyout is open, the flyout will re-render with the latest data.
     useEffect(() => {
         if (selectedTrainee && !isCreatingNew) {
-            const updatedTrainee = traineesData.find((t: Trainee) => t.fullName === selectedTrainee.fullName);
+            const updatedTrainee = traineesData.find((t: Trainee) => (t as any).id
+                ? (t as any).id === (selectedTrainee as any).id
+                : t.fullName === selectedTrainee.fullName);
 
-            // Update the state only if the data has actually changed to avoid an infinite loop.
-            // Preserve any locally-edited currencyStatus so a background traineesData refresh
-            // doesn't overwrite currency saves that haven't propagated back to the master array yet.
-            if (updatedTrainee && JSON.stringify(updatedTrainee) !== JSON.stringify(selectedTrainee)) {
-                setSelectedTrainee({
-                  ...updatedTrainee,
-                  currencyStatus: selectedTrainee.currencyStatus ?? updatedTrainee.currencyStatus,
-                });
+            if (updatedTrainee) {
+                // Compare unavailability content specifically to detect iOS-submitted changes
+                const prevUnavailHash = JSON.stringify((selectedTrainee.unavailability || []).map((u: any) => u.id).sort());
+                const newUnavailHash  = JSON.stringify((updatedTrainee.unavailability  || []).map((u: any) => u.id).sort());
+                const unavailChanged = prevUnavailHash !== newUnavailHash;
+
+                // Also check other key fields
+                const otherChanged = updatedTrainee.fullName !== selectedTrainee.fullName ||
+                    updatedTrainee.isPaused !== selectedTrainee.isPaused ||
+                    updatedTrainee.course !== selectedTrainee.course;
+
+                if (unavailChanged || otherChanged) {
+                    console.log('[CourseRosterView] Syncing selectedTrainee from updated traineesData - unavailChanged:', unavailChanged);
+                    // Preserve any locally-edited currencyStatus so a background traineesData refresh
+                    // doesn't overwrite currency saves that haven't propagated back to the master array yet.
+                    setSelectedTrainee({
+                        ...updatedTrainee,
+                        currencyStatus: selectedTrainee.currencyStatus ?? updatedTrainee.currencyStatus,
+                    });
+                }
             }
         }
-    }, [traineesData, selectedTrainee, isCreatingNew]);
+    }, [traineesData, isCreatingNew]);
 
-    // Only show courses that have trainees (from groupedTrainees), not all courses in courseColors
-    // This ensures courses without trainees at the selected location are not displayed
-    // Also filter out archived courses - only show courses that are in the active courseColors map
-    const activeCourseNumbers = Object.keys(groupedTrainees)
-        .filter(course => courseColors.hasOwnProperty(course))
+    // Filter courses by locality - only show courses that have trainees in traineesData
+    // (which is already filtered by school/location). This prevents courses from other
+    // localities (e.g., ADF304/ADF305 for PEA) from appearing when viewing ESL.
+    const activeCourseNumbers = [...new Set(traineesData.map(t => t.course).filter(c => c && courseColors[c]))]
         .sort((a, b) => a.localeCompare(b));
     const archivedCourseNumbers = Object.keys(archivedCourses).sort((a, b) => a.localeCompare(b));
 

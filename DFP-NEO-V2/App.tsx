@@ -5010,6 +5010,22 @@ const App: React.FC = () => {
                                 return merged;
                             });
 
+                            // Restore baselineSchedules from snapshots (enables change bar after page reload)
+                            setBaselineSchedules(prev => {
+                                const merged = { ...prev };
+                                snapshots.forEach(snap => {
+                                    const dateKey = snap.date;
+                                    // Use stored baselineEvents if available, otherwise fall back to scheduleEvents
+                                    const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
+                                        ? snap.baselineEvents
+                                        : (Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []);
+                                    if (baselineEvts.length > 0 && !merged[dateKey]) {
+                                        merged[dateKey] = JSON.parse(JSON.stringify(baselineEvts));
+                                    }
+                                });
+                                return merged;
+                            });
+
                             // Load PT-051 assessments from the most recent snapshot
                             const mostRecent = snapshots[0];
                             if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
@@ -5025,6 +5041,16 @@ const App: React.FC = () => {
                                     return merged;
                                 });
                             }
+                            // Load alertsData from all snapshots
+                            setAlertsDataByDate(prev => {
+                                const merged = { ...prev };
+                                snapshots.forEach(snap => {
+                                    if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+                                        merged[snap.date] = snap.alertsData;
+                                    }
+                                });
+                                return merged;
+                            });
                         }
                     }
                 } catch (snapErr) {
@@ -5120,6 +5146,14 @@ const App: React.FC = () => {
                     if (existingNonSeed.length > 0) return prev;
                     return { ...prev, [targetDate]: events };
                 });
+                // Restore baseline for this date too (enables change bar after navigation)
+                const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
+                    ? snap.baselineEvents
+                    : events;
+                setBaselineSchedules(prev => {
+                    if (prev[targetDate]) return prev; // don't overwrite existing baseline
+                    return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
+                });
                 console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
             }
             // Also merge PT-051 assessments from this snapshot
@@ -5131,6 +5165,10 @@ const App: React.FC = () => {
                     });
                     return merged;
                 });
+            }
+            // Load alertsData for this date
+            if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
+                setAlertsDataByDate(prev => ({ ...prev, [targetDate]: snap.alertsData }));
             }
         } catch (err) {
             console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
@@ -6182,6 +6220,9 @@ const App: React.FC = () => {
     // Baseline schedule state
     const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
 
+    // Alerts data state: { [date]: { [eventId]: alertEntry } }
+    const [alertsDataByDate, setAlertsDataByDate] = useState<Record<string, Record<string, any>>>({});
+
     const isDirtyRef = useRef<() => boolean>(() => false);
     const onSaveRef = useRef<() => void>(() => {});
     const onDiscardRef = useRef<() => void>(() => {});
@@ -6614,12 +6655,19 @@ const App: React.FC = () => {
     }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
 
     useEffect(() => {
-        const todayStr = getLocalDateString();
-        const initialEvents = events.filter(e => e.date === todayStr);
-        if (Object.keys(baselineSchedules).length === 0 && initialEvents.length > 0) {
-             setBaselineSchedules({ [todayStr]: JSON.parse(JSON.stringify(initialEvents)) });
+        // Initialize baselineSchedules when viewing published Daily DFP
+        // This enables change bar detection for moved events
+        // Uses publishedSchedules (not events) as that's what ScheduleView renders from
+        const dateStr = date;
+        const eventsForCurrentDate = publishedSchedules[dateStr] || [];
+
+        if (eventsForCurrentDate.length > 0 && !baselineSchedules[dateStr]) {
+            setBaselineSchedules(prev => ({
+                ...prev,
+                [dateStr]: JSON.parse(JSON.stringify(eventsForCurrentDate))
+            }));
         }
-    }, [events, baselineSchedules]);
+    }, [publishedSchedules, date, baselineSchedules]);
 
     const personnelData = useMemo(() => {
         const data = new Map<string, { callsignPrefix: string; callsignNumber: number }>();
@@ -7407,7 +7455,26 @@ const App: React.FC = () => {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify(patchBody)
+                    body: JSON.stringify({
+                        name: data.name,
+                        fullName: data.fullName,
+                        rank: data.rank,
+                        course: data.course,
+                        lmpType: data.lmpType,
+                        academicLmpType: (data as any).academicLmpType || '',
+                        unit: data.unit,
+                        flight: data.flight,
+                        location: data.location,
+                        service: data.service,
+                        seatConfig: data.seatConfig,
+                        isPaused: data.isPaused,
+                        traineeCallsign: data.traineeCallsign,
+                        primaryInstructor: data.primaryInstructor,
+                        secondaryInstructor: data.secondaryInstructor,
+                        phoneNumber: data.phoneNumber,
+                        email: data.email,
+                        unavailability: data.unavailability || [],
+                    })
                 });
                 
                 console.log('📝 [APP] PATCH response status:', response.status);
@@ -8078,7 +8145,7 @@ const App: React.FC = () => {
     // persistScheduleForDate: saves the full schedule for a date to the DB.
     // Pass allEventsForDate directly (after setPublishedSchedules has been called)
     // to avoid race conditions with React's async state updates.
-    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[]) => {
+    const persistScheduleForDate = (targetDate: string, allEventsForDate: ScheduleEvent[], baselineEventsForDate?: ScheduleEvent[]) => {
         // Skip seed data
         if (allEventsForDate.some((e: any) => e.isHistoricalSeed === true)) {
             console.log('[Persist] Skipped seed data for', targetDate);
@@ -8142,7 +8209,7 @@ const App: React.FC = () => {
             pt051AssessmentsObj[key] = assessment;
         });
 
-        const snapshotPayload = {
+        const snapshotPayload: Record<string, any> = {
             date: targetDate,
             scheduleEvents: allEventsForDate,
             staffEvents: staffEventsForDate,
@@ -8154,6 +8221,11 @@ const App: React.FC = () => {
             staffLogbook: {},
             savedBy,
         };
+        // Only include baselineEvents if explicitly provided (initial publish)
+        // This preserves the original published baseline for change-bar detection after page reload
+        if (baselineEventsForDate !== undefined) {
+            snapshotPayload.baselineEvents = baselineEventsForDate;
+        }
 
         console.log(`[Persist] Saving snapshot for ${targetDate}, ${allEventsForDate.length} events...`);
         fetch(`${apiBase}/daily-snapshot/save`, {
@@ -8761,6 +8833,100 @@ const App: React.FC = () => {
     };
 
     
+    // handleSendAlert
+    const handleSendAlert = async (eventId: string, recipients: string[], description: string = '') => {
+        // Always use relative /api - works on any domain
+        const apiBase = '/api';
+        const userId = getCurrentUserId() || currentUserName;
+        const eventForAlert = events.find(e => e.id === eventId) || selectedEvent;
+
+        console.log('🔔 [Alert] ========== SEND ALERT START ==========');
+        console.log('🔔 [Alert] eventId:', eventId);
+        console.log('🔔 [Alert] date:', date);
+        console.log('🔔 [Alert] sentBy:', userId);
+        console.log('🔔 [Alert] recipients:', recipients);
+        console.log('🔔 [Alert] URL:', `${apiBase}/alerts/send`);
+        console.log('🔔 [Alert] eventForAlert:', eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : 'NOT FOUND');
+
+        if (!recipients || recipients.length === 0) {
+            console.warn('🔔 [Alert] No recipients - alert not sent');
+            return;
+        }
+
+        try {
+            const payload = {
+                date,
+                eventId,
+                sentBy: userId,
+                recipients,
+                description,
+                eventDetails: eventForAlert ? {
+                    flightNumber: eventForAlert.flightNumber,
+                    startTime: eventForAlert.startTime,
+                    duration: eventForAlert.duration,
+                    resourceId: eventForAlert.resourceId,
+                    instructor: eventForAlert.instructor,
+                    student: eventForAlert.student,
+                    pilot: eventForAlert.pilot,
+                } : {},
+            };
+
+            console.log('🔔 [Alert] Payload:', JSON.stringify(payload, null, 2));
+
+            const res = await fetch(`${apiBase}/alerts/send`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            const responseText = await res.text();
+            console.log('🔔 [Alert] Response status:', res.status);
+            console.log('🔔 [Alert] Response body:', responseText);
+
+            if (res.ok) {
+                const data = JSON.parse(responseText);
+                setAlertsDataByDate(prev => ({
+                    ...prev,
+                    [date]: {
+                        ...(prev[date] || {}),
+                        [eventId]: data.alertEntry || data,
+                    },
+                }));
+                console.log('🔔 [Alert] Alert sent successfully! alertId:', data.alertId);
+            } else {
+                console.warn('🔔 [Alert] Failed to send alert. Status:', res.status, 'Body:', responseText);
+            }
+        } catch (err) {
+            console.error('🔔 [Alert] Exception sending alert:', err);
+        }
+        console.log('🔔 [Alert] ========== SEND ALERT END ==========');
+    };
+
+    // handleClearAlert - Clear alert history for an event to allow re-sending
+    const handleClearAlert = async (eventId: string) => {
+        const apiBase = '/api';
+        try {
+            const res = await fetch(`${apiBase}/alerts/clear`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ eventId, date, clearedBy: getCurrentUserId() || currentUserName }),
+            });
+            if (res.ok) {
+                // Remove from local state immediately
+                setAlertsDataByDate(prev => {
+                    const dateData = { ...(prev[date] || {}) };
+                    delete dateData[eventId];
+                    return { ...prev, [date]: dateData };
+                });
+                console.log('🔔 [Alert] Alert cleared for event:', eventId);
+            } else {
+                console.warn('🔔 [Alert] Failed to clear alert:', res.status);
+            }
+        } catch (err) {
+            console.error('🔔 [Alert] Exception clearing alert:', err);
+        }
+    };
+
     // Visual Adjust handlers
     const handleVisualAdjustStart = async (event: ScheduleEvent) => {
         console.log('Visual Adjust Start - Event:', event);
@@ -10455,6 +10621,8 @@ const App: React.FC = () => {
                 staffCurrency: staffCurrencyMap,
                 staffLogbook: staffLogbookMap,
                 savedBy: authUser?.userId || (authUser as any)?.username || null,
+                // Store the baseline (original published events) for change-bar detection after page reload
+                baselineEvents: newEventsForDate,
             };
 
             const apiBase = getApiBaseUrl();
@@ -11269,6 +11437,35 @@ updates.forEach(update => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+
+    // ── Alert response polling ──────────────────────────────────────────────
+    // Poll alert statuses for the current date every 5 seconds
+    useEffect(() => {
+        const pollAlerts = async () => {
+            try {
+                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+                const res = await fetch(`${apiBase}/daily-snapshot/${date}`);
+                if (!res.ok) return;
+                const data = await res.json();
+                const snap = data.snapshot;
+                if (!snap) return;
+                // Always update alertsData so responses (accept/reject) are reflected immediately
+                if (snap.alertsData) {
+                    setAlertsDataByDate(prev => ({
+                        ...prev,
+                        [date]: snap.alertsData,
+                    }));
+                }
+            } catch (err) {
+                // Silent fail - polling
+            }
+        };
+        // Run immediately on mount/date change, then every 5 seconds
+        pollAlerts();
+        const interval = setInterval(pollAlerts, 5 * 1000);
+        return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [date]);
 
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
@@ -12665,6 +12862,7 @@ updates.forEach(update => {
                            setSelectedEventIds={setSelectedEventIds}
                            detectConflictsForEvent={detectConflictsForEvent}
                            baselineEvents={baselineSchedules[date]}
+                           alertsData={alertsDataByDate[date] || {}}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
@@ -15248,6 +15446,19 @@ updates.forEach(update => {
                     onCancelEvent={handleCancelEvent}
                     onRestoreEvent={handleRestoreEvent}
                     isPauseViewMode={showPausePanel && ['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView)}
+                    isChanged={selectedEvent ? !!(baselineSchedules[date]?.length > 0 && (() => {
+                        const baseline = baselineSchedules[date]?.find(b => b.id === selectedEvent.id);
+                        if (!baseline) return !!baselineSchedules[date]?.length;
+                        const epsilon = 0.001;
+                        return Math.abs(selectedEvent.startTime - baseline.startTime) > epsilon ||
+                               Math.abs(selectedEvent.duration - baseline.duration) > epsilon ||
+                               selectedEvent.resourceId !== baseline.resourceId;
+                    })()) : false}
+                    alertData={selectedEvent ? (alertsDataByDate[date]?.[selectedEvent.id] || null) : null}
+                    baselineEvent={selectedEvent ? (baselineSchedules[date]?.find(b => b.id === selectedEvent.id) || null) : null}
+                    onSendAlert={handleSendAlert}
+                    onClearAlert={handleClearAlert}
+                    canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}
                 />
             )}
             
@@ -15560,10 +15771,10 @@ updates.forEach(update => {
         )}
 
         {/* Live sync indicator - shows last poll time so users can confirm iOS sync is running */}
-        {isAuthenticated && lastPollTime && (
+        {isAuthenticated && (
             <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none">
                 <span className={`w-1.5 h-1.5 rounded-full ${lastPollChanged ? 'bg-green-400' : 'bg-gray-500'}`}></span>
-                <span>Sync {lastPollTime}</span>
+                <span>Sync {lastPollTime || "Wait..."}</span>
             </div>
         )}
     </>
