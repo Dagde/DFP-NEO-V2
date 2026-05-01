@@ -13154,8 +13154,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         (alertSent || alertData) && onClearAlert && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => {
-              if (window.confirm("Clear this alert? This will allow a new alert to be sent for this event.")) {
+            onClick: async () => {
+              const confirmed = await showDarkConfirm("This will allow a new alert to be sent for this event.", "Clear this alert?", "warning");
+              if (confirmed) {
                 logAudit("Alert:" + event.id, "Delete", `Alert cleared for event ${event.flightNumber || event.id}`, `Recipients: ${alertData?.recipients?.join(", ") || alertRecipients.join(", ")}`);
                 onClearAlert(event.id);
                 setAlertSent(false);
