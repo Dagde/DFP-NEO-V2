@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { auth } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
@@ -8,11 +7,6 @@ const prisma = new PrismaClient();
 // Query params: traineeId, personnelId, personName, scheduleEventId, eventCode, fromDate, toDate
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const traineeId       = searchParams.get('traineeId');
     const personnelId     = searchParams.get('personnelId');
@@ -53,11 +47,6 @@ export async function GET(request: NextRequest) {
 // so re-saving the same post-flight form overwrites rather than duplicates.
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
 
     const {
