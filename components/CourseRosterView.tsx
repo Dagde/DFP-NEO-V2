@@ -45,6 +45,8 @@ interface CourseRosterViewProps {
     currencyRequirements?: CurrencyRequirement[];
     currentUserId?: string;
     currentUserName?: string;
+    pt051Assessments?: Map<string, any>;
+    userProfile?: any;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -106,6 +108,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     currencyRequirements = [],
     currentUserId,
     currentUserName,
+    pt051Assessments,
+    userProfile,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -441,6 +445,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     currencyRequirements={currencyRequirements}
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
+                    pt051Assessments={pt051Assessments}
+                    traineeLMPs={traineeLMPs}
+                    userProfile={userProfile}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (

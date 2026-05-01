@@ -2,7 +2,7 @@ import { useSystemFreeze } from '../hooks/useSystemFreeze';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus } from '../types';
+import { Trainee, TraineeRank, SeatConfig, UnavailabilityPeriod, ScheduleEvent, Score, SyllabusItemDetail, UnavailabilityReason, Instructor, LogbookExperience, MasterCurrency, CurrencyRequirement, PersonCurrencyStatus, Pt051Assessment } from '../types';
 import AddUnavailabilityFlyout from './AddUnavailabilityFlyout';
 import PauseConfirmationFlyout from './PauseConfirmationFlyout';
 import ScheduleWarningFlyout from './ScheduleWarningFlyout';
@@ -11,6 +11,8 @@ import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
+import HateSheetView from './HateSheetView';
+import TraineeLmpView from './TraineeLmpView';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -41,6 +43,10 @@ interface TraineeProfileFlyoutProps {
   currencyRequirements?: CurrencyRequirement[];
   currentUserId?: string;
   currentUserName?: string;
+  pt051Assessments?: Map<string, Pt051Assessment>;
+  traineeLMPs?: Map<string, SyllabusItemDetail[]>;
+  userProfile?: any;
+  onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -260,6 +266,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   currencyRequirements = [],
   currentUserId,
   currentUserName,
+  pt051Assessments,
+  traineeLMPs,
+  userProfile,
+  onSelectPt051ForEvent,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -281,7 +291,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 
     // Tab state — null means no tab open
-    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | null>(null);
+    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
     const [currencyEditState, setCurrencyEditState] = useState<{
       isEditing: boolean; isSaving: boolean;
@@ -672,13 +682,25 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
     
     const handleHateSheetClick = () => {
-        onNavigateToHateSheet(trainee);
-        onClose();
+        if (pt051Assessments !== undefined) {
+            // Render inline as a tab (keeps flyout/sidebar open)
+            setActiveTab(prev => prev === 'hatesheet' ? null : 'hatesheet');
+            setTimeout(() => { contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
+        } else {
+            onNavigateToHateSheet(trainee);
+            onClose();
+        }
     };
 
     const handleIndividualLMPClick = () => {
-        onViewIndividualLMP(trainee);
-        onClose();
+        if (traineeLMPs !== undefined) {
+            // Render inline as a tab (keeps flyout/sidebar open)
+            setActiveTab(prev => prev === 'lmp' ? null : 'lmp');
+            setTimeout(() => { contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
+        } else {
+            onViewIndividualLMP(trainee);
+            onClose();
+        }
     };
     
     const handleExperienceChange = (
@@ -1077,6 +1099,48 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       </div>
                     )}
 
+                    {/* ── PT-051 PERFORMANCE HISTORY TAB (inline) ── */}
+                    {activeTab === 'hatesheet' && (() => {
+                      const traineeAssessments = pt051Assessments
+                        ? Array.from(pt051Assessments.values()).filter((a: Pt051Assessment) => a.traineeFullName === trainee.fullName)
+                        : [];
+                      return (
+                        <div className={card3d + " p-0 overflow-hidden"} style={card3dStyle}>
+                          <HateSheetView
+                            trainee={trainee}
+                            lmpScores={scores.get(trainee.fullName) || []}
+                            assessments={traineeAssessments}
+                            pt051Events={traineeAssessments}
+                            userProfile={userProfile || {}}
+                            refreshEvents={() => {}}
+                            onSelectLmpScore={() => {}}
+                            onSelectPt051={(assessment: Pt051Assessment) => {
+                              if (onSelectPt051ForEvent) onSelectPt051ForEvent(assessment);
+                            }}
+                            onBackToRoster={() => setActiveTab(null)}
+                            onInsertPt051={() => {}}
+                          />
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── INDIVIDUAL LMP TAB (inline) ── */}
+                    {activeTab === 'lmp' && (() => {
+                      const traineeScores = scores.get(trainee.fullName) || [];
+                      let individualLMP = traineeLMPs ? traineeLMPs.get(trainee.fullName) : individualLmp;
+                      if (!individualLMP) individualLMP = individualLmp;
+                      return (
+                        <div className={card3d + " p-0 overflow-hidden"} style={card3dStyle}>
+                          <TraineeLmpView
+                            trainee={trainee}
+                            traineeLmp={individualLMP || []}
+                            scores={traineeScores}
+                            onBack={() => setActiveTab(null)}
+                          />
+                        </div>
+                      );
+                    })()}
+
                     {/* ── SECTION 1: MAIN PROFILE CARD ── */}
                     <div className={card3d + " p-3"} style={card3dStyle}>
                       {isEditing ? (
@@ -1376,8 +1440,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                          <button onClick={handleHateSheetClick} className={btnClass}>PT-051</button>
-                          <button onClick={handleIndividualLMPClick} className={btnClass}>View Individual LMP</button>
+                          <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>PT-051</button>
+                          <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>
                           <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>

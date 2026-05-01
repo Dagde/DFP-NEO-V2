@@ -8022,6 +8022,139 @@ function generateSimpleId() {
   return 'tp_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 8);
 }
 
+// ── Ensure snapshot columns exist on FlightLogEntry ─────────────────────────
+async function ensureFlightLogSnapshotColumns(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "FlightLogEntry"
+        ADD COLUMN IF NOT EXISTS "captainLogSnapshot" JSONB,
+        ADD COLUMN IF NOT EXISTS "crewLogSnapshot" JSONB
+    `);
+  } catch (err) {
+    console.log('[FlightLog] snapshot column ensure:', err.message);
+  }
+}
+
+// ── GET /api/flight-log ────────────────────────────────────────────────────────
+// Accepts: scheduleEventId, traineeId, personnelId, personName, eventCode, fromDate, toDate
+app.get('/api/flight-log', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureFlightLogSnapshotColumns(db);
+    const { scheduleEventId, traineeId, personnelId, personName, eventCode, fromDate, toDate } = req.query;
+
+    // Require at least one filter
+    if (!scheduleEventId && !traineeId && !personnelId && !personName && !eventCode) {
+      return res.status(400).json({ error: 'At least one filter param required: scheduleEventId, traineeId, personnelId, personName, or eventCode' });
+    }
+
+    const where = {};
+    if (scheduleEventId) where.scheduleEventId = scheduleEventId;
+    if (traineeId)       where.traineeId       = traineeId;
+    if (personnelId)     where.personnelId     = personnelId;
+    if (personName)      where.personName      = { contains: personName, mode: 'insensitive' };
+    if (eventCode)       where.eventCode       = eventCode;
+    if (fromDate || toDate) {
+      where.eventDate = {};
+      if (fromDate) where.eventDate.gte = fromDate;
+      if (toDate)   where.eventDate.lte = toDate;
+    }
+
+    const entries = await db.flightLogEntry.findMany({
+      where,
+      orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
+    });
+    console.log(`✅ GET /api/flight-log filters=${JSON.stringify({scheduleEventId,traineeId,personnelId,personName,eventCode})} → ${entries.length} rows`);
+    res.json({ entries, count: entries.length });
+  } catch (error) {
+    console.error('❌ GET /api/flight-log error:', error);
+    res.status(500).json({ error: 'Failed to fetch flight log entries', details: error.message });
+  }
+});
+
+// ── POST /api/flight-log (upsert by scheduleEventId + personRole) ─────────────
+app.post('/api/flight-log', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    await ensureFlightLogSnapshotColumns(db);
+    const body = req.body;
+    const {
+      scheduleEventId, eventCode, eventDate, eventType,
+      traineeId, personnelId, personName, personRole,
+      aircraftNumber, fromIcao, toIcao, duty,
+      isSolo, isDual, isFlightLog, isFtdLog,
+      takeoffTime, landTime, totalTime, captainTime, instructorTime,
+      nightTime, ifActualTime, ifSimTime, ineffectiveTime,
+      ilsCount, rnpCount, tacanCount, vorCount,
+      captainLogSnapshot, crewLogSnapshot,
+      recordedBy, notes,
+    } = body;
+
+    if (!scheduleEventId || !personRole || !personName) {
+      return res.status(400).json({ error: 'scheduleEventId, personName, personRole are required' });
+    }
+
+    // Upsert: match on scheduleEventId + personRole (one row per sortie per role)
+    const existing = await db.flightLogEntry.findFirst({
+      where: { scheduleEventId, personRole },
+    });
+
+    const data = {
+      scheduleEventId,
+      eventCode:      eventCode || scheduleEventId,
+      eventDate:      eventDate || new Date().toISOString().slice(0, 10),
+      eventType:      eventType || 'flight',
+      traineeId:      traineeId  || null,
+      personnelId:    personnelId || null,
+      personName,
+      personRole,
+      aircraftNumber: aircraftNumber || null,
+      fromIcao:       fromIcao || null,
+      toIcao:         toIcao   || null,
+      duty:           duty     || null,
+      isSolo:         !!isSolo,
+      isDual:         !!isDual,
+      isFlightLog:    isFlightLog !== undefined ? !!isFlightLog : true,
+      isFtdLog:       !!isFtdLog,
+      takeoffTime:    takeoffTime || null,
+      landTime:       landTime   || null,
+      totalTime:      totalTime       != null ? parseFloat(totalTime)       : null,
+      captainTime:    captainTime     != null ? parseFloat(captainTime)     : null,
+      instructorTime: instructorTime  != null ? parseFloat(instructorTime)  : null,
+      nightTime:      nightTime       != null ? parseFloat(nightTime)       : null,
+      ifActualTime:   ifActualTime    != null ? parseFloat(ifActualTime)    : null,
+      ifSimTime:      ifSimTime       != null ? parseFloat(ifSimTime)       : null,
+      ineffectiveTime:ineffectiveTime != null ? parseFloat(ineffectiveTime) : null,
+      ilsCount:       parseInt(ilsCount)   || 0,
+      rnpCount:       parseInt(rnpCount)   || 0,
+      tacanCount:     parseInt(tacanCount) || 0,
+      vorCount:       parseInt(vorCount)   || 0,
+      captainLogSnapshot: captainLogSnapshot || null,
+      crewLogSnapshot:    crewLogSnapshot   || null,
+      recordedBy:     recordedBy || null,
+      notes:          notes      || null,
+    };
+
+    let entry, created;
+    if (existing) {
+      entry = await db.flightLogEntry.update({
+        where: { id: existing.id },
+        data,
+      });
+      created = false;
+    } else {
+      entry = await db.flightLogEntry.create({ data });
+      created = true;
+    }
+
+    console.log(`✅ POST /api/flight-log ${created ? 'created' : 'updated'} id=${entry.id} scheduleEventId=${scheduleEventId} role=${personRole}`);
+    res.json({ success: true, entry, created });
+  } catch (error) {
+    console.error('❌ POST /api/flight-log error:', error);
+    res.status(500).json({ error: 'Failed to save flight log entry', details: error.message });
+  }
+});
+
 // Fallback: serve index-v2.html for all non-API routes
 app.get('*', (req, res) => {
   const indexPath = path.join(staticPath, 'index-v2.html');

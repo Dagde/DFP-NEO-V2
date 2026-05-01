@@ -8474,6 +8474,706 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
     }
   ) });
 };
+const PT051_STRUCTURE$2 = [
+  { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
+  { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
+  { category: "Takeoff", elements: ["Stationary"] },
+  { category: "Departure", elements: ["Visual"] },
+  { category: "Core Handling Skills", elements: ["Effects of Control", "Trimming", "Straight and Level"] },
+  { category: "Turns", elements: ["Level medium Turn", "Level Steep turn"] },
+  { category: "Recovery", elements: ["Visual - Initial & Pitch"] },
+  { category: "Landing", elements: ["Landing", "Crosswind"] },
+  { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
+];
+const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
+const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
+  const { isFrozen } = useSystemFreeze();
+  const [isDragging, setIsDragging] = reactExports.useState(false);
+  const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
+  const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
+  const combinedHistory = React.useMemo(() => {
+    const lmpItems = lmpScores.filter((score) => score.date && score.date.trim() !== "" || score.instructor && score.instructor.trim() !== "").map((score) => ({ ...score, type: "LMP Score" }));
+    const completedAssessments = assessments2.filter((assessment) => {
+      const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
+      const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
+      const hasScoredElements = assessment.scores && assessment.scores.length > 0 && assessment.scores.some((s) => s.grade !== null);
+      const hasDateAndInstructor = assessment.date && assessment.date.trim() !== "" && (assessment.instructorName && assessment.instructorName.trim() !== "");
+      return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
+    });
+    const seenUnassessed = /* @__PURE__ */ new Map();
+    completedAssessments.forEach((assessment) => {
+      const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
+      if (!isUnassessed) return;
+      const key = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
+      const existing = seenUnassessed.get(key);
+      if (!existing || (assessment.date || "") > (existing.date || "")) {
+        seenUnassessed.set(key, assessment);
+      }
+    });
+    const mostRecentKeys = new Set(Array.from(seenUnassessed.values()).map((a) => a.id));
+    const finalAssessments = completedAssessments.filter((assessment) => {
+      const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
+      if (!isUnassessed) return true;
+      return mostRecentKeys.has(assessment.id);
+    });
+    const pt051Items = finalAssessments.map((assessment) => ({ ...assessment, type: "PT-051" }));
+    console.log("=== Building combinedHistory ===");
+    console.log("LMP Scores:", lmpScores.length, lmpScores);
+    console.log("All PT-051 Assessments:", assessments2.length, assessments2);
+    console.log("Completed PT-051 Assessments (filtered):", completedAssessments.length, completedAssessments);
+    const combined = [...lmpItems, ...pt051Items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    console.log("Combined History:", combined.length, combined);
+    return combined;
+  }, [lmpScores, assessments2]);
+  const getScoreDisplay = (item) => {
+    let score = null;
+    let isDoubleMarginal = false;
+    if (item.type === "LMP Score") {
+      score = item.score;
+    } else if (item.type === "PT-051") {
+      score = item.overallGrade;
+    }
+    if (score === null || score === void 0 || score === "No Grade") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "-" });
+    }
+    if (score === 1) {
+      console.log("Checking double marginal for:", item.type === "LMP Score" ? item.event : item.flightNumber, "ID:", item.id, "on", item.date);
+      const currentIndex = combinedHistory.findIndex((history) => history.id === item.id);
+      if (currentIndex >= 0 && currentIndex < combinedHistory.length - 1) {
+        const previousItem = combinedHistory[currentIndex + 1];
+        const prevScore = previousItem.type === "LMP Score" ? previousItem.score : previousItem.overallGrade;
+        console.log("Previous item in timeline:", previousItem.type === "LMP Score" ? previousItem.event : previousItem.flightNumber, "score:", prevScore, "type:", previousItem.type, "ID:", previousItem.id);
+        if (prevScore === 1) {
+          isDoubleMarginal = true;
+          console.log("✅ DOUBLE MARGINAL DETECTED for", item.type === "LMP Score" ? item.event : item.flightNumber, "ID:", item.id, "- consecutive with previous event");
+        }
+      } else {
+        console.log("No previous item found in timeline for", item.type === "LMP Score" ? item.event : item.flightNumber);
+      }
+    }
+    if (item.type === "LMP Score" && item.score === 5) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 text-sm font-semibold", children: "Complete" });
+    }
+    const numScore = Number(score);
+    let colorClass = "bg-gray-500/20 text-gray-300";
+    if (!isNaN(numScore)) {
+      if (isDoubleMarginal) {
+        colorClass = "bg-red-500/20 text-red-300";
+      } else if (numScore >= 2) {
+        colorClass = "bg-green-500/20 text-green-300";
+      } else if (numScore === 1) {
+        colorClass = "bg-amber-500/20 text-amber-300";
+      } else if (numScore === 0) {
+        colorClass = "bg-red-500/20 text-red-300";
+      }
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-3 py-1 text-sm font-bold rounded-full ${colorClass}`, children: score });
+  };
+  const handleRowClick = (item) => {
+    if (item.type === "LMP Score") {
+      const mockAssessment = {
+        id: `mock-${item.event}`,
+        traineeFullName: trainee.fullName,
+        eventId: `mock-event-${item.event}`,
+        // Use a mock event ID
+        flightNumber: item.event,
+        date: item.date,
+        instructorName: item.instructor,
+        overallGrade: item.score === 5 ? "No Grade" : item.score,
+        // Type cast to Pt051OverallGrade
+        overallResult: item.score === 5 ? "P" : null,
+        dcoResult: item.score === 5 ? "DCO" : void 0,
+        overallComments: item.notes,
+        scores: ALL_ELEMENTS$2.map((element) => ({
+          element,
+          grade: null,
+          comment: ""
+        }))
+        // Properly structured scores array
+      };
+      onSelectPt051(mockAssessment);
+    } else if (item.type === "PT-051") {
+      onSelectPt051(item);
+    }
+  };
+  const handleDragStart = (e) => {
+    console.log("🟢 DRAG STARTED - PT-051 drag initiated");
+    console.log("🟢 Drag event details:", e.type, e.currentTarget);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", "pt051-new");
+    setTimeout(() => console.log("🟢 isDragging state:", isDragging), 100);
+  };
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    setHighlightedIndex(null);
+  };
+  const handleDragOver = reactExports.useCallback((e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    setHighlightedIndex(index);
+    console.log("⚡ INSTANT HIGHLIGHT - Row:", index);
+  }, []);
+  const handleDragLeave = reactExports.useCallback(() => {
+    setHighlightedIndex(null);
+    console.log("⚡ CLEARED HIGHLIGHT");
+  }, []);
+  const handleDrop = (e, index) => {
+    e.preventDefault();
+    let targetDate = "";
+    let insertIndex = index + 1;
+    if (insertIndex === 0) {
+      targetDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    } else if (insertIndex >= combinedHistory.length) {
+      const oldestItem = combinedHistory[combinedHistory.length - 1];
+      targetDate = oldestItem ? new Date(new Date(oldestItem.date).getTime() + 864e5).toISOString().split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    } else {
+      const highlightedItem = combinedHistory[index];
+      targetDate = highlightedItem ? highlightedItem.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    }
+    console.log("🎯 DROPPED PT-051 - Will insert after index:", index, "on date:", targetDate);
+    onInsertPt051(insertIndex, targetDate);
+    handleDragEnd();
+  };
+  React.useEffect(() => {
+    console.log("🔍 DEBUG STATE - isDragging:", isDragging, "highlightedIndex:", highlightedIndex);
+  }, [isDragging, highlightedIndex]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Performance History" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+          trainee.rank,
+          " ",
+          trainee.name || trainee.fullName,
+          " - ",
+          trainee.course
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: onBackToRoster,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
+            children: "← Back"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Performance History" })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto relative", children: [
+      isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            draggable: true,
+            onDragStart: handleDragStart,
+            onDragEnd: handleDragEnd,
+            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-all duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
+            title: "Drag and drop to insert PT-051 assessment",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 mr-2", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "+ Insert PT-051" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs opacity-75", children: "(drag to timeline)" })
+            ]
+          }
+        ) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
+          ] }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "tr",
+            {
+              onClick: () => handleRowClick(item),
+              className: `hover:bg-gray-700/50 transition-all duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
+              onDragOver: (e) => handleDragOver(e, index),
+              onDragLeave: handleDragLeave,
+              onDrop: (e) => handleDrop(e, index),
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: item.type === "LMP Score" ? item.event : item.flightNumber }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: item.type }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
+              ]
+            },
+            index
+          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "td",
+            {
+              colSpan: 6,
+              className: "text-center py-10 text-gray-500",
+              onDragOver: (e) => {
+                e.preventDefault();
+                console.log("🔶 DRAG OVER EMPTY STATE");
+                setHighlightedIndex(0);
+              },
+              onDragLeave: handleDragLeave,
+              onDrop: (e) => handleDrop(e, 0),
+              children: "No performance records for this trainee."
+            }
+          ) }) })
+        ] }) })
+      ] })
+    ] })
+  ] });
+};
+const DetailCard$1 = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-3 rounded-lg ${className}`, children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-md font-semibold text-white", children: value })
+] });
+const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
+] });
+const getScoreColor = (score, type) => {
+  const colors = {
+    "2-5": { text: "text-green-300", bg: "bg-green-500/20" },
+    "1": { text: "text-amber-300", bg: "bg-amber-500/20" },
+    "0": { text: "text-red-300", bg: "bg-red-500/20" }
+  };
+  const key = score >= 2 ? "2-5" : score === 1 ? "1" : "0";
+  return colors[key][type];
+};
+const getDisplayType = (syllabusItem) => {
+  if (syllabusItem.type === "Flight") return "Flight";
+  if (syllabusItem.type === "FTD") return "FTD";
+  if (syllabusItem.type === "Ground School") {
+    if (syllabusItem.code.includes("CPT")) return "CPT";
+    return "Ground";
+  }
+  return "Flight";
+};
+const DetailView$1 = ({ item, score }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Details" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Phase", value: item.phase }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Module", value: item.module }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: getDisplayType(item) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight || "Day" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Total Event Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        item.totalEventHours.toFixed(1),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Flight/Sim Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        item.flightOrSimHours.toFixed(1),
+        " ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
+      ] }) })
+    ] })
+  ] }),
+  score && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-sky-700 rounded-lg bg-sky-900/10", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-sky-300", children: "Trainee's Score" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        DetailCard$1,
+        {
+          label: "Overall Score",
+          value: item.type === "Ground School" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm", children: "-" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300", children: "Complete" })
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xl ${getScoreColor(score.score, "text")}`, children: score.score })
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Date", value: score.date }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Instructor", value: score.instructor })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap", children: score.notes }) }) })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Prerequisites" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Ground School", items: item.prerequisitesGround }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Sim/Flying", items: item.prerequisitesFlying })
+    ] })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Event Breakdown" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Delivery", items: item.methodOfDelivery }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Assessment", items: item.methodOfAssessment })
+    ] })
+  ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Resources" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Physical Resources", items: item.resourcesPhysical }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Human Resources", items: item.resourcesHuman })
+    ] })
+  ] })
+] });
+const CheckIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-green-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }) });
+const MissedIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) });
+const AcademicLmpTab = ({
+  trainee,
+  scores,
+  syllabusDetails,
+  allTraineesData,
+  onOpenPt051ForLesson
+}) => {
+  const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
+  const academicSyllabus = reactExports.useMemo(() => {
+    const academicLmpType2 = trainee.academicLmpType;
+    if (!academicLmpType2) return [];
+    return syllabusDetails.filter(
+      (s) => s.type === "Academics" && s.courses?.includes(academicLmpType2)
+    ).sort((a, b) => {
+      if (a.phase !== b.phase) return (a.phase || "").localeCompare(b.phase || "");
+      if (a.module !== b.module) return (a.module || "").localeCompare(b.module || "");
+      return (a.code || "").localeCompare(b.code || "");
+    });
+  }, [syllabusDetails, trainee.academicLmpType]);
+  const completedLessonCodes = reactExports.useMemo(() => {
+    const codes = /* @__PURE__ */ new Set();
+    scores.forEach((s) => {
+      if (s.event) codes.add(s.event.replace("*", ""));
+    });
+    return codes;
+  }, [scores]);
+  reactExports.useMemo(
+    () => allTraineesData.filter((t) => t.course === trainee.course && t.fullName !== trainee.fullName),
+    [allTraineesData, trainee.course, trainee.fullName]
+  );
+  const lastCompletedIndex = reactExports.useMemo(() => {
+    let last = -1;
+    academicSyllabus.forEach((item, idx) => {
+      if (completedLessonCodes.has(item.code)) last = idx;
+    });
+    return last;
+  }, [academicSyllabus, completedLessonCodes]);
+  const individualCount = completedLessonCodes.size;
+  const totalCount = academicSyllabus.length;
+  const groupedByModule = reactExports.useMemo(() => {
+    const groups = {};
+    academicSyllabus.forEach((item) => {
+      const key = item.module?.trim() || item.phase?.trim() || "General";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    });
+    return groups;
+  }, [academicSyllabus]);
+  const handleOpenPt051 = (lesson) => {
+    if (onOpenPt051ForLesson) {
+      onOpenPt051ForLesson(trainee, lesson.code);
+    }
+  };
+  const academicLmpType = trainee.academicLmpType;
+  if (!academicLmpType) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col items-center justify-center p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-900/20 border border-amber-700/40 rounded-lg p-6 max-w-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-300 font-semibold text-lg mb-2", children: "No Academic LMP Assigned" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm leading-relaxed", children: [
+        "This trainee does not have an Academic LMP assigned.",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+        "Go to ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Course Roster → Edit Trainee" }),
+        " and set the ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Academic LMP" }),
+        " field,",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+        "or set it at the course level via ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Training Records → Edit Course" }),
+        "."
+      ] })
+    ] }) });
+  }
+  if (academicSyllabus.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center h-full text-center p-8", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-4xl mb-4", children: "📚" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-lg font-medium", children: "No Academic Syllabus Found" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-500 text-sm mt-2", children: [
+        "No ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: "Academics" }),
+        " type lessons found with course assignment: ",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-purple-400", children: [
+          '"',
+          academicLmpType,
+          '"'
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-600 text-xs mt-2 max-w-md", children: [
+        "In the ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: "Syllabus view" }),
+        ", ensure at least one event has type ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Academics" }),
+        " and has ",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-purple-400", children: [
+          '"',
+          academicLmpType,
+          '"'
+        ] }),
+        " in its ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Courses" }),
+        " field."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-700 text-xs mt-1", children: [
+        "Total syllabus items loaded: ",
+        syllabusDetails.length,
+        " | Academics type items: ",
+        syllabusDetails.filter((s) => s.type === "Academics").length,
+        " | Matching course: ",
+        syllabusDetails.filter((s) => s.type === "Academics" && s.courses?.includes(academicLmpType)).length
+      ] })
+    ] });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-1/3 border-r border-gray-700 overflow-y-auto", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-gray-800/60 border-b border-gray-700 sticky top-0 z-10", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Individual Progress" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm font-bold text-white", children: [
+            individualCount,
+            "/",
+            totalCount
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700 rounded-full h-2 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "bg-sky-500 h-2 rounded-full transition-all duration-300",
+            style: { width: `${totalCount > 0 ? individualCount / totalCount * 100 : 0}%` }
+          }
+        ) }),
+        lastCompletedIndex > individualCount && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center gap-1 text-xs text-amber-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "⚠" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+            "Behind — ",
+            lastCompletedIndex - individualCount + 1,
+            " lesson(s) missed"
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 border-b border-gray-700/50 flex items-center gap-4 text-xs text-gray-400", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400", children: "✓" }),
+          " Attended"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "✗" }),
+          " Missed"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "○" }),
+          " Pending"
+        ] })
+      ] }),
+      Object.entries(groupedByModule).map(([moduleName, items]) => {
+        const moduleCompleted = items.filter((i) => completedLessonCodes.has(i.code)).length;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-1.5 bg-gray-800/40 border-b border-gray-700/50 flex items-center justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-sky-400 uppercase tracking-wider truncate", children: moduleName }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500 flex-shrink-0 ml-2", children: [
+              moduleCompleted,
+              "/",
+              items.length
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-1 space-y-0.5", children: items.map((item, idx) => {
+            const isCompleted = completedLessonCodes.has(item.code);
+            const lessonIdx = academicSyllabus.findIndex((a) => a.code === item.code);
+            const isMissed = !isCompleted && lessonIdx < lastCompletedIndex;
+            const isSelected = selectedLesson?.code === item.code;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: () => setSelectedLesson(item),
+                className: `w-full text-left px-2 py-1.5 rounded transition-colors text-xs flex items-center gap-2 ${isSelected ? "bg-sky-700 text-white font-semibold" : isCompleted ? "text-green-300 hover:bg-gray-700/50" : isMissed ? "text-red-300 hover:bg-gray-700/50" : "text-gray-400 hover:bg-gray-700/50"}`,
+                children: [
+                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : isMissed ? /* @__PURE__ */ jsxRuntimeExports.jsx(MissedIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 rounded-full border border-gray-600" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold", children: item.code }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-400 text-xs", children: item.eventDescription }),
+                  isMissed && !isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto flex-shrink-0 text-xs bg-red-900/50 text-red-300 px-1 rounded", children: "MISSED" })
+                ]
+              }
+            ) }, item.code);
+          }) })
+        ] }, moduleName);
+      })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2/3 overflow-y-auto", children: selectedLesson ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 max-w-3xl mx-auto space-y-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: selectedLesson.code }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mt-0.5", children: selectedLesson.eventDescription }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mt-2 text-xs text-gray-500", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: selectedLesson.module || selectedLesson.phase }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: selectedLesson.type }),
+            selectedLesson.duration ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: [
+              selectedLesson.duration,
+              "h"
+            ] }) : null
+          ] })
+        ] }),
+        completedLessonCodes.has(selectedLesson.code) ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 bg-green-900/40 text-green-300 px-3 py-1.5 rounded-lg text-sm font-semibold border border-green-700/50", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}),
+          " Attended"
+        ] }) : (() => {
+          const lessonIdx = academicSyllabus.findIndex((a) => a.code === selectedLesson.code);
+          return lessonIdx < lastCompletedIndex ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 bg-red-900/40 text-red-300 px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-700/50", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MissedIcon, {}),
+            " Missed"
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-gray-700/50 text-gray-400 px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-600/50", children: "Not Yet Attended" });
+        })()
+      ] }),
+      (() => {
+        const lessonScore = scores.find((s) => s.event === selectedLesson.code || s.event === selectedLesson.code + "*");
+        if (!lessonScore) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-green-700/50 rounded-lg bg-green-900/10", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-green-300", children: "Attendance Record" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4 mt-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Date", value: lessonScore.date }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Instructor", value: lessonScore.instructor || "—" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Result", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 font-bold", children: "DCO ✓" }) })
+          ] }),
+          lessonScore.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: lessonScore.notes }) }) })
+        ] });
+      })(),
+      onOpenPt051ForLesson && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 pt-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => handleOpenPt051(selectedLesson),
+            className: "w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed",
+            children: completedLessonCodes.has(selectedLesson.code) ? "View / Edit PT-051" : "Open PT-051"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 italic", children: completedLessonCodes.has(selectedLesson.code) ? "View or edit the attendance record for this lesson" : "Mark this lesson as attended via PT-051" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Lesson Details" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4 mt-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Phase", value: selectedLesson.phase || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Module", value: selectedLesson.module || "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Duration", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            selectedLesson.duration?.toFixed(1) || "—",
+            " ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
+          ] }) })
+        ] })
+      ] }),
+      selectedLesson.methodOfDelivery?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Delivery" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "", items: selectedLesson.methodOfDelivery }) })
+      ] }),
+      selectedLesson.methodOfAssessment?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Assessment" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "", items: selectedLesson.methodOfAssessment }) })
+      ] })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center h-full text-center p-8", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-4xl mb-4", children: "📖" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select a lesson from the list to view its details and attendance record." })
+    ] }) })
+  ] });
+};
+const TraineeLmpView = ({
+  trainee,
+  traineeLmp,
+  scores,
+  onBack,
+  syllabusDetails,
+  allTraineesData,
+  onOpenPt051ForLesson
+}) => {
+  const { isFrozen } = useSystemFreeze();
+  const [selectedItem, setSelectedItem] = reactExports.useState(null);
+  const [activeTab, setActiveTab] = reactExports.useState("neo");
+  const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
+  const completedEventIds = reactExports.useMemo(() => {
+    const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
+    traineeLmp.forEach((item) => {
+      if (item.completedAt) {
+        ids.add((item.id || item.code || "").replace("*", ""));
+      }
+    });
+    if (ids.has("BIF FTD2") && !ids.has("BIF FTD1")) ids.add("BIF FTD1");
+    if (ids.has("BIF1") && !ids.has("BIF FTD3")) ids.add("BIF FTD3");
+    return ids;
+  }, [scores, traineeLmp]);
+  reactExports.useEffect(() => {
+    setSelectedItem(null);
+  }, [trainee.fullName]);
+  const tabClass = (tab) => `px-4 py-2 text-sm font-semibold rounded-t-md transition-colors ${activeTab === tab ? "bg-gray-900 text-sky-400 border-t border-l border-r border-gray-700" : "bg-gray-800 text-gray-400 hover:text-gray-200 border border-transparent"}`;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Individual LMP" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+          trainee.rank,
+          " ",
+          trainee.name,
+          " - ",
+          trainee.course
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: onBack,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
+            children: "← Back"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Individual LMP" })
+      ] })
+    ] }),
+    hasAcademicSyllabus && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 px-4 pt-2 flex gap-1 border-b border-gray-700", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: tabClass("neo"), onClick: () => setActiveTab("neo"), children: "NEO Build LMP" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: tabClass("academic"), onClick: () => setActiveTab("academic"), children: "Academic LMP" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden relative", children: [
+      isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+      activeTab === "academic" && syllabusDetails && allTraineesData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        AcademicLmpTab,
+        {
+          trainee,
+          scores,
+          syllabusDetails,
+          allTraineesData,
+          onOpenPt051ForLesson
+        }
+      ) : (
+        /* ── NEO Build LMP Tab (existing) ── */
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 border-r border-gray-700 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
+            const isCompleted = completedEventIds.has(item.code);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: () => setSelectedItem(item),
+                className: `w-full text-left p-2 rounded-md transition-colors text-sm flex items-center space-x-2 ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`,
+                children: [
+                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.code })
+                ]
+              }
+            ) }, item.code);
+          }) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            DetailView$1,
+            {
+              item: selectedItem,
+              score: scores.find((s) => s.event === selectedItem.code)
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
+        ] })
+      )
+    ] })
+  ] });
+};
 const COURSE_MASTER_LMPS$1 = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
@@ -8556,7 +9256,11 @@ const TraineeProfileFlyout = ({
   masterCurrencies = [],
   currencyRequirements = [],
   currentUserId,
-  currentUserName
+  currentUserName,
+  pt051Assessments,
+  traineeLMPs,
+  userProfile,
+  onSelectPt051ForEvent
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -8852,12 +9556,26 @@ const TraineeProfileFlyout = ({
     );
   };
   const handleHateSheetClick = () => {
-    onNavigateToHateSheet(trainee);
-    onClose();
+    if (pt051Assessments !== void 0) {
+      setActiveTab((prev) => prev === "hatesheet" ? null : "hatesheet");
+      setTimeout(() => {
+        contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      }, 50);
+    } else {
+      onNavigateToHateSheet(trainee);
+      onClose();
+    }
   };
   const handleIndividualLMPClick = () => {
-    onViewIndividualLMP(trainee);
-    onClose();
+    if (traineeLMPs !== void 0) {
+      setActiveTab((prev) => prev === "lmp" ? null : "lmp");
+      setTimeout(() => {
+        contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      }, 50);
+    } else {
+      onViewIndividualLMP(trainee);
+      onClose();
+    }
   };
   const handleExperienceChange = (section, field, value) => {
     setPriorExperience((prev) => {
@@ -9200,6 +9918,43 @@ const TraineeProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setActiveTab(null), className: "px-4 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-xs rounded", children: "Cancel" })
             ] })
           ] }),
+          activeTab === "hatesheet" && (() => {
+            const traineeAssessments = pt051Assessments ? Array.from(pt051Assessments.values()).filter((a) => a.traineeFullName === trainee.fullName) : [];
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              HateSheetView,
+              {
+                trainee,
+                lmpScores: scores.get(trainee.fullName) || [],
+                assessments: traineeAssessments,
+                pt051Events: traineeAssessments,
+                userProfile: userProfile || {},
+                refreshEvents: () => {
+                },
+                onSelectLmpScore: () => {
+                },
+                onSelectPt051: (assessment) => {
+                  if (onSelectPt051ForEvent) onSelectPt051ForEvent(assessment);
+                },
+                onBackToRoster: () => setActiveTab(null),
+                onInsertPt051: () => {
+                }
+              }
+            ) });
+          })(),
+          activeTab === "lmp" && (() => {
+            const traineeScores = scores.get(trainee.fullName) || [];
+            let individualLMP = traineeLMPs ? traineeLMPs.get(trainee.fullName) : individualLmp;
+            if (!individualLMP) individualLMP = individualLmp;
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              TraineeLmpView,
+              {
+                trainee,
+                traineeLmp: individualLMP || [],
+                scores: traineeScores,
+                onBack: () => setActiveTab(null)
+              }
+            ) });
+          })(),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-3", style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }),
@@ -9490,8 +10245,8 @@ const TraineeProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: btnClass, children: "PT-051" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: btnClass, children: "View Individual LMP" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: tabBtnClass("hatesheet"), children: "PT-051" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[1px]" }),
@@ -10096,7 +10851,9 @@ const CourseRosterView = ({
   masterCurrencies = [],
   currencyRequirements = [],
   currentUserId,
-  currentUserName
+  currentUserName,
+  pt051Assessments,
+  userProfile
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -10360,7 +11117,10 @@ const CourseRosterView = ({
         masterCurrencies,
         currencyRequirements,
         currentUserId,
-        currentUserName
+        currentUserName,
+        pt051Assessments,
+        traineeLMPs,
+        userProfile
       }
     ),
     hoveredTrainee && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -10405,257 +11165,6 @@ const CourseRosterView = ({
         courseColors
       }
     )
-  ] });
-};
-const PT051_STRUCTURE$2 = [
-  { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
-  { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
-  { category: "Takeoff", elements: ["Stationary"] },
-  { category: "Departure", elements: ["Visual"] },
-  { category: "Core Handling Skills", elements: ["Effects of Control", "Trimming", "Straight and Level"] },
-  { category: "Turns", elements: ["Level medium Turn", "Level Steep turn"] },
-  { category: "Recovery", elements: ["Visual - Initial & Pitch"] },
-  { category: "Landing", elements: ["Landing", "Crosswind"] },
-  { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
-];
-const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
-  const { isFrozen } = useSystemFreeze();
-  const [isDragging, setIsDragging] = reactExports.useState(false);
-  const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
-  const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
-  const combinedHistory = React.useMemo(() => {
-    const lmpItems = lmpScores.filter((score) => score.date && score.date.trim() !== "" || score.instructor && score.instructor.trim() !== "").map((score) => ({ ...score, type: "LMP Score" }));
-    const completedAssessments = assessments2.filter((assessment) => {
-      const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
-      const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
-      const hasScoredElements = assessment.scores && assessment.scores.length > 0 && assessment.scores.some((s) => s.grade !== null);
-      const hasDateAndInstructor = assessment.date && assessment.date.trim() !== "" && (assessment.instructorName && assessment.instructorName.trim() !== "");
-      return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
-    });
-    const seenUnassessed = /* @__PURE__ */ new Map();
-    completedAssessments.forEach((assessment) => {
-      const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
-      if (!isUnassessed) return;
-      const key = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
-      const existing = seenUnassessed.get(key);
-      if (!existing || (assessment.date || "") > (existing.date || "")) {
-        seenUnassessed.set(key, assessment);
-      }
-    });
-    const mostRecentKeys = new Set(Array.from(seenUnassessed.values()).map((a) => a.id));
-    const finalAssessments = completedAssessments.filter((assessment) => {
-      const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
-      if (!isUnassessed) return true;
-      return mostRecentKeys.has(assessment.id);
-    });
-    const pt051Items = finalAssessments.map((assessment) => ({ ...assessment, type: "PT-051" }));
-    console.log("=== Building combinedHistory ===");
-    console.log("LMP Scores:", lmpScores.length, lmpScores);
-    console.log("All PT-051 Assessments:", assessments2.length, assessments2);
-    console.log("Completed PT-051 Assessments (filtered):", completedAssessments.length, completedAssessments);
-    const combined = [...lmpItems, ...pt051Items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    console.log("Combined History:", combined.length, combined);
-    return combined;
-  }, [lmpScores, assessments2]);
-  const getScoreDisplay = (item) => {
-    let score = null;
-    let isDoubleMarginal = false;
-    if (item.type === "LMP Score") {
-      score = item.score;
-    } else if (item.type === "PT-051") {
-      score = item.overallGrade;
-    }
-    if (score === null || score === void 0 || score === "No Grade") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "-" });
-    }
-    if (score === 1) {
-      console.log("Checking double marginal for:", item.type === "LMP Score" ? item.event : item.flightNumber, "ID:", item.id, "on", item.date);
-      const currentIndex = combinedHistory.findIndex((history) => history.id === item.id);
-      if (currentIndex >= 0 && currentIndex < combinedHistory.length - 1) {
-        const previousItem = combinedHistory[currentIndex + 1];
-        const prevScore = previousItem.type === "LMP Score" ? previousItem.score : previousItem.overallGrade;
-        console.log("Previous item in timeline:", previousItem.type === "LMP Score" ? previousItem.event : previousItem.flightNumber, "score:", prevScore, "type:", previousItem.type, "ID:", previousItem.id);
-        if (prevScore === 1) {
-          isDoubleMarginal = true;
-          console.log("✅ DOUBLE MARGINAL DETECTED for", item.type === "LMP Score" ? item.event : item.flightNumber, "ID:", item.id, "- consecutive with previous event");
-        }
-      } else {
-        console.log("No previous item found in timeline for", item.type === "LMP Score" ? item.event : item.flightNumber);
-      }
-    }
-    if (item.type === "LMP Score" && item.score === 5) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 text-sm font-semibold", children: "Complete" });
-    }
-    const numScore = Number(score);
-    let colorClass = "bg-gray-500/20 text-gray-300";
-    if (!isNaN(numScore)) {
-      if (isDoubleMarginal) {
-        colorClass = "bg-red-500/20 text-red-300";
-      } else if (numScore >= 2) {
-        colorClass = "bg-green-500/20 text-green-300";
-      } else if (numScore === 1) {
-        colorClass = "bg-amber-500/20 text-amber-300";
-      } else if (numScore === 0) {
-        colorClass = "bg-red-500/20 text-red-300";
-      }
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-3 py-1 text-sm font-bold rounded-full ${colorClass}`, children: score });
-  };
-  const handleRowClick = (item) => {
-    if (item.type === "LMP Score") {
-      const mockAssessment = {
-        id: `mock-${item.event}`,
-        traineeFullName: trainee.fullName,
-        eventId: `mock-event-${item.event}`,
-        // Use a mock event ID
-        flightNumber: item.event,
-        date: item.date,
-        instructorName: item.instructor,
-        overallGrade: item.score === 5 ? "No Grade" : item.score,
-        // Type cast to Pt051OverallGrade
-        overallResult: item.score === 5 ? "P" : null,
-        dcoResult: item.score === 5 ? "DCO" : void 0,
-        overallComments: item.notes,
-        scores: ALL_ELEMENTS$2.map((element) => ({
-          element,
-          grade: null,
-          comment: ""
-        }))
-        // Properly structured scores array
-      };
-      onSelectPt051(mockAssessment);
-    } else if (item.type === "PT-051") {
-      onSelectPt051(item);
-    }
-  };
-  const handleDragStart = (e) => {
-    console.log("🟢 DRAG STARTED - PT-051 drag initiated");
-    console.log("🟢 Drag event details:", e.type, e.currentTarget);
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = "copy";
-    e.dataTransfer.setData("text/plain", "pt051-new");
-    setTimeout(() => console.log("🟢 isDragging state:", isDragging), 100);
-  };
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    setHighlightedIndex(null);
-  };
-  const handleDragOver = reactExports.useCallback((e, index) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    setHighlightedIndex(index);
-    console.log("⚡ INSTANT HIGHLIGHT - Row:", index);
-  }, []);
-  const handleDragLeave = reactExports.useCallback(() => {
-    setHighlightedIndex(null);
-    console.log("⚡ CLEARED HIGHLIGHT");
-  }, []);
-  const handleDrop = (e, index) => {
-    e.preventDefault();
-    let targetDate = "";
-    let insertIndex = index + 1;
-    if (insertIndex === 0) {
-      targetDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    } else if (insertIndex >= combinedHistory.length) {
-      const oldestItem = combinedHistory[combinedHistory.length - 1];
-      targetDate = oldestItem ? new Date(new Date(oldestItem.date).getTime() + 864e5).toISOString().split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    } else {
-      const highlightedItem = combinedHistory[index];
-      targetDate = highlightedItem ? highlightedItem.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    }
-    console.log("🎯 DROPPED PT-051 - Will insert after index:", index, "on date:", targetDate);
-    onInsertPt051(insertIndex, targetDate);
-    handleDragEnd();
-  };
-  React.useEffect(() => {
-    console.log("🔍 DEBUG STATE - isDragging:", isDragging, "highlightedIndex:", highlightedIndex);
-  }, [isDragging, highlightedIndex]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Performance History" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
-          trainee.rank,
-          " ",
-          trainee.name || trainee.fullName,
-          " - ",
-          trainee.course
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: onBackToRoster,
-            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
-            children: "← Back"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Performance History" })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto relative", children: [
-      isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            draggable: true,
-            onDragStart: handleDragStart,
-            onDragEnd: handleDragEnd,
-            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-all duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
-            title: "Drag and drop to insert PT-051 assessment",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 mr-2", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "+ Insert PT-051" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs opacity-75", children: "(drag to timeline)" })
-            ]
-          }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "tr",
-            {
-              onClick: () => handleRowClick(item),
-              className: `hover:bg-gray-700/50 transition-all duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
-              onDragOver: (e) => handleDragOver(e, index),
-              onDragLeave: handleDragLeave,
-              onDrop: (e) => handleDrop(e, index),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: item.type === "LMP Score" ? item.event : item.flightNumber }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: item.type }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
-              ]
-            },
-            index
-          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "td",
-            {
-              colSpan: 6,
-              className: "text-center py-10 text-gray-500",
-              onDragOver: (e) => {
-                e.preventDefault();
-                console.log("🔶 DRAG OVER EMPTY STATE");
-                setHighlightedIndex(0);
-              },
-              onDragLeave: handleDragLeave,
-              onDrop: (e) => handleDrop(e, 0),
-              children: "No performance records for this trainee."
-            }
-          ) }) })
-        ] }) })
-      ] })
-    ] })
   ] });
 };
 const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
@@ -24258,7 +24767,9 @@ const TraineeView = (props) => {
           masterCurrencies: props.masterCurrencies,
           currencyRequirements: props.currencyRequirements,
           currentUserId: props.currentUserId,
-          currentUserName: props.currentUserName
+          currentUserName: props.currentUserName,
+          pt051Assessments: props.pt051Assessments,
+          userProfile: props.userProfile
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24509,11 +25020,11 @@ async function retireSyllabusItem(id, changeReason) {
   }
   clearSyllabusCache();
 }
-const DetailCard$1 = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-1 rounded-lg ${className}`, children: [
+const DetailCard = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-1 rounded-lg ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 text-[10px] font-semibold text-white", children: value })
 ] });
-const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
@@ -24543,7 +25054,7 @@ const EditableList = ({ title, items, onChange }) => /* @__PURE__ */ jsxRuntimeE
     }
   )
 ] });
-const DetailView$1 = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -24758,35 +25269,35 @@ const DetailView$1 = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent
           )
         ] })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: getDisplayType2(item) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Cct Only", value: item.cctOnly || (item.code === "BGF10" ? "YES" : "NO") }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "TWR DI Reqd", value: item.twrDiReqd || (item.code === "BGF11" || item.code === "BGF18" ? "YES" : "NO") }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Total Event Hrs", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Day/Night", value: item.dayNight }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Type", value: getDisplayType2(item) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Cct Only", value: item.cctOnly || (item.code === "BGF10" ? "YES" : "NO") }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "TWR DI Reqd", value: item.twrDiReqd || (item.code === "BGF11" || item.code === "BGF18" ? "YES" : "NO") }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Total Event Hrs", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           item.totalEventHours.toFixed(1),
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "hrs" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Flight/Sim Hrs", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Flight/Sim Hrs", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           item.flightOrSimHours.toFixed(1),
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "hrs" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           Math.round(item.preFlightTime * 60),
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "min" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Post-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Post-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           Math.round(item.postFlightTime * 60),
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "min" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Code", value: item.code }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Course", value: (item.courses || []).join(", ") || "None" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Phase", value: item.phase }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Module", value: item.module })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Code", value: item.code }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Course", value: (item.courses || []).join(", ") || "None" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Phase", value: item.phase }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Module", value: item.module })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -24799,8 +25310,8 @@ const DetailView$1 = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Ground School", items: currentItem.prerequisitesGround, onChange: (val) => handleFieldChange("prerequisitesGround", val) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Sim/Flying", items: currentItem.prerequisitesFlying, onChange: (val) => handleFieldChange("prerequisitesFlying", val) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Ground School", items: item.prerequisitesGround }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Sim/Flying", items: item.prerequisitesFlying })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Ground School", items: item.prerequisitesGround }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Sim/Flying", items: item.prerequisitesFlying })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -24811,10 +25322,10 @@ const DetailView$1 = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Event Details (Common)", items: currentItem.eventDetailsCommon, onChange: (val) => handleFieldChange("eventDetailsCommon", val) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Event Details (Sortie)", items: currentItem.eventDetailsSortie, onChange: (val) => handleFieldChange("eventDetailsSortie", val) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Delivery", items: item.methodOfDelivery }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Methods of Assessment", items: item.methodOfAssessment }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Event Details (Common)", items: item.eventDetailsCommon }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Event Details (Sortie)", items: item.eventDetailsSortie })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Methods of Delivery", items: item.methodOfDelivery }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Methods of Assessment", items: item.methodOfAssessment }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Event Details (Common)", items: item.eventDetailsCommon }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Event Details (Sortie)", items: item.eventDetailsSortie })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
@@ -24823,8 +25334,8 @@ const DetailView$1 = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Physical Resources", items: currentItem.resourcesPhysical, onChange: (val) => handleFieldChange("resourcesPhysical", val) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(EditableList, { title: "Human Resources", items: currentItem.resourcesHuman, onChange: (val) => handleFieldChange("resourcesHuman", val) })
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Physical Resources", items: item.resourcesPhysical }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList$1, { title: "Human Resources", items: item.resourcesHuman })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Physical Resources", items: item.resourcesPhysical }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Human Resources", items: item.resourcesHuman })
       ] }) })
     ] }),
     isEditing && onDeleteEvent && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "pt-4 border-t border-gray-700 mt-2 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -25337,7 +25848,7 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: hoveredItem || selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-          DetailView$1,
+          DetailView,
           {
             item: hoveredItem || selectedItem,
             isEditing,
@@ -57480,455 +57991,6 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     )
   ] });
 };
-const DetailCard = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-3 rounded-lg ${className}`, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-md font-semibold text-white", children: value })
-] });
-const DetailList = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
-] });
-const getScoreColor = (score, type) => {
-  const colors = {
-    "2-5": { text: "text-green-300", bg: "bg-green-500/20" },
-    "1": { text: "text-amber-300", bg: "bg-amber-500/20" },
-    "0": { text: "text-red-300", bg: "bg-red-500/20" }
-  };
-  const key = score >= 2 ? "2-5" : score === 1 ? "1" : "0";
-  return colors[key][type];
-};
-const getDisplayType = (syllabusItem) => {
-  if (syllabusItem.type === "Flight") return "Flight";
-  if (syllabusItem.type === "FTD") return "FTD";
-  if (syllabusItem.type === "Ground School") {
-    if (syllabusItem.code.includes("CPT")) return "CPT";
-    return "Ground";
-  }
-  return "Flight";
-};
-const DetailView = ({ item, score }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Details" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Phase", value: item.phase }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Module", value: item.module }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Type", value: getDisplayType(item) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Day/Night", value: item.dayNight || "Day" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Total Event Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        item.totalEventHours.toFixed(1),
-        " ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Flight/Sim Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        item.flightOrSimHours.toFixed(1),
-        " ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
-      ] }) })
-    ] })
-  ] }),
-  score && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-sky-700 rounded-lg bg-sky-900/10", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-sky-300", children: "Trainee's Score" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4 mt-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        DetailCard,
-        {
-          label: "Overall Score",
-          value: item.type === "Ground School" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm", children: "-" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300", children: "Complete" })
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xl ${getScoreColor(score.score, "text")}`, children: score.score })
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Date", value: score.date }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Instructor", value: score.instructor })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap", children: score.notes }) }) })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Prerequisites" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Ground School", items: item.prerequisitesGround }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Sim/Flying", items: item.prerequisitesFlying })
-    ] })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Event Breakdown" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Methods of Delivery", items: item.methodOfDelivery }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Methods of Assessment", items: item.methodOfAssessment })
-    ] })
-  ] }),
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Resources" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-6 mt-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Physical Resources", items: item.resourcesPhysical }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "Human Resources", items: item.resourcesHuman })
-    ] })
-  ] })
-] });
-const CheckIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-green-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z", clipRule: "evenodd" }) });
-const MissedIcon = () => /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-4 w-4 text-red-400 flex-shrink-0", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z", clipRule: "evenodd" }) });
-const AcademicLmpTab = ({
-  trainee,
-  scores,
-  syllabusDetails,
-  allTraineesData,
-  onOpenPt051ForLesson
-}) => {
-  const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
-  const academicSyllabus = reactExports.useMemo(() => {
-    const academicLmpType2 = trainee.academicLmpType;
-    if (!academicLmpType2) return [];
-    return syllabusDetails.filter(
-      (s) => s.type === "Academics" && s.courses?.includes(academicLmpType2)
-    ).sort((a, b) => {
-      if (a.phase !== b.phase) return (a.phase || "").localeCompare(b.phase || "");
-      if (a.module !== b.module) return (a.module || "").localeCompare(b.module || "");
-      return (a.code || "").localeCompare(b.code || "");
-    });
-  }, [syllabusDetails, trainee.academicLmpType]);
-  const completedLessonCodes = reactExports.useMemo(() => {
-    const codes = /* @__PURE__ */ new Set();
-    scores.forEach((s) => {
-      if (s.event) codes.add(s.event.replace("*", ""));
-    });
-    return codes;
-  }, [scores]);
-  reactExports.useMemo(
-    () => allTraineesData.filter((t) => t.course === trainee.course && t.fullName !== trainee.fullName),
-    [allTraineesData, trainee.course, trainee.fullName]
-  );
-  const lastCompletedIndex = reactExports.useMemo(() => {
-    let last = -1;
-    academicSyllabus.forEach((item, idx) => {
-      if (completedLessonCodes.has(item.code)) last = idx;
-    });
-    return last;
-  }, [academicSyllabus, completedLessonCodes]);
-  const individualCount = completedLessonCodes.size;
-  const totalCount = academicSyllabus.length;
-  const groupedByModule = reactExports.useMemo(() => {
-    const groups = {};
-    academicSyllabus.forEach((item) => {
-      const key = item.module?.trim() || item.phase?.trim() || "General";
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(item);
-    });
-    return groups;
-  }, [academicSyllabus]);
-  const handleOpenPt051 = (lesson) => {
-    if (onOpenPt051ForLesson) {
-      onOpenPt051ForLesson(trainee, lesson.code);
-    }
-  };
-  const academicLmpType = trainee.academicLmpType;
-  if (!academicLmpType) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col items-center justify-center p-8 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-900/20 border border-amber-700/40 rounded-lg p-6 max-w-md", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-amber-300 font-semibold text-lg mb-2", children: "No Academic LMP Assigned" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm leading-relaxed", children: [
-        "This trainee does not have an Academic LMP assigned.",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-        "Go to ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Course Roster → Edit Trainee" }),
-        " and set the ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Academic LMP" }),
-        " field,",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-        "or set it at the course level via ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Training Records → Edit Course" }),
-        "."
-      ] })
-    ] }) });
-  }
-  if (academicSyllabus.length === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center h-full text-center p-8", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-4xl mb-4", children: "📚" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-lg font-medium", children: "No Academic Syllabus Found" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-500 text-sm mt-2", children: [
-        "No ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: "Academics" }),
-        " type lessons found with course assignment: ",
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-purple-400", children: [
-          '"',
-          academicLmpType,
-          '"'
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-600 text-xs mt-2 max-w-md", children: [
-        "In the ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400", children: "Syllabus view" }),
-        ", ensure at least one event has type ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Academics" }),
-        " and has ",
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-purple-400", children: [
-          '"',
-          academicLmpType,
-          '"'
-        ] }),
-        " in its ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Courses" }),
-        " field."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-700 text-xs mt-1", children: [
-        "Total syllabus items loaded: ",
-        syllabusDetails.length,
-        " | Academics type items: ",
-        syllabusDetails.filter((s) => s.type === "Academics").length,
-        " | Matching course: ",
-        syllabusDetails.filter((s) => s.type === "Academics" && s.courses?.includes(academicLmpType)).length
-      ] })
-    ] });
-  }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-1/3 border-r border-gray-700 overflow-y-auto", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 bg-gray-800/60 border-b border-gray-700 sticky top-0 z-10", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold text-gray-400 uppercase tracking-wider", children: "Individual Progress" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm font-bold text-white", children: [
-            individualCount,
-            "/",
-            totalCount
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700 rounded-full h-2 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "bg-sky-500 h-2 rounded-full transition-all duration-300",
-            style: { width: `${totalCount > 0 ? individualCount / totalCount * 100 : 0}%` }
-          }
-        ) }),
-        lastCompletedIndex > individualCount && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center gap-1 text-xs text-amber-400", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "⚠" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-            "Behind — ",
-            lastCompletedIndex - individualCount + 1,
-            " lesson(s) missed"
-          ] })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-2 border-b border-gray-700/50 flex items-center gap-4 text-xs text-gray-400", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400", children: "✓" }),
-          " Attended"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "✗" }),
-          " Missed"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "○" }),
-          " Pending"
-        ] })
-      ] }),
-      Object.entries(groupedByModule).map(([moduleName, items]) => {
-        const moduleCompleted = items.filter((i) => completedLessonCodes.has(i.code)).length;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-3 py-1.5 bg-gray-800/40 border-b border-gray-700/50 flex items-center justify-between", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-sky-400 uppercase tracking-wider truncate", children: moduleName }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500 flex-shrink-0 ml-2", children: [
-              moduleCompleted,
-              "/",
-              items.length
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-1 space-y-0.5", children: items.map((item, idx) => {
-            const isCompleted = completedLessonCodes.has(item.code);
-            const lessonIdx = academicSyllabus.findIndex((a) => a.code === item.code);
-            const isMissed = !isCompleted && lessonIdx < lastCompletedIndex;
-            const isSelected = selectedLesson?.code === item.code;
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => setSelectedLesson(item),
-                className: `w-full text-left px-2 py-1.5 rounded transition-colors text-xs flex items-center gap-2 ${isSelected ? "bg-sky-700 text-white font-semibold" : isCompleted ? "text-green-300 hover:bg-gray-700/50" : isMissed ? "text-red-300 hover:bg-gray-700/50" : "text-gray-400 hover:bg-gray-700/50"}`,
-                children: [
-                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : isMissed ? /* @__PURE__ */ jsxRuntimeExports.jsx(MissedIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 rounded-full border border-gray-600" }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold", children: item.code }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate text-gray-400 text-xs", children: item.eventDescription }),
-                  isMissed && !isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto flex-shrink-0 text-xs bg-red-900/50 text-red-300 px-1 rounded", children: "MISSED" })
-                ]
-              }
-            ) }, item.code);
-          }) })
-        ] }, moduleName);
-      })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2/3 overflow-y-auto", children: selectedLesson ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 max-w-3xl mx-auto space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: selectedLesson.code }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mt-0.5", children: selectedLesson.eventDescription }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 mt-2 text-xs text-gray-500", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: selectedLesson.module || selectedLesson.phase }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: selectedLesson.type }),
-            selectedLesson.duration ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "bg-gray-700 px-2 py-0.5 rounded", children: [
-              selectedLesson.duration,
-              "h"
-            ] }) : null
-          ] })
-        ] }),
-        completedLessonCodes.has(selectedLesson.code) ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 bg-green-900/40 text-green-300 px-3 py-1.5 rounded-lg text-sm font-semibold border border-green-700/50", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}),
-          " Attended"
-        ] }) : (() => {
-          const lessonIdx = academicSyllabus.findIndex((a) => a.code === selectedLesson.code);
-          return lessonIdx < lastCompletedIndex ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 bg-red-900/40 text-red-300 px-3 py-1.5 rounded-lg text-sm font-semibold border border-red-700/50", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(MissedIcon, {}),
-            " Missed"
-          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "bg-gray-700/50 text-gray-400 px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-600/50", children: "Not Yet Attended" });
-        })()
-      ] }),
-      (() => {
-        const lessonScore = scores.find((s) => s.event === selectedLesson.code || s.event === selectedLesson.code + "*");
-        if (!lessonScore) return null;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-green-700/50 rounded-lg bg-green-900/10", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-green-300", children: "Attendance Record" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4 mt-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Date", value: lessonScore.date }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Instructor", value: lessonScore.instructor || "—" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Result", value: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-300 font-bold", children: "DCO ✓" }) })
-          ] }),
-          lessonScore.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: lessonScore.notes }) }) })
-        ] });
-      })(),
-      onOpenPt051ForLesson && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 pt-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => handleOpenPt051(selectedLesson),
-            className: "w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed",
-            children: completedLessonCodes.has(selectedLesson.code) ? "View / Edit PT-051" : "Open PT-051"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 italic", children: completedLessonCodes.has(selectedLesson.code) ? "View or edit the attendance record for this lesson" : "Mark this lesson as attended via PT-051" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Lesson Details" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4 mt-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Phase", value: selectedLesson.phase || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Module", value: selectedLesson.module || "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Duration", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-            selectedLesson.duration?.toFixed(1) || "—",
-            " ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
-          ] }) })
-        ] })
-      ] }),
-      selectedLesson.methodOfDelivery?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Delivery" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "", items: selectedLesson.methodOfDelivery }) })
-      ] }),
-      selectedLesson.methodOfAssessment?.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Method of Assessment" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailList, { title: "", items: selectedLesson.methodOfAssessment }) })
-      ] })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center h-full text-center p-8", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-4xl mb-4", children: "📖" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select a lesson from the list to view its details and attendance record." })
-    ] }) })
-  ] });
-};
-const TraineeLmpView = ({
-  trainee,
-  traineeLmp,
-  scores,
-  onBack,
-  syllabusDetails,
-  allTraineesData,
-  onOpenPt051ForLesson
-}) => {
-  const { isFrozen } = useSystemFreeze();
-  const [selectedItem, setSelectedItem] = reactExports.useState(null);
-  const [activeTab, setActiveTab] = reactExports.useState("neo");
-  const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
-  const completedEventIds = reactExports.useMemo(() => {
-    const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
-    traineeLmp.forEach((item) => {
-      if (item.completedAt) {
-        ids.add((item.id || item.code || "").replace("*", ""));
-      }
-    });
-    if (ids.has("BIF FTD2") && !ids.has("BIF FTD1")) ids.add("BIF FTD1");
-    if (ids.has("BIF1") && !ids.has("BIF FTD3")) ids.add("BIF FTD3");
-    return ids;
-  }, [scores, traineeLmp]);
-  reactExports.useEffect(() => {
-    setSelectedItem(null);
-  }, [trainee.fullName]);
-  const tabClass = (tab) => `px-4 py-2 text-sm font-semibold rounded-t-md transition-colors ${activeTab === tab ? "bg-gray-900 text-sky-400 border-t border-l border-r border-gray-700" : "bg-gray-800 text-gray-400 hover:text-gray-200 border border-transparent"}`;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Individual LMP" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
-          trainee.rank,
-          " ",
-          trainee.name,
-          " - ",
-          trainee.course
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: onBack,
-            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed",
-            children: "← Back"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Individual LMP" })
-      ] })
-    ] }),
-    hasAcademicSyllabus && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 px-4 pt-2 flex gap-1 border-b border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: tabClass("neo"), onClick: () => setActiveTab("neo"), children: "NEO Build LMP" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: tabClass("academic"), onClick: () => setActiveTab("academic"), children: "Academic LMP" })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-row overflow-hidden relative", children: [
-      isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-      activeTab === "academic" && syllabusDetails && allTraineesData ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-        AcademicLmpTab,
-        {
-          trainee,
-          scores,
-          syllabusDetails,
-          allTraineesData,
-          onOpenPt051ForLesson
-        }
-      ) : (
-        /* ── NEO Build LMP Tab (existing) ── */
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 border-r border-gray-700 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
-            const isCompleted = completedEventIds.has(item.code);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => setSelectedItem(item),
-                className: `w-full text-left p-2 rounded-md transition-colors text-sm flex items-center space-x-2 ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`,
-                children: [
-                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.code })
-                ]
-              }
-            ) }, item.code);
-          }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            DetailView,
-            {
-              item: selectedItem,
-              score: scores.find((s) => s.event === selectedItem.code)
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
-        ] })
-      )
-    ] })
-  ] });
-};
 const AddRemedialPackageFlyout = ({
   trainee,
   instructors,
@@ -73754,7 +73816,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             masterCurrencies,
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
-            currentUserName
+            currentUserName,
+            pt051Assessments,
+            userProfile: currentUser2
           }
         );
       case "CourseRoster":
@@ -73865,7 +73929,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             masterCurrencies,
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
-            currentUserName
+            currentUserName,
+            pt051Assessments,
+            userProfile: currentUser2
           }
         );
       case "HateSheet":
