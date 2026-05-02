@@ -18,6 +18,23 @@ interface CourseProgressViewProps {
     onUpdateStartDate: (courseName: string, newStartDate: string) => void;
 }
 
+type AwardCriterion = {
+    id: string;
+    event: string;
+    weight: number;
+    enabled: boolean;
+};
+
+type CourseAward = {
+    id: string;
+    name: string;
+    course: string;
+    lmpType: string;
+    includeAllScoredEvents: boolean;
+    minimumScoredEvents: number;
+    criteria: AwardCriterion[];
+};
+
 const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     traineesData,
     courseColors,
@@ -32,11 +49,12 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
     const [scoreCourse, setScoreCourse] = useState<string>('');
     const [activeAwardId, setActiveAwardId] = useState('dux');
-    const [awards, setAwards] = useState([
+    const [awards, setAwards] = useState<CourseAward[]>([
         {
             id: 'dux',
             name: 'Dux',
             course: 'all',
+            lmpType: 'BPC+IPC',
             includeAllScoredEvents: true,
             minimumScoredEvents: 1,
             criteria: [
@@ -86,12 +104,42 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const activeAward = awards.find(award => award.id === activeAwardId) || awards[0];
 
+    const getAwardDisplayName = (award: CourseAward) => {
+        return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
+    };
+
     useEffect(() => {
         if (!activeAward) return;
         if (activeAward.course !== 'all' && !activeCourses.some(course => course.name === activeAward.course)) {
             setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: 'all' } : award));
         }
     }, [activeAward, activeCourses]);
+
+    const availableAwardLmpTypes = useMemo(() => {
+        const lmpTypes = new Set<string>();
+
+        activeCourses.forEach(course => {
+            if (course.lmpType) lmpTypes.add(course.lmpType);
+        });
+
+        traineeLMPs.forEach(lmp => {
+            lmp.forEach(item => {
+                const itemLmpType = item.lmpType ? String(item.lmpType) : '';
+                if (itemLmpType && itemLmpType !== 'Staff CAT' && itemLmpType !== 'Master LMP') {
+                    lmpTypes.add(itemLmpType);
+                }
+                if (!itemLmpType && item.type !== 'Academics') {
+                    lmpTypes.add('BPC+IPC');
+                }
+                if (item.courses?.some(course => course.includes('FIC'))) {
+                    lmpTypes.add('FIC');
+                }
+            });
+        });
+
+        if (lmpTypes.size === 0) lmpTypes.add('BPC+IPC');
+        return Array.from(lmpTypes).sort();
+    }, [activeCourses, traineeLMPs]);
 
     const eventOrder = useMemo(() => {
         const order = new Map<string, number>();
@@ -105,6 +153,18 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return order;
     }, [traineeLMPs]);
 
+    const itemMatchesLmpType = (item: SyllabusItemDetail, lmpType: string) => {
+        if (!lmpType || lmpType === 'all') return true;
+        const itemLmpType = item.lmpType ? String(item.lmpType) : '';
+        if (itemLmpType && itemLmpType !== 'Staff CAT' && itemLmpType !== 'Master LMP') {
+            return itemLmpType === lmpType;
+        }
+        if (item.courses?.some(course => course === lmpType || course.includes(lmpType))) {
+            return true;
+        }
+        return lmpType === 'BPC+IPC' && !itemLmpType && item.type !== 'Academics';
+    };
+
     const awardEventOptions = useMemo(() => {
         if (!activeAward) return [];
 
@@ -115,6 +175,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         eligibleTrainees.forEach(trainee => {
             const lmp = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || [];
             lmp.forEach(item => {
+                if (!itemMatchesLmpType(item, activeAward.lmpType)) return;
                 const value = item.id || item.code;
                 if (!value || optionMap.has(value)) return;
                 const label = item.code && item.code !== value ? `${item.code} - ${value}` : value;
@@ -180,6 +241,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         if (!activeAward) return [];
 
         const selectedTrainees = activeTrainees.filter(trainee => activeAward.course === 'all' || trainee.course === activeAward.course);
+        const selectedAwardEvents = new Set(awardEventOptions.map(option => option.value.toUpperCase()));
         const criteriaWeights = new Map(
             activeAward.criteria
                 .filter(criterion => criterion.enabled && criterion.event.trim() && Number.isFinite(criterion.weight) && criterion.weight > 0)
@@ -191,7 +253,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                 const traineeName = trainee.fullName || trainee.name;
                 const scoredRecords = pt051ScoreRecords.filter(record => record.traineeName === traineeName);
                 const includedScores = activeAward.includeAllScoredEvents
-                    ? scoredRecords
+                    ? scoredRecords.filter(record => selectedAwardEvents.has(record.event.toUpperCase()))
                     : scoredRecords.filter(record => criteriaWeights.has(record.event.toUpperCase()));
 
                 const totals = includedScores.reduce((acc, record) => {
@@ -212,9 +274,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             })
             .filter(row => row.scoredCount >= activeAward.minimumScoredEvents)
             .sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-    }, [activeTrainees, activeAward, pt051ScoreRecords]);
+    }, [activeTrainees, activeAward, pt051ScoreRecords, awardEventOptions]);
 
-    const updateActiveAward = (updates: Partial<typeof awards[number]>) => {
+    const updateActiveAward = (updates: Partial<CourseAward>) => {
         setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, ...updates } : award));
     };
 
@@ -243,12 +305,119 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         ));
     };
 
+    const getCriterionForEvent = (eventCode: string) => {
+        return activeAward.criteria.find(criterion => criterion.event.toUpperCase() === eventCode.toUpperCase());
+    };
+
+    const isAwardEventSelected = (eventCode: string) => {
+        return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode)?.enabled;
+    };
+
+    const toggleAwardEvent = (eventCode: string, selected: boolean) => {
+        setAwards(prev => prev.map(award => {
+            if (award.id !== activeAward.id) return award;
+            const currentCriteria = award.includeAllScoredEvents
+                ? awardEventOptions
+                    .filter(option => option.value.toUpperCase() !== eventCode.toUpperCase())
+                    .map(option => {
+                        const existingCriterion = award.criteria.find(criterion => criterion.event.toUpperCase() === option.value.toUpperCase());
+                        return existingCriterion ? { ...existingCriterion, event: option.value, enabled: true } : { id: `criterion-${option.value}`, event: option.value, weight: 1, enabled: true };
+                    })
+                : award.criteria.filter(criterion => criterion.event.toUpperCase() !== eventCode.toUpperCase());
+
+            if (selected) {
+                const existingCriterion = award.criteria.find(criterion => criterion.event.toUpperCase() === eventCode.toUpperCase());
+                return {
+                    ...award,
+                    includeAllScoredEvents: false,
+                    criteria: [
+                        ...currentCriteria,
+                        existingCriterion ? { ...existingCriterion, enabled: true } : { id: `criterion-${eventCode}-${Date.now()}`, event: eventCode, weight: 1, enabled: true },
+                    ],
+                };
+            }
+
+            return {
+                ...award,
+                includeAllScoredEvents: false,
+                criteria: currentCriteria,
+            };
+        }));
+    };
+
+    const setAwardEventWeight = (eventCode: string, weight: number) => {
+        setAwards(prev => prev.map(award => {
+            if (award.id !== activeAward.id) return award;
+            const existingCriterion = award.criteria.find(criterion => criterion.event.toUpperCase() === eventCode.toUpperCase());
+            if (existingCriterion) {
+                return {
+                    ...award,
+                    criteria: award.criteria.map(criterion => criterion.id === existingCriterion.id ? { ...criterion, weight } : criterion),
+                };
+            }
+            return {
+                ...award,
+                criteria: [...award.criteria, { id: `criterion-${eventCode}-${Date.now()}`, event: eventCode, weight, enabled: true }],
+            };
+        }));
+    };
+
+    const toggleAllAwardEvents = (selected: boolean) => {
+        setAwards(prev => prev.map(award => award.id === activeAward.id
+            ? { ...award, includeAllScoredEvents: selected, criteria: selected ? award.criteria : award.criteria.map(criterion => ({ ...criterion, enabled: false })) }
+            : award
+        ));
+    };
+
+    const getAwardCourseColor = (courseName: string) => {
+        if (!courseName || courseName === 'all') return '';
+        const color = courseColors[courseName] || '';
+        if (!color || color.startsWith('#') || color.startsWith('rgb')) return color;
+        const baseColorMap: { [key: string]: string } = {
+            'bg-sky-400': '#38BDF8',
+            'bg-purple-400': '#C084FC',
+            'bg-yellow-400': '#FACC15',
+            'bg-pink-400': '#F472B6',
+            'bg-teal-400': '#2DD4BF',
+            'bg-indigo-400': '#818CF8',
+            'bg-cyan-400': '#22D3EE',
+            'bg-blue-400': '#60A5FA',
+            'bg-green-400': '#4ADE80',
+            'bg-orange-400': '#FB923C',
+            'bg-red-400': '#F87171',
+            'bg-gray-400': '#9CA3AF',
+            'bg-amber-500': '#F59E0B',
+            'bg-fuchsia-400': '#E879F9',
+            'bg-gray-500': '#6B7280',
+            'bg-sky-500': '#0EA5E9',
+        };
+        return baseColorMap[color.replace(/\/\d+$/, '')] || '';
+    };
+
+    const getCourseBoxStyle = (courseName: string): React.CSSProperties => {
+        const color = getAwardCourseColor(courseName);
+        if (!color || (!color.startsWith('#') && !color.startsWith('rgb'))) return {};
+        return {
+            borderColor: color,
+            boxShadow: `0 0 0 1px ${color}55`,
+            background: `linear-gradient(135deg, ${color}22, rgba(31, 41, 55, 0.96) 38%)`,
+        };
+    };
+
+    const getCourseBoxColorClass = (courseName: string) => {
+        const color = courseColors[courseName] || '';
+        return color && !color.startsWith('#') && !color.startsWith('rgb') ? 'border-gray-700' : '';
+    };
+
     const addAward = () => {
         const id = `award-${Date.now()}`;
+        const defaultCourse = scoreCourse || activeCourses[0]?.name || 'all';
+        const defaultLmpType = activeCourses.find(course => course.name === defaultCourse)?.lmpType || availableAwardLmpTypes[0] || 'BPC+IPC';
         setAwards(prev => [...prev, {
             id,
             name: 'New Award',
-            course: 'all',
+            course: defaultCourse,
+            lmpType: defaultLmpType,
             includeAllScoredEvents: true,
             minimumScoredEvents: 1,
             criteria: [],
@@ -399,7 +568,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                             </div>
 
                             <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6">
-                                <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                                <div
+                                    className={`bg-gray-800 rounded-lg border border-gray-700 overflow-hidden ${getCourseBoxColorClass(scoreCourse)}`}
+                                    style={getCourseBoxStyle(scoreCourse)}
+                                >
                                     <div className="px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
                                         <div>
                                             <h3 className="text-lg font-semibold text-white">Course Scores</h3>
@@ -468,7 +640,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                     </div>
                                 </div>
 
-                                <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+                                <div
+                                    className={`bg-gray-800 rounded-lg border border-gray-700 overflow-hidden ${getCourseBoxColorClass(activeAward.course)}`}
+                                    style={getCourseBoxStyle(activeAward.course)}
+                                >
                                     <div className="px-4 py-3 border-b border-gray-700">
                                         <h3 className="text-lg font-semibold text-white">Course Rankings</h3>
                                         <p className="text-xs text-gray-400">Create named awards and define how each ranking is calculated.</p>
@@ -482,7 +657,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     onChange={event => setActiveAwardId(event.target.value)}
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 >
-                                                    {awards.map(award => <option key={award.id} value={award.id}>{award.name}</option>)}
+                                                    {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
                                                 </select>
                                             </label>
                                             <button
@@ -507,11 +682,29 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 Course
                                                 <select
                                                     value={activeAward.course}
-                                                    onChange={event => updateActiveAward({ course: event.target.value })}
+                                                    onChange={event => {
+                                                        const nextCourse = event.target.value;
+                                                        const nextCourseLmp = activeCourses.find(course => course.name === nextCourse)?.lmpType;
+                                                        updateActiveAward({
+                                                            course: nextCourse,
+                                                            lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || 'BPC+IPC',
+                                                            includeAllScoredEvents: true,
+                                                        });
+                                                    }}
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 >
                                                     <option value="all">All active courses</option>
                                                     {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="text-sm text-gray-300">
+                                                Award LMP
+                                                <select
+                                                    value={activeAward.lmpType}
+                                                    onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
+                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                >
+                                                    {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
                                                 </select>
                                             </label>
                                             <label className="text-sm text-gray-300">
@@ -536,66 +729,57 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                             </div>
                                         </div>
 
-                                        <label className="flex items-center gap-2 text-sm text-gray-300">
-                                            <input
-                                                type="checkbox"
-                                                checked={activeAward.includeAllScoredEvents}
-                                                onChange={event => updateActiveAward({ includeAllScoredEvents: event.target.checked })}
-                                                className="h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
-                                            />
-                                            Include all scored events in this award average
-                                        </label>
-
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between">
-                                                <h4 className="text-sm font-semibold text-gray-200">Weighted Events</h4>
-                                                <button
-                                                    type="button"
-                                                    onClick={addAwardCriterion}
-                                                    className="px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md"
-                                                >
-                                                    Add Event
-                                                </button>
-                                            </div>
-                                            {activeAward.criteria.map(criterion => (
-                                                <div key={criterion.id} className="grid grid-cols-[auto_minmax(0,1fr)_88px_auto] gap-2 items-center">
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-gray-200">Scoring Events</h4>
+                                                    <p className="text-xs text-gray-500">Events cascade from the selected LMP. Tick the events used for this award and adjust weights where required.</p>
+                                                </div>
+                                                <label className="flex items-center gap-2 text-xs font-semibold text-gray-300">
                                                     <input
                                                         type="checkbox"
-                                                        checked={criterion.enabled}
-                                                        onChange={event => updateAwardCriterion(criterion.id, { enabled: event.target.checked })}
+                                                        checked={activeAward.includeAllScoredEvents}
+                                                        onChange={event => toggleAllAwardEvents(event.target.checked)}
                                                         className="h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                                                     />
-                                                    <select
-                                                        value={criterion.event}
-                                                        onChange={event => updateAwardCriterion(criterion.id, { event: event.target.value })}
-                                                        className="bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                    >
-                                                        <option value="">Select LMP event</option>
-                                                        {criterion.event && !awardEventOptions.some(option => option.value === criterion.event) && (
-                                                            <option value={criterion.event}>{criterion.event}</option>
-                                                        )}
-                                                        {awardEventOptions.map(option => (
-                                                            <option key={option.value} value={option.value}>{option.label}</option>
-                                                        ))}
-                                                    </select>
-                                                    <input
-                                                        type="number"
-                                                        min={0.1}
-                                                        step={0.1}
-                                                        value={criterion.weight}
-                                                        onChange={event => updateAwardCriterion(criterion.id, { weight: parseFloat(event.target.value) || 1 })}
-                                                        className="bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                        aria-label="Weight"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeAwardCriterion(criterion.id)}
-                                                        className="px-2 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                    Select all
+                                                </label>
+                                            </div>
+                                            <div className="max-h-72 overflow-y-auto rounded-md border border-gray-700 divide-y divide-gray-700">
+                                                {awardEventOptions.map(option => {
+                                                    const criterion = getCriterionForEvent(option.value);
+                                                    const selected = isAwardEventSelected(option.value);
+                                                    return (
+                                                        <div key={option.value} className="grid grid-cols-[auto_minmax(0,1fr)_90px] gap-2 items-center px-3 py-2 bg-gray-900/35">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selected}
+                                                                onChange={event => toggleAwardEvent(option.value, event.target.checked)}
+                                                                className="h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                                                            />
+                                                            <div className="min-w-0">
+                                                                <div className="text-sm font-medium text-gray-100 truncate">{option.label}</div>
+                                                            </div>
+                                                            <input
+                                                                type="number"
+                                                                min={0.1}
+                                                                step={0.1}
+                                                                value={criterion?.weight ?? 1}
+                                                                onChange={event => setAwardEventWeight(option.value, parseFloat(event.target.value) || 1)}
+                                                                disabled={!selected}
+                                                                className="bg-gray-900 border border-gray-600 rounded-md px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-40"
+                                                                aria-label={`${option.label} weight`}
+                                                            />
+                                                        </div>
+                                                    );
+                                                })}
+                                                {awardEventOptions.length === 0 && (
+                                                    <div className="px-3 py-6 text-center text-sm text-gray-400">No LMP events available for this course and LMP selection.</div>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-500">
+                                                {getAwardDisplayName(activeAward)} ranking includes {activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter(criterion => criterion.enabled).length} selected event{(activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter(criterion => criterion.enabled).length) === 1 ? '' : 's'}.
+                                            </p>
                                         </div>
 
                                         <div className="overflow-x-auto border border-gray-700 rounded-md">
