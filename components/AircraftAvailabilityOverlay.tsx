@@ -340,13 +340,13 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return lines;
     };
 
-    // Solid line: from currentTimeX → endOfDayX (today), or lastSnapX → endOfDayX (other dates).
-    // On today: starts at the current time vertical line and goes right.
-    // On past/future dates: starts from the last snapshot change point.
-    const lastSnapX = lastSnap ? Math.max(0, getXPosition(lastSnap.timestamp)) : 0;
+    // Solid line logic:
+    // - Today: starts at currentTimeX (the white vertical line), goes to end of day
+    // - Any other date (past/future): starts at X=0 (full day visible, always draggable)
+    // This is simple and reliable regardless of snapshot timestamps or timezone.
     const isToday = currentDate.toDateString() === now.toDateString();
-    const solidStartX = isToday ? Math.max(lastSnapX, Math.min(currentTimeX, endOfDayX)) : lastSnapX;
-    const showSolidLine = solidStartX <= endOfDayX;
+    const solidStartX = isToday ? Math.min(currentTimeX, endOfDayX - 1) : 0;
+    const showSolidLine = true;
 
     return (
         <>
