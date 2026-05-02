@@ -7,8 +7,6 @@ import { logAudit } from '../utils/auditLogger';
 interface AircraftAvailabilityOverlayProps {
     currentDate: Date;
     totalAircraft: number;
-    // NOTE: plannedAvailability removed — overlay is now INDEPENDENT from Build Factors.
-    // The overlay loads its own initial value from localStorage/DB on mount.
     dayFlyingStart: string; // HH:mm
     dayFlyingEnd: string;   // HH:mm
     gridHeight: number;
@@ -16,9 +14,10 @@ interface AircraftAvailabilityOverlayProps {
     pixelsPerHour: number;
     startHour: number;
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
-    // initialAvailability: optional seed value used ONLY when there is no saved data
-    // (e.g. the very first time a user opens a brand-new date). After that localStorage wins.
+    // initialAvailability: ONLY used as last-resort fallback when no localStorage AND no DB data exists
     initialAvailability?: number;
+    // apiBase: passed from App.tsx so we can fetch persisted value from DB on first load
+    apiBase?: string;
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
@@ -32,10 +31,15 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     startHour,
     onAvailabilityChange,
     initialAvailability = 15,
+    apiBase,
 }) => {
+    // isInitialized: true once we've loaded from localStorage or DB
+    const [isInitialized, setIsInitialized] = useState(false);
     const [currentAvailable, setCurrentAvailable] = useState<number>(initialAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const overlayRef = useRef<SVGSVGElement>(null);
+    // Track whether the current snapshots came from a user drag (should save) or from init (should not overwrite)
+    const isDirtyRef = useRef(false);
 
     // Stable ref for onAvailabilityChange
     const onAvailabilityChangeRef = useRef(onAvailabilityChange);
@@ -43,56 +47,84 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     // Helper: make the day-start (0001) timestamp for a given date
     const makeDayStart = (date: Date): Date => {
-        const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
-        return d;
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
     };
 
     // Sort snapshots by timestamp ascending — guarantees left-to-right rendering
     const sortSnapshots = (snaps: AircraftAvailabilitySnapshot[]): AircraftAvailabilitySnapshot[] =>
         [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    // ── Load snapshots from localStorage on mount / date change ──────────────────
+    // ── Load from localStorage first, then DB, then fallback to initialAvailability ──
     useEffect(() => {
+        let cancelled = false;
+        isDirtyRef.current = false;
+        setIsInitialized(false);
+
         const dateKey = formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
+
         if (stored) {
             try {
                 const data = JSON.parse(stored);
                 const loaded: AircraftAvailabilitySnapshot[] = sortSnapshots(
                     data.snapshots.map((s: any) => ({ ...s, timestamp: new Date(s.timestamp) }))
                 );
-                setSnapshots(loaded);
-                const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
-                setCurrentAvailable(lastAvailable);
+                if (!cancelled && loaded.length > 0) {
+                    const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
+                    setSnapshots(loaded);
+                    setCurrentAvailable(lastAvailable);
+                    setIsInitialized(true);
+                    return;
+                }
             } catch {
-                // Corrupted data — reinitialise
-                initSnapshots();
+                // Corrupted data — fall through to DB fetch
             }
-        } else {
-            initSnapshots();
         }
+
+        // No localStorage data — try DB for persisted value
+        const loadFromDb = async () => {
+            let persistedCount = initialAvailability;
+            if (apiBase) {
+                try {
+                    const res = await fetch(`${apiBase}/aircraft-availability-current`, { credentials: 'include' });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.success && !data.isDefault && data.availableCount !== undefined) {
+                            persistedCount = data.availableCount;
+                        }
+                    }
+                } catch {
+                    // DB fetch failed — use initialAvailability fallback
+                }
+            }
+
+            if (!cancelled) {
+                const initial: AircraftAvailabilitySnapshot = {
+                    timestamp: makeDayStart(currentDate),
+                    available: persistedCount,
+                    total: totalAircraft,
+                    notes: 'Initial availability at start of day'
+                };
+                setSnapshots([initial]);
+                setCurrentAvailable(persistedCount);
+                setIsInitialized(true);
+                logAudit({
+                    page: "Program Schedule",
+                    action: "Add",
+                    description: `Aircraft availability initialized at ${persistedCount}`,
+                    changes: `Initial: ${persistedCount} | Total: ${totalAircraft}`
+                });
+            }
+        };
+
+        loadFromDb();
+        return () => { cancelled = true; };
     }, [currentDate.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const initSnapshots = () => {
-        const initial: AircraftAvailabilitySnapshot = {
-            timestamp: makeDayStart(currentDate),
-            available: initialAvailability,
-            total: totalAircraft,
-            notes: 'Initial planned availability at start of day'
-        };
-        setSnapshots([initial]);
-        setCurrentAvailable(initialAvailability);
-        logAudit({
-            page: "Program Schedule",
-            action: "Add",
-            description: `Aircraft availability initialized at ${initialAvailability}`,
-            changes: `Initial: ${initialAvailability} | Total: ${totalAircraft}`
-        });
-    };
-
-    // ── Save to localStorage + notify parent whenever snapshots change ────────
+    // ── Save to localStorage + notify parent ONLY when user drags (isDirty) ────
     useEffect(() => {
-        if (snapshots.length === 0) return;
+        if (!isInitialized || snapshots.length === 0 || !isDirtyRef.current) return;
+
         const timeline = convertSnapshotsToTimeline(snapshots);
         const avg = calculateDailyAverageAvailability(
             timeline,
@@ -108,13 +140,13 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         };
         localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
         onAvailabilityChangeRef.current(record);
-    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [snapshots]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Coordinate → pixel helpers ──────────────────────────────────────────────
     const getYPosition = (count: number): number => count * rowHeight;
 
     const getXPosition = (time: Date): number => {
-        const t = new Date(time); // ensure it's a real Date object
+        const t = new Date(time);
         const hours = t.getHours() + t.getMinutes() / 60 + t.getSeconds() / 3600;
         return (hours - startHour) * pixelsPerHour;
     };
@@ -182,9 +214,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
         setCurrentAvailable(snappedCount);
 
-        // NOTE: We do NOT call onUpdatePlannedAvailability here.
-        // The Active DFP overlay is now INDEPENDENT from Build Factors.
-
         if (valueChanged) {
             logAudit({
                 page: "Program Schedule",
@@ -193,7 +222,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 changes: `Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${totalAircraftRef.current}`
             });
 
-            // Create snapshot at real wall-clock time within the displayed date
             const now = new Date();
             const cd = currentDateRef.current;
             const snapshotTime = new Date(
@@ -208,6 +236,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 notes: `Availability changed to ${snappedCount}`
             };
 
+            // Mark dirty so the save effect fires
+            isDirtyRef.current = true;
             setSnapshots(prev => sortSnapshots([...prev, newSnap]));
         }
     };
@@ -242,40 +272,26 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const now = new Date();
     const currentTimeX = getXPosition(now);
 
-    // Use sorted snapshots for rendering — guarantees left-to-right
     const sortedSnaps = sortSnapshots(snapshots);
 
-    /**
-     * Historical dashed trace — always left to right.
-     *
-     * For each snapshot[i]:
-     *   • Horizontal dashed line from snapshot[i].X  →  snapshot[i+1].X (or currentTimeX for last)
-     *   • Vertical connector at snapshot[i].X from snapshot[i-1].Y → snapshot[i].Y  (i > 0 only)
-     *
-     * The first snapshot always starts at X=0 (start of visible timeline).
-     */
     const renderHistoricalLines = () => {
         if (sortedSnaps.length === 0) return null;
         const lines: React.ReactNode[] = [];
 
         for (let i = 0; i < sortedSnaps.length; i++) {
             const snap = sortedSnaps[i];
-            // Where this availability value begins
             const startX = i === 0 ? 0 : Math.max(0, getXPosition(snap.timestamp));
-            // Where it ends (next change, or current time for the last past segment)
             const rawEndX = i < sortedSnaps.length - 1
                 ? getXPosition(sortedSnaps[i + 1].timestamp)
                 : Math.min(currentTimeX, endOfDayX);
-            const endX = Math.max(startX, rawEndX); // never go backwards
+            const endX = Math.max(startX, rawEndX);
 
             const y = getYPosition(snap.available);
 
-            // Only draw segments that are fully in the past (before current time)
             if (startX >= currentTimeX) continue;
             const clampedEndX = Math.min(endX, currentTimeX);
             if (clampedEndX <= startX) continue;
 
-            // Horizontal segment
             lines.push(
                 <line key={`h-${i}`}
                     x1={startX} y1={y} x2={clampedEndX} y2={y}
@@ -285,7 +301,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 />
             );
 
-            // Vertical connector at this snapshot's X (the moment the value changed)
             if (i > 0 && sortedSnaps[i - 1].available !== snap.available) {
                 const prevY = getYPosition(sortedSnaps[i - 1].available);
                 const vertX = Math.max(0, getXPosition(snap.timestamp));
@@ -304,10 +319,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return lines;
     };
 
-    // Solid line logic:
-    // - Today: starts at currentTimeX (the white vertical line), goes to end of day
-    // - Any other date (past/future): starts at X=0 (full day visible, always draggable)
-    // This is simple and reliable regardless of snapshot timestamps or timezone.
     const isToday = currentDate.toDateString() === now.toDateString();
     const solidStartX = isToday ? Math.min(currentTimeX, endOfDayX - 1) : 0;
     const showSolidLine = true;
@@ -319,10 +330,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 className="absolute top-0 left-0 w-full h-full"
                 style={{ zIndex: 5, pointerEvents: 'none' }}
             >
-                {/* Historical dashed trace — rendered first (behind solid line) */}
                 {renderHistoricalLines()}
 
-                {/* Solid future line — rendered on top of history, draggable */}
                 {showSolidLine && (
                     <g>
                         <line

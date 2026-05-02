@@ -59,6 +59,7 @@ interface ScheduleViewProps {
   // NOTE: plannedAvailability and onUpdatePlannedAvailability removed.
   // The overlay is now independent from Build Factors.
   initialAvailability?: number; // seed value for new dates with no saved data
+  apiBase?: string;             // passed to overlay for DB-backed persistence
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
@@ -140,7 +141,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isOracleMode,
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, initialAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    showAircraftAvailability, initialAvailability, apiBase, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
     timezoneOffset = 11 // Default to UTC+11
@@ -1012,6 +1013,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             currentDate={new Date(date)}
                             totalAircraft={airframeCount}
                             initialAvailability={initialAvailability ?? 15}
+                            apiBase={apiBase}
                             dayFlyingStart={dayFlyingStart}
                             dayFlyingEnd={dayFlyingEnd}
                             gridHeight={resources.length * ROW_HEIGHT}

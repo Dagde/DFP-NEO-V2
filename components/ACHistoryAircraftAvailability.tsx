@@ -455,14 +455,24 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       if (recalcRes.ok) {
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
-          const recordWithDate = {
-            ...recalcData.summary,
-            date: today
-          };
-          setTodaysAverageWithMetadata(recordWithDate);
-        } else {
-          setTodaysAverageWithMetadata(null);
+          setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          return;
         }
+      }
+      // Fallback to localStorage
+      const localAvg = computeAverageFromLocalStorage(today);
+      if (localAvg !== null) {
+        setTodaysAverageWithMetadata({
+          dailyAverage: localAvg,
+          date: today,
+          flyingWindowStart: '0800',
+          flyingWindowEnd: '1700',
+          plannedCount: currentAircraftAvailable ?? 15,
+          actualCount: currentAircraftAvailable ?? 15,
+          totalAircraft: totalAircraft ?? 24,
+        });
+      } else {
+        setTodaysAverageWithMetadata(null);
       }
     } catch (err) {
       console.error("Failed to refresh today's average:", err);
@@ -555,9 +565,41 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     fetchRecords();
   }, [fetchRecords]);
 
+  // Helper: compute today's average from localStorage snapshots as a client-side fallback
+  // Used when DB has no events yet (e.g. first session of the day before startup event is posted)
+  const computeAverageFromLocalStorage = (today: string): number | null => {
+    try {
+      const stored = localStorage.getItem(`aircraft-availability-${today}`);
+      if (!stored) return null;
+      const data = JSON.parse(stored);
+      const snaps: Array<{ timestamp: string; available: number }> = data.snapshots || [];
+      if (snaps.length === 0) return null;
+
+      // Time-weighted average over flying window (default 08:00-17:00)
+      const windowStartMin = 8 * 60;   // 480
+      const windowEndMin   = 17 * 60;  // 1020
+      const totalWindow    = windowEndMin - windowStartMin;
+      const sorted = [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+      let weightedSum = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        const t = new Date(sorted[i].timestamp);
+        const tMin = t.getHours() * 60 + t.getMinutes();
+        const nextMin = i + 1 < sorted.length
+          ? (() => { const n = new Date(sorted[i + 1].timestamp); return n.getHours() * 60 + n.getMinutes(); })()
+          : windowEndMin;
+        const segStart = Math.max(tMin, windowStartMin);
+        const segEnd   = Math.min(nextMin, windowEndMin);
+        if (segEnd > segStart) weightedSum += sorted[i].available * (segEnd - segStart);
+      }
+      return totalWindow > 0 ? weightedSum / totalWindow : null;
+    } catch {
+      return null;
+    }
+  };
+
   // Fetch today's average from the database
-  // Uses the POST /api/aircraft-availability-history endpoint to trigger recalculation
-  // This ensures the time-weighted average is always up-to-date based on raw events
+  // Falls back to localStorage computation if DB has no events yet
   useEffect(() => {
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
@@ -566,7 +608,6 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${new Date().getHours()}:${new Date().getMinutes()}`);
         
         // First, trigger a recalculation via the recalculate endpoint
-        // This will rebuild the daily summary from raw events
         const recalcRes = await fetch('/api/aircraft-availability-recalculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -575,72 +616,102 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
             date: today,
             clientLocalHour: new Date().getHours(),
             clientLocalMinute: new Date().getMinutes(),
-            // Use default flying window (0800-1700) - the server will use its configured values
           }),
         });
         
         if (recalcRes.ok) {
           const recalcData = await recalcRes.json();
           if (recalcData.summary) {
-            // The recalculation returned the updated summary
-            // Add the date to the summary for the UI
-            const recordWithDate = {
-              ...recalcData.summary,
-              date: today
-            };
-            setTodaysAverageWithMetadata(recordWithDate);
-          } else {
-            // No events exist yet for today
-            setTodaysAverageWithMetadata(null);
+            setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+            return;
           }
+        }
+
+        // DB has no events yet — fall back to localStorage
+        const localAvg = computeAverageFromLocalStorage(today);
+        if (localAvg !== null) {
+          console.log(`[AV-FETCH] Using localStorage fallback: avg=${localAvg.toFixed(2)}`);
+          setTodaysAverageWithMetadata({
+            dailyAverage: localAvg,
+            date: today,
+            flyingWindowStart: '0800',
+            flyingWindowEnd: '1700',
+            plannedCount: currentAircraftAvailable ?? 15,
+            actualCount: currentAircraftAvailable ?? 15,
+            totalAircraft: totalAircraft ?? 24,
+          });
         } else {
-          // Recalculation failed, show no data
           setTodaysAverageWithMetadata(null);
         }
       } catch (err) {
         console.error('Failed to fetch today\'s average:', err);
-        setTodaysAverageWithMetadata(null);
+        // Try localStorage as last resort
+        const today = getLocalDateString();
+        const localAvg = computeAverageFromLocalStorage(today);
+        if (localAvg !== null) {
+          setTodaysAverageWithMetadata({
+            dailyAverage: localAvg,
+            date: today,
+            flyingWindowStart: '0800',
+            flyingWindowEnd: '1700',
+            plannedCount: currentAircraftAvailable ?? 15,
+            actualCount: currentAircraftAvailable ?? 15,
+            totalAircraft: totalAircraft ?? 24,
+          });
+        } else {
+          setTodaysAverageWithMetadata(null);
+        }
       } finally {
         setTodaysAverageLoading(false);
       }
     };
     fetchTodaysAverage();
     
-    // Also set up a periodic refresh every 5 minutes to keep the average current
+    // Periodic refresh every 5 minutes
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
   
   // Refresh today's average when currentAircraftAvailable changes
-  // This ensures the average updates when the user changes availability in the daily schedule
   useEffect(() => {
-    // Debounce the refresh to avoid too many API calls
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       const today = getLocalDateString();
-      fetch('/api/aircraft-availability-recalculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ 
+      try {
+        const res = await fetch('/api/aircraft-availability-recalculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ 
+            date: today,
+            clientLocalHour: new Date().getHours(),
+            clientLocalMinute: new Date().getMinutes(),
+          }),
+        });
+        const data = await res.json();
+        if (data.summary) {
+          setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          return;
+        }
+      } catch {
+        // ignore
+      }
+      // Fallback to localStorage
+      const localAvg = computeAverageFromLocalStorage(today);
+      if (localAvg !== null) {
+        setTodaysAverageWithMetadata({
+          dailyAverage: localAvg,
           date: today,
-          clientLocalHour: new Date().getHours(),
-          clientLocalMinute: new Date().getMinutes(),
-        }),
-      }).then(res => res.json())
-        .then(data => {
-          if (data.summary) {
-            const recordWithDate = {
-              ...data.summary,
-              date: today
-            };
-            setTodaysAverageWithMetadata(recordWithDate);
-          }
-        })
-        .catch(err => console.error('Failed to refresh today\'s average:', err));
-    }, 2000); // 2 second debounce
+          flyingWindowStart: '0800',
+          flyingWindowEnd: '1700',
+          plannedCount: currentAircraftAvailable ?? 15,
+          actualCount: currentAircraftAvailable ?? 15,
+          totalAircraft: totalAircraft ?? 24,
+        });
+      }
+    }, 2000);
     
     return () => clearTimeout(timeoutId);
-  }, [currentAircraftAvailable]);
+  }, [currentAircraftAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPeriodLabel = (period: TimePeriod): string => {
     const labels: Record<TimePeriod, string> = {

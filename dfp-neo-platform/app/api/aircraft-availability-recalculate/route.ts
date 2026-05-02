@@ -26,10 +26,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'date is required' }, { status: 400, headers: CORS_HEADERS });
     }
 
-    // Skip if summary is recent (within 10 minutes)
+    // Check for existing summary
     const existing = await prisma.aircraftAvailabilityHistory.findUnique({ where: { date } });
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-    if (existing && existing.lastCalculatedAt > tenMinutesAgo) {
+    // Only skip for past dates (not today) — today's data changes throughout the day
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = date === todayStr;
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    if (!isToday && existing && existing.lastCalculatedAt > oneMinuteAgo) {
       return NextResponse.json({ skipped: true, reason: 'recent', record: existing, summary: existing }, { headers: CORS_HEADERS });
     }
 

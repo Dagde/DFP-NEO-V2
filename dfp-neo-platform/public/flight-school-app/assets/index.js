@@ -4666,21 +4666,26 @@ const AircraftAvailabilityOverlay = ({
   pixelsPerHour,
   startHour,
   onAvailabilityChange,
-  initialAvailability = 15
+  initialAvailability = 15,
+  apiBase: apiBase2
 }) => {
+  const [isInitialized, setIsInitialized] = reactExports.useState(false);
   const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
   const overlayRef = reactExports.useRef(null);
+  const isDirtyRef = reactExports.useRef(false);
   const onAvailabilityChangeRef = reactExports.useRef(onAvailabilityChange);
   reactExports.useEffect(() => {
     onAvailabilityChangeRef.current = onAvailabilityChange;
   }, [onAvailabilityChange]);
   const makeDayStart = (date) => {
-    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
-    return d;
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
   };
   const sortSnapshots = (snaps) => [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   reactExports.useEffect(() => {
+    let cancelled = false;
+    isDirtyRef.current = false;
+    setIsInitialized(false);
     const dateKey = formatDate$5(currentDate);
     const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
     if (stored) {
@@ -4689,34 +4694,55 @@ const AircraftAvailabilityOverlay = ({
         const loaded = sortSnapshots(
           data.snapshots.map((s) => ({ ...s, timestamp: new Date(s.timestamp) }))
         );
-        setSnapshots(loaded);
-        const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
-        setCurrentAvailable(lastAvailable);
+        if (!cancelled && loaded.length > 0) {
+          const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
+          setSnapshots(loaded);
+          setCurrentAvailable(lastAvailable);
+          setIsInitialized(true);
+          return;
+        }
       } catch {
-        initSnapshots();
       }
-    } else {
-      initSnapshots();
     }
-  }, [currentDate.toDateString()]);
-  const initSnapshots = () => {
-    const initial = {
-      timestamp: makeDayStart(currentDate),
-      available: initialAvailability,
-      total: totalAircraft,
-      notes: "Initial planned availability at start of day"
+    const loadFromDb = async () => {
+      let persistedCount = initialAvailability;
+      if (apiBase2) {
+        try {
+          const res = await fetch(`${apiBase2}/aircraft-availability-current`, { credentials: "include" });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && !data.isDefault && data.availableCount !== void 0) {
+              persistedCount = data.availableCount;
+            }
+          }
+        } catch {
+        }
+      }
+      if (!cancelled) {
+        const initial = {
+          timestamp: makeDayStart(currentDate),
+          available: persistedCount,
+          total: totalAircraft,
+          notes: "Initial availability at start of day"
+        };
+        setSnapshots([initial]);
+        setCurrentAvailable(persistedCount);
+        setIsInitialized(true);
+        logAudit({
+          page: "Program Schedule",
+          action: "Add",
+          description: `Aircraft availability initialized at ${persistedCount}`,
+          changes: `Initial: ${persistedCount} | Total: ${totalAircraft}`
+        });
+      }
     };
-    setSnapshots([initial]);
-    setCurrentAvailable(initialAvailability);
-    logAudit({
-      page: "Program Schedule",
-      action: "Add",
-      description: `Aircraft availability initialized at ${initialAvailability}`,
-      changes: `Initial: ${initialAvailability} | Total: ${totalAircraft}`
-    });
-  };
+    loadFromDb();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentDate.toDateString()]);
   reactExports.useEffect(() => {
-    if (snapshots.length === 0) return;
+    if (!isInitialized || snapshots.length === 0 || !isDirtyRef.current) return;
     const timeline = convertSnapshotsToTimeline(snapshots);
     const avg = calculateDailyAverageAvailability(
       timeline,
@@ -4732,7 +4758,7 @@ const AircraftAvailabilityOverlay = ({
     };
     localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
     onAvailabilityChangeRef.current(record);
-  }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
+  }, [snapshots]);
   const getYPosition = (count) => count * rowHeight;
   const getXPosition = (time) => {
     const t = new Date(time);
@@ -4825,6 +4851,7 @@ const AircraftAvailabilityOverlay = ({
         total: totalAircraftRef.current,
         notes: `Availability changed to ${snappedCount}`
       };
+      isDirtyRef.current = true;
       setSnapshots((prev) => sortSnapshots([...prev, newSnap]));
     }
   };
@@ -5157,6 +5184,7 @@ const ScheduleView = ({
   showDepartureDensityOverlay,
   showAircraftAvailability,
   initialAvailability,
+  apiBase: apiBase2,
   dayFlyingStart,
   dayFlyingEnd,
   onAvailabilityChange,
@@ -5879,6 +5907,7 @@ const ScheduleView = ({
                   currentDate: new Date(date),
                   totalAircraft: airframeCount,
                   initialAvailability: initialAvailability ?? 15,
+                  apiBase: apiBase2,
                   dayFlyingStart,
                   dayFlyingEnd,
                   gridHeight: resources.length * ROW_HEIGHT$5,
@@ -48097,14 +48126,23 @@ const ACHistoryAircraftAvailability = ({
       if (recalcRes.ok) {
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
-          const recordWithDate = {
-            ...recalcData.summary,
-            date: today
-          };
-          setTodaysAverageWithMetadata(recordWithDate);
-        } else {
-          setTodaysAverageWithMetadata(null);
+          setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          return;
         }
+      }
+      const localAvg = computeAverageFromLocalStorage(today);
+      if (localAvg !== null) {
+        setTodaysAverageWithMetadata({
+          dailyAverage: localAvg,
+          date: today,
+          flyingWindowStart: "0800",
+          flyingWindowEnd: "1700",
+          plannedCount: currentAircraftAvailable ?? 15,
+          actualCount: currentAircraftAvailable ?? 15,
+          totalAircraft: totalAircraft ?? 24
+        });
+      } else {
+        setTodaysAverageWithMetadata(null);
       }
     } catch (err) {
       console.error("Failed to refresh today's average:", err);
@@ -48187,6 +48225,34 @@ const ACHistoryAircraftAvailability = ({
   reactExports.useEffect(() => {
     fetchRecords();
   }, [fetchRecords]);
+  const computeAverageFromLocalStorage = (today) => {
+    try {
+      const stored = localStorage.getItem(`aircraft-availability-${today}`);
+      if (!stored) return null;
+      const data = JSON.parse(stored);
+      const snaps = data.snapshots || [];
+      if (snaps.length === 0) return null;
+      const windowStartMin = 8 * 60;
+      const windowEndMin = 17 * 60;
+      const totalWindow = windowEndMin - windowStartMin;
+      const sorted = [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      let weightedSum = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        const t = new Date(sorted[i].timestamp);
+        const tMin = t.getHours() * 60 + t.getMinutes();
+        const nextMin = i + 1 < sorted.length ? (() => {
+          const n = new Date(sorted[i + 1].timestamp);
+          return n.getHours() * 60 + n.getMinutes();
+        })() : windowEndMin;
+        const segStart = Math.max(tMin, windowStartMin);
+        const segEnd = Math.min(nextMin, windowEndMin);
+        if (segEnd > segStart) weightedSum += sorted[i].available * (segEnd - segStart);
+      }
+      return totalWindow > 0 ? weightedSum / totalWindow : null;
+    } catch {
+      return null;
+    }
+  };
   reactExports.useEffect(() => {
     const fetchTodaysAverage = async () => {
       setTodaysAverageLoading(true);
@@ -48201,26 +48267,44 @@ const ACHistoryAircraftAvailability = ({
             date: today,
             clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
             clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
-            // Use default flying window (0800-1700) - the server will use its configured values
           })
         });
         if (recalcRes.ok) {
           const recalcData = await recalcRes.json();
           if (recalcData.summary) {
-            const recordWithDate = {
-              ...recalcData.summary,
-              date: today
-            };
-            setTodaysAverageWithMetadata(recordWithDate);
-          } else {
-            setTodaysAverageWithMetadata(null);
+            setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+            return;
           }
+        }
+        const localAvg = computeAverageFromLocalStorage(today);
+        if (localAvg !== null) {
+          console.log(`[AV-FETCH] Using localStorage fallback: avg=${localAvg.toFixed(2)}`);
+          setTodaysAverageWithMetadata({
+            dailyAverage: localAvg,
+            date: today,
+            flyingWindowStart: "0800",
+            flyingWindowEnd: "1700",
+            plannedCount: currentAircraftAvailable ?? 15,
+            actualCount: currentAircraftAvailable ?? 15,
+            totalAircraft: totalAircraft ?? 24
+          });
         } else {
           setTodaysAverageWithMetadata(null);
         }
       } catch (err) {
         console.error("Failed to fetch today's average:", err);
-        setTodaysAverageWithMetadata(null);
+        const today = getLocalDateString();
+        const localAvg = computeAverageFromLocalStorage(today);
+        if (localAvg !== null) {
+          setTodaysAverageWithMetadata({
+            dailyAverage: localAvg,
+            date: today,
+            flyingWindowStart: "0800",
+            flyingWindowEnd: "1700"
+          });
+        } else {
+          setTodaysAverageWithMetadata(null);
+        }
       } finally {
         setTodaysAverageLoading(false);
       }
@@ -48230,26 +48314,35 @@ const ACHistoryAircraftAvailability = ({
     return () => clearInterval(interval);
   }, []);
   reactExports.useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       const today = getLocalDateString();
-      fetch("/api/aircraft-availability-recalculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          date: today,
-          clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-          clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
-        })
-      }).then((res) => res.json()).then((data) => {
+      try {
+        const res = await fetch("/api/aircraft-availability-recalculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            date: today,
+            clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
+            clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
+          })
+        });
+        const data = await res.json();
         if (data.summary) {
-          const recordWithDate = {
-            ...data.summary,
-            date: today
-          };
-          setTodaysAverageWithMetadata(recordWithDate);
+          setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          return;
         }
-      }).catch((err) => console.error("Failed to refresh today's average:", err));
+      } catch {
+      }
+      const localAvg = computeAverageFromLocalStorage(today);
+      if (localAvg !== null) {
+        setTodaysAverageWithMetadata({
+          dailyAverage: localAvg,
+          date: today,
+          flyingWindowStart: "0800",
+          flyingWindowEnd: "1700"
+        });
+      }
     }, 2e3);
     return () => clearTimeout(timeoutId);
   }, [currentAircraftAvailable]);
@@ -73294,6 +73387,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             showDepartureDensityOverlay,
             showAircraftAvailability,
             initialAvailability: availableAircraftCount,
+            apiBase: getApiBaseUrl(),
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             onAvailabilityChange: async (record) => {
