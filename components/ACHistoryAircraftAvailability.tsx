@@ -463,6 +463,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
           setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          await fetchRecords();
           return;
         }
       }
@@ -654,11 +655,12 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         });
         
         if (recalcRes.ok) {
-          const recalcData = await recalcRes.json();
-          if (recalcData.summary) {
-            setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
-            return;
-          }
+            const recalcData = await recalcRes.json();
+            if (recalcData.summary) {
+              setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+              await fetchRecords();
+              return;
+            }
         }
 
         // DB has no events yet — fall back to localStorage
@@ -726,6 +728,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         const data = await res.json();
         if (data.summary) {
           setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          await fetchRecords();
           return;
         }
       } catch {

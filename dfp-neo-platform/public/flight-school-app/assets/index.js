@@ -48131,6 +48131,7 @@ const ACHistoryAircraftAvailability = ({
         const recalcData = await recalcRes.json();
         if (recalcData.summary) {
           setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          await fetchRecords();
           return;
         }
       }
@@ -48304,6 +48305,7 @@ const ACHistoryAircraftAvailability = ({
           const recalcData = await recalcRes.json();
           if (recalcData.summary) {
             setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+            await fetchRecords();
             return;
           }
         }
@@ -48362,6 +48364,7 @@ const ACHistoryAircraftAvailability = ({
         const data = await res.json();
         if (data.summary) {
           setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          await fetchRecords();
           return;
         }
       } catch {

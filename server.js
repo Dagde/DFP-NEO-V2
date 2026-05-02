@@ -4650,8 +4650,16 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
     // Normalize records: map 'totalFleet' -> 'totalAircraft' for frontend compatibility
     const records = rawRecords.map(r => ({
       ...r,
+      id: r.id != null ? String(r.id) : r.date,
       totalAircraft: Number(r.totalAircraft ?? r.totalFleet ?? 0),
       dailyAverage: Number(r.dailyAverage ?? 0),
+      plannedCount: Number(r.plannedCount ?? 0),
+      actualCount: r.actualCount == null ? null : Number(r.actualCount),
+      availabilityPct: Number(r.availabilityPct ?? (
+        Number(r.totalAircraft ?? r.totalFleet ?? 0) > 0
+          ? (Number(r.dailyAverage ?? 0) / Number(r.totalAircraft ?? r.totalFleet ?? 1)) * 100
+          : 0
+      )),
     }));
     console.log(`✅ GET /api/aircraft-availability-history - returning ${records.length} records`);
     // Return both 'records' (expected by frontend) and 'history' (legacy) for compatibility
@@ -4974,20 +4982,84 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     const totalAircraft = Math.max(...dedupedEvents.map(e => Number(e.totalAircraft ?? e.totalFleet ?? totalFleet ?? 0)));
     const effectiveEndTime = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(Math.floor(effectiveEndMin % 60)).padStart(2, '0')}`;
 
-    // Upsert the summary - handle both old schema (totalFleet) and new schema (totalAircraft)
-    // Try new schema columns first, fall back gracefully
+    // Upsert the summary with the live schema. Railway has had both totalFleet and
+    // totalAircraft variants, and some tables require id on insert.
     try {
-      await db.$executeRawUnsafe(`
-        INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
-        VALUES ($1::text, $2::int, $3::numeric, $4::text, $5::text, NOW(), NOW())
-        ON CONFLICT ("date") DO UPDATE SET
-          "totalFleet" = EXCLUDED."totalFleet",
-          "dailyAverage" = EXCLUDED."dailyAverage",
-          "flyingWindowStart" = EXCLUDED."flyingWindowStart",
-          "flyingWindowEnd" = EXCLUDED."flyingWindowEnd",
-          "lastCalculatedAt" = NOW(),
-          "updatedAt" = NOW()
-      `, date, totalAircraft || totalFleet || 0, dailyAverage, flyingWindowStart || null, flyingWindowEnd || null);
+      const historyColumns = await db.$queryRawUnsafe(`
+        SELECT column_name, column_default, is_nullable, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'AircraftAvailabilityHistory'
+        ORDER BY ordinal_position
+      `);
+      const historyColumnNames = historyColumns.map(c => c.column_name);
+      const fleetColumn = historyColumnNames.includes('totalAircraft') ? 'totalAircraft' : 'totalFleet';
+      const existing = await db.$queryRawUnsafe(
+        `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text LIMIT 1`,
+        date
+      );
+
+      const summaryValues = {
+        dailyAverage,
+        [fleetColumn]: totalAircraft || totalFleet || 0,
+        availabilityPct: (totalAircraft || totalFleet || 0) > 0 ? (dailyAverage / (totalAircraft || totalFleet || 1)) * 100 : 0,
+        plannedCount: Number(dedupedEvents[0]?.availableCount ?? currentAvailability ?? 0),
+        actualCount: Number(dedupedEvents[dedupedEvents.length - 1]?.availableCount ?? currentAvailability ?? 0),
+        flyingWindowStart: flyingWindowStart || null,
+        flyingWindowEnd: flyingWindowEnd || null,
+        effectiveEndTime,
+      };
+
+      const writableFields = Object.entries(summaryValues).filter(([key]) => historyColumnNames.includes(key));
+
+      if (existing.length > 0) {
+        const setClauses = writableFields.map(([key], idx) => `"${key}" = $${idx + 2}`);
+        if (historyColumnNames.includes('lastCalculatedAt')) setClauses.push('"lastCalculatedAt" = NOW()');
+        if (historyColumnNames.includes('updatedAt')) setClauses.push('"updatedAt" = NOW()');
+        await db.$executeRawUnsafe(
+          `UPDATE "AircraftAvailabilityHistory" SET ${setClauses.join(', ')} WHERE "date" = $1::text`,
+          date,
+          ...writableFields.map(([, value]) => value)
+        );
+      } else {
+        const insertColumns = [];
+        const insertValues = [];
+        const insertParams = [];
+        let paramIdx = 1;
+
+        const idColumn = historyColumns.find(c => c.column_name === 'id');
+        if (idColumn && !idColumn.column_default) {
+          insertColumns.push('"id"');
+          insertValues.push('gen_random_uuid()::text');
+        }
+
+        insertColumns.push('"date"');
+        insertValues.push(`$${paramIdx++}::text`);
+        insertParams.push(date);
+
+        for (const [key, value] of writableFields) {
+          insertColumns.push(`"${key}"`);
+          insertValues.push(`$${paramIdx++}`);
+          insertParams.push(value);
+        }
+
+        if (historyColumnNames.includes('lastCalculatedAt')) {
+          insertColumns.push('"lastCalculatedAt"');
+          insertValues.push('NOW()');
+        }
+        if (historyColumnNames.includes('createdAt')) {
+          insertColumns.push('"createdAt"');
+          insertValues.push('NOW()');
+        }
+        if (historyColumnNames.includes('updatedAt')) {
+          insertColumns.push('"updatedAt"');
+          insertValues.push('NOW()');
+        }
+
+        await db.$executeRawUnsafe(
+          `INSERT INTO "AircraftAvailabilityHistory" (${insertColumns.join(', ')}) VALUES (${insertValues.join(', ')})`,
+          ...insertParams
+        );
+      }
     } catch (upsertErr) {
       console.error('[AV-RECALC] Upsert error (non-fatal):', upsertErr.message);
     }
@@ -5001,6 +5073,12 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     record.effectiveEndTime = record.effectiveEndTime ?? effectiveEndTime;
     record.flyingWindowStart = record.flyingWindowStart ?? (flyingWindowStart || null);
     record.flyingWindowEnd = record.flyingWindowEnd ?? (flyingWindowEnd || null);
+    if (record.id != null) record.id = String(record.id);
+    if (record.totalAircraft != null) record.totalAircraft = Number(record.totalAircraft);
+    if (record.totalFleet != null) record.totalFleet = Number(record.totalFleet);
+    if (record.availabilityPct != null) record.availabilityPct = Number(record.availabilityPct);
+    if (record.plannedCount != null) record.plannedCount = Number(record.plannedCount);
+    if (record.actualCount != null) record.actualCount = Number(record.actualCount);
 
     console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}, offset: ${clientUtcOffsetHours}h, effectiveEnd=${effectiveEndTime}`);
     // Return both 'record' and 'summary' so all callers work
