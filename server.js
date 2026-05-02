@@ -4640,16 +4640,19 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     }
     const ts = timestamp ? new Date(timestamp) : new Date();
 
-    // Deduplication: skip if last event for this date has same availableCount (non-boundary events)
-    const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown'];
-    const isBoundary = BOUNDARY_TYPES.includes(changeType);
-    if (!isBoundary) {
+    // Deduplication: skip if last event for this date has same availableCount
+    // ALL event types are deduplicated - 'startup' events especially tend to flood the DB
+    // because they fire on every page load.
+    // Exception: 'reset' always goes through (user explicitly requested reset).
+    const ALWAYS_INSERT_TYPES = ['reset'];
+    const shouldDeduplicate = !ALWAYS_INSERT_TYPES.includes(changeType);
+    if (shouldDeduplicate) {
       const lastRows = await db.$queryRawUnsafe(
         `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
         date
       );
       if (lastRows.length > 0 && Number(lastRows[0].availableCount) === Number(availableCount)) {
-        console.log(`[AV-EVENTS] Skipping duplicate: availableCount=${availableCount} unchanged for ${date}`);
+        console.log(`[AV-EVENTS] Skipping duplicate ${changeType}: availableCount=${availableCount} unchanged for ${date}`);
         return res.json({ skipped: true, reason: 'no_change', success: true });
       }
     }
@@ -4787,15 +4790,29 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     const windowEndMin = flyingWindowEnd ? parseWindowTime(flyingWindowEnd) : 17 * 60;
     const windowDuration = windowEndMin - windowStartMin;
 
+    // Deduplicate events by timestamp - keep only the LAST event at each timestamp
+    // (duplicate events flood the DB due to startup events firing on every page load)
+    const dedupMap = new Map();
+    for (const event of events) {
+      const tsKey = new Date(event.timestamp).getTime();
+      dedupMap.set(tsKey, event); // last one wins for same timestamp
+    }
+    // Sort by CLIENT-LOCAL minutes (not UTC) so overnight UTC events (e.g. AEDT dates that
+    // start at UTC-11h) are in the correct local-time order for the flying window calculation.
+    const dedupedEvents = Array.from(dedupMap.values()).sort(
+      (a, b) => toLocalMinutes(a.timestamp) - toLocalMinutes(b.timestamp)
+    );
+    console.log(`[AV-RECALC] Deduped ${events.length} events -> ${dedupedEvents.length} unique timestamps`);
+
     // Calculate time-weighted average within flying window
     let weightedSum = 0;
     let coveredMinutes = 0;
 
-    for (let i = 0; i < events.length; i++) {
-      const event = events[i];
+    for (let i = 0; i < dedupedEvents.length; i++) {
+      const event = dedupedEvents[i];
       const eventMinutes = toLocalMinutes(event.timestamp);
-      const nextEventMinutes = i + 1 < events.length
-        ? toLocalMinutes(events[i + 1].timestamp)
+      const nextEventMinutes = i + 1 < dedupedEvents.length
+        ? toLocalMinutes(dedupedEvents[i + 1].timestamp)
         : windowEndMin;
 
       // Clamp to flying window
@@ -4810,20 +4827,31 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       }
     }
 
-    // If no coverage (all events outside window), use first known value
-    if (coveredMinutes === 0 && events.length > 0) {
-      weightedSum = Number(events[0].availableCount) * windowDuration;
+    // If no coverage (all events outside window), use last known value before window start
+    // or first event if none before window
+    if (coveredMinutes === 0 && dedupedEvents.length > 0) {
+      // Find last event at or before window start
+      const lastBeforeWindow = [...dedupedEvents].reverse().find(
+        e => toLocalMinutes(e.timestamp) <= windowStartMin
+      );
+      const fallbackCount = lastBeforeWindow
+        ? Number(lastBeforeWindow.availableCount)
+        : Number(dedupedEvents[0].availableCount);
+      weightedSum = fallbackCount * windowDuration;
       coveredMinutes = windowDuration;
+      console.log(`[AV-RECALC] No in-window events, using fallback count=${fallbackCount}`);
     }
 
-    // Fill uncovered tail with last known value
-    if (coveredMinutes < windowDuration && events.length > 0) {
+    // Fill uncovered tail (events before window end) with last known in-window value
+    if (coveredMinutes < windowDuration && dedupedEvents.length > 0) {
       const uncovered = windowDuration - coveredMinutes;
-      weightedSum += Number(events[events.length - 1].availableCount) * uncovered;
+      const lastEvent = dedupedEvents[dedupedEvents.length - 1];
+      weightedSum += Number(lastEvent.availableCount) * uncovered;
+      console.log(`[AV-RECALC] Tail fill: ${lastEvent.availableCount} ac × ${uncovered.toFixed(1)} min`);
     }
 
     const dailyAverage = windowDuration > 0 ? weightedSum / windowDuration : 0;
-    const totalAircraft = Math.max(...events.map(e => Number(e.totalAircraft ?? e.totalFleet ?? totalFleet ?? 0)));
+    const totalAircraft = Math.max(...dedupedEvents.map(e => Number(e.totalAircraft ?? e.totalFleet ?? totalFleet ?? 0)));
 
     // Upsert the summary - handle both old schema (totalFleet) and new schema (totalAircraft)
     // Try new schema columns first, fall back gracefully
