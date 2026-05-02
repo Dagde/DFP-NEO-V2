@@ -48195,7 +48195,12 @@ const ACHistoryAircraftAvailability = ({
     }
     return { start, end };
   }, []);
-  const toISODate = (d) => d.toISOString().split("T")[0];
+  const toISODate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
   const getLocalDateString = (d = /* @__PURE__ */ new Date()) => {
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -48311,7 +48316,7 @@ const ACHistoryAircraftAvailability = ({
     fetchTodaysAverage();
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1e3);
     return () => clearInterval(interval);
-  }, []);
+  }, [timezoneOffset]);
   reactExports.useEffect(() => {
     const timeoutId = setTimeout(async () => {
       const today = getLocalDateString();
@@ -48343,7 +48348,7 @@ const ACHistoryAircraftAvailability = ({
       }
     }, 2e3);
     return () => clearTimeout(timeoutId);
-  }, [currentAircraftAvailable]);
+  }, [currentAircraftAvailable, timezoneOffset]);
   const formatPeriodLabel = (period) => {
     const labels = {
       week: "Past Week",

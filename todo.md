@@ -6,5 +6,5 @@
 - [x] Fix ACHistoryAircraftAvailability: add `timezoneOffset` prop, send `clientTimezoneOffsetHours`
 - [x] Fix ACHistoryPage: add + pass `timezoneOffset` prop
 - [x] Fix SettingsView.tsx: pass `timezoneOffset` to ACHistoryPage
-- [ ] Rebuild frontend bundle
-- [ ] Push to feature/comprehensive-build-algorithm
+- [x] Rebuild frontend bundle
+- [x] Push to feature/comprehensive-build-algorithm

@@ -531,7 +531,13 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     return { start, end };
   }, []);
 
-  const toISODate = (d: Date) => d.toISOString().split('T')[0];
+  // Use local date methods (not toISOString which is UTC) to avoid timezone off-by-one day
+  const toISODate = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
   
   // Get local date string in YYYY-MM-DD format (respects timezone)
   const getLocalDateString = (d: Date = new Date()): string => {
@@ -670,7 +676,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     // Periodic refresh every 5 minutes
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  // timezoneOffset must be in deps so the closure captures the correct value
+  }, [timezoneOffset]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // Refresh today's average when currentAircraftAvailable changes
   useEffect(() => {
@@ -710,7 +717,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     }, 2000);
     
     return () => clearTimeout(timeoutId);
-  }, [currentAircraftAvailable]); // eslint-disable-line react-hooks/exhaustive-deps
+  // timezoneOffset in deps so closure captures correct value
+  }, [currentAircraftAvailable, timezoneOffset]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPeriodLabel = (period: TimePeriod): string => {
     const labels: Record<TimePeriod, string> = {
