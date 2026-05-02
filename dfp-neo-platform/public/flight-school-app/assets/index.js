@@ -4659,7 +4659,6 @@ function convertSnapshotsToTimeline(snapshots) {
 const AircraftAvailabilityOverlay = ({
   currentDate,
   totalAircraft,
-  plannedAvailability,
   dayFlyingStart,
   dayFlyingEnd,
   gridHeight,
@@ -4667,12 +4666,11 @@ const AircraftAvailabilityOverlay = ({
   pixelsPerHour,
   startHour,
   onAvailabilityChange,
-  onUpdatePlannedAvailability
+  initialAvailability = 15
 }) => {
-  const [currentAvailable, setCurrentAvailable] = reactExports.useState(plannedAvailability);
+  const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
   const overlayRef = reactExports.useRef(null);
-  const lastSetByOverlay = reactExports.useRef(plannedAvailability);
   const onAvailabilityChangeRef = reactExports.useRef(onAvailabilityChange);
   reactExports.useEffect(() => {
     onAvailabilityChangeRef.current = onAvailabilityChange;
@@ -4692,9 +4690,8 @@ const AircraftAvailabilityOverlay = ({
           data.snapshots.map((s) => ({ ...s, timestamp: new Date(s.timestamp) }))
         );
         setSnapshots(loaded);
-        const lastAvailable = loaded[loaded.length - 1]?.available ?? plannedAvailability;
+        const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
         setCurrentAvailable(lastAvailable);
-        lastSetByOverlay.current = lastAvailable;
       } catch {
         initSnapshots();
       }
@@ -4705,18 +4702,17 @@ const AircraftAvailabilityOverlay = ({
   const initSnapshots = () => {
     const initial = {
       timestamp: makeDayStart(currentDate),
-      available: plannedAvailability,
+      available: initialAvailability,
       total: totalAircraft,
       notes: "Initial planned availability at start of day"
     };
     setSnapshots([initial]);
-    setCurrentAvailable(plannedAvailability);
-    lastSetByOverlay.current = plannedAvailability;
+    setCurrentAvailable(initialAvailability);
     logAudit({
       page: "Program Schedule",
       action: "Add",
-      description: `Aircraft availability initialized at ${plannedAvailability}`,
-      changes: `Initial: ${plannedAvailability} | Total: ${totalAircraft}`
+      description: `Aircraft availability initialized at ${initialAvailability}`,
+      changes: `Initial: ${initialAvailability} | Total: ${totalAircraft}`
     });
   };
   reactExports.useEffect(() => {
@@ -4737,26 +4733,6 @@ const AircraftAvailabilityOverlay = ({
     localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
     onAvailabilityChangeRef.current(record);
   }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
-  reactExports.useEffect(() => {
-    if (isDraggingRef.current) return;
-    if (plannedAvailability === lastSetByOverlay.current) return;
-    lastSetByOverlay.current = plannedAvailability;
-    setCurrentAvailable(plannedAvailability);
-    setSnapshots((prev) => {
-      const sorted = sortSnapshots(prev);
-      if (sorted.length === 0) {
-        return [{
-          timestamp: makeDayStart(currentDate),
-          available: plannedAvailability,
-          total: totalAircraft,
-          notes: `Availability set to ${plannedAvailability} from Build Factors`
-        }];
-      }
-      const updated = [...sorted];
-      updated[0] = { ...updated[0], available: plannedAvailability, total: totalAircraft };
-      return updated;
-    });
-  }, [plannedAvailability]);
   const getYPosition = (count) => count * rowHeight;
   const getXPosition = (time) => {
     const t = new Date(time);
@@ -4771,7 +4747,7 @@ const AircraftAvailabilityOverlay = ({
   const snapshotsRef = reactExports.useRef(snapshots);
   const rowHeightRef = reactExports.useRef(rowHeight);
   const totalAircraftRef = reactExports.useRef(totalAircraft);
-  const plannedAvailabilityRef = reactExports.useRef(plannedAvailability);
+  const initialAvailabilityRef = reactExports.useRef(initialAvailability);
   const currentDateRef = reactExports.useRef(currentDate);
   reactExports.useEffect(() => {
     snapshotsRef.current = snapshots;
@@ -4783,8 +4759,8 @@ const AircraftAvailabilityOverlay = ({
     totalAircraftRef.current = totalAircraft;
   }, [totalAircraft]);
   reactExports.useEffect(() => {
-    plannedAvailabilityRef.current = plannedAvailability;
-  }, [plannedAvailability]);
+    initialAvailabilityRef.current = initialAvailability;
+  }, [initialAvailability]);
   reactExports.useEffect(() => {
     currentDateRef.current = currentDate;
   }, [currentDate]);
@@ -4822,13 +4798,9 @@ const AircraftAvailabilityOverlay = ({
       Math.max(0, Math.min(totalAircraftRef.current, dragYRef.current / rowHeightRef.current))
     );
     const currentSnaps = snapshotsRef.current;
-    const previousAvailability = currentSnaps.length > 0 ? currentSnaps[currentSnaps.length - 1].available : plannedAvailabilityRef.current;
+    const previousAvailability = currentSnaps.length > 0 ? currentSnaps[currentSnaps.length - 1].available : initialAvailabilityRef.current;
     const valueChanged = snappedCount !== previousAvailability;
-    lastSetByOverlay.current = snappedCount;
     setCurrentAvailable(snappedCount);
-    if (onUpdatePlannedAvailability) {
-      onUpdatePlannedAvailability(snappedCount);
-    }
     if (valueChanged) {
       logAudit({
         page: "Program Schedule",
@@ -4885,7 +4857,6 @@ const AircraftAvailabilityOverlay = ({
   const now = /* @__PURE__ */ new Date();
   const currentTimeX = getXPosition(now);
   const sortedSnaps = sortSnapshots(snapshots);
-  sortedSnaps.length > 0 ? sortedSnaps[sortedSnaps.length - 1] : null;
   const renderHistoricalLines = () => {
     if (sortedSnaps.length === 0) return null;
     const lines = [];
@@ -5185,8 +5156,7 @@ const ScheduleView = ({
   detectConflictsForEvent,
   showDepartureDensityOverlay,
   showAircraftAvailability,
-  plannedAvailability,
-  onUpdatePlannedAvailability,
+  initialAvailability,
   dayFlyingStart,
   dayFlyingEnd,
   onAvailabilityChange,
@@ -5903,20 +5873,19 @@ const ScheduleView = ({
               renderCategorySeparators(),
               renderCurrentTimeIndicator(),
               renderValidateOverlay(),
-              showAircraftAvailability && plannedAvailability !== void 0 && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 AircraftAvailabilityOverlay,
                 {
                   currentDate: new Date(date),
                   totalAircraft: airframeCount,
-                  plannedAvailability,
+                  initialAvailability: initialAvailability ?? 15,
                   dayFlyingStart,
                   dayFlyingEnd,
                   gridHeight: resources.length * ROW_HEIGHT$5,
                   rowHeight: ROW_HEIGHT$5,
                   pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
                   startHour: START_HOUR$5,
-                  onAvailabilityChange,
-                  onUpdatePlannedAvailability
+                  onAvailabilityChange
                 }
               ),
               renderEvents(),
@@ -73324,8 +73293,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onOracleMouseUp: handleOracleMouseUp,
             showDepartureDensityOverlay,
             showAircraftAvailability,
-            plannedAvailability: availableAircraftCount,
-            onUpdatePlannedAvailability: handleUpdateAircraftCount,
+            initialAvailability: availableAircraftCount,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             onAvailabilityChange: async (record) => {

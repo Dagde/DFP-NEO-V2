@@ -56,8 +56,9 @@ interface ScheduleViewProps {
   };
   showDepartureDensityOverlay: boolean;
   showAircraftAvailability?: boolean;
-  plannedAvailability?: number;
-  onUpdatePlannedAvailability?: (count: number) => void;
+  // NOTE: plannedAvailability and onUpdatePlannedAvailability removed.
+  // The overlay is now independent from Build Factors.
+  initialAvailability?: number; // seed value for new dates with no saved data
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
@@ -139,7 +140,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isOracleMode,
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, plannedAvailability, onUpdatePlannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    showAircraftAvailability, initialAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
     timezoneOffset = 11 // Default to UTC+11
@@ -1005,12 +1006,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     {renderCurrentTimeIndicator()}
                     {renderValidateOverlay()}
                     
-                    {/* Aircraft Availability Overlay */}
-                    {showAircraftAvailability && plannedAvailability !== undefined && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && (
+                    {/* Aircraft Availability Overlay — independent from Build Factors */}
+                    {showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && (
                         <AircraftAvailabilityOverlay
                             currentDate={new Date(date)}
                             totalAircraft={airframeCount}
-                            plannedAvailability={plannedAvailability}
+                            initialAvailability={initialAvailability ?? 15}
                             dayFlyingStart={dayFlyingStart}
                             dayFlyingEnd={dayFlyingEnd}
                             gridHeight={resources.length * ROW_HEIGHT}
@@ -1018,7 +1019,6 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                             startHour={START_HOUR}
                             onAvailabilityChange={onAvailabilityChange}
-                            onUpdatePlannedAvailability={onUpdatePlannedAvailability}
                         />
                     )}
                     
