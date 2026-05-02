@@ -2907,6 +2907,22 @@ app.get('/api/debug/academics', async (req, res) => {
 // ============================================================
 // DEBUG: Check DailyAverage and Events for specific date
 // ============================================================
+app.get('/api/debug/check-table-structure', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    // Get column names for AircraftAvailabilityHistory table
+    const columns = await db.$queryRawUnsafe(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'AircraftAvailabilityHistory' 
+      ORDER BY ordinal_position
+    `);
+    res.json({ table: 'AircraftAvailabilityHistory', columns });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/debug/check-daily-average', async (req, res) => {
   try {
     const db = await getPrisma();
