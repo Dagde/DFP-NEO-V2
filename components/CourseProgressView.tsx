@@ -230,6 +230,93 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         setActiveAwardId(nextAwards[0].id);
     };
 
+    const scoreMatrixRows = useMemo(() => {
+        return scoreCourseTrainees.map(trainee => ({
+            traineeName: trainee.fullName || trainee.name,
+            scores: scoredEvents.map(eventCode => getLatestScoreForEvent(trainee, eventCode)?.score ?? ''),
+        }));
+    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords]);
+
+    const escapeCsvValue = (value: string | number): string => {
+        const raw = String(value);
+        return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
+    };
+
+    const escapeHtmlValue = (value: string | number): string => {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    const exportCourseScoresCsv = () => {
+        const header = ['Trainee', ...scoredEvents];
+        const rows = scoreMatrixRows.map(row => [row.traineeName, ...row.scores]);
+        const csv = [header, ...rows]
+            .map(row => row.map(escapeCsvValue).join(','))
+            .join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeCourseName = (scoreCourse || 'course').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+        link.href = url;
+        link.download = `${safeCourseName}-scores.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const printCourseScores = () => {
+        const printWindow = window.open('', '_blank', 'width=1200,height=800');
+        if (!printWindow) return;
+
+        const headerCells = scoredEvents.map(eventCode => `<th>${escapeHtmlValue(eventCode)}</th>`).join('');
+        const bodyRows = scoreMatrixRows.map(row => `
+            <tr>
+                <td class="name">${escapeHtmlValue(row.traineeName)}</td>
+                ${row.scores.map(score => `<td>${escapeHtmlValue(score)}</td>`).join('')}
+            </tr>
+        `).join('');
+        const escapedCourseName = escapeHtmlValue(scoreCourse);
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html>
+                <head>
+                    <title>${escapedCourseName} Course Scores</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; color: #111827; margin: 24px; }
+                        h1 { font-size: 20px; margin: 0 0 4px; }
+                        p { color: #4b5563; margin: 0 0 16px; }
+                        table { border-collapse: collapse; width: 100%; font-size: 11px; }
+                        th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: center; }
+                        th { background: #f3f4f6; font-weight: 700; }
+                        td.name, th.name { text-align: left; white-space: nowrap; }
+                        @media print { body { margin: 12mm; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>${escapedCourseName} Course Scores</h1>
+                    <p>PT-051 overall grades</p>
+                    <table>
+                        <thead><tr><th class="name">Trainee</th>${headerCells}</tr></thead>
+                        <tbody>${bodyRows || '<tr><td>No scores available.</td></tr>'}</tbody>
+                    </table>
+                    <script>
+                        window.onload = function () {
+                            window.print();
+                            window.onafterprint = function () { window.close(); };
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
     return (
         <>
             {showFullGraph ? (
@@ -285,16 +372,32 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                             <h3 className="text-lg font-semibold text-white">Course Scores</h3>
                                             <p className="text-xs text-gray-400">Only events with saved PT-051 overall grades are shown.</p>
                                         </div>
-                                        <label className="text-sm text-gray-300 min-w-60">
-                                            Course
-                                            <select
-                                                value={scoreCourse}
-                                                onChange={event => setScoreCourse(event.target.value)}
-                                                className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+                                            <label className="text-sm text-gray-300 min-w-60">
+                                                Course
+                                                <select
+                                                    value={scoreCourse}
+                                                    onChange={event => setScoreCourse(event.target.value)}
+                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                >
+                                                    {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
+                                                </select>
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={printCourseScores}
+                                                className="px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70"
                                             >
-                                                {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
-                                            </select>
-                                        </label>
+                                                Print
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={exportCourseScoresCsv}
+                                                className="px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70"
+                                            >
+                                                Export CSV
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full text-sm">
