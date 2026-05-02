@@ -93,6 +93,8 @@ export async function POST(request: NextRequest) {
       notes,
       flyingWindowStart,
       flyingWindowEnd,
+      clientLocalHour,
+      clientLocalMinute,
     } = body;
 
     console.log(`[AV-EVENTS] 📊 Parsed body:`, {
@@ -146,7 +148,7 @@ export async function POST(request: NextRequest) {
           `availableCount=${availableCount} unchanged since last event (${lastEvent.changeType} @ ${lastEvent.timestamp.toISOString()})`
         );
         // Still recalculate summary in case it's missing
-        const summary = await recalculateDailySummary(date, flyingWindowStart, flyingWindowEnd, recordedBy);
+        const summary = await recalculateDailySummary(date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour);
         return NextResponse.json(
           { skipped: true, reason: 'no_change', summary, requestId },
           { headers: CORS_HEADERS }
@@ -185,7 +187,7 @@ export async function POST(request: NextRequest) {
 
     // --- Recalculate daily summary ---
     console.log(`[AV-EVENTS] 🔄 Recalculating daily summary...`);
-    const summary = await recalculateDailySummary(date, flyingWindowStart, flyingWindowEnd, recordedBy);
+    const summary = await recalculateDailySummary(date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour);
     console.log(`[AV-EVENTS] 📊 Summary result:`, summary ? {
       date: summary.date,
       dailyAverage: summary.dailyAverage,
@@ -232,10 +234,12 @@ async function recalculateDailySummary(
   date: string,
   flyingWindowStart?: string, // "0800" or "08:00" format
   flyingWindowEnd?: string,   // "1700" or "17:00" format
-  recordedBy?: string | null
+  recordedBy?: string | null,
+  clientLocalHour?: number    // client's current local hour, used to infer UTC offset
 ): Promise<any> {
   console.log(`[AV-EVENTS] 🔄 recalculateDailySummary called for ${date}`);
   console.log(`[AV-EVENTS] 🔄 Flying window: ${flyingWindowStart} - ${flyingWindowEnd}`);
+  console.log(`[AV-EVENTS] 🔄 clientLocalHour: ${clientLocalHour}, serverUtcHour: ${new Date().getUTCHours()}`);
   
   try {
     // Parse flying window (default 0800-1700)
@@ -277,12 +281,27 @@ async function recalculateDailySummary(
       return null;
     }
 
-    // Convert event timestamps to minutes-since-midnight
-    const toMinutes = (ts: Date): number => {
-      const h = ts.getHours();
-      const m = ts.getMinutes();
-      const s = ts.getSeconds();
-      return h * 60 + m + s / 60;
+    // Convert event timestamps to client-local minutes-since-midnight.
+    // Server runs in UTC; client may be in a different timezone (e.g. AEDT = UTC+11).
+    // We infer the UTC offset from clientLocalHour vs server's current UTC hour.
+    // This ensures the time-weighted average uses client-local hours, matching the flying window.
+    let clientUtcOffsetHours = 0;
+    if (typeof clientLocalHour === 'number') {
+      const serverUtcHour = new Date().getUTCHours();
+      clientUtcOffsetHours = clientLocalHour - serverUtcHour;
+      // Normalize to [-12, 14] range
+      if (clientUtcOffsetHours > 14) clientUtcOffsetHours -= 24;
+      if (clientUtcOffsetHours < -12) clientUtcOffsetHours += 24;
+      console.log(`[AV-EVENTS] 🕐 Inferred UTC offset: ${clientUtcOffsetHours}h (client=${clientLocalHour}, server=${serverUtcHour})`);
+    }
+
+    const toLocalMinutes = (ts: Date): number => {
+      const utcH = new Date(ts).getUTCHours();
+      const utcM = new Date(ts).getUTCMinutes();
+      const utcS = new Date(ts).getUTCSeconds();
+      const localTotal = utcH * 60 + utcM + utcS / 60 + clientUtcOffsetHours * 60;
+      // Normalize to [0, 1440)
+      return ((localTotal % 1440) + 1440) % 1440;
     };
 
     // Build timeline segments
@@ -291,9 +310,9 @@ async function recalculateDailySummary(
 
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
-      const evMinutes = toMinutes(ev.timestamp);
+      const evMinutes = toLocalMinutes(ev.timestamp);
       const nextMinutes = i + 1 < events.length
-        ? toMinutes(events[i + 1].timestamp)
+        ? toLocalMinutes(events[i + 1].timestamp)
         : windowEndMin; // assume last value persists until end of window
 
       // Clip segment to flying window
@@ -316,7 +335,7 @@ async function recalculateDailySummary(
       // Find last event at or before window start
       const lastBeforeWindow = [...events]
         .reverse()
-        .find(e => toMinutes(e.timestamp) <= windowStartMin);
+        .find(e => toLocalMinutes(e.timestamp) <= windowStartMin);
       const fallbackCount = lastBeforeWindow
         ? lastBeforeWindow.availableCount
         : events[0].availableCount;

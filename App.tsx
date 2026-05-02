@@ -12874,86 +12874,29 @@ updates.forEach(update => {
                            apiBase={getApiBaseUrl()}
                            dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, '0')}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, '0')}`}
                            dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, '0')}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, '0')}`}
-                           onAvailabilityChange={async (record: DailyAvailabilityRecord) => {
-                               // Event-based tracking: record a 'change' event whenever
-                               // the availability line is moved in the overlay.
-                               // The last snapshot in the record represents the current state.
-                               console.log('[AV] 🔥 onAvailabilityChange CALLED', {
-                                   snapshotsLength: record.snapshots.length,
-                                   date: record.date,
-                                   snapshots: record.snapshots.map((s: any) => ({
-                                       time: s.timestamp,
-                                       available: s.available
-                                   }))
-                               });
-                               
-                               if (record.snapshots.length === 0) {
-                                   console.log('[AV] ⚠️ No snapshots, returning early');
+                           onAvailabilityChange={(record: DailyAvailabilityRecord) => {
+                               // localStorage is already saved by the overlay itself.
+                               // This callback is purely for in-memory UI state sync (no DB posting).
+                               // DB posting only happens via onUserAvailabilityChange (user drag).
+                               if (record.snapshots.length === 0) return;
+                               const lastSnapshot = record.snapshots[record.snapshots.length - 1];
+                               console.log(`[AV] 📋 onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
+                           }}
+                           onUserAvailabilityChange={async (count: number) => {
+                               // Called ONLY when the user physically drags the line.
+                               // This is the ONLY place that posts to the DB.
+                               console.log(`[AV] 🔥 onUserAvailabilityChange: user dragged line to ${count}`);
+                               if (!sessionUser?.userId) {
+                                   console.log('[AV] ⚠️ No session user, skipping DB post');
                                    return;
                                }
-
-                               const lastSnapshot = record.snapshots[record.snapshots.length - 1];
-                               const currentAvailable = lastSnapshot.available;
-                               const snapshotTs = new Date(lastSnapshot.timestamp);
-
-                               console.log(
-                                   `[AV] 📤 Preparing to POST event: date=${record.date} ` +
-                                   `available=${currentAvailable} snapshots=${record.snapshots.length} ` +
-                                   `timestamp=${snapshotTs.toISOString()}`
+                               await postAvailabilityEvent(
+                                   count,
+                                   'change',
+                                   undefined,
+                                   `Aircraft availability updated via overlay: ${count}`
                                );
-
-                               const totalAircraftCount = availableAircraftCount;
-                               const windowStart = formatWindowTime(flyingStartTime);
-                               const windowEnd   = formatWindowTime(flyingEndTime);
-
-                               const requestBody = {
-                                   timestamp: snapshotTs.toISOString(),
-                                   date: record.date,
-                                   availableCount: currentAvailable,
-                                   totalAircraft: totalAircraftCount,
-                                   changeType: 'change',
-                                   recordedBy: sessionUser?.userId ?? null,
-                                   notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
-                                   flyingWindowStart: windowStart,
-                                   flyingWindowEnd:   windowEnd,
-                                   // Send client's local time for accurate timezone comparison
-                                   clientLocalHour: new Date().getHours(),
-                                   clientLocalMinute: new Date().getMinutes(),
-                               };
-                               
-                               console.log('[AV] 📦 Request body:', JSON.stringify(requestBody, null, 2));
-                               console.log('[AV] 🌐 Current origin:', window.location.origin);
-                               console.log('[AV] 👤 Session user:', sessionUser?.userId ?? 'not logged in');
-
-                               try {
-                                   const apiBase = getApiBaseUrl();
-                                   const apiUrl = `${apiBase}/aircraft-availability-events`;
-                                   console.log('[AV] 🚀 Starting fetch to', apiUrl);
-                                   const res = await fetch(apiUrl, {
-                                       method: 'POST',
-                                       headers: { 'Content-Type': 'application/json' },
-                                       credentials: 'include',
-                                       body: JSON.stringify(requestBody)
-                                   });
-                                   console.log('[AV] 📥 Response status:', res.status, res.statusText);
-                                   console.log('[AV] 📥 Response headers:', Object.fromEntries(res.headers.entries()));
-                                   
-                                   if (res.ok) {
-                                       const data = await res.json();
-                                       console.log('[AV] ✅ Response data:', data);
-                                       if (data.skipped) {
-                                           console.log(`[AV] Change event skipped: count unchanged at ${currentAvailable}`);
-                                       } else {
-                                           console.log(`[AV] ✅ Change event recorded for ${record.date}: available=${currentAvailable}`);
-                                       }
-                                   } else {
-                                       const errText = await res.text();
-                                       console.error(`[AV] ❌ Failed to record change event: ${res.status} ${errText}`);
-                                   }
-                               } catch (error) {
-                                   console.error('[AV] ❌ Error recording change event:', error);
-                                   console.error('[AV] ❌ Error stack:', (error as Error).stack);
-                               }
+                               console.log(`[AV] ✅ DB event posted for user drag: ${count}`);
                            }}
                            isVisualAdjustMode={isVisualAdjustMode}
                            visualAdjustEvent={visualAdjustEvent}

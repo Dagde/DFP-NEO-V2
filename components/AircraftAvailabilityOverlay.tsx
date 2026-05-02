@@ -6,6 +6,9 @@ import { logAudit } from '../utils/auditLogger';
 
 interface AircraftAvailabilityOverlayProps {
     currentDate: Date;
+    // dateString: canonical YYYY-MM-DD string for this date (used as localStorage key).
+    // If provided, avoids timezone issues from Date conversion. Must match the date shown.
+    dateString?: string;
     totalAircraft: number;
     dayFlyingStart: string; // HH:mm
     dayFlyingEnd: string;   // HH:mm
@@ -14,14 +17,17 @@ interface AircraftAvailabilityOverlayProps {
     pixelsPerHour: number;
     startHour: number;
     onAvailabilityChange: (record: DailyAvailabilityRecord) => void;
-    // initialAvailability: ONLY used as last-resort fallback when no localStorage AND no DB data exists
+    // onUserChange: called ONLY when user drags the line (for DB posting)
+    onUserChange?: (count: number) => void;
+    // initialAvailability: last-resort fallback when no localStorage AND no DB data
     initialAvailability?: number;
-    // apiBase: passed from App.tsx so we can fetch persisted value from DB on first load
+    // apiBase: for DB fetch on first load of a date with no localStorage data
     apiBase?: string;
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
     currentDate,
+    dateString,
     totalAircraft,
     dayFlyingStart,
     dayFlyingEnd,
@@ -30,37 +36,37 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     pixelsPerHour,
     startHour,
     onAvailabilityChange,
+    onUserChange,
     initialAvailability = 15,
     apiBase,
 }) => {
-    // isInitialized: true once we've loaded from localStorage or DB
-    const [isInitialized, setIsInitialized] = useState(false);
     const [currentAvailable, setCurrentAvailable] = useState<number>(initialAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
     const overlayRef = useRef<SVGSVGElement>(null);
-    // Track whether the current snapshots came from a user drag (should save) or from init (should not overwrite)
-    const isDirtyRef = useRef(false);
 
     // Stable ref for onAvailabilityChange
     const onAvailabilityChangeRef = useRef(onAvailabilityChange);
     useEffect(() => { onAvailabilityChangeRef.current = onAvailabilityChange; }, [onAvailabilityChange]);
 
-    // Helper: make the day-start (0001) timestamp for a given date
-    const makeDayStart = (date: Date): Date => {
-        return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
-    };
-
     // Sort snapshots by timestamp ascending — guarantees left-to-right rendering
     const sortSnapshots = (snaps: AircraftAvailabilitySnapshot[]): AircraftAvailabilitySnapshot[] =>
         [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    // ── Load from localStorage first, then DB, then fallback to initialAvailability ──
+    // Helper: make the day-start (0001) timestamp for a given date
+    const makeDayStart = (date: Date): Date =>
+        new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
+
+    // ── Load from localStorage on mount / date change ────────────────────────────
+    // If no localStorage data, fetch from DB; if DB also has nothing, use initialAvailability.
+    // NOTE: We do NOT gate on isDirty — always load from storage to ensure correct restore.
+    // dateString prop is preferred over formatDate(currentDate) to avoid UTC/local timezone issues.
     useEffect(() => {
         let cancelled = false;
-        isDirtyRef.current = false;
-        setIsInitialized(false);
 
-        const dateKey = formatDate(currentDate);
+        // Use dateString prop if provided (avoids UTC/local timezone mismatch from new Date(dateStr))
+        // formatDate uses toISOString() which is UTC-based; if currentDate is UTC midnight it matches
+        // the date string, but dateString (the canonical YYYY-MM-DD from App.tsx) is always correct.
+        const dateKey = dateString ?? formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
 
         if (stored) {
@@ -73,66 +79,66 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
                     setSnapshots(loaded);
                     setCurrentAvailable(lastAvailable);
-                    setIsInitialized(true);
                     return;
                 }
             } catch {
-                // Corrupted data — fall through to DB fetch
+                // Corrupted data — fall through to DB
             }
         }
 
-        // No localStorage data — try DB for persisted value
+        // No localStorage — fetch persisted value from DB
         const loadFromDb = async () => {
-            let persistedCount = initialAvailability;
+            let seed = initialAvailability;
             if (apiBase) {
                 try {
                     const res = await fetch(`${apiBase}/aircraft-availability-current`, { credentials: 'include' });
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.success && !data.isDefault && data.availableCount !== undefined) {
-                            persistedCount = data.availableCount;
+                        if (data.success && !data.isDefault && typeof data.availableCount === 'number') {
+                            seed = data.availableCount;
                         }
                     }
                 } catch {
-                    // DB fetch failed — use initialAvailability fallback
+                    // ignore — use seed
                 }
             }
-
             if (!cancelled) {
                 const initial: AircraftAvailabilitySnapshot = {
                     timestamp: makeDayStart(currentDate),
-                    available: persistedCount,
+                    available: seed,
                     total: totalAircraft,
                     notes: 'Initial availability at start of day'
                 };
                 setSnapshots([initial]);
-                setCurrentAvailable(persistedCount);
-                setIsInitialized(true);
+                setCurrentAvailable(seed);
                 logAudit({
                     page: "Program Schedule",
                     action: "Add",
-                    description: `Aircraft availability initialized at ${persistedCount}`,
-                    changes: `Initial: ${persistedCount} | Total: ${totalAircraft}`
+                    description: `Aircraft availability initialized at ${seed}`,
+                    changes: `Initial: ${seed} | Total: ${totalAircraft}`
                 });
             }
         };
 
         loadFromDb();
         return () => { cancelled = true; };
-    }, [currentDate.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Use dateString if provided (canonical date, no timezone issues), otherwise use local date fields
+    }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Save to localStorage + notify parent ONLY when user drags (isDirty) ────
+    // ── Save to localStorage + notify parent whenever snapshots change ────────────
+    // Always saves (same as working version) — ensures data is always persisted
     useEffect(() => {
-        if (!isInitialized || snapshots.length === 0 || !isDirtyRef.current) return;
-
+        if (snapshots.length === 0) return;
         const timeline = convertSnapshotsToTimeline(snapshots);
         const avg = calculateDailyAverageAvailability(
             timeline,
             dayFlyingStart.replace(':', ''),
             dayFlyingEnd.replace(':', '')
         );
+        // Use dateString prop if provided (avoids UTC/local timezone mismatch)
+        const dateKey = dateString ?? formatDate(currentDate);
         const record: DailyAvailabilityRecord = {
-            date: formatDate(currentDate),
+            date: dateKey,
             snapshots,
             averageAvailability: avg,
             dayFlyingStart,
@@ -140,7 +146,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         };
         localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
         onAvailabilityChangeRef.current(record);
-    }, [snapshots]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, dateString]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Coordinate → pixel helpers ──────────────────────────────────────────────
     const getYPosition = (count: number): number => count * rowHeight;
@@ -236,8 +242,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 notes: `Availability changed to ${snappedCount}`
             };
 
-            // Mark dirty so the save effect fires
-            isDirtyRef.current = true;
+            // Notify parent of user-driven change (for DB posting)
+            if (onUserChange) onUserChange(snappedCount);
             setSnapshots(prev => sortSnapshots([...prev, newSnap]));
         }
     };
@@ -266,7 +272,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return () => clearInterval(t);
     }, []);
 
-    // ── Render values ────────────────────────────────────────────────────────────
+    // ── Render ──────────────────────────────────────────────────────────────────
     const displayY = isDragging ? dragY : getYPosition(currentAvailable);
     const endOfDayX = getEndOfDayX();
     const now = new Date();
@@ -287,7 +293,6 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             const endX = Math.max(startX, rawEndX);
 
             const y = getYPosition(snap.available);
-
             if (startX >= currentTimeX) continue;
             const clampedEndX = Math.min(endX, currentTimeX);
             if (clampedEndX <= startX) continue;
@@ -319,9 +324,14 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return lines;
     };
 
-    const isToday = currentDate.toDateString() === now.toDateString();
+    // Solid line: starts at current time for today, X=0 for other dates
+    // Use dateString prop if provided (canonical YYYY-MM-DD from App.tsx, timezone-correct).
+    // Fallback: use local date string comparison to avoid UTC/local timezone mismatch
+    // (currentDate may be created from a YYYY-MM-DD string which is parsed as UTC midnight)
+    const localDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const todayStr = localDateStr(now);
+    const isToday = dateString ? (dateString === todayStr) : (localDateStr(currentDate) === todayStr);
     const solidStartX = isToday ? Math.min(currentTimeX, endOfDayX - 1) : 0;
-    const showSolidLine = true;
 
     return (
         <>
@@ -331,25 +341,22 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 style={{ zIndex: 5, pointerEvents: 'none' }}
             >
                 {renderHistoricalLines()}
-
-                {showSolidLine && (
-                    <g>
-                        <line
-                            x1={solidStartX} y1={displayY}
-                            x2={endOfDayX}   y2={displayY}
-                            stroke="rgba(236, 72, 153, 0.85)"
-                            strokeWidth="2"
-                            className="pointer-events-none"
-                        />
-                        <line
-                            x1={solidStartX} y1={displayY}
-                            x2={endOfDayX}   y2={displayY}
-                            stroke="transparent" strokeWidth="20"
-                            style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                            onMouseDown={handleLineMouseDown}
-                        />
-                    </g>
-                )}
+                <g>
+                    <line
+                        x1={solidStartX} y1={displayY}
+                        x2={endOfDayX}   y2={displayY}
+                        stroke="rgba(236, 72, 153, 0.85)"
+                        strokeWidth="2"
+                        className="pointer-events-none"
+                    />
+                    <line
+                        x1={solidStartX} y1={displayY}
+                        x2={endOfDayX}   y2={displayY}
+                        stroke="transparent" strokeWidth="20"
+                        style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
+                        onMouseDown={handleLineMouseDown}
+                    />
+                </g>
             </svg>
         </>
     );

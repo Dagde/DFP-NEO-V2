@@ -15,23 +15,49 @@ export async function OPTIONS() {
 /**
  * POST /api/aircraft-availability-recalculate
  * Recalculates (or skips if recent) the daily summary for a given date.
- * Body: { date, flyingWindowStart, flyingWindowEnd, recordedBy }
+ * Body: { date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour?, clientLocalMinute? }
+ *
+ * NOTE: The server may be in UTC while clients are in AEDT (UTC+11) or similar.
+ * The 'date' field is always the client's local YYYY-MM-DD date string.
+ * We use clientLocalHour/clientLocalMinute to determine if 'date' is today on the client.
+ * Timestamps stored in the DB are UTC; we use the UTC offset inferred from client local time
+ * to convert DB timestamps to local minutes for the time-weighted average calculation.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { date, flyingWindowStart, flyingWindowEnd, recordedBy } = body;
+    const { date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour, clientLocalMinute } = body;
 
     if (!date) {
       return NextResponse.json({ error: 'date is required' }, { status: 400, headers: CORS_HEADERS });
     }
 
+    // Determine if this date is "today" on the client.
+    // Strategy: The client sends clientLocalHour/clientLocalMinute.
+    // We compare the date against the server's UTC date AND infer client-local date.
+    // The safest approach: always recalculate for the most recent date (client's today).
+    // We trust the client's date string — if they say date="2025-05-27", that's their today.
+    // 
+    // To determine isToday without relying on server timezone:
+    // - Server UTC date: new Date().toISOString().split('T')[0]
+    // - But client may be ahead (AEDT = UTC+11), so their "today" could be server's "tomorrow"
+    // - If clientLocalHour is provided, we can infer the client's UTC offset:
+    //   clientOffset (hours) = clientLocalHour - serverUTCHour (approx, ignoring minutes)
+    // - Then client's today = server UTC date + offset adjustment
+    //
+    // Simplest reliable approach: treat the provided date as potentially "today" if it's
+    // within ±1 day of server UTC date. Always recalculate for today (no skip).
+    const serverUtcDateStr = new Date().toISOString().split('T')[0];
+    const serverUtcDate = new Date(serverUtcDateStr);
+    const clientDate = new Date(date + 'T00:00:00Z');
+    const diffDays = Math.round((clientDate.getTime() - serverUtcDate.getTime()) / (1000 * 60 * 60 * 24));
+    // Consider "today" if within 1 day (handles timezone differences up to UTC+24)
+    const isToday = diffDays >= -1 && diffDays <= 1;
+
     // Check for existing summary
     const existing = await prisma.aircraftAvailabilityHistory.findUnique({ where: { date } });
-    // Only skip for past dates (not today) — today's data changes throughout the day
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = date === todayStr;
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+    // Only skip for clearly past dates (not today or adjacent)
     if (!isToday && existing && existing.lastCalculatedAt > oneMinuteAgo) {
       return NextResponse.json({ skipped: true, reason: 'recent', record: existing, summary: existing }, { headers: CORS_HEADERS });
     }
@@ -56,16 +82,35 @@ export async function POST(request: NextRequest) {
     const windowEndMin = parseWindowTime(flyingWindowEnd, 17);
     const totalWindowMinutes = windowEndMin - windowStartMin;
 
-    const toMinutes = (ts: Date): number =>
-      new Date(ts).getHours() * 60 + new Date(ts).getMinutes() + new Date(ts).getSeconds() / 60;
+    // Convert a DB timestamp to client-local minutes.
+    // The timestamps are stored as UTC. We need to convert them to the client's local time.
+    // Strategy: infer UTC offset from clientLocalHour vs server UTC hour at time of request.
+    // If clientLocalHour not provided, fall back to UTC (may be slightly off for cross-timezone setups).
+    let clientUtcOffsetHours = 0;
+    if (typeof clientLocalHour === 'number') {
+      const serverUtcHour = new Date().getUTCHours();
+      clientUtcOffsetHours = clientLocalHour - serverUtcHour;
+      // Normalize to [-12, 14] range
+      if (clientUtcOffsetHours > 14) clientUtcOffsetHours -= 24;
+      if (clientUtcOffsetHours < -12) clientUtcOffsetHours += 24;
+    }
+
+    const toLocalMinutes = (ts: Date): number => {
+      const utcHours = new Date(ts).getUTCHours();
+      const utcMinutes = new Date(ts).getUTCMinutes();
+      const utcSeconds = new Date(ts).getUTCSeconds();
+      const localTotalMinutes = utcHours * 60 + utcMinutes + utcSeconds / 60 + clientUtcOffsetHours * 60;
+      // Normalize to [0, 1440)
+      return ((localTotalMinutes % 1440) + 1440) % 1440;
+    };
 
     let weightedSum = 0;
     let coveredMinutes = 0;
 
     for (let i = 0; i < events.length; i++) {
       const ev = events[i];
-      const evMinutes = toMinutes(ev.timestamp);
-      const nextMinutes = i + 1 < events.length ? toMinutes(events[i + 1].timestamp) : windowEndMin;
+      const evMinutes = toLocalMinutes(ev.timestamp);
+      const nextMinutes = i + 1 < events.length ? toLocalMinutes(events[i + 1].timestamp) : windowEndMin;
       const segStart = Math.max(evMinutes, windowStartMin);
       const segEnd = Math.min(nextMinutes, windowEndMin);
       if (segEnd > segStart) {

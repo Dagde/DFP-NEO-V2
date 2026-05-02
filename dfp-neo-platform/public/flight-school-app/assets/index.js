@@ -4658,6 +4658,7 @@ function convertSnapshotsToTimeline(snapshots) {
 }
 const AircraftAvailabilityOverlay = ({
   currentDate,
+  dateString,
   totalAircraft,
   dayFlyingStart,
   dayFlyingEnd,
@@ -4666,27 +4667,22 @@ const AircraftAvailabilityOverlay = ({
   pixelsPerHour,
   startHour,
   onAvailabilityChange,
+  onUserChange,
   initialAvailability = 15,
   apiBase: apiBase2
 }) => {
-  const [isInitialized, setIsInitialized] = reactExports.useState(false);
   const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
   const overlayRef = reactExports.useRef(null);
-  const isDirtyRef = reactExports.useRef(false);
   const onAvailabilityChangeRef = reactExports.useRef(onAvailabilityChange);
   reactExports.useEffect(() => {
     onAvailabilityChangeRef.current = onAvailabilityChange;
   }, [onAvailabilityChange]);
-  const makeDayStart = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
-  };
   const sortSnapshots = (snaps) => [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const makeDayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
   reactExports.useEffect(() => {
     let cancelled = false;
-    isDirtyRef.current = false;
-    setIsInitialized(false);
-    const dateKey = formatDate$5(currentDate);
+    const dateKey = dateString ?? formatDate$5(currentDate);
     const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
     if (stored) {
       try {
@@ -4698,21 +4694,20 @@ const AircraftAvailabilityOverlay = ({
           const lastAvailable = loaded[loaded.length - 1]?.available ?? initialAvailability;
           setSnapshots(loaded);
           setCurrentAvailable(lastAvailable);
-          setIsInitialized(true);
           return;
         }
       } catch {
       }
     }
     const loadFromDb = async () => {
-      let persistedCount = initialAvailability;
+      let seed = initialAvailability;
       if (apiBase2) {
         try {
           const res = await fetch(`${apiBase2}/aircraft-availability-current`, { credentials: "include" });
           if (res.ok) {
             const data = await res.json();
-            if (data.success && !data.isDefault && data.availableCount !== void 0) {
-              persistedCount = data.availableCount;
+            if (data.success && !data.isDefault && typeof data.availableCount === "number") {
+              seed = data.availableCount;
             }
           }
         } catch {
@@ -4721,18 +4716,17 @@ const AircraftAvailabilityOverlay = ({
       if (!cancelled) {
         const initial = {
           timestamp: makeDayStart(currentDate),
-          available: persistedCount,
+          available: seed,
           total: totalAircraft,
           notes: "Initial availability at start of day"
         };
         setSnapshots([initial]);
-        setCurrentAvailable(persistedCount);
-        setIsInitialized(true);
+        setCurrentAvailable(seed);
         logAudit({
           page: "Program Schedule",
           action: "Add",
-          description: `Aircraft availability initialized at ${persistedCount}`,
-          changes: `Initial: ${persistedCount} | Total: ${totalAircraft}`
+          description: `Aircraft availability initialized at ${seed}`,
+          changes: `Initial: ${seed} | Total: ${totalAircraft}`
         });
       }
     };
@@ -4740,17 +4734,18 @@ const AircraftAvailabilityOverlay = ({
     return () => {
       cancelled = true;
     };
-  }, [currentDate.toDateString()]);
+  }, [dateString ?? `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`]);
   reactExports.useEffect(() => {
-    if (!isInitialized || snapshots.length === 0 || !isDirtyRef.current) return;
+    if (snapshots.length === 0) return;
     const timeline = convertSnapshotsToTimeline(snapshots);
     const avg = calculateDailyAverageAvailability(
       timeline,
       dayFlyingStart.replace(":", ""),
       dayFlyingEnd.replace(":", "")
     );
+    const dateKey = dateString ?? formatDate$5(currentDate);
     const record = {
-      date: formatDate$5(currentDate),
+      date: dateKey,
       snapshots,
       averageAvailability: avg,
       dayFlyingStart,
@@ -4758,7 +4753,7 @@ const AircraftAvailabilityOverlay = ({
     };
     localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
     onAvailabilityChangeRef.current(record);
-  }, [snapshots]);
+  }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate, dateString]);
   const getYPosition = (count) => count * rowHeight;
   const getXPosition = (time) => {
     const t = new Date(time);
@@ -4851,7 +4846,7 @@ const AircraftAvailabilityOverlay = ({
         total: totalAircraftRef.current,
         notes: `Availability changed to ${snappedCount}`
       };
-      isDirtyRef.current = true;
+      if (onUserChange) onUserChange(snappedCount);
       setSnapshots((prev) => sortSnapshots([...prev, newSnap]));
     }
   };
@@ -4937,7 +4932,9 @@ const AircraftAvailabilityOverlay = ({
     }
     return lines;
   };
-  const isToday = currentDate.toDateString() === now.toDateString();
+  const localDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const todayStr = localDateStr(now);
+  const isToday = dateString ? dateString === todayStr : localDateStr(currentDate) === todayStr;
   const solidStartX = isToday ? Math.min(currentTimeX, endOfDayX - 1) : 0;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
@@ -5188,6 +5185,7 @@ const ScheduleView = ({
   dayFlyingStart,
   dayFlyingEnd,
   onAvailabilityChange,
+  onUserAvailabilityChange,
   isPauseSelectMode = false,
   pauseCompletedEventIds,
   onPauseToggleCompleted,
@@ -5905,6 +5903,7 @@ const ScheduleView = ({
                 AircraftAvailabilityOverlay,
                 {
                   currentDate: new Date(date),
+                  dateString: date,
                   totalAircraft: airframeCount,
                   initialAvailability: initialAvailability ?? 15,
                   apiBase: apiBase2,
@@ -5914,7 +5913,8 @@ const ScheduleView = ({
                   rowHeight: ROW_HEIGHT$5,
                   pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
                   startHour: START_HOUR$5,
-                  onAvailabilityChange
+                  onAvailabilityChange,
+                  onUserChange: onUserAvailabilityChange
                 }
               ),
               renderEvents(),
@@ -73390,73 +73390,24 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             apiBase: getApiBaseUrl(),
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
-            onAvailabilityChange: async (record) => {
-              console.log("[AV] 🔥 onAvailabilityChange CALLED", {
-                snapshotsLength: record.snapshots.length,
-                date: record.date,
-                snapshots: record.snapshots.map((s) => ({
-                  time: s.timestamp,
-                  available: s.available
-                }))
-              });
-              if (record.snapshots.length === 0) {
-                console.log("[AV] ⚠️ No snapshots, returning early");
+            onAvailabilityChange: (record) => {
+              if (record.snapshots.length === 0) return;
+              const lastSnapshot = record.snapshots[record.snapshots.length - 1];
+              console.log(`[AV] 📋 onAvailabilityChange (UI sync): date=${record.date} available=${lastSnapshot.available} snapshots=${record.snapshots.length}`);
+            },
+            onUserAvailabilityChange: async (count) => {
+              console.log(`[AV] 🔥 onUserAvailabilityChange: user dragged line to ${count}`);
+              if (!sessionUser?.userId) {
+                console.log("[AV] ⚠️ No session user, skipping DB post");
                 return;
               }
-              const lastSnapshot = record.snapshots[record.snapshots.length - 1];
-              const currentAvailable = lastSnapshot.available;
-              const snapshotTs = new Date(lastSnapshot.timestamp);
-              console.log(
-                `[AV] 📤 Preparing to POST event: date=${record.date} available=${currentAvailable} snapshots=${record.snapshots.length} timestamp=${snapshotTs.toISOString()}`
+              await postAvailabilityEvent(
+                count,
+                "change",
+                void 0,
+                `Aircraft availability updated via overlay: ${count}`
               );
-              const totalAircraftCount = availableAircraftCount;
-              const windowStart = formatWindowTime(flyingStartTime);
-              const windowEnd = formatWindowTime(flyingEndTime);
-              const requestBody = {
-                timestamp: snapshotTs.toISOString(),
-                date: record.date,
-                availableCount: currentAvailable,
-                totalAircraft: totalAircraftCount,
-                changeType: "change",
-                recordedBy: sessionUser?.userId ?? null,
-                notes: `Availability updated via overlay: ${currentAvailable}/${totalAircraftCount}`,
-                flyingWindowStart: windowStart,
-                flyingWindowEnd: windowEnd,
-                // Send client's local time for accurate timezone comparison
-                clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-                clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
-              };
-              console.log("[AV] 📦 Request body:", JSON.stringify(requestBody, null, 2));
-              console.log("[AV] 🌐 Current origin:", window.location.origin);
-              console.log("[AV] 👤 Session user:", sessionUser?.userId ?? "not logged in");
-              try {
-                const apiBase2 = getApiBaseUrl();
-                const apiUrl = `${apiBase2}/aircraft-availability-events`;
-                console.log("[AV] 🚀 Starting fetch to", apiUrl);
-                const res = await fetch(apiUrl, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify(requestBody)
-                });
-                console.log("[AV] 📥 Response status:", res.status, res.statusText);
-                console.log("[AV] 📥 Response headers:", Object.fromEntries(res.headers.entries()));
-                if (res.ok) {
-                  const data = await res.json();
-                  console.log("[AV] ✅ Response data:", data);
-                  if (data.skipped) {
-                    console.log(`[AV] Change event skipped: count unchanged at ${currentAvailable}`);
-                  } else {
-                    console.log(`[AV] ✅ Change event recorded for ${record.date}: available=${currentAvailable}`);
-                  }
-                } else {
-                  const errText = await res.text();
-                  console.error(`[AV] ❌ Failed to record change event: ${res.status} ${errText}`);
-                }
-              } catch (error) {
-                console.error("[AV] ❌ Error recording change event:", error);
-                console.error("[AV] ❌ Error stack:", error.stack);
-              }
+              console.log(`[AV] ✅ DB event posted for user drag: ${count}`);
             },
             isVisualAdjustMode,
             visualAdjustEvent,

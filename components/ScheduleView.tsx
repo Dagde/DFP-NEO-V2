@@ -63,6 +63,7 @@ interface ScheduleViewProps {
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
+  onUserAvailabilityChange?: (count: number) => void; // called ONLY when user drags the line
   isVisualAdjustMode?: boolean;
   visualAdjustEvent?: ScheduleEvent | null;
   onVisualAdjustTimeChange?: (startTime: number, endTime: number) => void;
@@ -141,7 +142,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isOracleMode,
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, initialAvailability, apiBase, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    showAircraftAvailability, initialAvailability, apiBase, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUserAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
     timezoneOffset = 11 // Default to UTC+11
@@ -1011,6 +1012,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     {showAircraftAvailability && dayFlyingStart && dayFlyingEnd && onAvailabilityChange && date && (
                         <AircraftAvailabilityOverlay
                             currentDate={new Date(date)}
+                            dateString={date}
                             totalAircraft={airframeCount}
                             initialAvailability={initialAvailability ?? 15}
                             apiBase={apiBase}
@@ -1021,6 +1023,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                             startHour={START_HOUR}
                             onAvailabilityChange={onAvailabilityChange}
+                            onUserChange={onUserAvailabilityChange}
                         />
                     )}
                     
