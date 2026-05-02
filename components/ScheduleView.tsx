@@ -57,6 +57,7 @@ interface ScheduleViewProps {
   showDepartureDensityOverlay: boolean;
   showAircraftAvailability?: boolean;
   plannedAvailability?: number;
+  onUpdatePlannedAvailability?: (count: number) => void;
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
   onAvailabilityChange?: (record: any) => void;
@@ -138,7 +139,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isOracleMode,
     isNeoBuild = false, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     detectConflictsForEvent, showDepartureDensityOverlay,
-    showAircraftAvailability, plannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
+    showAircraftAvailability, plannedAvailability, onUpdatePlannedAvailability, dayFlyingStart, dayFlyingEnd, onAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
     timezoneOffset = 11 // Default to UTC+11
@@ -1017,6 +1018,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                             pixelsPerHour={PIXELS_PER_HOUR * zoomLevel}
                             startHour={START_HOUR}
                             onAvailabilityChange={onAvailabilityChange}
+                            onUpdatePlannedAvailability={onUpdatePlannedAvailability}
                         />
                     )}
                     

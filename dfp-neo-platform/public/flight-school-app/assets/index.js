@@ -4678,67 +4678,73 @@ const AircraftAvailabilityOverlay = ({
     onAvailabilityChangeRef.current = onAvailabilityChange;
   }, [onAvailabilityChange]);
   const makeDayStart = (date) => {
-    const d = new Date(date);
-    d.setHours(0, 0, 1, 0);
+    const d = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 1, 0);
     return d;
   };
+  const sortSnapshots = (snaps) => [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   reactExports.useEffect(() => {
     const dateKey = formatDate$5(currentDate);
     const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
     if (stored) {
-      const data = JSON.parse(stored);
-      const loaded = data.snapshots.map((s) => ({
-        ...s,
-        timestamp: new Date(s.timestamp)
-      }));
-      setSnapshots(loaded);
-      const lastAvailable = loaded[loaded.length - 1]?.available ?? plannedAvailability;
-      setCurrentAvailable(lastAvailable);
-      lastSetByOverlay.current = lastAvailable;
+      try {
+        const data = JSON.parse(stored);
+        const loaded = sortSnapshots(
+          data.snapshots.map((s) => ({ ...s, timestamp: new Date(s.timestamp) }))
+        );
+        setSnapshots(loaded);
+        const lastAvailable = loaded[loaded.length - 1]?.available ?? plannedAvailability;
+        setCurrentAvailable(lastAvailable);
+        lastSetByOverlay.current = lastAvailable;
+      } catch {
+        initSnapshots();
+      }
     } else {
-      const initialSnapshot = {
-        timestamp: makeDayStart(currentDate),
-        available: plannedAvailability,
-        total: totalAircraft,
-        notes: "Initial planned availability at start of day"
-      };
-      setSnapshots([initialSnapshot]);
-      setCurrentAvailable(plannedAvailability);
-      lastSetByOverlay.current = plannedAvailability;
-      logAudit({
-        page: "Program Schedule",
-        action: "Add",
-        description: `Aircraft availability initialized at ${plannedAvailability} (${totalAircraft - plannedAvailability} aircraft unavailable)`,
-        changes: `Time: ${(/* @__PURE__ */ new Date()).toLocaleTimeString()} | Initial: ${plannedAvailability} | Total: ${totalAircraft} | Type: Initial setup`
-      });
+      initSnapshots();
     }
   }, [currentDate.toDateString()]);
+  const initSnapshots = () => {
+    const initial = {
+      timestamp: makeDayStart(currentDate),
+      available: plannedAvailability,
+      total: totalAircraft,
+      notes: "Initial planned availability at start of day"
+    };
+    setSnapshots([initial]);
+    setCurrentAvailable(plannedAvailability);
+    lastSetByOverlay.current = plannedAvailability;
+    logAudit({
+      page: "Program Schedule",
+      action: "Add",
+      description: `Aircraft availability initialized at ${plannedAvailability}`,
+      changes: `Initial: ${plannedAvailability} | Total: ${totalAircraft}`
+    });
+  };
   reactExports.useEffect(() => {
-    if (snapshots.length > 0) {
-      const timeline = convertSnapshotsToTimeline(snapshots);
-      const avg = calculateDailyAverageAvailability(
-        timeline,
-        dayFlyingStart.replace(":", ""),
-        dayFlyingEnd.replace(":", "")
-      );
-      const record = {
-        date: formatDate$5(currentDate),
-        snapshots,
-        averageAvailability: avg,
-        dayFlyingStart,
-        dayFlyingEnd
-      };
-      localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
-      onAvailabilityChangeRef.current(record);
-    }
+    if (snapshots.length === 0) return;
+    const timeline = convertSnapshotsToTimeline(snapshots);
+    const avg = calculateDailyAverageAvailability(
+      timeline,
+      dayFlyingStart.replace(":", ""),
+      dayFlyingEnd.replace(":", "")
+    );
+    const record = {
+      date: formatDate$5(currentDate),
+      snapshots,
+      averageAvailability: avg,
+      dayFlyingStart,
+      dayFlyingEnd
+    };
+    localStorage.setItem(`aircraft-availability-${record.date}`, JSON.stringify(record));
+    onAvailabilityChangeRef.current(record);
   }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]);
   reactExports.useEffect(() => {
     if (isDraggingRef.current) return;
     if (plannedAvailability === lastSetByOverlay.current) return;
-    setCurrentAvailable(plannedAvailability);
     lastSetByOverlay.current = plannedAvailability;
+    setCurrentAvailable(plannedAvailability);
     setSnapshots((prev) => {
-      if (prev.length === 0) {
+      const sorted = sortSnapshots(prev);
+      if (sorted.length === 0) {
         return [{
           timestamp: makeDayStart(currentDate),
           available: plannedAvailability,
@@ -4746,37 +4752,27 @@ const AircraftAvailabilityOverlay = ({
           notes: `Availability set to ${plannedAvailability} from Build Factors`
         }];
       }
-      const updated = [...prev];
-      updated[0] = {
-        ...updated[0],
-        available: plannedAvailability,
-        total: totalAircraft,
-        notes: `Availability updated to ${plannedAvailability} from Build Factors`
-      };
+      const updated = [...sorted];
+      updated[0] = { ...updated[0], available: plannedAvailability, total: totalAircraft };
       return updated;
     });
   }, [plannedAvailability]);
-  const getYPosition = (aircraftCount) => {
-    return aircraftCount * rowHeight;
-  };
+  const getYPosition = (count) => count * rowHeight;
   const getXPosition = (time) => {
-    const hours = time.getHours() + time.getMinutes() / 60;
+    const t = new Date(time);
+    const hours = t.getHours() + t.getMinutes() / 60 + t.getSeconds() / 3600;
     return (hours - startHour) * pixelsPerHour;
   };
-  const getEndOfDayX = () => {
-    const endOfDay = new Date(currentDate);
-    endOfDay.setHours(23, 59, 59);
-    return getXPosition(endOfDay);
-  };
+  const getEndOfDayX = () => getXPosition(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), 23, 59, 59));
   const [isDragging, setIsDragging] = reactExports.useState(false);
   const [dragY, setDragY] = reactExports.useState(0);
-  const [mouseX, setMouseX] = reactExports.useState(0);
   const isDraggingRef = reactExports.useRef(false);
   const dragYRef = reactExports.useRef(0);
   const snapshotsRef = reactExports.useRef(snapshots);
   const rowHeightRef = reactExports.useRef(rowHeight);
   const totalAircraftRef = reactExports.useRef(totalAircraft);
   const plannedAvailabilityRef = reactExports.useRef(plannedAvailability);
+  const currentDateRef = reactExports.useRef(currentDate);
   reactExports.useEffect(() => {
     snapshotsRef.current = snapshots;
   }, [snapshots]);
@@ -4789,6 +4785,9 @@ const AircraftAvailabilityOverlay = ({
   reactExports.useEffect(() => {
     plannedAvailabilityRef.current = plannedAvailability;
   }, [plannedAvailability]);
+  reactExports.useEffect(() => {
+    currentDateRef.current = currentDate;
+  }, [currentDate]);
   const handleLineMouseDown = async (e) => {
     const freezeRaw = localStorage.getItem("systemFreezeState");
     if (freezeRaw) {
@@ -4801,67 +4800,60 @@ const AircraftAvailabilityOverlay = ({
     if (!overlayRef.current) return;
     e.preventDefault();
     const rect = overlayRef.current.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const x = e.clientX - rect.left;
     isDraggingRef.current = true;
-    dragYRef.current = y;
+    dragYRef.current = e.clientY - rect.top;
     setIsDragging(true);
-    setDragY(y);
-    setMouseX(x);
+    setDragY(e.clientY - rect.top);
   };
   const handleDragMove = (e) => {
     if (!isDraggingRef.current || !overlayRef.current) return;
     const rect = overlayRef.current.getBoundingClientRect();
     const y = e.clientY - rect.top;
-    const x = e.clientX - rect.left;
     dragYRef.current = y;
     setDragY(y);
-    setMouseX(x);
-    const rowsFromTop = y / rowHeightRef.current;
-    const clampedCount = Math.max(0, Math.min(totalAircraftRef.current, rowsFromTop));
-    setCurrentAvailable(clampedCount);
+    const count = Math.max(0, Math.min(totalAircraftRef.current, y / rowHeightRef.current));
+    setCurrentAvailable(count);
   };
   const handleDragEnd = () => {
     if (!isDraggingRef.current) return;
     isDraggingRef.current = false;
     setIsDragging(false);
-    const finalDragY = dragYRef.current;
-    const currentRowHeight = rowHeightRef.current;
-    const currentTotalAircraft = totalAircraftRef.current;
-    const currentSnapshots = snapshotsRef.current;
-    const rowsFromTop = finalDragY / currentRowHeight;
-    const snappedCount = Math.round(Math.max(0, Math.min(currentTotalAircraft, rowsFromTop)));
-    const previousAvailability = currentSnapshots[currentSnapshots.length - 1]?.available ?? plannedAvailabilityRef.current;
+    const snappedCount = Math.round(
+      Math.max(0, Math.min(totalAircraftRef.current, dragYRef.current / rowHeightRef.current))
+    );
+    const currentSnaps = snapshotsRef.current;
+    const previousAvailability = currentSnaps.length > 0 ? currentSnaps[currentSnaps.length - 1].available : plannedAvailabilityRef.current;
     const valueChanged = snappedCount !== previousAvailability;
     lastSetByOverlay.current = snappedCount;
     setCurrentAvailable(snappedCount);
+    if (onUpdatePlannedAvailability) {
+      onUpdatePlannedAvailability(snappedCount);
+    }
     if (valueChanged) {
-      if (onUpdatePlannedAvailability) {
-        onUpdatePlannedAvailability(snappedCount);
-      }
       logAudit({
         page: "Program Schedule",
         action: "Edit",
-        description: `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${currentTotalAircraft - snappedCount} aircraft unavailable)`,
-        changes: `Time: ${(/* @__PURE__ */ new Date()).toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${currentTotalAircraft}`
+        description: `Aircraft availability changed from ${previousAvailability} to ${snappedCount}`,
+        changes: `Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${totalAircraftRef.current}`
       });
       const now2 = /* @__PURE__ */ new Date();
+      const cd = currentDateRef.current;
       const snapshotTime = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth(),
-        currentDate.getDate(),
+        cd.getFullYear(),
+        cd.getMonth(),
+        cd.getDate(),
         now2.getHours(),
         now2.getMinutes(),
         now2.getSeconds(),
         now2.getMilliseconds()
       );
-      const newSnapshot = {
+      const newSnap = {
         timestamp: snapshotTime,
         available: snappedCount,
-        total: currentTotalAircraft,
+        total: totalAircraftRef.current,
         notes: `Availability changed to ${snappedCount}`
       };
-      setSnapshots((prev) => [...prev, newSnapshot]);
+      setSnapshots((prev) => sortSnapshots([...prev, newSnap]));
     }
   };
   const handleDragMoveRef = reactExports.useRef(handleDragMove);
@@ -4873,61 +4865,59 @@ const AircraftAvailabilityOverlay = ({
     handleDragEndRef.current = handleDragEnd;
   });
   reactExports.useEffect(() => {
-    if (isDragging) {
-      const moveHandler = (e) => handleDragMoveRef.current(e);
-      const upHandler = () => handleDragEndRef.current();
-      window.addEventListener("mousemove", moveHandler);
-      window.addEventListener("mouseup", upHandler);
-      return () => {
-        window.removeEventListener("mousemove", moveHandler);
-        window.removeEventListener("mouseup", upHandler);
-      };
-    }
+    if (!isDragging) return;
+    const move = (e) => handleDragMoveRef.current(e);
+    const up = () => handleDragEndRef.current();
+    window.addEventListener("mousemove", move);
+    window.addEventListener("mouseup", up);
+    return () => {
+      window.removeEventListener("mousemove", move);
+      window.removeEventListener("mouseup", up);
+    };
   }, [isDragging]);
-  const [, setCurrentTime] = reactExports.useState(/* @__PURE__ */ new Date());
+  const [, setTick] = reactExports.useState(0);
   reactExports.useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(/* @__PURE__ */ new Date()), 6e4);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setTick((n) => n + 1), 6e4);
+    return () => clearInterval(t);
   }, []);
   const displayY = isDragging ? dragY : getYPosition(currentAvailable);
   const endOfDayX = getEndOfDayX();
   const now = /* @__PURE__ */ new Date();
   const currentTimeX = getXPosition(now);
+  const sortedSnaps = sortSnapshots(snapshots);
+  const lastSnap = sortedSnaps.length > 0 ? sortedSnaps[sortedSnaps.length - 1] : null;
   const renderHistoricalLines = () => {
-    if (snapshots.length === 0) return null;
+    if (sortedSnaps.length === 0) return null;
     const lines = [];
-    for (let i = 0; i < snapshots.length; i++) {
-      const snapshot = snapshots[i];
-      const snapshotX = i === 0 ? 0 : getXPosition(snapshot.timestamp);
-      const clampedStartX = Math.max(0, snapshotX);
-      let endX;
-      if (i < snapshots.length - 1) {
-        endX = Math.max(0, getXPosition(snapshots[i + 1].timestamp));
-      } else {
-        endX = Math.min(currentTimeX, endOfDayX);
-      }
-      if (endX <= clampedStartX) continue;
-      const y = getYPosition(snapshot.available);
+    for (let i = 0; i < sortedSnaps.length; i++) {
+      const snap2 = sortedSnaps[i];
+      const startX = i === 0 ? 0 : Math.max(0, getXPosition(snap2.timestamp));
+      const rawEndX = i < sortedSnaps.length - 1 ? getXPosition(sortedSnaps[i + 1].timestamp) : Math.min(currentTimeX, endOfDayX);
+      const endX = Math.max(startX, rawEndX);
+      const y = getYPosition(snap2.available);
+      if (startX >= currentTimeX) continue;
+      const clampedEndX = Math.min(endX, currentTimeX);
+      if (clampedEndX <= startX) continue;
       lines.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "line",
           {
-            x1: clampedStartX,
+            x1: startX,
             y1: y,
-            x2: endX,
+            x2: clampedEndX,
             y2: y,
-            stroke: "rgba(236, 72, 153, 0.4)",
+            stroke: "rgba(236, 72, 153, 0.5)",
             strokeWidth: "2",
             strokeDasharray: "8 4",
             className: "pointer-events-none"
           },
-          `history-h-${i}`
+          `h-${i}`
         )
       );
-      if (i > 0) {
-        const prevY = getYPosition(snapshots[i - 1].available);
-        if (prevY !== y) {
-          const vertX = Math.max(0, getXPosition(snapshot.timestamp));
+      if (i > 0 && sortedSnaps[i - 1].available !== snap2.available) {
+        const prevY = getYPosition(sortedSnaps[i - 1].available);
+        const vertX = Math.max(0, getXPosition(snap2.timestamp));
+        if (vertX < currentTimeX) {
           lines.push(
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "line",
@@ -4936,12 +4926,12 @@ const AircraftAvailabilityOverlay = ({
                 y1: prevY,
                 x2: vertX,
                 y2: y,
-                stroke: "rgba(236, 72, 153, 0.4)",
+                stroke: "rgba(236, 72, 153, 0.5)",
                 strokeWidth: "2",
                 strokeDasharray: "8 4",
                 className: "pointer-events-none"
               },
-              `history-v-${i}`
+              `v-${i}`
             )
           );
         }
@@ -4949,9 +4939,7 @@ const AircraftAvailabilityOverlay = ({
     }
     return lines;
   };
-  const lastSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
-  const lastChangeX = lastSnapshot ? Math.max(0, getXPosition(lastSnapshot.timestamp)) : 0;
-  const solidStartX = Math.max(lastChangeX, currentTimeX);
+  const solidStartX = lastSnap ? Math.max(Math.max(0, getXPosition(lastSnap.timestamp)), currentTimeX) : currentTimeX;
   const showSolidLine = solidStartX < endOfDayX;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
@@ -4969,7 +4957,7 @@ const AircraftAvailabilityOverlay = ({
               y1: displayY,
               x2: endOfDayX,
               y2: displayY,
-              stroke: "rgba(236, 72, 153, 0.8)",
+              stroke: "rgba(236, 72, 153, 0.85)",
               strokeWidth: "2",
               className: "pointer-events-none"
             }
@@ -5198,6 +5186,7 @@ const ScheduleView = ({
   showDepartureDensityOverlay,
   showAircraftAvailability,
   plannedAvailability,
+  onUpdatePlannedAvailability,
   dayFlyingStart,
   dayFlyingEnd,
   onAvailabilityChange,
@@ -5926,7 +5915,8 @@ const ScheduleView = ({
                   rowHeight: ROW_HEIGHT$5,
                   pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
                   startHour: START_HOUR$5,
-                  onAvailabilityChange
+                  onAvailabilityChange,
+                  onUpdatePlannedAvailability
                 }
               ),
               renderEvents(),
