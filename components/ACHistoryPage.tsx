@@ -12,6 +12,8 @@ interface ACHistoryPageProps {
   currentAircraftAvailable?: number;
   totalAircraft?: number;
   timezoneOffset?: number;
+  dayFlyingStart?: string;
+  dayFlyingEnd?: string;
 }
 
 const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
@@ -21,6 +23,8 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   currentAircraftAvailable = 0,
   totalAircraft = 24,
   timezoneOffset = 0,
+  dayFlyingStart = '08:00',
+  dayFlyingEnd = '17:00',
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
@@ -180,6 +184,8 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
         totalAircraft={totalAircraft}
         currentUserRole={currentUserRole}
         timezoneOffset={timezoneOffset}
+        dayFlyingStart={dayFlyingStart}
+        dayFlyingEnd={dayFlyingEnd}
       />
 
       {/* Recent Cancellations Table */}

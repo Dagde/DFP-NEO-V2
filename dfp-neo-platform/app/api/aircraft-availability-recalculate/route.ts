@@ -26,7 +26,7 @@ export async function OPTIONS() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour, clientLocalMinute } = body;
+    const { date, flyingWindowStart, flyingWindowEnd, recordedBy, clientLocalHour, clientLocalMinute, clientTimezoneOffsetHours } = body;
 
     if (!date) {
       return NextResponse.json({ error: 'date is required' }, { status: 400, headers: CORS_HEADERS });
@@ -87,7 +87,9 @@ export async function POST(request: NextRequest) {
     // Strategy: infer UTC offset from clientLocalHour vs server UTC hour at time of request.
     // If clientLocalHour not provided, fall back to UTC (may be slightly off for cross-timezone setups).
     let clientUtcOffsetHours = 0;
-    if (typeof clientLocalHour === 'number') {
+    if (typeof clientTimezoneOffsetHours === 'number') {
+      clientUtcOffsetHours = clientTimezoneOffsetHours;
+    } else if (typeof clientLocalHour === 'number') {
       const serverUtcHour = new Date().getUTCHours();
       clientUtcOffsetHours = clientLocalHour - serverUtcHour;
       // Normalize to [-12, 14] range
@@ -104,33 +106,51 @@ export async function POST(request: NextRequest) {
       return ((localTotalMinutes % 1440) + 1440) % 1440;
     };
 
+    const now = new Date();
+    const currentLocalMinutes = ((now.getUTCHours() * 60 + now.getUTCMinutes() + clientUtcOffsetHours * 60) % 1440 + 1440) % 1440;
+    const localNow = new Date(now.getTime() + clientUtcOffsetHours * 60 * 60 * 1000);
+    const localToday = `${localNow.getUTCFullYear()}-${String(localNow.getUTCMonth() + 1).padStart(2, '0')}-${String(localNow.getUTCDate()).padStart(2, '0')}`;
+    const effectiveEndMin = date === localToday
+      ? Math.min(Math.max(currentLocalMinutes, windowStartMin), windowEndMin)
+      : windowEndMin;
+    const effectiveWindowMinutes = effectiveEndMin - windowStartMin;
+
+    if (effectiveWindowMinutes <= 0) {
+      return NextResponse.json({ skipped: true, reason: 'before_flying_window' }, { headers: CORS_HEADERS });
+    }
+
+    const timeline = events
+      .map((event: any) => ({ event, minutes: toLocalMinutes(event.timestamp) }))
+      .sort((a: any, b: any) => a.minutes - b.minutes);
     let weightedSum = 0;
     let coveredMinutes = 0;
+    let currentAvailability = timeline[0].event.availableCount;
+    let segmentStart = windowStartMin;
 
-    for (let i = 0; i < events.length; i++) {
-      const ev = events[i];
-      const evMinutes = toLocalMinutes(ev.timestamp);
-      const nextMinutes = i + 1 < events.length ? toLocalMinutes(events[i + 1].timestamp) : windowEndMin;
-      const segStart = Math.max(evMinutes, windowStartMin);
-      const segEnd = Math.min(nextMinutes, windowEndMin);
-      if (segEnd > segStart) {
-        weightedSum += ev.availableCount * (segEnd - segStart);
-        coveredMinutes += segEnd - segStart;
+    for (const item of timeline) {
+      if (item.minutes <= windowStartMin) {
+        currentAvailability = item.event.availableCount;
+        continue;
       }
+      if (item.minutes >= effectiveEndMin) break;
+      if (item.minutes > segmentStart) {
+        weightedSum += currentAvailability * (item.minutes - segmentStart);
+        coveredMinutes += item.minutes - segmentStart;
+      }
+      currentAvailability = item.event.availableCount;
+      segmentStart = item.minutes;
     }
 
-    if (coveredMinutes === 0) {
-      const fallback = events[0].availableCount;
-      weightedSum = fallback * totalWindowMinutes;
-      coveredMinutes = totalWindowMinutes;
+    if (segmentStart < effectiveEndMin) {
+      weightedSum += currentAvailability * (effectiveEndMin - segmentStart);
+      coveredMinutes += effectiveEndMin - segmentStart;
     }
 
-    if (coveredMinutes < totalWindowMinutes) {
-      const uncovered = totalWindowMinutes - coveredMinutes;
-      weightedSum += events[events.length - 1].availableCount * uncovered;
+    if (coveredMinutes < effectiveWindowMinutes) {
+      weightedSum += currentAvailability * (effectiveWindowMinutes - coveredMinutes);
     }
 
-    const dailyAverage = totalWindowMinutes > 0 ? weightedSum / totalWindowMinutes : 0;
+    const dailyAverage = effectiveWindowMinutes > 0 ? weightedSum / effectiveWindowMinutes : 0;
     const totalAircraft = Math.max(...events.map((e: any) => e.totalAircraft));
     const availabilityPct = totalAircraft > 0 ? (dailyAverage / totalAircraft) * 100 : 0;
 
@@ -161,8 +181,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const effectiveEndTime = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(Math.floor(effectiveEndMin % 60)).padStart(2, '0')}`;
+    const summary = { ...record, dailyAverage, effectiveEndTime };
+
     // Return both 'record' and 'summary' so both old and new callers work
-    return NextResponse.json({ success: true, record, summary: record }, { headers: CORS_HEADERS });
+    return NextResponse.json({ success: true, record: summary, summary }, { headers: CORS_HEADERS });
   } catch (error) {
     console.error('[AV-RECALC] POST error:', error);
     return NextResponse.json(

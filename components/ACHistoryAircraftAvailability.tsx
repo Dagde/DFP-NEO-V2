@@ -25,6 +25,8 @@ interface ACHistoryAircraftAvailabilityProps {
   totalAircraft?: number;
   currentUserRole?: string; // For admin check
   timezoneOffset?: number;  // UTC offset in hours (e.g. 11 for AEDT). Used for timezone-correct averages.
+  dayFlyingStart?: string;  // HH:mm
+  dayFlyingEnd?: string;    // HH:mm
 }
 
 // ─── Tiny SVG line/area chart ────────────────────────────────────────────────
@@ -238,6 +240,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   totalAircraft = 24,
   currentUserRole,
   timezoneOffset = 0,
+  dayFlyingStart = '08:00',
+  dayFlyingEnd = '17:00',
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const [records, setRecords] = useState<AvailabilityRecord[]>([]);
@@ -449,6 +453,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         credentials: 'include',
         body: JSON.stringify({
           date: today,
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
           clientTimezoneOffsetHours: timezoneOffset,
         }),
       });
@@ -466,8 +472,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         setTodaysAverageWithMetadata({
           dailyAverage: localAvg,
           date: today,
-          flyingWindowStart: '0800',
-          flyingWindowEnd: '1700',
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
           plannedCount: currentAircraftAvailable ?? 15,
           actualCount: currentAircraftAvailable ?? 15,
           totalAircraft: totalAircraft ?? 24,
@@ -582,22 +588,42 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
       const snaps: Array<{ timestamp: string; available: number }> = data.snapshots || [];
       if (snaps.length === 0) return null;
 
-      // Time-weighted average over flying window (default 08:00-17:00)
-      const windowStartMin = 8 * 60;   // 480
-      const windowEndMin   = 17 * 60;  // 1020
-      const totalWindow    = windowEndMin - windowStartMin;
+      const parseWindowTime = (time: string, fallbackHour: number): number => {
+        const clean = (time || '').replace(':', '');
+        const h = parseInt(clean.slice(0, -2), 10);
+        const m = parseInt(clean.slice(-2), 10);
+        return (Number.isFinite(h) ? h : fallbackHour) * 60 + (Number.isFinite(m) ? m : 0);
+      };
+      const windowStartMin = parseWindowTime(dayFlyingStart, 8);
+      const windowEndMin = parseWindowTime(dayFlyingEnd, 17);
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const effectiveEndMin = Math.min(Math.max(nowMin, windowStartMin), windowEndMin);
+      const totalWindow = effectiveEndMin - windowStartMin;
+      if (totalWindow <= 0) return null;
       const sorted = [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
       let weightedSum = 0;
+      let coveredMinutes = 0;
       for (let i = 0; i < sorted.length; i++) {
         const t = new Date(sorted[i].timestamp);
         const tMin = t.getHours() * 60 + t.getMinutes();
         const nextMin = i + 1 < sorted.length
           ? (() => { const n = new Date(sorted[i + 1].timestamp); return n.getHours() * 60 + n.getMinutes(); })()
-          : windowEndMin;
+          : effectiveEndMin;
         const segStart = Math.max(tMin, windowStartMin);
-        const segEnd   = Math.min(nextMin, windowEndMin);
-        if (segEnd > segStart) weightedSum += sorted[i].available * (segEnd - segStart);
+        const segEnd = Math.min(nextMin, effectiveEndMin);
+        if (segEnd > segStart) {
+          weightedSum += sorted[i].available * (segEnd - segStart);
+          coveredMinutes += segEnd - segStart;
+        }
+      }
+      if (coveredMinutes < totalWindow) {
+        const lastBeforeEnd = [...sorted].reverse().find(s => {
+          const t = new Date(s.timestamp);
+          return t.getHours() * 60 + t.getMinutes() <= effectiveEndMin;
+        }) ?? sorted[0];
+        weightedSum += lastBeforeEnd.available * (totalWindow - coveredMinutes);
       }
       return totalWindow > 0 ? weightedSum / totalWindow : null;
     } catch {
@@ -621,6 +647,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           credentials: 'include',
           body: JSON.stringify({
             date: today,
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
             clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
@@ -640,8 +668,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           setTodaysAverageWithMetadata({
             dailyAverage: localAvg,
             date: today,
-            flyingWindowStart: '0800',
-            flyingWindowEnd: '1700',
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
             plannedCount: currentAircraftAvailable ?? 15,
             actualCount: currentAircraftAvailable ?? 15,
             totalAircraft: totalAircraft ?? 24,
@@ -658,8 +686,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           setTodaysAverageWithMetadata({
             dailyAverage: localAvg,
             date: today,
-            flyingWindowStart: '0800',
-            flyingWindowEnd: '1700',
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
             plannedCount: currentAircraftAvailable ?? 15,
             actualCount: currentAircraftAvailable ?? 15,
             totalAircraft: totalAircraft ?? 24,
@@ -677,7 +705,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1000);
     return () => clearInterval(interval);
   // timezoneOffset must be in deps so the closure captures the correct value
-  }, [timezoneOffset]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]); // eslint-disable-line react-hooks/exhaustive-deps
   
   // Refresh today's average when currentAircraftAvailable changes
   useEffect(() => {
@@ -690,6 +718,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           credentials: 'include',
           body: JSON.stringify({ 
             date: today,
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
             clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
@@ -707,8 +737,8 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         setTodaysAverageWithMetadata({
           dailyAverage: localAvg,
           date: today,
-          flyingWindowStart: '0800',
-          flyingWindowEnd: '1700',
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
           plannedCount: currentAircraftAvailable ?? 15,
           actualCount: currentAircraftAvailable ?? 15,
           totalAircraft: totalAircraft ?? 24,
@@ -718,7 +748,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
     
     return () => clearTimeout(timeoutId);
   // timezoneOffset in deps so closure captures correct value
-  }, [currentAircraftAvailable, timezoneOffset]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const formatPeriodLabel = (period: TimePeriod): string => {
     const labels: Record<TimePeriod, string> = {

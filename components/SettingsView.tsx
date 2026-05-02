@@ -88,6 +88,8 @@ interface SettingsViewProps {
     cancellationCodes?: CancellationCode[];
     currentAircraftAvailable?: number;
     totalAircraft?: number;
+    dayFlyingStart?: string;
+    dayFlyingEnd?: string;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -467,7 +469,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     cancellationRecords,
     cancellationCodes,
     currentAircraftAvailable,
-    totalAircraft
+    totalAircraft,
+    dayFlyingStart = '08:00',
+    dayFlyingEnd = '17:00'
 }) => {
     // --- STATE ---
     
@@ -1692,6 +1696,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        currentAircraftAvailable={currentAircraftAvailable}
                        totalAircraft={totalAircraft}
                        timezoneOffset={timezoneOffset}
+                       dayFlyingStart={dayFlyingStart}
+                       dayFlyingEnd={dayFlyingEnd}
                    />
                 </div>
                 )}

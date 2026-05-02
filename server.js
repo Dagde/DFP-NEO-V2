@@ -4885,6 +4885,33 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     const windowStartMin = flyingWindowStart ? parseWindowTime(flyingWindowStart) : 8 * 60;
     const windowEndMin = flyingWindowEnd ? parseWindowTime(flyingWindowEnd) : 17 * 60;
     const windowDuration = windowEndMin - windowStartMin;
+    const now = new Date();
+    const currentLocalMinutes = ((now.getUTCHours() * 60 + now.getUTCMinutes() + clientUtcOffsetHours * 60) % 1440 + 1440) % 1440;
+    const localToday = (() => {
+      const localNow = new Date(now.getTime() + clientUtcOffsetHours * 60 * 60 * 1000);
+      return `${localNow.getUTCFullYear()}-${String(localNow.getUTCMonth() + 1).padStart(2, '0')}-${String(localNow.getUTCDate()).padStart(2, '0')}`;
+    })();
+    const isToday = date === localToday;
+    const effectiveEndMin = isToday
+      ? Math.min(Math.max(currentLocalMinutes, windowStartMin), windowEndMin)
+      : windowEndMin;
+    const effectiveWindowDuration = effectiveEndMin - windowStartMin;
+
+    if (windowDuration <= 0) {
+      return res.status(400).json({ error: 'Invalid flying window', date, flyingWindowStart, flyingWindowEnd });
+    }
+
+    if (isToday && effectiveWindowDuration <= 0) {
+      return res.json({
+        skipped: true,
+        reason: 'before_flying_window',
+        message: 'Flying window has not started yet',
+        date,
+        flyingWindowStart,
+        flyingWindowEnd,
+        effectiveEndTime: `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(Math.floor(effectiveEndMin % 60)).padStart(2, '0')}`,
+      });
+    }
 
     // Deduplicate events by timestamp - keep only the LAST event at each timestamp
     // (duplicate events flood the DB due to startup events firing on every page load)
@@ -4900,54 +4927,52 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     );
     console.log(`[AV-RECALC] Deduped ${events.length} events -> ${dedupedEvents.length} unique timestamps`);
 
-    // Calculate time-weighted average within flying window
+    // Calculate time-weighted average within the elapsed flying window for today,
+    // or the full flying window for historical dates.
     let weightedSum = 0;
     let coveredMinutes = 0;
+    const timeline = dedupedEvents
+      .map(event => ({ event, minutes: toLocalMinutes(event.timestamp) }))
+      .sort((a, b) => a.minutes - b.minutes);
 
-    for (let i = 0; i < dedupedEvents.length; i++) {
-      const event = dedupedEvents[i];
-      const eventMinutes = toLocalMinutes(event.timestamp);
-      const nextEventMinutes = i + 1 < dedupedEvents.length
-        ? toLocalMinutes(dedupedEvents[i + 1].timestamp)
-        : windowEndMin;
+    let currentAvailability = Number(timeline[0].event.availableCount);
+    let segmentStart = windowStartMin;
 
-      // Clamp to flying window
-      const segStart = Math.max(eventMinutes, windowStartMin);
-      const segEnd = Math.min(nextEventMinutes, windowEndMin);
-
-      if (segEnd > segStart) {
-        const duration = segEnd - segStart;
-        weightedSum += Number(event.availableCount) * duration;
-        coveredMinutes += duration;
-        console.log(`[AV-RECALC] Segment [${segStart.toFixed(0)}-${segEnd.toFixed(0)}min]: ${event.availableCount} ac × ${duration.toFixed(1)} min (local)`);
+    for (const item of timeline) {
+      if (item.minutes <= windowStartMin) {
+        currentAvailability = Number(item.event.availableCount);
+        continue;
       }
+
+      if (item.minutes >= effectiveEndMin) break;
+
+      if (item.minutes > segmentStart) {
+        const duration = item.minutes - segmentStart;
+        weightedSum += currentAvailability * duration;
+        coveredMinutes += duration;
+        console.log(`[AV-RECALC] Segment [${segmentStart.toFixed(0)}-${item.minutes.toFixed(0)}min]: ${currentAvailability} ac × ${duration.toFixed(1)} min (local)`);
+      }
+
+      currentAvailability = Number(item.event.availableCount);
+      segmentStart = item.minutes;
     }
 
-    // If no coverage (all events outside window), use last known value before window start
-    // or first event if none before window
-    if (coveredMinutes === 0 && dedupedEvents.length > 0) {
-      // Find last event at or before window start
-      const lastBeforeWindow = [...dedupedEvents].reverse().find(
-        e => toLocalMinutes(e.timestamp) <= windowStartMin
-      );
-      const fallbackCount = lastBeforeWindow
-        ? Number(lastBeforeWindow.availableCount)
-        : Number(dedupedEvents[0].availableCount);
-      weightedSum = fallbackCount * windowDuration;
-      coveredMinutes = windowDuration;
-      console.log(`[AV-RECALC] No in-window events, using fallback count=${fallbackCount}`);
+    if (segmentStart < effectiveEndMin) {
+      const duration = effectiveEndMin - segmentStart;
+      weightedSum += currentAvailability * duration;
+      coveredMinutes += duration;
+      console.log(`[AV-RECALC] Segment [${segmentStart.toFixed(0)}-${effectiveEndMin.toFixed(0)}min]: ${currentAvailability} ac × ${duration.toFixed(1)} min (local)`);
     }
 
-    // Fill uncovered tail (events before window end) with last known in-window value
-    if (coveredMinutes < windowDuration && dedupedEvents.length > 0) {
-      const uncovered = windowDuration - coveredMinutes;
-      const lastEvent = dedupedEvents[dedupedEvents.length - 1];
-      weightedSum += Number(lastEvent.availableCount) * uncovered;
-      console.log(`[AV-RECALC] Tail fill: ${lastEvent.availableCount} ac × ${uncovered.toFixed(1)} min`);
+    if (coveredMinutes < effectiveWindowDuration) {
+      const uncovered = effectiveWindowDuration - coveredMinutes;
+      weightedSum += currentAvailability * uncovered;
+      coveredMinutes += uncovered;
     }
 
-    const dailyAverage = windowDuration > 0 ? weightedSum / windowDuration : 0;
+    const dailyAverage = effectiveWindowDuration > 0 ? weightedSum / effectiveWindowDuration : 0;
     const totalAircraft = Math.max(...dedupedEvents.map(e => Number(e.totalAircraft ?? e.totalFleet ?? totalFleet ?? 0)));
+    const effectiveEndTime = `${String(Math.floor(effectiveEndMin / 60)).padStart(2, '0')}:${String(Math.floor(effectiveEndMin % 60)).padStart(2, '0')}`;
 
     // Upsert the summary - handle both old schema (totalFleet) and new schema (totalAircraft)
     // Try new schema columns first, fall back gracefully
@@ -4971,9 +4996,13 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text`, date
     );
 
-    const record = updated[0] || { date, dailyAverage, totalFleet: totalAircraft };
+    const record = updated[0] || { date, totalFleet: totalAircraft };
+    record.dailyAverage = dailyAverage;
+    record.effectiveEndTime = record.effectiveEndTime ?? effectiveEndTime;
+    record.flyingWindowStart = record.flyingWindowStart ?? (flyingWindowStart || null);
+    record.flyingWindowEnd = record.flyingWindowEnd ?? (flyingWindowEnd || null);
 
-    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}, offset: ${clientUtcOffsetHours}h`);
+    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}, offset: ${clientUtcOffsetHours}h, effectiveEnd=${effectiveEndTime}`);
     // Return both 'record' and 'summary' so all callers work
     res.json({ success: true, record, summary: record, dailyAverage, date, eventCount: events.length });
   } catch (error) {

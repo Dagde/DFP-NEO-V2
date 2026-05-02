@@ -73,6 +73,8 @@ interface SettingsViewWithMenuProps {
     cancellationCodes: CancellationCode[];
     currentAircraftAvailable?: number;
     totalAircraft?: number;
+    dayFlyingStart?: string;
+    dayFlyingEnd?: string;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;
