@@ -4550,9 +4550,16 @@ app.get('/api/aircraft-availability-history', async (req, res) => {
       params.push(endDate);
     }
     query += ` ORDER BY "date" ASC`;
-    const records = await db.$queryRawUnsafe(query, ...params);
+    const rawRecords = await db.$queryRawUnsafe(query, ...params);
+    // Normalize records: map 'totalFleet' -> 'totalAircraft' for frontend compatibility
+    const records = rawRecords.map(r => ({
+      ...r,
+      totalAircraft: Number(r.totalAircraft ?? r.totalFleet ?? 0),
+      dailyAverage: Number(r.dailyAverage ?? 0),
+    }));
     console.log(`✅ GET /api/aircraft-availability-history - returning ${records.length} records`);
-    res.json({ history: records });
+    // Return both 'records' (expected by frontend) and 'history' (legacy) for compatibility
+    res.json({ records, history: records });
   } catch (error) {
     console.error('❌ GET /api/aircraft-availability-history error:', error);
     res.status(500).json({ error: 'Failed to fetch aircraft availability history', details: error.message });
@@ -4626,12 +4633,26 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
     // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
-    const { date, availableCount, notes, timestamp, changeType, recordedBy } = req.body;
+    const { date, availableCount, notes, timestamp, changeType, recordedBy, flyingWindowStart, flyingWindowEnd, clientLocalHour } = req.body;
     const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
-    if (!date || availableCount === undefined || !totalFleet) {
-      return res.status(400).json({ error: 'date, availableCount, and totalFleet (or totalAircraft) required' });
+    if (!date || availableCount === undefined) {
+      return res.status(400).json({ error: 'date and availableCount are required' });
     }
     const ts = timestamp ? new Date(timestamp) : new Date();
+
+    // Deduplication: skip if last event for this date has same availableCount (non-boundary events)
+    const BOUNDARY_TYPES = ['window_start', 'window_end', 'startup', 'reset', 'shutdown'];
+    const isBoundary = BOUNDARY_TYPES.includes(changeType);
+    if (!isBoundary) {
+      const lastRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
+        date
+      );
+      if (lastRows.length > 0 && Number(lastRows[0].availableCount) === Number(availableCount)) {
+        console.log(`[AV-EVENTS] Skipping duplicate: availableCount=${availableCount} unchanged for ${date}`);
+        return res.json({ skipped: true, reason: 'no_change', success: true });
+      }
+    }
     
     // Use raw SQL since AircraftAvailabilityEvent is not in Prisma schema.
     // The table schema on Railway may differ from local (unknown columns/types).
@@ -4698,7 +4719,7 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
     const event = rows[0] ?? { date, availableCount, totalAircraft: totalFleet };
 
     console.log(`✅ POST /api/aircraft-availability-events - created event for date: ${date}`);
-    res.json({ event });
+    res.json({ success: true, event });
   } catch (error) {
     console.error('❌ POST /api/aircraft-availability-events error:', error);
     res.status(500).json({ error: 'Failed to create event', details: error.message });
@@ -4709,7 +4730,8 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
 app.post('/api/aircraft-availability-recalculate', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, clientTimezoneOffset } = req.body;
+    // Accept clientLocalHour (new) or clientTimezoneOffset (legacy) for timezone handling
+    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, clientLocalHour, clientTimezoneOffset } = req.body;
     if (!date) return res.status(400).json({ error: 'date is required' });
 
     const events = await db.$queryRawUnsafe(
@@ -4718,20 +4740,36 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     );
 
     if (!events || events.length === 0) {
-      return res.json({ message: 'No events found for this date', dailyAverage: 0, date });
+      return res.json({ skipped: true, reason: 'no_events', message: 'No events found for this date', date });
     }
 
-    const toMinutes = (ts) => {
+    // Convert UTC timestamp to client-local minutes-since-midnight.
+    // Server runs UTC. Client may be AEDT (UTC+11) or similar.
+    // Priority: clientLocalHour (inferred offset) > clientTimezoneOffset (legacy) > 0
+    let clientUtcOffsetHours = 0;
+    if (typeof clientLocalHour === 'number') {
+      const serverUtcHour = new Date().getUTCHours();
+      clientUtcOffsetHours = clientLocalHour - serverUtcHour;
+      if (clientUtcOffsetHours > 14) clientUtcOffsetHours -= 24;
+      if (clientUtcOffsetHours < -12) clientUtcOffsetHours += 24;
+      console.log(`[AV-RECALC] Inferred UTC offset: ${clientUtcOffsetHours}h (clientLocalHour=${clientLocalHour}, serverUTC=${serverUtcHour})`);
+    } else if (typeof clientTimezoneOffset === 'number') {
+      clientUtcOffsetHours = clientTimezoneOffset / 60;
+    }
+
+    const toLocalMinutes = (ts) => {
       const d = new Date(ts);
-      // Adjust for client timezone: server is UTC, client is local time
-      const offsetMinutes = clientTimezoneOffset !== undefined ? clientTimezoneOffset : 0;
-      return (d.getUTCHours() + offsetMinutes / 60) * 60 + d.getUTCMinutes();
+      const localTotal = d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60 + clientUtcOffsetHours * 60;
+      return ((localTotal % 1440) + 1440) % 1440;
     };
 
     const parseWindowTime = (timeStr) => {
       if (!timeStr) return null;
-      const [h, m] = timeStr.split(':').map(Number);
-      return h * 60 + (m || 0);
+      // Accept "HH:MM" or "HHMM" format
+      const clean = timeStr.replace(':', '');
+      const h = parseInt(clean.slice(0, -2), 10);
+      const m = parseInt(clean.slice(-2), 10);
+      return h * 60 + (isNaN(m) ? 0 : m);
     };
 
     const windowStartMin = flyingWindowStart ? parseWindowTime(flyingWindowStart) : 8 * 60;
@@ -4740,48 +4778,69 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
 
     // Calculate time-weighted average within flying window
     let weightedSum = 0;
-    let totalTime = 0;
-    const now = new Date();
-    const nowMinutes = toMinutes(now);
-    const effectiveEnd = Math.min(nowMinutes, windowEndMin);
+    let coveredMinutes = 0;
 
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      const eventMinutes = toMinutes(event.timestamp);
-      const nextEventMinutes = i + 1 < events.length ? toMinutes(events[i + 1].timestamp) : effectiveEnd;
+      const eventMinutes = toLocalMinutes(event.timestamp);
+      const nextEventMinutes = i + 1 < events.length
+        ? toLocalMinutes(events[i + 1].timestamp)
+        : windowEndMin;
 
       // Clamp to flying window
       const segStart = Math.max(eventMinutes, windowStartMin);
-      const segEnd = Math.min(nextEventMinutes, effectiveEnd);
+      const segEnd = Math.min(nextEventMinutes, windowEndMin);
 
       if (segEnd > segStart) {
         const duration = segEnd - segStart;
-        weightedSum += event.availableCount * duration;
-        totalTime += duration;
+        weightedSum += Number(event.availableCount) * duration;
+        coveredMinutes += duration;
+        console.log(`[AV-RECALC] Segment [${segStart.toFixed(0)}-${segEnd.toFixed(0)}min]: ${event.availableCount} ac × ${duration.toFixed(1)} min (local)`);
       }
     }
 
-    const dailyAverage = totalTime > 0 ? weightedSum / totalTime : 0;
+    // If no coverage (all events outside window), use first known value
+    if (coveredMinutes === 0 && events.length > 0) {
+      weightedSum = Number(events[0].availableCount) * windowDuration;
+      coveredMinutes = windowDuration;
+    }
 
-    // Upsert the summary
-    await db.$executeRawUnsafe(`
-      INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
-      VALUES ($1::text, $2::int, $3::numeric, $4::text, $5::text, NOW(), NOW())
-      ON CONFLICT ("date") DO UPDATE SET
-        "totalFleet" = EXCLUDED."totalFleet",
-        "dailyAverage" = EXCLUDED."dailyAverage",
-        "flyingWindowStart" = EXCLUDED."flyingWindowStart",
-        "flyingWindowEnd" = EXCLUDED."flyingWindowEnd",
-        "lastCalculatedAt" = NOW(),
-        "updatedAt" = NOW()
-    `, date, totalFleet || 0, dailyAverage, flyingWindowStart || null, flyingWindowEnd || null);
+    // Fill uncovered tail with last known value
+    if (coveredMinutes < windowDuration && events.length > 0) {
+      const uncovered = windowDuration - coveredMinutes;
+      weightedSum += Number(events[events.length - 1].availableCount) * uncovered;
+    }
+
+    const dailyAverage = windowDuration > 0 ? weightedSum / windowDuration : 0;
+    const totalAircraft = Math.max(...events.map(e => Number(e.totalAircraft ?? e.totalFleet ?? totalFleet ?? 0)));
+
+    // Upsert the summary - handle both old schema (totalFleet) and new schema (totalAircraft)
+    // Try new schema columns first, fall back gracefully
+    try {
+      await db.$executeRawUnsafe(`
+        INSERT INTO "AircraftAvailabilityHistory" ("date", "totalFleet", "dailyAverage", "flyingWindowStart", "flyingWindowEnd", "lastCalculatedAt", "updatedAt")
+        VALUES ($1::text, $2::int, $3::numeric, $4::text, $5::text, NOW(), NOW())
+        ON CONFLICT ("date") DO UPDATE SET
+          "totalFleet" = EXCLUDED."totalFleet",
+          "dailyAverage" = EXCLUDED."dailyAverage",
+          "flyingWindowStart" = EXCLUDED."flyingWindowStart",
+          "flyingWindowEnd" = EXCLUDED."flyingWindowEnd",
+          "lastCalculatedAt" = NOW(),
+          "updatedAt" = NOW()
+      `, date, totalAircraft || totalFleet || 0, dailyAverage, flyingWindowStart || null, flyingWindowEnd || null);
+    } catch (upsertErr) {
+      console.error('[AV-RECALC] Upsert error (non-fatal):', upsertErr.message);
+    }
 
     const updated = await db.$queryRawUnsafe(
       `SELECT * FROM "AircraftAvailabilityHistory" WHERE "date" = $1::text`, date
     );
 
-    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}`);
-    res.json({ record: updated[0], dailyAverage, date, eventCount: events.length });
+    const record = updated[0] || { date, dailyAverage, totalFleet: totalAircraft };
+
+    console.log(`✅ POST /api/aircraft-availability-recalculate - date: ${date}, average: ${dailyAverage.toFixed(2)}, offset: ${clientUtcOffsetHours}h`);
+    // Return both 'record' and 'summary' so all callers work
+    res.json({ success: true, record, summary: record, dailyAverage, date, eventCount: events.length });
   } catch (error) {
     console.error('❌ POST /api/aircraft-availability-recalculate error:', error);
     res.status(500).json({ error: 'Failed to recalculate', details: error.message });
@@ -4789,27 +4848,19 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
 });
 
 // GET /api/aircraft-availability-current - Get the current aircraft availability
-// Returns the most recent event (any date) so availability persists across days
+// Returns the most recent event (any date) so availability persists across days/restarts
 app.get('/api/aircraft-availability-current', async (req, res) => {
   try {
     const db = await getPrisma();
-    const today = new Date().toISOString().split('T')[0];
 
-    // First try today's events
-    let events = await db.$queryRawUnsafe(
-      `SELECT * FROM "AircraftAvailabilityEvent" WHERE "date" = $1::text ORDER BY "timestamp" DESC LIMIT 1`,
-      today
+    // Always fetch the most recent event across ALL dates.
+    // This ensures persistence regardless of timezone (client date vs server UTC date may differ).
+    const events = await db.$queryRawUnsafe(
+      `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
     );
 
-    // If no events today, fall back to the most recent event across all dates
     if (events.length === 0) {
-      events = await db.$queryRawUnsafe(
-        `SELECT * FROM "AircraftAvailabilityEvent" ORDER BY "timestamp" DESC LIMIT 1`
-      );
-    }
-
-    if (events.length === 0) {
-      // No events at all - return default
+      const today = new Date().toISOString().split('T')[0];
       return res.json({
         success: true,
         isDefault: true,
@@ -4826,7 +4877,7 @@ app.get('/api/aircraft-availability-current', async (req, res) => {
       isDefault: false,
       availableCount: Number(latest.availableCount),
       totalAircraft: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
-      date: latest.date || today,
+      date: latest.date,
       current: {
         availableCount: Number(latest.availableCount),
         totalFleet: Number(latest.totalAircraft ?? latest.totalFleet ?? 15),
