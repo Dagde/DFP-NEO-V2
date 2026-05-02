@@ -7090,6 +7090,36 @@ const App: React.FC = () => {
         return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
     }, [detectConflictsForEvent, getPersonnel, enforceDayNightSeparation, date]);
 
+    const isTwrDiEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean => {
+        return event.eventCategory === 'twr_di' ||
+            event.resourceId === 'TWR DI' ||
+            event.flightNumber === 'TWR DI';
+    };
+
+    const isSoloFlightNeedingTwrDi = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean => {
+        if (event.type !== 'flight' || isTwrDiEvent(event)) return false;
+        if (event.flightType === 'Solo') return true;
+
+        const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);
+        return syllabusItem?.sortieType === 'Solo';
+    };
+
+    const hasTwrDiCoverageForSolo = (
+        soloEvent: ScheduleEvent | Omit<ScheduleEvent, 'date'>,
+        eventsToCheck: (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[]
+    ): boolean => {
+        const soloStartTime = soloEvent.startTime;
+        const soloEndTime = soloEvent.startTime + soloEvent.duration;
+
+        return eventsToCheck.some(twrDiEvent => {
+            if (!isTwrDiEvent(twrDiEvent)) return false;
+
+            const twrDiStartTime = twrDiEvent.startTime;
+            const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
+            return twrDiStartTime <= soloStartTime && twrDiEndTime >= soloEndTime;
+        });
+    };
+
     /**
      * Calculate all conflicts for current day events (used when Validate is checked)
      */
@@ -7141,45 +7171,18 @@ const App: React.FC = () => {
         // console.log('🔴 Conflict check complete. Conflicting event IDs:', Array.from(conflictingEventIds));
         // console.log('🔴 ========== CONFLICT CHECK END ==========');
 
-        // TWR DI Validation Rule
+        // TWR DI Validation Rule: every trainee solo flight must be fully covered.
         for (const event of eventsForDate) {
-            // Only validate flight events
-            if (event.type !== 'flight' || !event.flightNumber) {
+            if (!isSoloFlightNeedingTwrDi(event)) {
                 continue;
             }
 
-            // Get the Master LMP for this event
-            const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);
-            if (!syllabusItem || syllabusItem.twrDiReqd !== 'YES') {
-                // TWR DI not required, skip this validation rule
-                continue;
-            }
-
-            // Find TWR DI events scheduled on the TWR DI resource line
-            const twrDiEvents = eventsForDate.filter(e => 
-                e.eventCategory === 'twr_di' && 
-                e.type === 'flight'
-            );
-
-            // Check if any TWR DI event provides full coverage
-            let hasValidCoverage = false;
-            for (const twrDiEvent of twrDiEvents) {
-                const twrDiStartTime = twrDiEvent.startTime;
-                const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
-                const flightStartTime = event.startTime;
-                const flightEndTime = event.startTime + event.duration;
-
-                // Check if TWR DI event fully covers the flight event
-                if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {
-                    hasValidCoverage = true;
-                    break;
-                }
-            }
-
-            if (!hasValidCoverage) {
+            if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
                 conflictingEventIds.add(event.id);
             }
-        }        return conflictingEventIds;
+        }
+
+        return conflictingEventIds;
     }, [eventsForDate, detectConflictsForEventWithDayNightSeparation, syllabusDetails]);
 
     /**
@@ -7201,42 +7204,13 @@ const App: React.FC = () => {
             }
         }
 
-        // TWR DI Validation Rule for Next Day Build
+        // TWR DI Validation Rule for Next Day Build: every trainee solo flight must be fully covered.
         for (const event of nextDayBuildEvents) {
-            // Only validate flight events
-            if (event.type !== 'flight' || !event.flightNumber) {
+            if (!isSoloFlightNeedingTwrDi(event)) {
                 continue;
             }
 
-            // Get the Master LMP for this event
-            const syllabusItem = syllabusDetails.find(item => item.id === event.flightNumber);
-            if (!syllabusItem || syllabusItem.twrDiReqd !== 'YES') {
-                // TWR DI not required, skip this validation rule
-                continue;
-            }
-
-            // Find TWR DI events scheduled on the TWR DI resource line
-            const twrDiEvents = nextDayBuildEvents.filter(e => 
-                e.eventCategory === 'twr_di' && 
-                e.type === 'flight'
-            );
-
-            // Check if any TWR DI event provides full coverage
-            let hasValidCoverage = false;
-            for (const twrDiEvent of twrDiEvents) {
-                const twrDiStartTime = twrDiEvent.startTime;
-                const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
-                const flightStartTime = event.startTime;
-                const flightEndTime = event.startTime + event.duration;
-
-                // Check if TWR DI event fully covers the flight event
-                if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {
-                    hasValidCoverage = true;
-                    break;
-                }
-            }
-
-            if (!hasValidCoverage) {
+            if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
                 conflictingEventIds.add(event.id);
             }
         }
@@ -12252,6 +12226,10 @@ updates.forEach(update => {
         // Check for missing instructor on Dual events
         if (event.flightType === 'Dual' && (!event.instructor || event.instructor.trim() === '' || event.instructor === 'TBD')) {
             errors.push('❌ No instructor assigned - Dual flights require an instructor.');
+        }
+
+        if (isSoloFlightNeedingTwrDi(event) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
+            errors.push('❌ TWR DI coverage missing - Solo flights require a TWR DI event that starts before or at the solo start time and finishes after or at the solo finish time.');
         }
 
         // Check for static unavailability for all personnel

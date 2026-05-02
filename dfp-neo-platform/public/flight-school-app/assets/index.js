@@ -68979,6 +68979,25 @@ ${"=".repeat(60)}`);
     }
     return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
   }, [detectConflictsForEvent, getPersonnel, enforceDayNightSeparation, date]);
+  const isTwrDiEvent = (event) => {
+    return event.eventCategory === "twr_di" || event.resourceId === "TWR DI" || event.flightNumber === "TWR DI";
+  };
+  const isSoloFlightNeedingTwrDi = (event) => {
+    if (event.type !== "flight" || isTwrDiEvent(event)) return false;
+    if (event.flightType === "Solo") return true;
+    const syllabusItem = syllabusDetails.find((item) => item.id === event.flightNumber);
+    return syllabusItem?.sortieType === "Solo";
+  };
+  const hasTwrDiCoverageForSolo = (soloEvent, eventsToCheck) => {
+    const soloStartTime = soloEvent.startTime;
+    const soloEndTime = soloEvent.startTime + soloEvent.duration;
+    return eventsToCheck.some((twrDiEvent) => {
+      if (!isTwrDiEvent(twrDiEvent)) return false;
+      const twrDiStartTime = twrDiEvent.startTime;
+      const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
+      return twrDiStartTime <= soloStartTime && twrDiEndTime >= soloEndTime;
+    });
+  };
   const personnelAndResourceConflictIds = reactExports.useMemo(() => {
     const conflictingEventIds = /* @__PURE__ */ new Set();
     if (!eventsForDate || eventsForDate.length === 0) {
@@ -69007,28 +69026,10 @@ ${"=".repeat(60)}`);
       }
     }
     for (const event of eventsForDate) {
-      if (event.type !== "flight" || !event.flightNumber) {
+      if (!isSoloFlightNeedingTwrDi(event)) {
         continue;
       }
-      const syllabusItem = syllabusDetails.find((item) => item.id === event.flightNumber);
-      if (!syllabusItem || syllabusItem.twrDiReqd !== "YES") {
-        continue;
-      }
-      const twrDiEvents = eventsForDate.filter(
-        (e) => e.eventCategory === "twr_di" && e.type === "flight"
-      );
-      let hasValidCoverage = false;
-      for (const twrDiEvent of twrDiEvents) {
-        const twrDiStartTime = twrDiEvent.startTime;
-        const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
-        const flightStartTime = event.startTime;
-        const flightEndTime = event.startTime + event.duration;
-        if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {
-          hasValidCoverage = true;
-          break;
-        }
-      }
-      if (!hasValidCoverage) {
+      if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
         conflictingEventIds.add(event.id);
       }
     }
@@ -69047,28 +69048,10 @@ ${"=".repeat(60)}`);
       }
     }
     for (const event of nextDayBuildEvents) {
-      if (event.type !== "flight" || !event.flightNumber) {
+      if (!isSoloFlightNeedingTwrDi(event)) {
         continue;
       }
-      const syllabusItem = syllabusDetails.find((item) => item.id === event.flightNumber);
-      if (!syllabusItem || syllabusItem.twrDiReqd !== "YES") {
-        continue;
-      }
-      const twrDiEvents = nextDayBuildEvents.filter(
-        (e) => e.eventCategory === "twr_di" && e.type === "flight"
-      );
-      let hasValidCoverage = false;
-      for (const twrDiEvent of twrDiEvents) {
-        const twrDiStartTime = twrDiEvent.startTime;
-        const twrDiEndTime = twrDiEvent.startTime + twrDiEvent.duration;
-        const flightStartTime = event.startTime;
-        const flightEndTime = event.startTime + event.duration;
-        if (twrDiStartTime <= flightStartTime && twrDiEndTime >= flightEndTime) {
-          hasValidCoverage = true;
-          break;
-        }
-      }
-      if (!hasValidCoverage) {
+      if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
         conflictingEventIds.add(event.id);
       }
     }
@@ -72994,6 +72977,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }
     if (event.flightType === "Dual" && (!event.instructor || event.instructor.trim() === "" || event.instructor === "TBD")) {
       errors.push("❌ No instructor assigned - Dual flights require an instructor.");
+    }
+    if (isSoloFlightNeedingTwrDi(event) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
+      errors.push("❌ TWR DI coverage missing - Solo flights require a TWR DI event that starts before or at the solo start time and finishes after or at the solo finish time.");
     }
     const eventWindow = getEventBookingWindow(event, syllabusDetails);
     const personnel = getPersonnel(event);
