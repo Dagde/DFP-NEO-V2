@@ -2912,9 +2912,9 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
     const db = await getPrisma();
     const targetDate = req.query.date || '2026-05-02';
     
-    // Check DailyAverage record for target date
+    // Check AircraftAvailabilityHistory record for target date
     const dailyAvg = await db.$queryRawUnsafe(
-      `SELECT * FROM "DailyAverage" WHERE date = $1::text`,
+      `SELECT * FROM "AircraftAvailabilityHistory" WHERE date = $1::text`,
       targetDate
     );
     
@@ -2935,10 +2935,10 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
       targetDate
     );
     
-    // Get all DailyAverage records around that time
+    // Get all AircraftAvailabilityHistory records around that time
     const avgSample = await db.$queryRawUnsafe(
       `SELECT date, "dailyAverage", "totalFleet", "createdAt", "updatedAt" 
-       FROM "DailyAverage" 
+       FROM "AircraftAvailabilityHistory" 
        WHERE date >= $1::text || '-01' AND date <= $1::text || '-05'
        ORDER BY date`,
       targetDate.substring(0, 7) // Get YYYY-MM from target date
@@ -2947,9 +2947,9 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
     // Get total counts
     const totals = await db.$queryRawUnsafe(
       `SELECT 
-         (SELECT COUNT(*) FROM "DailyAverage") as avg_count,
-         (SELECT MIN(date) FROM "DailyAverage") as min_date,
-         (SELECT MAX(date) FROM "DailyAverage") as max_date,
+         (SELECT COUNT(*) FROM "AircraftAvailabilityHistory") as avg_count,
+         (SELECT MIN(date) FROM "AircraftAvailabilityHistory") as min_date,
+         (SELECT MAX(date) FROM "AircraftAvailabilityHistory") as max_date,
          (SELECT COUNT(*) FROM "AircraftAvailabilityEvent") as event_count,
          (SELECT MIN(date) FROM "AircraftAvailabilityEvent") as min_event_date,
          (SELECT MAX(date) FROM "AircraftAvailabilityEvent") as max_event_date`
