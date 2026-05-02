@@ -49,6 +49,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [selectedGraphCourse, setSelectedGraphCourse] = useState<string | null>(null);
     const [scoreCourse, setScoreCourse] = useState<string>('');
     const [activeAwardId, setActiveAwardId] = useState('dux');
+    const [isEditingAward, setIsEditingAward] = useState(false);
     const [awards, setAwards] = useState<CourseAward[]>([
         {
             id: 'dux',
@@ -107,6 +108,10 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const getAwardDisplayName = (award: CourseAward) => {
         return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
     };
+
+    useEffect(() => {
+        setIsEditingAward(false);
+    }, [activeAwardId]);
 
     useEffect(() => {
         if (!activeAward) return;
@@ -313,6 +318,17 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode)?.enabled;
     };
 
+    const selectedAwardEventRows = useMemo(() => {
+        const selectedRows = activeAward.includeAllScoredEvents
+            ? awardEventOptions
+            : awardEventOptions.filter(option => !!getCriterionForEvent(option.value)?.enabled);
+
+        return selectedRows.map(option => ({
+            ...option,
+            weight: getCriterionForEvent(option.value)?.weight ?? 1,
+        }));
+    }, [activeAward, awardEventOptions]);
+
     const toggleAwardEvent = (eventCode: string, selected: boolean) => {
         setAwards(prev => prev.map(award => {
             if (award.id !== activeAward.id) return award;
@@ -369,44 +385,30 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         ));
     };
 
-    const getAwardCourseColor = (courseName: string) => {
-        if (!courseName || courseName === 'all') return '';
-        const color = courseColors[courseName] || '';
-        if (!color || color.startsWith('#') || color.startsWith('rgb')) return color;
-        const baseColorMap: { [key: string]: string } = {
-            'bg-sky-400': '#38BDF8',
-            'bg-purple-400': '#C084FC',
-            'bg-yellow-400': '#FACC15',
-            'bg-pink-400': '#F472B6',
-            'bg-teal-400': '#2DD4BF',
-            'bg-indigo-400': '#818CF8',
-            'bg-cyan-400': '#22D3EE',
-            'bg-blue-400': '#60A5FA',
-            'bg-green-400': '#4ADE80',
-            'bg-orange-400': '#FB923C',
-            'bg-red-400': '#F87171',
-            'bg-gray-400': '#9CA3AF',
-            'bg-amber-500': '#F59E0B',
-            'bg-fuchsia-400': '#E879F9',
-            'bg-gray-500': '#6B7280',
-            'bg-sky-500': '#0EA5E9',
-        };
-        return baseColorMap[color.replace(/\/\d+$/, '')] || '';
+    const getCourseColor = (courseName: string) => {
+        return activeCourses.find(course => course.name === courseName)?.color || courseColors[courseName] || '';
     };
 
-    const getCourseBoxStyle = (courseName: string): React.CSSProperties => {
-        const color = getAwardCourseColor(courseName);
-        if (!color || (!color.startsWith('#') && !color.startsWith('rgb'))) return {};
-        return {
-            borderColor: color,
-            boxShadow: `0 0 0 1px ${color}55`,
-            background: `linear-gradient(135deg, ${color}22, rgba(31, 41, 55, 0.96) 38%)`,
-        };
+    const isCssColor = (color: string) => color.startsWith('#') || color.startsWith('rgb');
+
+    const getCourseHeaderClass = (courseName: string) => {
+        const color = getCourseColor(courseName);
+        return color && !isCssColor(color) ? color : 'bg-gray-800';
     };
 
-    const getCourseBoxColorClass = (courseName: string) => {
+    const getCourseHeaderStyle = (courseName: string): React.CSSProperties => {
+        const color = getCourseColor(courseName);
+        return color && isCssColor(color) ? { backgroundColor: color } : {};
+    };
+
+    const getCourseBorderStyle = (courseName: string): React.CSSProperties => {
+        const color = getCourseColor(courseName);
+        return color && isCssColor(color) ? { borderColor: color } : {};
+    };
+
+    const getCourseBorderClass = (courseName: string) => {
         const color = courseColors[courseName] || '';
-        return color && !color.startsWith('#') && !color.startsWith('rgb') ? 'border-gray-700' : '';
+        return color && !isCssColor(color) ? color.replace(/^bg-/, 'border-').replace(/\/\d+$/, '') : 'border-gray-700';
     };
 
     const addAward = () => {
@@ -423,6 +425,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             criteria: [],
         }]);
         setActiveAwardId(id);
+        setIsEditingAward(true);
     };
 
     const removeAward = () => {
@@ -569,13 +572,16 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
                             <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6">
                                 <div
-                                    className={`bg-gray-800 rounded-lg border border-gray-700 overflow-hidden ${getCourseBoxColorClass(scoreCourse)}`}
-                                    style={getCourseBoxStyle(scoreCourse)}
+                                    className={`bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(scoreCourse)}`}
+                                    style={getCourseBorderStyle(scoreCourse)}
                                 >
-                                    <div className="px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+                                    <div
+                                        className={`px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 ${getCourseHeaderClass(scoreCourse)}`}
+                                        style={getCourseHeaderStyle(scoreCourse)}
+                                    >
                                         <div>
                                             <h3 className="text-lg font-semibold text-white">Course Scores</h3>
-                                            <p className="text-xs text-gray-400">Only events with saved PT-051 overall grades are shown.</p>
+                                            <p className="text-xs text-white/75">Only events with saved PT-051 overall grades are shown.</p>
                                         </div>
                                         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
                                             <label className="text-sm text-gray-300 min-w-60">
@@ -641,12 +647,15 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                 </div>
 
                                 <div
-                                    className={`bg-gray-800 rounded-lg border border-gray-700 overflow-hidden ${getCourseBoxColorClass(activeAward.course)}`}
-                                    style={getCourseBoxStyle(activeAward.course)}
+                                    className={`bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAward.course)}`}
+                                    style={getCourseBorderStyle(activeAward.course)}
                                 >
-                                    <div className="px-4 py-3 border-b border-gray-700">
+                                    <div
+                                        className={`px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`}
+                                        style={getCourseHeaderStyle(activeAward.course)}
+                                    >
                                         <h3 className="text-lg font-semibold text-white">Course Rankings</h3>
-                                        <p className="text-xs text-gray-400">Create named awards and define how each ranking is calculated.</p>
+                                        <p className="text-xs text-white/75">Create named awards and define how each ranking is calculated.</p>
                                     </div>
                                     <div className="p-4 space-y-4">
                                         <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
@@ -660,15 +669,37 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
                                                 </select>
                                             </label>
-                                            <button
-                                                type="button"
-                                                onClick={addAward}
-                                                className="px-3 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md"
-                                            >
-                                                Add Award
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsEditingAward(prev => !prev)}
+                                                    className="px-3 py-2 text-sm font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-md"
+                                                >
+                                                    {isEditingAward ? 'Done' : 'Edit'}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={addAward}
+                                                    className="px-3 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md"
+                                                >
+                                                    Add Award
+                                                </button>
+                                            </div>
                                         </div>
 
+                                        {!isEditingAward && (
+                                            <div className="rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3">
+                                                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
+                                                    <span className="rounded bg-gray-800 px-2 py-1">Course: {activeAward.course === 'all' ? 'All active courses' : activeAward.course}</span>
+                                                    <span className="rounded bg-gray-800 px-2 py-1">LMP: {activeAward.lmpType}</span>
+                                                    <span className="rounded bg-gray-800 px-2 py-1">Events: {selectedAwardEventRows.length}</span>
+                                                    <span className="rounded bg-gray-800 px-2 py-1">Minimum scores: {activeAward.minimumScoredEvents}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {isEditingAward && (
+                                        <>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <label className="text-sm text-gray-300">
                                                 Award Name
@@ -781,6 +812,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 {getAwardDisplayName(activeAward)} ranking includes {activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter(criterion => criterion.enabled).length} selected event{(activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter(criterion => criterion.enabled).length) === 1 ? '' : 's'}.
                                             </p>
                                         </div>
+                                        </>
+                                        )}
 
                                         <div className="overflow-x-auto border border-gray-700 rounded-md">
                                             <table className="min-w-full text-sm">

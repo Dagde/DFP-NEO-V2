@@ -58975,6 +58975,7 @@ const CourseProgressView = ({
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
   const [scoreCourse, setScoreCourse] = reactExports.useState("");
   const [activeAwardId, setActiveAwardId] = reactExports.useState("dux");
+  const [isEditingAward, setIsEditingAward] = reactExports.useState(false);
   const [awards, setAwards] = reactExports.useState([
     {
       id: "dux",
@@ -59018,6 +59019,9 @@ const CourseProgressView = ({
   const getAwardDisplayName = (award) => {
     return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
   };
+  reactExports.useEffect(() => {
+    setIsEditingAward(false);
+  }, [activeAwardId]);
   reactExports.useEffect(() => {
     if (!activeAward) return;
     if (activeAward.course !== "all" && !activeCourses.some((course) => course.name === activeAward.course)) {
@@ -59161,6 +59165,13 @@ const CourseProgressView = ({
   const isAwardEventSelected = (eventCode) => {
     return activeAward.includeAllScoredEvents || !!getCriterionForEvent(eventCode)?.enabled;
   };
+  const selectedAwardEventRows = reactExports.useMemo(() => {
+    const selectedRows = activeAward.includeAllScoredEvents ? awardEventOptions : awardEventOptions.filter((option) => !!getCriterionForEvent(option.value)?.enabled);
+    return selectedRows.map((option) => ({
+      ...option,
+      weight: getCriterionForEvent(option.value)?.weight ?? 1
+    }));
+  }, [activeAward, awardEventOptions]);
   const toggleAwardEvent = (eventCode, selected) => {
     setAwards((prev) => prev.map((award) => {
       if (award.id !== activeAward.id) return award;
@@ -59207,42 +59218,25 @@ const CourseProgressView = ({
       (award) => award.id === activeAward.id ? { ...award, includeAllScoredEvents: selected, criteria: selected ? award.criteria : award.criteria.map((criterion) => ({ ...criterion, enabled: false })) } : award
     ));
   };
-  const getAwardCourseColor = (courseName) => {
-    if (!courseName || courseName === "all") return "";
-    const color = courseColors[courseName] || "";
-    if (!color || color.startsWith("#") || color.startsWith("rgb")) return color;
-    const baseColorMap = {
-      "bg-sky-400": "#38BDF8",
-      "bg-purple-400": "#C084FC",
-      "bg-yellow-400": "#FACC15",
-      "bg-pink-400": "#F472B6",
-      "bg-teal-400": "#2DD4BF",
-      "bg-indigo-400": "#818CF8",
-      "bg-cyan-400": "#22D3EE",
-      "bg-blue-400": "#60A5FA",
-      "bg-green-400": "#4ADE80",
-      "bg-orange-400": "#FB923C",
-      "bg-red-400": "#F87171",
-      "bg-gray-400": "#9CA3AF",
-      "bg-amber-500": "#F59E0B",
-      "bg-fuchsia-400": "#E879F9",
-      "bg-gray-500": "#6B7280",
-      "bg-sky-500": "#0EA5E9"
-    };
-    return baseColorMap[color.replace(/\/\d+$/, "")] || "";
+  const getCourseColor = (courseName) => {
+    return activeCourses.find((course) => course.name === courseName)?.color || courseColors[courseName] || "";
   };
-  const getCourseBoxStyle = (courseName) => {
-    const color = getAwardCourseColor(courseName);
-    if (!color || !color.startsWith("#") && !color.startsWith("rgb")) return {};
-    return {
-      borderColor: color,
-      boxShadow: `0 0 0 1px ${color}55`,
-      background: `linear-gradient(135deg, ${color}22, rgba(31, 41, 55, 0.96) 38%)`
-    };
+  const isCssColor = (color) => color.startsWith("#") || color.startsWith("rgb");
+  const getCourseHeaderClass = (courseName) => {
+    const color = getCourseColor(courseName);
+    return color && !isCssColor(color) ? color : "bg-gray-800";
   };
-  const getCourseBoxColorClass = (courseName) => {
+  const getCourseHeaderStyle = (courseName) => {
+    const color = getCourseColor(courseName);
+    return color && isCssColor(color) ? { backgroundColor: color } : {};
+  };
+  const getCourseBorderStyle = (courseName) => {
+    const color = getCourseColor(courseName);
+    return color && isCssColor(color) ? { borderColor: color } : {};
+  };
+  const getCourseBorderClass = (courseName) => {
     const color = courseColors[courseName] || "";
-    return color && !color.startsWith("#") && !color.startsWith("rgb") ? "border-gray-700" : "";
+    return color && !isCssColor(color) ? color.replace(/^bg-/, "border-").replace(/\/\d+$/, "") : "border-gray-700";
   };
   const addAward = () => {
     const id = `award-${Date.now()}`;
@@ -59258,6 +59252,7 @@ const CourseProgressView = ({
       criteria: []
     }]);
     setActiveAwardId(id);
+    setIsEditingAward(true);
   };
   const removeAward = () => {
     if (awards.length <= 1) return;
@@ -59383,47 +59378,54 @@ const CourseProgressView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            className: `bg-gray-800 rounded-lg border border-gray-700 overflow-hidden ${getCourseBoxColorClass(scoreCourse)}`,
-            style: getCourseBoxStyle(scoreCourse),
+            className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(scoreCourse)}`,
+            style: getCourseBorderStyle(scoreCourse),
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Only events with saved PT-051 overall grades are shown." })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-end gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300 min-w-60", children: [
-                    "Course",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "select",
-                      {
-                        value: scoreCourse,
-                        onChange: (event) => setScoreCourse(event.target.value),
-                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                        children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: printCourseScores,
-                      className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
-                      children: "Print"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: exportCourseScoresCsv,
-                      className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
-                      children: "Export CSV"
-                    }
-                  )
-                ] })
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: `px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 ${getCourseHeaderClass(scoreCourse)}`,
+                  style: getCourseHeaderStyle(scoreCourse),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Only events with saved PT-051 overall grades are shown." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-end gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300 min-w-60", children: [
+                        "Course",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "select",
+                          {
+                            value: scoreCourse,
+                            onChange: (event) => setScoreCourse(event.target.value),
+                            className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                            children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: printCourseScores,
+                          className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
+                          children: "Print"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: exportCourseScoresCsv,
+                          className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
+                          children: "Export CSV"
+                        }
+                      )
+                    ] })
+                  ]
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "sticky left-0 z-10 bg-gray-900/95 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-300 min-w-56", children: "Trainee" }),
@@ -59446,13 +59448,20 @@ const CourseProgressView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            className: `bg-gray-800 rounded-lg border border-gray-700 overflow-hidden ${getCourseBoxColorClass(activeAward.course)}`,
-            style: getCourseBoxStyle(activeAward.course),
+            className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAward.course)}`,
+            style: getCourseBorderStyle(activeAward.course),
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 border-b border-gray-700", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Rankings" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Create named awards and define how each ranking is calculated." })
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: `px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`,
+                  style: getCourseHeaderStyle(activeAward.course),
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Rankings" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Create named awards and define how each ranking is calculated." })
+                  ]
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
@@ -59467,145 +59476,176 @@ const CourseProgressView = ({
                       }
                     )
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: addAward,
-                      className: "px-3 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md",
-                      children: "Add Award"
-                    }
-                  )
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: () => setIsEditingAward((prev) => !prev),
+                        className: "px-3 py-2 text-sm font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-md",
+                        children: isEditingAward ? "Done" : "Edit"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: addAward,
+                        className: "px-3 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md",
+                        children: "Add Award"
+                      }
+                    )
+                  ] })
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                    "Award Name",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        value: activeAward.name,
-                        onChange: (event) => updateActiveAward({ name: event.target.value }),
-                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      }
-                    )
+                !isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 text-xs text-gray-300", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                    "Course: ",
+                    activeAward.course === "all" ? "All active courses" : activeAward.course
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                    "Course",
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "select",
-                      {
-                        value: activeAward.course,
-                        onChange: (event) => {
-                          const nextCourse = event.target.value;
-                          const nextCourseLmp = activeCourses.find((course) => course.name === nextCourse)?.lmpType;
-                          updateActiveAward({
-                            course: nextCourse,
-                            lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "BPC+IPC",
-                            includeAllScoredEvents: true
-                          });
-                        },
-                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All active courses" }),
-                          activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
-                        ]
-                      }
-                    )
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                    "LMP: ",
+                    activeAward.lmpType
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                    "Award LMP",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "select",
-                      {
-                        value: activeAward.lmpType,
-                        onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
-                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                        children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
-                      }
-                    )
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                    "Events: ",
+                    selectedAwardEventRows.length
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                    "Minimum scored events",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "input",
-                      {
-                        type: "number",
-                        min: 1,
-                        value: activeAward.minimumScoredEvents,
-                        onChange: (event) => updateActiveAward({ minimumScoredEvents: Math.max(1, parseInt(event.target.value, 10) || 1) }),
-                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "button",
-                    {
-                      type: "button",
-                      onClick: removeAward,
-                      disabled: awards.length <= 1,
-                      className: "w-full px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
-                      children: "Remove Award"
-                    }
-                  ) })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-200", children: "Scoring Events" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Events cascade from the selected LMP. Tick the events used for this award and adjust weights where required." })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-semibold text-gray-300", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                    "Minimum scores: ",
+                    activeAward.minimumScoredEvents
+                  ] })
+                ] }) }),
+                isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                      "Award Name",
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "input",
                         {
-                          type: "checkbox",
-                          checked: activeAward.includeAllScoredEvents,
-                          onChange: (event) => toggleAllAwardEvents(event.target.checked),
-                          className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                          value: activeAward.name,
+                          onChange: (event) => updateActiveAward({ name: event.target.value }),
+                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                         }
-                      ),
-                      "Select all"
-                    ] })
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                      "Course",
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        "select",
+                        {
+                          value: activeAward.course,
+                          onChange: (event) => {
+                            const nextCourse = event.target.value;
+                            const nextCourseLmp = activeCourses.find((course) => course.name === nextCourse)?.lmpType;
+                            updateActiveAward({
+                              course: nextCourse,
+                              lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "BPC+IPC",
+                              includeAllScoredEvents: true
+                            });
+                          },
+                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                          children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All active courses" }),
+                            activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
+                          ]
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                      "Award LMP",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: activeAward.lmpType,
+                          onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
+                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                          children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                      "Minimum scored events",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "number",
+                          min: 1,
+                          value: activeAward.minimumScoredEvents,
+                          onChange: (event) => updateActiveAward({ minimumScoredEvents: Math.max(1, parseInt(event.target.value, 10) || 1) }),
+                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "button",
+                      {
+                        type: "button",
+                        onClick: removeAward,
+                        disabled: awards.length <= 1,
+                        className: "w-full px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
+                        children: "Remove Award"
+                      }
+                    ) })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto rounded-md border border-gray-700 divide-y divide-gray-700", children: [
-                    awardEventOptions.map((option) => {
-                      const criterion = getCriterionForEvent(option.value);
-                      const selected = isAwardEventSelected(option.value);
-                      return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_90px] gap-2 items-center px-3 py-2 bg-gray-900/35", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-200", children: "Scoring Events" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Events cascade from the selected LMP. Tick the events used for this award and adjust weights where required." })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-semibold text-gray-300", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {
                             type: "checkbox",
-                            checked: selected,
-                            onChange: (event) => toggleAwardEvent(option.value, event.target.checked),
+                            checked: activeAward.includeAllScoredEvents,
+                            onChange: (event) => toggleAllAwardEvents(event.target.checked),
                             className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                           }
                         ),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-gray-100 truncate", children: option.label }) }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx(
-                          "input",
-                          {
-                            type: "number",
-                            min: 0.1,
-                            step: 0.1,
-                            value: criterion?.weight ?? 1,
-                            onChange: (event) => setAwardEventWeight(option.value, parseFloat(event.target.value) || 1),
-                            disabled: !selected,
-                            className: "bg-gray-900 border border-gray-600 rounded-md px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-40",
-                            "aria-label": `${option.label} weight`
-                          }
-                        )
-                      ] }, option.value);
-                    }),
-                    awardEventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-6 text-center text-sm text-gray-400", children: "No LMP events available for this course and LMP selection." })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500", children: [
-                    getAwardDisplayName(activeAward),
-                    " ranking includes ",
-                    activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length,
-                    " selected event",
-                    (activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length) === 1 ? "" : "s",
-                    "."
+                        "Select all"
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto rounded-md border border-gray-700 divide-y divide-gray-700", children: [
+                      awardEventOptions.map((option) => {
+                        const criterion = getCriterionForEvent(option.value);
+                        const selected = isAwardEventSelected(option.value);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_90px] gap-2 items-center px-3 py-2 bg-gray-900/35", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "checkbox",
+                              checked: selected,
+                              onChange: (event) => toggleAwardEvent(option.value, event.target.checked),
+                              className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-gray-100 truncate", children: option.label }) }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "input",
+                            {
+                              type: "number",
+                              min: 0.1,
+                              step: 0.1,
+                              value: criterion?.weight ?? 1,
+                              onChange: (event) => setAwardEventWeight(option.value, parseFloat(event.target.value) || 1),
+                              disabled: !selected,
+                              className: "bg-gray-900 border border-gray-600 rounded-md px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-40",
+                              "aria-label": `${option.label} weight`
+                            }
+                          )
+                        ] }, option.value);
+                      }),
+                      awardEventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-6 text-center text-sm text-gray-400", children: "No LMP events available for this course and LMP selection." })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500", children: [
+                      getAwardDisplayName(activeAward),
+                      " ranking includes ",
+                      activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length,
+                      " selected event",
+                      (activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length) === 1 ? "" : "s",
+                      "."
+                    ] })
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto border border-gray-700 rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
