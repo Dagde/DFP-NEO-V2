@@ -4939,7 +4939,9 @@ const AircraftAvailabilityOverlay = ({
     }
     return lines;
   };
-  const solidStartX = lastSnap ? Math.max(Math.max(0, getXPosition(lastSnap.timestamp)), currentTimeX) : currentTimeX;
+  const lastSnapX = lastSnap ? Math.max(0, getXPosition(lastSnap.timestamp)) : 0;
+  const isToday = currentDate.toDateString() === now.toDateString();
+  const solidStartX = isToday ? Math.min(Math.max(lastSnapX, currentTimeX), endOfDayX - 1) : lastSnapX;
   const showSolidLine = solidStartX < endOfDayX;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",

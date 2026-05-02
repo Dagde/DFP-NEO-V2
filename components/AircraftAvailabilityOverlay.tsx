@@ -340,10 +340,14 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return lines;
     };
 
-    // Solid line: from max(lastChange, now) → end of day
-    const solidStartX = lastSnap
-        ? Math.max(Math.max(0, getXPosition(lastSnap.timestamp)), currentTimeX)
-        : currentTimeX;
+    // Solid line: always visible from last snapshot X (or current time on today) to end of day.
+    // For today: solid starts at max(lastSnapX, currentTimeX) — future portion only.
+    // For past/future dates: solid starts at lastSnapX so it's always visible and draggable.
+    const lastSnapX = lastSnap ? Math.max(0, getXPosition(lastSnap.timestamp)) : 0;
+    const isToday = currentDate.toDateString() === now.toDateString();
+    const solidStartX = isToday
+        ? Math.min(Math.max(lastSnapX, currentTimeX), endOfDayX - 1)
+        : lastSnapX;
     const showSolidLine = solidStartX < endOfDayX;
 
     return (
