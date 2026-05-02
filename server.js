@@ -2944,7 +2944,7 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
     
     // Get sample events to understand the data
     const sampleEvents = await db.$queryRawUnsafe(
-      `SELECT "id", "timestamp", "availableCount", "totalFleet", "changeType", date 
+      `SELECT "id", "timestamp", "availableCount", "totalAircraft", "changeType", date 
        FROM "AircraftAvailabilityEvent" 
        WHERE date = $1::text 
        ORDER BY "timestamp" ASC 
