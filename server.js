@@ -4633,7 +4633,7 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
   try {
     const db = await getPrisma();
     // Accept either 'totalFleet' or 'totalAircraft' for backwards compatibility
-    const { date, availableCount, notes, timestamp, changeType, recordedBy, flyingWindowStart, flyingWindowEnd, clientLocalHour } = req.body;
+    const { date, availableCount, notes, timestamp, changeType, recordedBy, flyingWindowStart, flyingWindowEnd, clientLocalHour, clientTimezoneOffsetHours } = req.body;
     const totalFleet = req.body.totalFleet ?? req.body.totalAircraft;
     if (!date || availableCount === undefined) {
       return res.status(400).json({ error: 'date and availableCount are required' });
@@ -4730,8 +4730,8 @@ app.post('/api/aircraft-availability-events', async (req, res) => {
 app.post('/api/aircraft-availability-recalculate', async (req, res) => {
   try {
     const db = await getPrisma();
-    // Accept clientLocalHour (new) or clientTimezoneOffset (legacy) for timezone handling
-    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, clientLocalHour, clientTimezoneOffset } = req.body;
+    // Accept clientTimezoneOffsetHours (preferred) or clientLocalHour (fallback inference) for timezone handling
+    const { date, flyingWindowStart, flyingWindowEnd, totalFleet, clientTimezoneOffsetHours, clientLocalHour, clientTimezoneOffset } = req.body;
     if (!date) return res.status(400).json({ error: 'date is required' });
 
     const events = await db.$queryRawUnsafe(
@@ -4744,10 +4744,18 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
     }
 
     // Convert UTC timestamp to client-local minutes-since-midnight.
-    // Server runs UTC. Client may be AEDT (UTC+11) or similar.
-    // Priority: clientLocalHour (inferred offset) > clientTimezoneOffset (legacy) > 0
+    // Server runs UTC. Client is AEDT (UTC+11) or similar.
+    // Priority:
+    //   1. clientTimezoneOffsetHours - explicit UTC offset in hours (e.g. 11 for AEDT) - PREFERRED
+    //   2. clientLocalHour - infer offset by comparing client hour vs server UTC hour - fallback
+    //   3. clientTimezoneOffset - legacy field (minutes) - last resort
     let clientUtcOffsetHours = 0;
-    if (typeof clientLocalHour === 'number') {
+    if (typeof clientTimezoneOffsetHours === 'number') {
+      // Direct UTC offset in hours - most reliable, no inference needed
+      clientUtcOffsetHours = clientTimezoneOffsetHours;
+      console.log(`[AV-RECALC] Using explicit UTC offset: ${clientUtcOffsetHours}h (from clientTimezoneOffsetHours)`);
+    } else if (typeof clientLocalHour === 'number') {
+      // Infer offset from client local hour vs server UTC hour
       const serverUtcHour = new Date().getUTCHours();
       clientUtcOffsetHours = clientLocalHour - serverUtcHour;
       if (clientUtcOffsetHours > 14) clientUtcOffsetHours -= 24;
@@ -4755,6 +4763,9 @@ app.post('/api/aircraft-availability-recalculate', async (req, res) => {
       console.log(`[AV-RECALC] Inferred UTC offset: ${clientUtcOffsetHours}h (clientLocalHour=${clientLocalHour}, serverUTC=${serverUtcHour})`);
     } else if (typeof clientTimezoneOffset === 'number') {
       clientUtcOffsetHours = clientTimezoneOffset / 60;
+      console.log(`[AV-RECALC] Legacy UTC offset: ${clientUtcOffsetHours}h (from clientTimezoneOffset=${clientTimezoneOffset}min)`);
+    } else {
+      console.warn(`[AV-RECALC] No timezone info provided - using UTC (offset=0). Average may be incorrect for non-UTC clients.`);
     }
 
     const toLocalMinutes = (ts) => {

@@ -47938,7 +47938,8 @@ const ACHistoryAircraftAvailability = ({
   currentUserId,
   currentAircraftAvailable = 0,
   totalAircraft = 24,
-  currentUserRole
+  currentUserRole,
+  timezoneOffset = 0
 }) => {
   const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
   const [records, setRecords] = reactExports.useState([]);
@@ -48119,8 +48120,7 @@ const ACHistoryAircraftAvailability = ({
         credentials: "include",
         body: JSON.stringify({
           date: today,
-          clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-          clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
+          clientTimezoneOffsetHours: timezoneOffset
         })
       });
       if (recalcRes.ok) {
@@ -48265,8 +48265,7 @@ const ACHistoryAircraftAvailability = ({
           credentials: "include",
           body: JSON.stringify({
             date: today,
-            clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-            clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
+            clientTimezoneOffsetHours: timezoneOffset
           })
         });
         if (recalcRes.ok) {
@@ -48323,8 +48322,7 @@ const ACHistoryAircraftAvailability = ({
           credentials: "include",
           body: JSON.stringify({
             date: today,
-            clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-            clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
+            clientTimezoneOffsetHours: timezoneOffset
           })
         });
         const data = await res.json();
@@ -48947,7 +48945,8 @@ const ACHistoryPage = ({
   cancellationRecords,
   currentUserId,
   currentAircraftAvailable = 0,
-  totalAircraft = 24
+  totalAircraft = 24,
+  timezoneOffset = 0
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
@@ -49084,7 +49083,8 @@ const ACHistoryPage = ({
         currentUserId,
         currentAircraftAvailable,
         totalAircraft,
-        currentUserRole
+        currentUserRole,
+        timezoneOffset
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -51296,7 +51296,8 @@ const SettingsView = ({
           currentUserRole: currentUserPermission,
           cancellationRecords: cancellationRecords || [],
           currentAircraftAvailable,
-          totalAircraft
+          totalAircraft,
+          timezoneOffset
         }
       ) }),
       shouldShowSection("timezone") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 w-96", children: [
@@ -67825,9 +67826,8 @@ ${"=".repeat(60)}`);
       notes: notesOverride ?? null,
       flyingWindowStart: windowStart,
       flyingWindowEnd: windowEnd,
-      // Send client's local time for accurate timezone comparison
-      clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-      clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
+      // Send explicit timezone offset (hours) — more reliable than inferring from local clock
+      clientTimezoneOffsetHours: timezoneOffset
     };
     console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
     console.log(`[AV] 🌐 API URL: ${apiBase2}/aircraft-availability-events`);
@@ -68014,8 +68014,7 @@ ${"=".repeat(60)}`);
             date: todayStr,
             flyingWindowStart: windowStart,
             flyingWindowEnd: windowEnd,
-            clientLocalHour: (/* @__PURE__ */ new Date()).getHours(),
-            clientLocalMinute: (/* @__PURE__ */ new Date()).getMinutes()
+            clientTimezoneOffsetHours: timezoneOffset
           })
         });
         if (recovRes.ok) {

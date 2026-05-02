@@ -5633,9 +5633,8 @@ const App: React.FC = () => {
             notes: notesOverride ?? null,
             flyingWindowStart: windowStart,
             flyingWindowEnd:   windowEnd,
-            // Send client's local time for accurate timezone comparison
-            clientLocalHour: new Date().getHours(),
-            clientLocalMinute: new Date().getMinutes(),
+            // Send explicit timezone offset (hours) — more reliable than inferring from local clock
+            clientTimezoneOffsetHours: timezoneOffset,
         };
         
         console.log(`[AV] 📦 Request body:`, JSON.stringify(requestBody, null, 2));
@@ -5865,8 +5864,7 @@ const App: React.FC = () => {
                         date: todayStr,
                         flyingWindowStart: windowStart,
                         flyingWindowEnd:   windowEnd,
-                        clientLocalHour: new Date().getHours(),
-                        clientLocalMinute: new Date().getMinutes(),
+                        clientTimezoneOffsetHours: timezoneOffset,
                     })
                 });
                 if (recovRes.ok) {

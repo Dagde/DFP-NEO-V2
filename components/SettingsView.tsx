@@ -1691,6 +1691,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        cancellationRecords={cancellationRecords || []}
                        currentAircraftAvailable={currentAircraftAvailable}
                        totalAircraft={totalAircraft}
+                       timezoneOffset={timezoneOffset}
                    />
                 </div>
                 )}

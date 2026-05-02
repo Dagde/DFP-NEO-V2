@@ -24,6 +24,7 @@ interface ACHistoryAircraftAvailabilityProps {
   currentAircraftAvailable?: number;
   totalAircraft?: number;
   currentUserRole?: string; // For admin check
+  timezoneOffset?: number;  // UTC offset in hours (e.g. 11 for AEDT). Used for timezone-correct averages.
 }
 
 // ─── Tiny SVG line/area chart ────────────────────────────────────────────────
@@ -236,6 +237,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
   currentAircraftAvailable = 0,
   totalAircraft = 24,
   currentUserRole,
+  timezoneOffset = 0,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const [records, setRecords] = useState<AvailabilityRecord[]>([]);
@@ -447,8 +449,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
         credentials: 'include',
         body: JSON.stringify({
           date: today,
-          clientLocalHour: new Date().getHours(),
-          clientLocalMinute: new Date().getMinutes(),
+          clientTimezoneOffsetHours: timezoneOffset,
         }),
       });
       
@@ -614,8 +615,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           credentials: 'include',
           body: JSON.stringify({
             date: today,
-            clientLocalHour: new Date().getHours(),
-            clientLocalMinute: new Date().getMinutes(),
+            clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
         
@@ -683,8 +683,7 @@ const ACHistoryAircraftAvailability: React.FC<ACHistoryAircraftAvailabilityProps
           credentials: 'include',
           body: JSON.stringify({ 
             date: today,
-            clientLocalHour: new Date().getHours(),
-            clientLocalMinute: new Date().getMinutes(),
+            clientTimezoneOffsetHours: timezoneOffset,
           }),
         });
         const data = await res.json();
