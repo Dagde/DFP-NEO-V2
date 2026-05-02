@@ -66544,21 +66544,57 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
     return !generatedEvents.some(
-      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY")
+      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("FTD-STBY")
     );
   });
-  console.log("Trainees needing STBY FTD events:", traineesNeedingStbyFtd.length);
+  console.log("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
   if (traineesNeedingStbyFtd.length > 0) {
+    const ftdRecoveryIncrement = 15 / 60;
+    let recoveredToFtd = 0;
+    for (const trainee of traineesNeedingStbyFtd) {
+      const { next } = traineeNextEventMap.get(trainee.fullName);
+      if (!next) continue;
+      let placedOnFtd = false;
+      const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) ? [true, false] : [false];
+      for (const primaryOnly of passModes) {
+        if (placedOnFtd) break;
+        for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 1e-3; time += ftdRecoveryIncrement) {
+          const result = scheduleEvent(trainee, next, time, "ftd", false, false, primaryOnly);
+          if (result && result.resourceId?.startsWith("FTD ")) {
+            generatedEvents.push({ ...result, _source: "generated", _isNext: true, _traineeName: trainee.fullName });
+            const tCounts = eventCounts.get(trainee.fullName);
+            const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+            if (tCounts) tCounts.flightFtd++;
+            if (ipCounts) ipCounts.flightFtd++;
+            recoveredToFtd++;
+            placedOnFtd = true;
+            console.log(`FTD recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
+            break;
+          }
+        }
+      }
+    }
+    console.log(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
+  }
+  const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
+    const { next } = traineeNextEventMap.get(trainee.fullName);
+    if (!next || next.type !== "FTD") return false;
+    return !generatedEvents.some(
+      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("FTD-STBY")
+    );
+  });
+  console.log("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
+  if (traineesStillNeedingStbyFtd.length > 0) {
     let currentStbyLine = 1;
     let currentTime = ftdStartTime;
     const minSpacing = ftdTurnaround;
-    console.log(`FTD STBY: Scheduling ${traineesNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
-    for (const trainee of traineesNeedingStbyFtd) {
+    console.log(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
+    for (const trainee of traineesStillNeedingStbyFtd) {
       const { next } = traineeNextEventMap.get(trainee.fullName);
       if (!next) continue;
       let placed = false;
       while (!placed && currentStbyLine <= 20) {
-        if (currentTime + next.duration <= flyingEndTime) {
+        if (currentTime + next.duration <= ftdEndTime) {
           const hasConflict = generatedEvents.some((e) => {
             if (e.resourceId !== `STBY ${currentStbyLine}`) return false;
             const eventEnd = e.startTime + e.duration + minSpacing;
@@ -66593,7 +66629,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         } else {
           currentStbyLine++;
-          currentTime = flyingStartTime;
+          currentTime = ftdStartTime;
         }
       }
       if (!placed) {
@@ -68456,10 +68492,8 @@ ${"=".repeat(60)}`);
       "Duty Sup",
       "TWR DI",
       ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
-      ...Array.from({ length: 5 }, (_, i) => `FTD ${i + 1}`),
-      // Always 5 FTD lines for display
-      ...Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`),
-      // Always 4 CPT lines for display
+      ...Array.from({ length: availableFtdCount }, (_, i) => `FTD ${i + 1}`),
+      ...Array.from({ length: availableCptCount }, (_, i) => `CPT ${i + 1}`),
       ...Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`)
     ];
     console.log("Built all resources:", allResources, "STBY lines:", stbyLineCount);
