@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AircraftAvailabilitySnapshot, DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { calculateDailyAverageAvailability, formatDate, convertSnapshotsToTimeline } from '../utils/aircraftAvailabilityUtils';
 import { logAudit } from '../utils/auditLogger';
+
 interface AircraftAvailabilityOverlayProps {
     currentDate: Date;
     totalAircraft: number;
@@ -35,28 +36,35 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const overlayRef = useRef<SVGSVGElement>(null);
     // Track last value set by THIS overlay to avoid re-syncing our own updates
     const lastSetByOverlay = useRef<number>(plannedAvailability);
-    // Stable ref for onAvailabilityChange to avoid re-running snapshots effect on every render
+    // Stable ref for onAvailabilityChange to avoid re-render loop
     const onAvailabilityChangeRef = useRef(onAvailabilityChange);
     useEffect(() => { onAvailabilityChangeRef.current = onAvailabilityChange; }, [onAvailabilityChange]);
 
+    // Helper: make the day-start (0001) timestamp for currentDate
+    const makeDayStart = (date: Date): Date => {
+        const d = new Date(date);
+        d.setHours(0, 0, 1, 0);
+        return d;
+    };
+
     // Load snapshots from localStorage on mount / date change ONLY
-    // NOTE: plannedAvailability intentionally excluded from deps to avoid resetting on every slider move
     useEffect(() => {
         const dateKey = formatDate(currentDate);
         const stored = localStorage.getItem(`aircraft-availability-${dateKey}`);
         if (stored) {
             const data = JSON.parse(stored);
-            setSnapshots(data.snapshots.map((s: any) => ({
+            const loaded: AircraftAvailabilitySnapshot[] = data.snapshots.map((s: any) => ({
                 ...s,
                 timestamp: new Date(s.timestamp)
-            })));
-            const lastAvailable = data.snapshots[data.snapshots.length - 1]?.available ?? plannedAvailability;
+            }));
+            setSnapshots(loaded);
+            const lastAvailable = loaded[loaded.length - 1]?.available ?? plannedAvailability;
             setCurrentAvailable(lastAvailable);
             lastSetByOverlay.current = lastAvailable;
         } else {
             // Initialize with planned availability at start of day (0001)
             const initialSnapshot: AircraftAvailabilitySnapshot = {
-                timestamp: (() => { const dayStart = new Date(currentDate); dayStart.setHours(0, 0, 1, 0); return dayStart; })(),
+                timestamp: makeDayStart(currentDate),
                 available: plannedAvailability,
                 total: totalAircraft,
                 notes: 'Initial planned availability at start of day'
@@ -64,32 +72,23 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             setSnapshots([initialSnapshot]);
             setCurrentAvailable(plannedAvailability);
             lastSetByOverlay.current = plannedAvailability;
-                
-                // Log audit record for initial availability setup
-                const initialDescription = `Aircraft availability initialized at ${plannedAvailability} (${totalAircraft - plannedAvailability} aircraft unavailable)`;
-                const initialDetails = `Time: ${new Date().toLocaleTimeString()} | Initial: ${plannedAvailability} | Total: ${totalAircraft} | Type: Initial setup`;
-                logAudit({
-                    page: "Program Schedule",
-                    action: "Add",
-                    description: initialDescription,
-                    changes: initialDetails
-                });
+
+            logAudit({
+                page: "Program Schedule",
+                action: "Add",
+                description: `Aircraft availability initialized at ${plannedAvailability} (${totalAircraft - plannedAvailability} aircraft unavailable)`,
+                changes: `Time: ${new Date().toLocaleTimeString()} | Initial: ${plannedAvailability} | Total: ${totalAircraft} | Type: Initial setup`
+            });
         }
-    }, [currentDate.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps - use string to avoid new Date() reference changes
-
-
+    }, [currentDate.toDateString()]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Save and calculate average whenever snapshots change
-    // NOTE: onAvailabilityChange intentionally excluded from deps (use ref) to avoid re-render loop
     useEffect(() => {
         if (snapshots.length > 0) {
-            // Convert snapshots to timeline format for calculation
             const timeline = convertSnapshotsToTimeline(snapshots);
-            
-            // Calculate average only using data within flying window
             const avg = calculateDailyAverageAvailability(
-                timeline, 
-                dayFlyingStart.replace(':', ''), 
+                timeline,
+                dayFlyingStart.replace(':', ''),
                 dayFlyingEnd.replace(':', '')
             );
 
@@ -106,10 +105,43 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         }
     }, [snapshots, dayFlyingStart, dayFlyingEnd, currentDate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Calculate Y position for a given aircraft count (snap to lower grid line)
+    // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Priorities panel)
+    // When this happens, update the day-start snapshot (index 0) to the new value so the
+    // line always starts at the correct value at 0001 — and add a new snapshot at 0001
+    // if the change comes from outside (not from a drag).
+    useEffect(() => {
+        if (isDraggingRef.current) return;
+        if (plannedAvailability === lastSetByOverlay.current) return;
+
+        // External change: update currentAvailable display and update/replace the
+        // initial snapshot so the trace starts from the correct value.
+        setCurrentAvailable(plannedAvailability);
+        lastSetByOverlay.current = plannedAvailability;
+
+        setSnapshots(prev => {
+            if (prev.length === 0) {
+                return [{
+                    timestamp: makeDayStart(currentDate),
+                    available: plannedAvailability,
+                    total: totalAircraft,
+                    notes: `Availability set to ${plannedAvailability} from Build Factors`
+                }];
+            }
+            // Replace or update the very first (day-start) snapshot to new value.
+            // All subsequent snapshots (user drags during the day) remain intact.
+            const updated = [...prev];
+            updated[0] = {
+                ...updated[0],
+                available: plannedAvailability,
+                total: totalAircraft,
+                notes: `Availability updated to ${plannedAvailability} from Build Factors`
+            };
+            return updated;
+        });
+    }, [plannedAvailability]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Calculate Y position for a given aircraft count
     const getYPosition = (aircraftCount: number): number => {
-        // Available aircraft = rows from top
-        // So Y position = aircraftCount * rowHeight
         return aircraftCount * rowHeight;
     };
 
@@ -126,35 +158,22 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return getXPosition(endOfDay);
     };
 
-    // Handle drag start
+    // Drag state
     const [isDragging, setIsDragging] = useState(false);
-    const [dragY, setDragY] = useState(0); // Store raw Y position during drag
-    const [mouseX, setMouseX] = useState(0); // Store mouse X position for tooltip
-    // Refs to avoid stale closures in event listeners
+    const [dragY, setDragY] = useState(0);
+    const [mouseX, setMouseX] = useState(0);
     const isDraggingRef = useRef(false);
     const dragYRef = useRef(0);
     const snapshotsRef = useRef(snapshots);
     const rowHeightRef = useRef(rowHeight);
     const totalAircraftRef = useRef(totalAircraft);
+    const plannedAvailabilityRef = useRef(plannedAvailability);
     useEffect(() => { snapshotsRef.current = snapshots; }, [snapshots]);
     useEffect(() => { rowHeightRef.current = rowHeight; }, [rowHeight]);
     useEffect(() => { totalAircraftRef.current = totalAircraft; }, [totalAircraft]);
-    // Sync line position when plannedAvailability changes from OUTSIDE (e.g. Settings panel slider moved)
-    useEffect(() => {
-        // Don't sync if we're currently dragging - drag end will handle it
-        if (isDraggingRef.current) {
-            return;
-        }
-        if (plannedAvailability !== lastSetByOverlay.current) {
-            setCurrentAvailable(plannedAvailability);
-        } else {
-        }
-    }, [plannedAvailability]);
+    useEffect(() => { plannedAvailabilityRef.current = plannedAvailability; }, [plannedAvailability]);
 
-
-    // Handle drag start on the solid line
     const handleLineMouseDown = async (e: React.MouseEvent) => {
-        // Check if system is frozen and aircraft availability is not allowed
         const freezeRaw = localStorage.getItem('systemFreezeState');
         if (freezeRaw) {
             const freeze = JSON.parse(freezeRaw);
@@ -168,8 +187,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
-        
-        
+
         isDraggingRef.current = true;
         dragYRef.current = y;
         setIsDragging(true);
@@ -177,118 +195,75 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         setMouseX(x);
     };
 
-    // Handle drag move - smooth movement with raw Y position
     const handleDragMove = (e: MouseEvent) => {
         if (!isDraggingRef.current || !overlayRef.current) return;
-
         const rect = overlayRef.current.getBoundingClientRect();
         const y = e.clientY - rect.top;
         const x = e.clientX - rect.left;
-        
         dragYRef.current = y;
         setDragY(y);
         setMouseX(x);
-        
         const rowsFromTop = y / rowHeightRef.current;
         const clampedCount = Math.max(0, Math.min(totalAircraftRef.current, rowsFromTop));
         setCurrentAvailable(clampedCount);
     };
 
-    // Handle drag end - snap to nearest whole number based on final drag position
-    // Uses refs to avoid stale closure issues with event listeners
     const handleDragEnd = () => {
-        if (isDraggingRef.current) {
-            isDraggingRef.current = false;
-            setIsDragging(false);
-            
-            // Use ref values to avoid stale closures
-            const finalDragY = dragYRef.current;
-            const currentRowHeight = rowHeightRef.current;
-            const currentTotalAircraft = totalAircraftRef.current;
-            const currentSnapshots = snapshotsRef.current;
+        if (!isDraggingRef.current) return;
+        isDraggingRef.current = false;
+        setIsDragging(false);
 
-            
-            // Calculate aircraft count from final drag Y position
-            const rowsFromTop = finalDragY / currentRowHeight;
-            const exactCount = rowsFromTop;
-            
-            // Snap to nearest whole number
-            const snappedCount = Math.round(Math.max(0, Math.min(currentTotalAircraft, exactCount)));
-            
-            const previousAvailability = currentSnapshots[currentSnapshots.length - 1]?.available || plannedAvailability;
-            const valueChanged = snappedCount !== previousAvailability;
-            
-            console.log('✅ DRAG END:', {
-                timestamp: new Date().toISOString(),
-                dragY: finalDragY.toFixed(2),
-                rowsFromTop: rowsFromTop.toFixed(2),
-                exactCount: exactCount.toFixed(2),
-                snappedCount: snappedCount,
-                previousAvailability: previousAvailability,
-                valueChanged: valueChanged,
-                snapshotsBeforeUpdate: snapshots.length
+        const finalDragY = dragYRef.current;
+        const currentRowHeight = rowHeightRef.current;
+        const currentTotalAircraft = totalAircraftRef.current;
+        const currentSnapshots = snapshotsRef.current;
+
+        const rowsFromTop = finalDragY / currentRowHeight;
+        const snappedCount = Math.round(Math.max(0, Math.min(currentTotalAircraft, rowsFromTop)));
+
+        const previousAvailability = currentSnapshots[currentSnapshots.length - 1]?.available ?? plannedAvailabilityRef.current;
+        const valueChanged = snappedCount !== previousAvailability;
+
+        // Always update lastSetByOverlay BEFORE any state/prop changes
+        lastSetByOverlay.current = snappedCount;
+        setCurrentAvailable(snappedCount);
+
+        if (valueChanged) {
+            if (onUpdatePlannedAvailability) {
+                onUpdatePlannedAvailability(snappedCount);
+            }
+
+            logAudit({
+                page: "Program Schedule",
+                action: "Edit",
+                description: `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${currentTotalAircraft - snappedCount} aircraft unavailable)`,
+                changes: `Time: ${new Date().toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${currentTotalAircraft}`
             });
-            
-            // ALWAYS update lastSetByOverlay BEFORE any state/prop changes
-            // This prevents the plannedAvailability sync useEffect from overwriting our drag result
-            lastSetByOverlay.current = snappedCount;
-            setCurrentAvailable(snappedCount);
 
-            // Sync with Settings panel slider
-            if (valueChanged) {
-                if (onUpdatePlannedAvailability) {
-                    onUpdatePlannedAvailability(snappedCount);
-                } else {
-                }
-            }
-            
-                // Log audit record for availability change
-                const changeDescription = `Aircraft availability changed from ${previousAvailability} to ${snappedCount} (${currentTotalAircraft - snappedCount} aircraft unavailable)`;
-                const changeDetails = `Time: ${new Date().toLocaleTimeString()} | Previous: ${previousAvailability} | New: ${snappedCount} | Total: ${currentTotalAircraft}`;
-                logAudit({
-                    page: "Program Schedule",
-                    action: "Edit",
-                    description: changeDescription,
-                    changes: changeDetails
-                });
+            // Create snapshot at current real-wall-clock time within the selected date
+            const now = new Date();
+            const snapshotTime = new Date(
+                currentDate.getFullYear(),
+                currentDate.getMonth(),
+                currentDate.getDate(),
+                now.getHours(),
+                now.getMinutes(),
+                now.getSeconds(),
+                now.getMilliseconds()
+            );
 
-            // Create new snapshot if value changed
-            if (valueChanged) {
-                // Create timestamp using currentDate as base, with current time
-                   const now = new Date();
-                   
-                   // Create snapshot time preserving local timezone
-                   const snapshotTime = new Date(
-                       currentDate.getFullYear(),
-                       currentDate.getMonth(),
-                       currentDate.getDate(),
-                       now.getHours(),
-                       now.getMinutes(),
-                       now.getSeconds(),
-                       now.getMilliseconds()
-                   );
-                
-                
-                const newSnapshot: AircraftAvailabilitySnapshot = {
-                    timestamp: snapshotTime,
-                    available: snappedCount,
-                    total: currentTotalAircraft,
-                    notes: `Availability changed to ${snappedCount}`
-                };
-                
-                
-                setSnapshots(prev => {
-                    const updated = [...prev, newSnapshot];
-                    return updated;
-                });
-            } else {
-                console.log('⏭️ NO SNAPSHOT CREATED - Value unchanged');
-            }
+            const newSnapshot: AircraftAvailabilitySnapshot = {
+                timestamp: snapshotTime,
+                available: snappedCount,
+                total: currentTotalAircraft,
+                notes: `Availability changed to ${snappedCount}`
+            };
+
+            setSnapshots(prev => [...prev, newSnapshot]);
         }
     };
 
-    // Add global mouse event listeners for dragging
-    // Use refs for handlers to avoid stale closures
+    // Global mouse listeners for drag
     const handleDragMoveRef = useRef(handleDragMove);
     const handleDragEndRef = useRef(handleDragEnd);
     useEffect(() => { handleDragMoveRef.current = handleDragMove; });
@@ -307,61 +282,65 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         }
     }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Update component every minute to transition solid line to dashed as time passes
+    // Tick every minute to transition solid→dashed as time passes
     const [, setCurrentTime] = useState(new Date());
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 60000); // Update every minute
-
+        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
 
-    // Use dragY during dragging for smooth movement, otherwise use calculated position
     const displayY = isDragging ? dragY : getYPosition(currentAvailable);
-    const currentY = getYPosition(currentAvailable); // Keep for tooltip positioning
     const endOfDayX = getEndOfDayX();
+    const now = new Date();
+    const currentTimeX = getXPosition(now);
 
-    // Render historical segments - each segment between snapshots
+    /**
+     * Render the historical (dashed) trace.
+     *
+     * Each snapshot[i] represents a new availability value that takes effect at snapshot[i].timestamp.
+     * The trace for snapshot[i] is a horizontal dashed line drawn from:
+     *   - startX = X position of snapshot[i].timestamp  (where this value begins)
+     *   - endX   = X position of snapshot[i+1].timestamp (where the next change happens)
+     *              OR currentTimeX for the last past segment
+     *
+     * A vertical connector is drawn at snapshot[i].timestamp going from the previous value's Y
+     * down (or up) to snapshot[i]'s Y — this always moves in the X-forward direction.
+     *
+     * The first snapshot's horizontal starts at X=0 (start of day display) because that value
+     * was set at 0001 and the display starts at startHour (which may be 0 or 8 etc).
+     * We draw from pixel 0 of the SVG to represent "from the start of the visible timeline."
+     */
     const renderHistoricalLines = () => {
-        if (snapshots.length === 0) {
-            return null;
-        }
-        
-        // Get current time to determine which snapshots are historical
-        const now = new Date();
-        const currentTimeX = getXPosition(now);
-        
-           // Use all snapshots without filtering
-           const filteredSnapshots = snapshots;
+        if (snapshots.length === 0) return null;
 
+        const lines: React.ReactNode[] = [];
 
-        
-        const lines = [];
-        for (let i = 0; i < filteredSnapshots.length; i++) {
-            const snapshot = filteredSnapshots[i];
-            const snapshotX = getXPosition(snapshot.timestamp);
-            
-            // Only render this segment if the snapshot is in the past (before current time)
-            // Skip the last snapshot if it's at or after current time (it will be rendered separately)
-            if (i === filteredSnapshots.length - 1 && snapshotX >= currentTimeX) {
-                continue;
+        for (let i = 0; i < snapshots.length; i++) {
+            const snapshot = snapshots[i];
+            const snapshotX = i === 0 ? 0 : getXPosition(snapshot.timestamp);
+
+            // Clamp snapshotX to be non-negative (don't draw left of the visible area)
+            const clampedStartX = Math.max(0, snapshotX);
+
+            // End X: next snapshot's start, or currentTime for the last segment
+            let endX: number;
+            if (i < snapshots.length - 1) {
+                endX = Math.max(0, getXPosition(snapshots[i + 1].timestamp));
+            } else {
+                // Last snapshot: draw up to current time (past portion)
+                endX = Math.min(currentTimeX, endOfDayX);
             }
-            
-            // For the first snapshot, start from the beginning of the day (0 hours)
-            const startX = i === 0 ? 0 : snapshotX;
-            const endX = i === filteredSnapshots.length - 1 ? currentTimeX : getXPosition(filteredSnapshots[i + 1].timestamp);
+
+            // Don't draw a zero-width or backwards segment
+            if (endX <= clampedStartX) continue;
+
             const y = getYPosition(snapshot.available);
-            
-            // Only log specific lines to reduce spam
-               if (i === 0 || i === 5 || i === filteredSnapshots.length - 1) {
-               }
-            
-            // Add horizontal line for this segment
+
+            // Horizontal dashed segment for this availability value
             lines.push(
                 <line
-                    key={`history-${i}`}
-                    x1={startX}
+                    key={`history-h-${i}`}
+                    x1={clampedStartX}
                     y1={y}
                     x2={endX}
                     y2={y}
@@ -371,21 +350,20 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                     className="pointer-events-none"
                 />
             );
-            
-            // Add vertical connector line if there's a previous snapshot with different availability
+
+            // Vertical connector: drawn at snapshot[i].timestamp going from prev value → current value
+            // Only for i > 0 and only when the value actually changed
             if (i > 0) {
-                const prevSnapshot = filteredSnapshots[i - 1];
-                const prevY = getYPosition(prevSnapshot.available);
-                
-                // Only add vertical line if availability changed
-                if (prevSnapshot.available !== snapshot.available) {
-                    // Draw vertical line at startX (where previous segment ends and new one begins)
+                const prevY = getYPosition(snapshots[i - 1].available);
+                if (prevY !== y) {
+                    // Draw vertical at this snapshot's X position (not prev — always left→right)
+                    const vertX = Math.max(0, getXPosition(snapshot.timestamp));
                     lines.push(
                         <line
-                            key={`vertical-${i}`}
-                            x1={startX}
+                            key={`history-v-${i}`}
+                            x1={vertX}
                             y1={prevY}
-                            x2={startX}
+                            x2={vertX}
                             y2={y}
                             stroke="rgba(236, 72, 153, 0.4)"
                             strokeWidth="2"
@@ -396,156 +374,59 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 }
             }
         }
+
         return lines;
     };
 
-    // Get the last snapshot for the solid line
+    // The last snapshot defines where the solid (future) line begins
     const lastSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
-    const lastChangeX = lastSnapshot ? getXPosition(lastSnapshot.timestamp) : 0;
-    
-    // Get current time position
-    const now = new Date();
-    const currentTimeX = getXPosition(now);
-    
-    // Debug timestamp comparison
-    if (lastSnapshot) {
-    }
-    
-    // Determine if we need to split the line into history (dashed) and future (solid)
-    const needsSplit = lastSnapshot && currentTimeX > lastChangeX && currentTimeX < endOfDayX;
-    
+    const lastChangeX = lastSnapshot ? Math.max(0, getXPosition(lastSnapshot.timestamp)) : 0;
 
-    return (<>
-        <svg
-            ref={overlayRef}
-            className="absolute top-0 left-0 w-full h-full"
-            style={{ zIndex: 5, pointerEvents: 'none' }}
-        >
-            {/* Historical dashed lines - one segment for each snapshot period */}
-            {renderHistoricalLines()}
+    // Solid future line runs from max(lastChangeX, currentTimeX) to end of day
+    // It always goes left→right and never extends into the historical (dashed) region.
+    const solidStartX = Math.max(lastChangeX, currentTimeX);
+    const showSolidLine = solidStartX < endOfDayX;
 
-               {/* Solid line for current availability - from last change to end of day - DRAGGABLE */}
-{lastSnapshot ? (
-                      <g>
-                          {needsSplit ? (
-                              <>
-                                  {/* Solid line from current time to end of day (future) */}
-                                  <line
-                                      x1={currentTimeX}
-                                      y1={displayY}
-                                      x2={endOfDayX}
-                                      y2={displayY}
-                                      stroke="rgba(236, 72, 153, 0.4)"
-                                      strokeWidth="2"
-                                      className="pointer-events-none"
-                                  />
-                                  {/* Invisible wider line for easier clicking/dragging - only on future part */}
-                                  <line
-                                      x1={currentTimeX}
-                                      y1={displayY}
-                                      x2={endOfDayX}
-                                      y2={displayY}
-                                      stroke="transparent"
-                                      strokeWidth="20"
-                                      style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                                      onMouseDown={handleLineMouseDown}
-                                  />
-                              </>
-) : (
-                                <>
-                                    {/* If current time is before last change, split into historical and future */}
-                                    {currentTimeX < lastChangeX ? (
-                                        <>
-                                            {/* Dashed line from last change to current time (historical - uses last snapshot Y) */}
-                                            <line
-                                                x1={lastChangeX}
-                                                y1={getYPosition(lastSnapshot.available)}
-                                                x2={currentTimeX}
-                                                y2={getYPosition(lastSnapshot.available)}
-                                                stroke="rgba(236, 72, 153, 0.4)"
-                                                strokeWidth="2"
-                                                strokeDasharray="8 4"
-                                                className="pointer-events-none"
-                                            />
-                                            {/* Solid line from current time to end of day (future - uses displayY) */}
-                                            <line
-                                                x1={currentTimeX}
-                                                y1={displayY}
-                                                x2={endOfDayX}
-                                                y2={displayY}
-                                                stroke="rgba(236, 72, 153, 0.4)"
-                                                strokeWidth="2"
-                                                className="pointer-events-none"
-                                            />
-                                            {/* Invisible wider line for easier clicking/dragging - only on future part */}
-                                            <line
-                                                x1={currentTimeX}
-                                                y1={displayY}
-                                                x2={endOfDayX}
-                                                y2={displayY}
-                                                stroke="transparent"
-                                                strokeWidth="20"
-                                                style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                                                onMouseDown={handleLineMouseDown}
-                                            />
-                                        </>
-                                    ) : (
-                                        <>
-                                            {/* If current time is after last change or after end of day, show full line */}
-                                            <line
-                                                x1={lastChangeX}
-                                                y1={displayY}
-                                                x2={endOfDayX}
-                                                y2={displayY}
-                                                stroke="rgba(236, 72, 153, 0.4)"
-                                                strokeWidth="2"
-                                                strokeDasharray={currentTimeX >= endOfDayX ? "8 4" : undefined}
-                                                className="pointer-events-none"
-                                            />
-                                            {/* Invisible wider line for easier clicking/dragging */}
-                                            {currentTimeX < endOfDayX && (
-                                                <line
-                                                    x1={lastChangeX}
-                                                    y1={displayY}
-                                                    x2={endOfDayX}
-                                                    y2={displayY}
-                                                    stroke="transparent"
-                                                    strokeWidth="20"
-                                                    style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                                                    onMouseDown={handleLineMouseDown}
-                                                />
-                                            )}
-                                        </>
-                                    )}
-                                </>
-                            )}
-                        </g>
-                     ) : (
-                         // If no snapshot exists (shouldn't happen), render full draggable line from start of day
-                         <g>
-                             <line
-                                 x1={0}
-                                 y1={displayY}
-                                 x2={endOfDayX}
-                                 y2={displayY}
-                                 stroke="rgba(236, 72, 153, 0.4)"
-                                 strokeWidth="2"
-                                 className="pointer-events-none"
-                             />
-                             <line
-                                 x1={0}
-                                 y1={displayY}
-                                 x2={endOfDayX}
-                                 y2={displayY}
-                                 stroke="transparent"
-                                 strokeWidth="20"
-                                 style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                                 onMouseDown={handleLineMouseDown}
-                             />
-                         </g>
-                     )}
+    return (
+        <>
+            <svg
+                ref={overlayRef}
+                className="absolute top-0 left-0 w-full h-full"
+                style={{ zIndex: 5, pointerEvents: 'none' }}
+            >
+                {/* Historical dashed trace — always left to right */}
+                {renderHistoricalLines()}
+
+                {/* Solid line for future availability — draggable */}
+                {showSolidLine && (
+                    <g>
+                        {/* Visual solid line */}
+                        <line
+                            x1={solidStartX}
+                            y1={displayY}
+                            x2={endOfDayX}
+                            y2={displayY}
+                            stroke="rgba(236, 72, 153, 0.8)"
+                            strokeWidth="2"
+                            className="pointer-events-none"
+                        />
+                        {/* Invisible wider hit target for dragging */}
+                        <line
+                            x1={solidStartX}
+                            y1={displayY}
+                            x2={endOfDayX}
+                            y2={displayY}
+                            stroke="transparent"
+                            strokeWidth="20"
+                            style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
+                            onMouseDown={handleLineMouseDown}
+                        />
+                    </g>
+                )}
+
+                {/* If day is fully in the past, show full dashed line (already handled by renderHistoricalLines) */}
+                {/* Nothing extra needed */}
             </svg>
-
         </>
     );
 };
