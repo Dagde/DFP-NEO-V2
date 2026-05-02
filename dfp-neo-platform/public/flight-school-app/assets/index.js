@@ -4885,7 +4885,7 @@ const AircraftAvailabilityOverlay = ({
   const now = /* @__PURE__ */ new Date();
   const currentTimeX = getXPosition(now);
   const sortedSnaps = sortSnapshots(snapshots);
-  const lastSnap = sortedSnaps.length > 0 ? sortedSnaps[sortedSnaps.length - 1] : null;
+  sortedSnaps.length > 0 ? sortedSnaps[sortedSnaps.length - 1] : null;
   const renderHistoricalLines = () => {
     if (sortedSnaps.length === 0) return null;
     const lines = [];
@@ -4939,10 +4939,7 @@ const AircraftAvailabilityOverlay = ({
     }
     return lines;
   };
-  const lastSnapX = lastSnap ? Math.max(0, getXPosition(lastSnap.timestamp)) : 0;
-  const isToday = currentDate.toDateString() === now.toDateString();
-  const solidStartX = isToday ? Math.min(Math.max(lastSnapX, currentTimeX), endOfDayX - 1) : lastSnapX;
-  const showSolidLine = solidStartX < endOfDayX;
+  const solidStartX = 0;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
     {
@@ -4950,8 +4947,7 @@ const AircraftAvailabilityOverlay = ({
       className: "absolute top-0 left-0 w-full h-full",
       style: { zIndex: 5, pointerEvents: "none" },
       children: [
-        renderHistoricalLines(),
-        showSolidLine && /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "line",
             {
@@ -4977,7 +4973,8 @@ const AircraftAvailabilityOverlay = ({
               onMouseDown: handleLineMouseDown
             }
           )
-        ] })
+        ] }),
+        renderHistoricalLines()
       ]
     }
   ) });

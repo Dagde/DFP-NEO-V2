@@ -340,15 +340,12 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return lines;
     };
 
-    // Solid line: always visible from last snapshot X (or current time on today) to end of day.
-    // For today: solid starts at max(lastSnapX, currentTimeX) — future portion only.
-    // For past/future dates: solid starts at lastSnapX so it's always visible and draggable.
-    const lastSnapX = lastSnap ? Math.max(0, getXPosition(lastSnap.timestamp)) : 0;
-    const isToday = currentDate.toDateString() === now.toDateString();
-    const solidStartX = isToday
-        ? Math.min(Math.max(lastSnapX, currentTimeX), endOfDayX - 1)
-        : lastSnapX;
-    const showSolidLine = solidStartX < endOfDayX;
+    // Solid line: always runs full width (0 → endOfDayX) at displayY.
+    // The dashed history segments are rendered on top, so the solid line is visually
+    // only "exposed" in the future (undashed) region.
+    // This guarantees the line is always present and draggable on any date.
+    const solidStartX = 0;
+    const showSolidLine = true;
 
     return (
         <>
@@ -357,29 +354,27 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 className="absolute top-0 left-0 w-full h-full"
                 style={{ zIndex: 5, pointerEvents: 'none' }}
             >
-                {/* Historical dashed trace */}
-                {renderHistoricalLines()}
+                {/* Solid line — full width, always visible, draggable.
+                    Rendered FIRST (behind dashed history) so history overlays it. */}
+                <g>
+                    <line
+                        x1={solidStartX} y1={displayY}
+                        x2={endOfDayX}   y2={displayY}
+                        stroke="rgba(236, 72, 153, 0.85)"
+                        strokeWidth="2"
+                        className="pointer-events-none"
+                    />
+                    <line
+                        x1={solidStartX} y1={displayY}
+                        x2={endOfDayX}   y2={displayY}
+                        stroke="transparent" strokeWidth="20"
+                        style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
+                        onMouseDown={handleLineMouseDown}
+                    />
+                </g>
 
-                {/* Solid future line — draggable */}
-                {showSolidLine && (
-                    <g>
-                        <line
-                            x1={solidStartX} y1={displayY}
-                            x2={endOfDayX}   y2={displayY}
-                            stroke="rgba(236, 72, 153, 0.85)"
-                            strokeWidth="2"
-                            className="pointer-events-none"
-                        />
-                        {/* Wide invisible hit-target */}
-                        <line
-                            x1={solidStartX} y1={displayY}
-                            x2={endOfDayX}   y2={displayY}
-                            stroke="transparent" strokeWidth="20"
-                            style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
-                            onMouseDown={handleLineMouseDown}
-                        />
-                    </g>
-                )}
+                {/* Historical dashed trace — rendered ON TOP of solid line */}
+                {renderHistoricalLines()}
             </svg>
         </>
     );
