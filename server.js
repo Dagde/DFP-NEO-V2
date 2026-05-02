@@ -8256,6 +8256,58 @@ app.get('*', (req, res) => {
 });
 
 // ============================================================
+// DEBUG: Check DailyAverage and Events for 2020-05-02
+// ============================================================
+app.get('/api/debug/check-2020-date', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const targetDate = '2020-05-02';
+    
+    // Check DailyAverage record for 2020-05-02
+    const dailyAvg = await db.$queryRawUnsafe(
+      `SELECT * FROM "DailyAverage" WHERE date = $1::text`,
+      targetDate
+    );
+    
+    // Check AircraftAvailabilityEvent records for 2020-05-02
+    const eventCount = await db.$queryRawUnsafe(
+      `SELECT COUNT(*) as count FROM "AircraftAvailabilityEvent" WHERE date = $1::text`,
+      targetDate
+    );
+    
+    // Get all DailyAverage records around that time
+    const avgSample = await db.$queryRawUnsafe(
+      `SELECT date, "dailyAverage", "totalFleet", "createdAt", "updatedAt" 
+       FROM "DailyAverage" 
+       WHERE date >= '2020-05-01' AND date <= '2020-05-05'
+       ORDER BY date`
+    );
+    
+    // Get total counts
+    const totals = await db.$queryRawUnsafe(
+      `SELECT 
+         (SELECT COUNT(*) FROM "DailyAverage") as avg_count,
+         (SELECT MIN(date) FROM "DailyAverage") as min_date,
+         (SELECT MAX(date) FROM "DailyAverage") as max_date,
+         (SELECT COUNT(*) FROM "AircraftAvailabilityEvent") as event_count,
+         (SELECT MIN(date) FROM "AircraftAvailabilityEvent") as min_event_date,
+         (SELECT MAX(date) FROM "AircraftAvailabilityEvent") as max_event_date`
+    );
+    
+    res.json({
+      targetDate,
+      dailyAverage: dailyAvg[0] || null,
+      eventCount: eventCount[0] || null,
+      avgSample,
+      totals: totals[0] || null
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error checking 2020 date:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
