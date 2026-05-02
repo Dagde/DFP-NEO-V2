@@ -105,6 +105,39 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return order;
     }, [traineeLMPs]);
 
+    const awardEventOptions = useMemo(() => {
+        if (!activeAward) return [];
+
+        const eligibleTrainees = activeTrainees.filter(trainee => activeAward.course === 'all' || trainee.course === activeAward.course);
+        const eligibleNames = new Set(eligibleTrainees.map(trainee => trainee.fullName || trainee.name));
+        const optionMap = new Map<string, { value: string; label: string; order: number }>();
+
+        eligibleTrainees.forEach(trainee => {
+            const lmp = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || [];
+            lmp.forEach(item => {
+                const value = item.id || item.code;
+                if (!value || optionMap.has(value)) return;
+                const label = item.code && item.code !== value ? `${item.code} - ${value}` : value;
+                optionMap.set(value, {
+                    value,
+                    label,
+                    order: eventOrder.get(value) ?? eventOrder.get(item.code) ?? Number.MAX_SAFE_INTEGER,
+                });
+            });
+        });
+
+        pt051Assessments.forEach(assessment => {
+            if (!eligibleNames.has(assessment.traineeFullName) || !assessment.flightNumber || optionMap.has(assessment.flightNumber)) return;
+            optionMap.set(assessment.flightNumber, {
+                value: assessment.flightNumber,
+                label: assessment.flightNumber,
+                order: eventOrder.get(assessment.flightNumber) ?? Number.MAX_SAFE_INTEGER,
+            });
+        });
+
+        return Array.from(optionMap.values()).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+    }, [activeAward, activeTrainees, traineeLMPs, pt051Assessments, eventOrder]);
+
     const pt051ScoreRecords = useMemo(() => {
         return Array.from(pt051Assessments.values())
             .filter(assessment => typeof assessment.overallGrade === 'number')
@@ -532,12 +565,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                         onChange={event => updateAwardCriterion(criterion.id, { enabled: event.target.checked })}
                                                         className="h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                                                     />
-                                                    <input
+                                                    <select
                                                         value={criterion.event}
-                                                        onChange={event => updateAwardCriterion(criterion.id, { event: event.target.value.toUpperCase() })}
-                                                        placeholder="Event"
+                                                        onChange={event => updateAwardCriterion(criterion.id, { event: event.target.value })}
                                                         className="bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                    />
+                                                    >
+                                                        <option value="">Select LMP event</option>
+                                                        {criterion.event && !awardEventOptions.some(option => option.value === criterion.event) && (
+                                                            <option value={criterion.event}>{criterion.event}</option>
+                                                        )}
+                                                        {awardEventOptions.map(option => (
+                                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                                        ))}
+                                                    </select>
                                                     <input
                                                         type="number"
                                                         min={0.1}
