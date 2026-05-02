@@ -2972,17 +2972,13 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
          (SELECT MAX(date) FROM "AircraftAvailabilityEvent") as max_event_date`
     );
     
-    // Perform a recalculation for this date with AEDT timezone (offset=11)
-    const recalcResult = await recalculateDailyAverage(db, targetDate, 8, 17, 24, 11);
-    
     res.json({
       targetDate,
       dailyAverage: dailyAvg[0] || null,
       eventCount: eventCount[0] || null,
       sampleEvents,
       avgSample,
-      totals: totals[0] || null,
-      recalculation: recalcResult
+      totals: totals[0] || null
     });
   } catch (error) {
     console.error('[DEBUG] Error checking daily average:', error);
