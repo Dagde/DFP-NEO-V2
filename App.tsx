@@ -3665,17 +3665,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     
 
-    // Also handle trainees in nextEventLists.flight who have NO STBY event yet at all
-    // (e.g. trainees not caught by hardModeStby but still without a scheduled flight)
+    const hasTraineeFlightOrFtdCommitment = (traineeName: string): boolean => generatedEvents.some(e =>
+        (e.type === 'flight' || e.type === 'ftd') &&
+        (e.student === traineeName || e.pilot === traineeName)
+    );
+
+    // Also handle trainees in nextEventLists.flight who have no Flight/FTD commitment yet.
+    // A trainee may only receive one Flight-or-FTD event per day, including STBY.
     const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next) return false;
-        // Check if this trainee has ANY flight event (aircraft or STBY)
-        return !generatedEvents.some(e =>
-            e.student === trainee.fullName &&
-            e.flightNumber === next.id &&
-            e.type === 'flight'
-        );
+        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
     });
 
     
@@ -3734,13 +3734,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next || next.type !== 'FTD') return false;
-        return !generatedEvents.some(e => 
-            e.student === trainee.fullName && 
-            e.flightNumber === next.id &&
-            e.type === 'ftd' &&
-            !e.resourceId.startsWith('STBY') &&
-            !e.resourceId.startsWith('FTD-STBY')
-        );
+        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
     });
     
     console.log('Trainees needing FTD recovery pass:', traineesNeedingStbyFtd.length);
@@ -3786,13 +3780,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next || next.type !== 'FTD') return false;
-        return !generatedEvents.some(e =>
-            e.student === trainee.fullName &&
-            e.flightNumber === next.id &&
-            e.type === 'ftd' &&
-            !e.resourceId.startsWith('STBY') &&
-            !e.resourceId.startsWith('FTD-STBY')
-        );
+        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
     });
 
     console.log('Trainees still needing STBY FTD events:', traineesStillNeedingStbyFtd.length);

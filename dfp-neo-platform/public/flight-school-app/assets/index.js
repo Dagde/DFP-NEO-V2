@@ -66497,12 +66497,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       stbyEvent.instructor = "TBA";
     }
   }
+  const hasTraineeFlightOrFtdCommitment = (traineeName) => generatedEvents.some(
+    (e) => (e.type === "flight" || e.type === "ftd") && (e.student === traineeName || e.pilot === traineeName)
+  );
   const traineesNeedingStby = nextEventLists.flight.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next) return false;
-    return !generatedEvents.some(
-      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "flight"
-    );
+    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
   });
   if (traineesNeedingStby.length > 0) {
     const timeIncrement = 5 / 60;
@@ -66543,9 +66544,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
-    return !generatedEvents.some(
-      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("FTD-STBY")
-    );
+    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
   });
   console.log("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
   if (traineesNeedingStbyFtd.length > 0) {
@@ -66579,9 +66578,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
-    return !generatedEvents.some(
-      (e) => e.student === trainee.fullName && e.flightNumber === next.id && e.type === "ftd" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("FTD-STBY")
-    );
+    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
   });
   console.log("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
   if (traineesStillNeedingStbyFtd.length > 0) {
