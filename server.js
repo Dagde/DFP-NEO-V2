@@ -2910,14 +2910,15 @@ app.get('/api/debug/academics', async (req, res) => {
 app.get('/api/debug/check-table-structure', async (req, res) => {
   try {
     const db = await getPrisma();
-    // Get column names for AircraftAvailabilityHistory table
+    const tableName = req.query.table || 'AircraftAvailabilityHistory';
+    // Get column names for the specified table
     const columns = await db.$queryRawUnsafe(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
-      WHERE table_name = 'AircraftAvailabilityHistory' 
+      WHERE table_name = $1::text 
       ORDER BY ordinal_position
-    `);
-    res.json({ table: 'AircraftAvailabilityHistory', columns });
+    `, tableName);
+    res.json({ table: tableName, columns });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
