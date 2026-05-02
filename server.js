@@ -2953,7 +2953,7 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
     
     // Get all AircraftAvailabilityHistory records around that time
     const avgSample = await db.$queryRawUnsafe(
-      `SELECT date, "dailyAverage", "totalFleet", "createdAt", "updatedAt" 
+      `SELECT date, "dailyAverage", COALESCE("totalFleet", "totalAircraft") as "totalFleet", "createdAt", "updatedAt" 
        FROM "AircraftAvailabilityHistory" 
        WHERE date >= $1::text || '-01' AND date <= $1::text || '-05'
        ORDER BY date`,
