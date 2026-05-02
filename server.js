@@ -4566,6 +4566,13 @@ async function ensureAircraftAvailabilityTable(db) {
     } catch (alterErr) {
       // Columns may already exist, ignore
     }
+    // Add missing core columns for compatibility with old schema
+    try {
+      await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityHistory" ADD COLUMN IF NOT EXISTS "totalFleet" INTEGER NOT NULL DEFAULT 0`);
+      await db.$executeRawUnsafe(`ALTER TABLE "AircraftAvailabilityHistory" ADD COLUMN IF NOT EXISTS "dailyAverage" DOUBLE PRECISION NOT NULL DEFAULT 0`);
+    } catch (coreColsErr) {
+      // Core columns may already exist, ignore
+    }
     console.log('✅ AircraftAvailabilityHistory table ready');
   } catch (err) {
     console.error('❌ Failed to ensure AircraftAvailabilityHistory table:', err.message);
