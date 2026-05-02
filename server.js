@@ -8258,10 +8258,10 @@ app.get('*', (req, res) => {
 // ============================================================
 // DEBUG: Check DailyAverage and Events for 2020-05-02
 // ============================================================
-app.get('/api/debug/check-2020-date', async (req, res) => {
+app.get('/api/debug/check-daily-average', async (req, res) => {
   try {
     const db = await getPrisma();
-    const targetDate = '2020-05-02';
+    const targetDate = req.query.date || '2026-05-02';
     
     // Check DailyAverage record for 2020-05-02
     const dailyAvg = await db.$queryRawUnsafe(
@@ -8269,9 +8269,20 @@ app.get('/api/debug/check-2020-date', async (req, res) => {
       targetDate
     );
     
-    // Check AircraftAvailabilityEvent records for 2020-05-02
+    // Check AircraftAvailabilityEvent records for target date
     const eventCount = await db.$queryRawUnsafe(
-      `SELECT COUNT(*) as count FROM "AircraftAvailabilityEvent" WHERE date = $1::text`,
+      `SELECT COUNT(*) as count, MIN("timestamp") as min_ts, MAX("timestamp") as max_ts 
+       FROM "AircraftAvailabilityEvent" WHERE date = $1::text`,
+      targetDate
+    );
+    
+    // Get sample events to understand the data
+    const sampleEvents = await db.$queryRawUnsafe(
+      `SELECT "id", "timestamp", "availableCount", "totalFleet", "changeType", date 
+       FROM "AircraftAvailabilityEvent" 
+       WHERE date = $1::text 
+       ORDER BY "timestamp" ASC 
+       LIMIT 10`,
       targetDate
     );
     
@@ -8294,12 +8305,17 @@ app.get('/api/debug/check-2020-date', async (req, res) => {
          (SELECT MAX(date) FROM "AircraftAvailabilityEvent") as max_event_date`
     );
     
+    // Perform a recalculation for this date with AEDT timezone (offset=11)
+    const recalcResult = await recalculateDailyAverage(db, targetDate, 8, 17, 24, 11);
+    
     res.json({
       targetDate,
       dailyAverage: dailyAvg[0] || null,
       eventCount: eventCount[0] || null,
+      sampleEvents,
       avgSample,
-      totals: totals[0] || null
+      totals: totals[0] || null,
+      recalculation: recalcResult
     });
   } catch (error) {
     console.error('[DEBUG] Error checking 2020 date:', error);
