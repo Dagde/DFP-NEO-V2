@@ -2972,13 +2972,20 @@ app.get('/api/debug/check-daily-average', async (req, res) => {
          (SELECT MAX(date) FROM "AircraftAvailabilityEvent") as max_event_date`
     );
     
+    // Convert BigInt values to String for JSON serialization
+    const serialize = (obj) => {
+      return JSON.parse(JSON.stringify(obj, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      ));
+    };
+    
     res.json({
       targetDate,
-      dailyAverage: dailyAvg[0] || null,
-      eventCount: eventCount[0] || null,
-      sampleEvents,
-      avgSample,
-      totals: totals[0] || null
+      dailyAverage: dailyAvg[0] ? serialize(dailyAvg[0]) : null,
+      eventCount: eventCount[0] ? serialize(eventCount[0]) : null,
+      sampleEvents: sampleEvents.map(e => serialize(e)),
+      avgSample: avgSample.map(e => serialize(e)),
+      totals: totals[0] ? serialize(totals[0]) : null
     });
   } catch (error) {
     console.error('[DEBUG] Error checking daily average:', error);
