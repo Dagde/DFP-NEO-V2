@@ -13809,6 +13809,7 @@ updates.forEach(update => {
                             traineesData={traineesData}
                             courseColors={courseColors}
                             scores={scores}
+                            pt051Assessments={pt051Assessments}
                             traineeLMPs={traineeLMPs}
                             onUpdateGradDate={handleUpdateGradDate}
                             onUpdateStartDate={handleUpdateStartDate}

@@ -58965,6 +58965,7 @@ const CourseProgressView = ({
   traineesData,
   courseColors,
   scores,
+  pt051Assessments,
   traineeLMPs,
   courses,
   onUpdateGradDate,
@@ -58972,13 +58973,21 @@ const CourseProgressView = ({
 }) => {
   const [showFullGraph, setShowFullGraph] = reactExports.useState(false);
   const [selectedGraphCourse, setSelectedGraphCourse] = reactExports.useState(null);
-  const [rankingCourse, setRankingCourse] = reactExports.useState("all");
-  const [includeAllScoredEvents, setIncludeAllScoredEvents] = reactExports.useState(true);
-  const [minimumScoredEvents, setMinimumScoredEvents] = reactExports.useState(1);
-  const [duxCriteria, setDuxCriteria] = reactExports.useState([
-    { id: "BGF21", event: "BGF21", weight: 2, enabled: true },
-    { id: "BIF3", event: "BIF3", weight: 2, enabled: true },
-    { id: "BNAV4", event: "BNAV4", weight: 2, enabled: true }
+  const [scoreCourse, setScoreCourse] = reactExports.useState("");
+  const [activeAwardId, setActiveAwardId] = reactExports.useState("dux");
+  const [awards, setAwards] = reactExports.useState([
+    {
+      id: "dux",
+      name: "Dux",
+      course: "all",
+      includeAllScoredEvents: true,
+      minimumScoredEvents: 1,
+      criteria: [
+        { id: "BGF21", event: "BGF21", weight: 2, enabled: true },
+        { id: "BIF3", event: "BIF3", weight: 2, enabled: true },
+        { id: "BNAV4", event: "BNAV4", weight: 2, enabled: true }
+      ]
+    }
   ]);
   reactExports.useEffect(() => {
     logAudit({
@@ -58991,16 +59000,26 @@ const CourseProgressView = ({
   const activeCourses = reactExports.useMemo(() => {
     return courses.filter((course) => courseColors[course.name]).sort((a, b) => a.name.localeCompare(b.name));
   }, [courses, courseColors]);
-  reactExports.useEffect(() => {
-    if (rankingCourse === "all") return;
-    if (!activeCourses.some((course) => course.name === rankingCourse)) {
-      setRankingCourse("all");
-    }
-  }, [activeCourses, rankingCourse]);
   const activeCourseNames = reactExports.useMemo(() => new Set(activeCourses.map((course) => course.name)), [activeCourses]);
   const activeTrainees = reactExports.useMemo(() => {
     return traineesData.filter((trainee) => !trainee.isPaused && activeCourseNames.has(trainee.course)).sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
   }, [traineesData, activeCourseNames]);
+  reactExports.useEffect(() => {
+    if (!scoreCourse && activeCourses[0]) {
+      setScoreCourse(activeCourses[0].name);
+      return;
+    }
+    if (scoreCourse && !activeCourses.some((course) => course.name === scoreCourse)) {
+      setScoreCourse(activeCourses[0]?.name || "");
+    }
+  }, [activeCourses, scoreCourse]);
+  const activeAward = awards.find((award) => award.id === activeAwardId) || awards[0];
+  reactExports.useEffect(() => {
+    if (!activeAward) return;
+    if (activeAward.course !== "all" && !activeCourses.some((course) => course.name === activeAward.course)) {
+      setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: "all" } : award));
+    }
+  }, [activeAward, activeCourses]);
   const eventOrder = reactExports.useMemo(() => {
     const order = /* @__PURE__ */ new Map();
     let index = 0;
@@ -59012,13 +59031,22 @@ const CourseProgressView = ({
     });
     return order;
   }, [traineeLMPs]);
+  const pt051ScoreRecords = reactExports.useMemo(() => {
+    return Array.from(pt051Assessments.values()).filter((assessment) => typeof assessment.overallGrade === "number").map((assessment) => ({
+      traineeName: assessment.traineeFullName,
+      event: assessment.flightNumber,
+      score: assessment.overallGrade,
+      date: assessment.date || ""
+    }));
+  }, [pt051Assessments]);
+  const scoreCourseTrainees = reactExports.useMemo(() => {
+    return activeTrainees.filter((trainee) => trainee.course === scoreCourse);
+  }, [activeTrainees, scoreCourse]);
   const scoredEvents = reactExports.useMemo(() => {
     const eventSet = /* @__PURE__ */ new Set();
-    activeTrainees.forEach((trainee) => {
-      const traineeScores = scores.get(trainee.fullName) || scores.get(trainee.name) || [];
-      traineeScores.forEach((score) => {
-        if (typeof score.score === "number") eventSet.add(score.event);
-      });
+    const traineeNames = new Set(scoreCourseTrainees.map((trainee) => trainee.fullName || trainee.name));
+    pt051ScoreRecords.forEach((record) => {
+      if (traineeNames.has(record.traineeName)) eventSet.add(record.event);
     });
     return Array.from(eventSet).sort((a, b) => {
       const aOrder = eventOrder.get(a) ?? Number.MAX_SAFE_INTEGER;
@@ -59026,24 +59054,25 @@ const CourseProgressView = ({
       if (aOrder !== bOrder) return aOrder - bOrder;
       return a.localeCompare(b);
     });
-  }, [activeTrainees, scores, eventOrder]);
+  }, [scoreCourseTrainees, pt051ScoreRecords, eventOrder]);
   const getLatestScoreForEvent = (trainee, eventCode) => {
-    const traineeScores = scores.get(trainee.fullName) || scores.get(trainee.name) || [];
-    return traineeScores.filter((score) => score.event === eventCode && typeof score.score === "number").sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+    const traineeName = trainee.fullName || trainee.name;
+    return pt051ScoreRecords.filter((record) => record.traineeName === traineeName && record.event === eventCode).sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
   };
-  const duxRankings = reactExports.useMemo(() => {
-    const selectedTrainees = activeTrainees.filter((trainee) => rankingCourse === "all" || trainee.course === rankingCourse);
+  const awardRankings = reactExports.useMemo(() => {
+    if (!activeAward) return [];
+    const selectedTrainees = activeTrainees.filter((trainee) => activeAward.course === "all" || trainee.course === activeAward.course);
     const criteriaWeights = new Map(
-      duxCriteria.filter((criterion) => criterion.enabled && criterion.event.trim() && Number.isFinite(criterion.weight) && criterion.weight > 0).map((criterion) => [criterion.event.trim().toUpperCase(), criterion.weight])
+      activeAward.criteria.filter((criterion) => criterion.enabled && criterion.event.trim() && Number.isFinite(criterion.weight) && criterion.weight > 0).map((criterion) => [criterion.event.trim().toUpperCase(), criterion.weight])
     );
     return selectedTrainees.map((trainee) => {
-      const traineeScores = scores.get(trainee.fullName) || scores.get(trainee.name) || [];
-      const scoredRecords = traineeScores.filter((score) => typeof score.score === "number");
-      const includedScores = includeAllScoredEvents ? scoredRecords : scoredRecords.filter((score) => criteriaWeights.has(score.event.toUpperCase()));
-      const totals = includedScores.reduce((acc, score) => {
-        const weight = criteriaWeights.get(score.event.toUpperCase()) ?? 1;
+      const traineeName = trainee.fullName || trainee.name;
+      const scoredRecords = pt051ScoreRecords.filter((record) => record.traineeName === traineeName);
+      const includedScores = activeAward.includeAllScoredEvents ? scoredRecords : scoredRecords.filter((record) => criteriaWeights.has(record.event.toUpperCase()));
+      const totals = includedScores.reduce((acc, record) => {
+        const weight = criteriaWeights.get(record.event.toUpperCase()) ?? 1;
         return {
-          weightedScore: acc.weightedScore + score.score * weight,
+          weightedScore: acc.weightedScore + record.score * weight,
           weight: acc.weight + weight,
           weightedEvents: acc.weightedEvents + (weight !== 1 ? 1 : 0)
         };
@@ -59054,17 +59083,48 @@ const CourseProgressView = ({
         weightedEvents: totals.weightedEvents,
         rankingScore: totals.weight > 0 ? totals.weightedScore / totals.weight : 0
       };
-    }).filter((row) => row.scoredCount >= minimumScoredEvents).sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
-  }, [activeTrainees, rankingCourse, duxCriteria, scores, includeAllScoredEvents, minimumScoredEvents]);
-  const updateDuxCriterion = (id, updates) => {
-    setDuxCriteria((prev) => prev.map((criterion) => criterion.id === id ? { ...criterion, ...updates } : criterion));
+    }).filter((row) => row.scoredCount >= activeAward.minimumScoredEvents).sort((a, b) => b.rankingScore - a.rankingScore || (a.trainee.fullName || a.trainee.name).localeCompare(b.trainee.fullName || b.trainee.name));
+  }, [activeTrainees, activeAward, pt051ScoreRecords]);
+  const updateActiveAward = (updates) => {
+    setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, ...updates } : award));
   };
-  const addDuxCriterion = () => {
+  const updateAwardCriterion = (id, updates) => {
+    setAwards((prev) => prev.map((award) => {
+      if (award.id !== activeAward.id) return award;
+      return {
+        ...award,
+        criteria: award.criteria.map((criterion) => criterion.id === id ? { ...criterion, ...updates } : criterion)
+      };
+    }));
+  };
+  const addAwardCriterion = () => {
     const id = `criterion-${Date.now()}`;
-    setDuxCriteria((prev) => [...prev, { id, event: "", weight: 2, enabled: true }]);
+    setAwards((prev) => prev.map(
+      (award) => award.id === activeAward.id ? { ...award, criteria: [...award.criteria, { id, event: "", weight: 2, enabled: true }] } : award
+    ));
   };
-  const removeDuxCriterion = (id) => {
-    setDuxCriteria((prev) => prev.filter((criterion) => criterion.id !== id));
+  const removeAwardCriterion = (id) => {
+    setAwards((prev) => prev.map(
+      (award) => award.id === activeAward.id ? { ...award, criteria: award.criteria.filter((criterion) => criterion.id !== id) } : award
+    ));
+  };
+  const addAward = () => {
+    const id = `award-${Date.now()}`;
+    setAwards((prev) => [...prev, {
+      id,
+      name: "New Award",
+      course: "all",
+      includeAllScoredEvents: true,
+      minimumScoredEvents: 1,
+      criteria: []
+    }]);
+    setActiveAwardId(id);
+  };
+  const removeAward = () => {
+    if (awards.length <= 1) return;
+    const nextAwards = awards.filter((award) => award.id !== activeAward.id);
+    setAwards(nextAwards);
+    setActiveAwardId(nextAwards[0].id);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: showFullGraph ? /* @__PURE__ */ jsxRuntimeExports.jsx(
     FullPageProgressGraph,
@@ -59105,13 +59165,27 @@ const CourseProgressView = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "Course Scores & Rankings" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Score summary and editable award ranking criteria for active course trainees." })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "PT-051 overall grades and editable award ranking criteria for active course trainees." })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 overflow-hidden", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 border-b border-gray-700", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Only events with recorded scores are shown." })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Only events with saved PT-051 overall grades are shown." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300 min-w-60", children: [
+              "Course",
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "select",
+                {
+                  value: scoreCourse,
+                  onChange: (event) => setScoreCourse(event.target.value),
+                  className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                  children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
+                }
+              )
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -59119,34 +59193,65 @@ const CourseProgressView = ({
               scoredEvents.map((eventCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3 text-center text-xs font-semibold uppercase text-gray-300 min-w-24 whitespace-nowrap", children: eventCode }, eventCode))
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
-              activeTrainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: trainee.fullName || trainee.name }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: trainee.course })
-                ] }),
+              scoreCourseTrainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: trainee.fullName || trainee.name }) }),
                 scoredEvents.map((eventCode) => {
                   const score = getLatestScoreForEvent(trainee, eventCode);
                   return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode}`);
                 })
               ] }, trainee.idNumber || trainee.fullName)),
-              activeTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available." }) })
+              scoreCourseTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available for this course." }) })
             ] })
           ] }) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 overflow-hidden", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-3 border-b border-gray-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Rankings" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Dux ranking uses editable weighted average criteria." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: "Create named awards and define how each ranking is calculated." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                "Award",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    value: activeAward.id,
+                    onChange: (event) => setActiveAwardId(event.target.value),
+                    className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                    children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: award.name }, award.id))
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: addAward,
+                  className: "px-3 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md",
+                  children: "Add Award"
+                }
+              )
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                "Award Name",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    value: activeAward.name,
+                    onChange: (event) => updateActiveAward({ name: event.target.value }),
+                    className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  }
+                )
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
                 "Course",
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "select",
                   {
-                    value: rankingCourse,
-                    onChange: (event) => setRankingCourse(event.target.value),
+                    value: activeAward.course,
+                    onChange: (event) => updateActiveAward({ course: event.target.value }),
                     className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All active courses" }),
@@ -59162,24 +59267,34 @@ const CourseProgressView = ({
                   {
                     type: "number",
                     min: 1,
-                    value: minimumScoredEvents,
-                    onChange: (event) => setMinimumScoredEvents(Math.max(1, parseInt(event.target.value, 10) || 1)),
+                    value: activeAward.minimumScoredEvents,
+                    onChange: (event) => updateActiveAward({ minimumScoredEvents: Math.max(1, parseInt(event.target.value, 10) || 1) }),
                     className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   }
                 )
-              ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: removeAward,
+                  disabled: awards.length <= 1,
+                  className: "w-full px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
+                  children: "Remove Award"
+                }
+              ) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-sm text-gray-300", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   type: "checkbox",
-                  checked: includeAllScoredEvents,
-                  onChange: (event) => setIncludeAllScoredEvents(event.target.checked),
+                  checked: activeAward.includeAllScoredEvents,
+                  onChange: (event) => updateActiveAward({ includeAllScoredEvents: event.target.checked }),
                   className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                 }
               ),
-              "Include all scored events in Dux average"
+              "Include all scored events in this award average"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
@@ -59188,19 +59303,19 @@ const CourseProgressView = ({
                   "button",
                   {
                     type: "button",
-                    onClick: addDuxCriterion,
+                    onClick: addAwardCriterion,
                     className: "px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md",
                     children: "Add Event"
                   }
                 )
               ] }),
-              duxCriteria.map((criterion) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_88px_auto] gap-2 items-center", children: [
+              activeAward.criteria.map((criterion) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_88px_auto] gap-2 items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
                     type: "checkbox",
                     checked: criterion.enabled,
-                    onChange: (event) => updateDuxCriterion(criterion.id, { enabled: event.target.checked }),
+                    onChange: (event) => updateAwardCriterion(criterion.id, { enabled: event.target.checked }),
                     className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                   }
                 ),
@@ -59208,7 +59323,7 @@ const CourseProgressView = ({
                   "input",
                   {
                     value: criterion.event,
-                    onChange: (event) => updateDuxCriterion(criterion.id, { event: event.target.value.toUpperCase() }),
+                    onChange: (event) => updateAwardCriterion(criterion.id, { event: event.target.value.toUpperCase() }),
                     placeholder: "Event",
                     className: "bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   }
@@ -59220,7 +59335,7 @@ const CourseProgressView = ({
                     min: 0.1,
                     step: 0.1,
                     value: criterion.weight,
-                    onChange: (event) => updateDuxCriterion(criterion.id, { weight: parseFloat(event.target.value) || 1 }),
+                    onChange: (event) => updateAwardCriterion(criterion.id, { weight: parseFloat(event.target.value) || 1 }),
                     className: "bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                     "aria-label": "Weight"
                   }
@@ -59229,7 +59344,7 @@ const CourseProgressView = ({
                   "button",
                   {
                     type: "button",
-                    onClick: () => removeDuxCriterion(criterion.id),
+                    onClick: () => removeAwardCriterion(criterion.id),
                     className: "px-2 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-md",
                     children: "Remove"
                   }
@@ -59240,11 +59355,11 @@ const CourseProgressView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-xs font-semibold uppercase text-gray-300", children: "Rank" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-xs font-semibold uppercase text-gray-300", children: "Trainee" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Dux Avg" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Average" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Scores" })
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
-                duxRankings.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
+                awardRankings.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-300", children: index + 1 }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-3 py-2", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-white", children: row.trainee.fullName || row.trainee.name }),
@@ -59253,7 +59368,7 @@ const CourseProgressView = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right font-mono text-sky-300", children: row.rankingScore.toFixed(2) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right text-gray-300", children: row.scoredCount })
                 ] }, row.trainee.idNumber || row.trainee.fullName)),
-                duxRankings.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-6 text-center text-gray-400", colSpan: 4, children: "No ranking data available for the selected criteria." }) })
+                awardRankings.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-6 text-center text-gray-400", colSpan: 4, children: "No ranking data available for the selected criteria." }) })
               ] })
             ] }) })
           ] })
@@ -74540,6 +74655,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             traineesData,
             courseColors,
             scores,
+            pt051Assessments,
             traineeLMPs,
             onUpdateGradDate: handleUpdateGradDate,
             onUpdateStartDate: handleUpdateStartDate
