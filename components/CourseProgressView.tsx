@@ -696,18 +696,8 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         <p className="text-xs text-white/75">Create named awards and define how each ranking is calculated.</p>
                                     </div>
                                     <div className="p-4 space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(190px,260px)_auto] gap-3 items-end">
-                                            <label className="text-sm text-gray-300">
-                                                Award
-                                                <select
-                                                    value={activeAward.id}
-                                                    onChange={event => setActiveAwardId(event.target.value)}
-                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                >
-                                                    {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
-                                                </select>
-                                            </label>
-                                            <div className="space-y-2">
+                                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
+                                            <div className="space-y-3">
                                                 <label className="block text-sm text-gray-300">
                                                     LMP
                                                     <select
@@ -728,21 +718,31 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                         {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
                                                     </select>
                                                 </label>
+                                                <label className="block text-sm text-gray-300">
+                                                    Award
+                                                    <select
+                                                        value={activeAward.id}
+                                                        onChange={event => setActiveAwardId(event.target.value)}
+                                                        className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                    >
+                                                        {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
+                                                    </select>
+                                                </label>
                                             </div>
                                             <div className="flex gap-2 justify-start sm:justify-end self-end">
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsEditingAward(prev => !prev)}
-                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                                    className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
                                                     {isEditingAward ? 'Done' : 'Edit'}
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={addAward}
-                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                                    className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
-                                                    Add
+                                                    Add Award
                                                 </button>
                                             </div>
                                         </div>

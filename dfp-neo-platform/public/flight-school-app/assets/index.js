@@ -59490,20 +59490,8 @@ const CourseProgressView = ({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(190px,260px)_auto] gap-3 items-end", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                    "Award",
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "select",
-                      {
-                        value: activeAward.id,
-                        onChange: (event) => setActiveAwardId(event.target.value),
-                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                        children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: getAwardDisplayName(award) }, award.id))
-                      }
-                    )
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
                       "LMP",
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59527,6 +59515,18 @@ const CourseProgressView = ({
                           children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
                         }
                       )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
+                      "Award",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: activeAward.id,
+                          onChange: (event) => setActiveAwardId(event.target.value),
+                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                          children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: getAwardDisplayName(award) }, award.id))
+                        }
+                      )
                     ] })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 justify-start sm:justify-end self-end", children: [
@@ -59535,7 +59535,7 @@ const CourseProgressView = ({
                       {
                         type: "button",
                         onClick: () => setIsEditingAward((prev) => !prev),
-                        className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                        className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                         children: isEditingAward ? "Done" : "Edit"
                       }
                     ),
@@ -59544,8 +59544,8 @@ const CourseProgressView = ({
                       {
                         type: "button",
                         onClick: addAward,
-                        className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-                        children: "Add"
+                        className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                        children: "Add Award"
                       }
                     )
                   ] })
