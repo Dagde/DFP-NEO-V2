@@ -2,12 +2,15 @@ import React, { useMemo } from 'react';
 import { Instructor, Trainee, ScheduleEvent } from '../types';
 import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import TafWeatherWidget from './TafWeatherWidget';
+import FlightTrackingWidget from './FlightTrackingWidget';
 
 interface SupervisorDashboardProps {
     instructorsData: Instructor[];
     traineesData: Trainee[];
     date: string;
     events: ScheduleEvent[];
+    school: string;
+    currentLocation: string;
     onNavigate: (view: string) => void;
     onOpenAuth: (event: ScheduleEvent) => void;
 }
@@ -18,7 +21,7 @@ const formatTime = (time: number) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
-const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsData, traineesData, date, events, school, currentLocation, onNavigate, onOpenAuth }) => {
     
     const flightsNeedingAuth = useMemo(() => {
         const nowInHours = new Date().getHours() + new Date().getMinutes() / 60;
@@ -57,14 +60,14 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                     <p className="text-lg text-gray-400">Overview of personnel and program status for today.</p>
                 </header>
 
-                {/* Top row: AUTH and TAF */}
-                <div className="flex flex-wrap gap-6">
+                {/* Top row: AUTH, TAF, and flight tracking */}
+                <div className="flex flex-wrap items-stretch gap-6">
                     {/* AUTH Window */}
-                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md">
+                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]">
                         <h2 className="p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center">
                             AUTH
                         </h2>
-                        <div className="p-4 space-y-3">
+                        <div className="p-4 space-y-3 flex-1">
                             {flightsNeedingAuth.length > 0 ? (
                                 <ul className="space-y-3">
                                     {flightsNeedingAuth.map(event => (
@@ -99,12 +102,22 @@ const SupervisorDashboard: React.FC<SupervisorDashboardProps> = ({ instructorsDa
                     </div>
 
                     {/* Weather Widget */}
-                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md">
+                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]">
                         <h2 className="p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center">
                             Weather (TAF)
                         </h2>
-                        <div className="p-0">
+                        <div className="p-0 flex-1 flex flex-col">
                             <TafWeatherWidget />
+                        </div>
+                    </div>
+
+                    {/* Flight Tracking Widget */}
+                    <div className="flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]">
+                        <h2 className="p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center">
+                            Flight Tracking
+                        </h2>
+                        <div className="p-0 flex-1 flex flex-col">
+                            <FlightTrackingWidget school={school} locationName={currentLocation} />
                         </div>
                     </div>
                 </div>

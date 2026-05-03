@@ -17345,12 +17345,157 @@ const UnavailabilitiesWindow = ({ instructorsData, traineesData, date, title }) 
     ] })
   ] });
 };
+const TRACKING_LOCATIONS = {
+  ESL: { label: "East Sale", shortCode: "ESL", lat: -38.0989, lon: 147.1494, zoom: 8 },
+  "EAST SALE": { label: "East Sale", shortCode: "ESL", lat: -38.0989, lon: 147.1494, zoom: 8 },
+  YMES: { label: "East Sale", shortCode: "YMES", lat: -38.0989, lon: 147.1494, zoom: 8 },
+  PEA: { label: "Pearce", shortCode: "PEA", lat: -31.6678, lon: 116.015, zoom: 8 },
+  PEARCE: { label: "Pearce", shortCode: "PEA", lat: -31.6678, lon: 116.015, zoom: 8 },
+  YPEA: { label: "Pearce", shortCode: "YPEA", lat: -31.6678, lon: 116.015, zoom: 8 },
+  WLM: { label: "Williamtown", shortCode: "WLM", lat: -32.7949, lon: 151.8344, zoom: 8 },
+  WILLIAMTOWN: { label: "Williamtown", shortCode: "WLM", lat: -32.7949, lon: 151.8344, zoom: 8 },
+  YWLM: { label: "Williamtown", shortCode: "YWLM", lat: -32.7949, lon: 151.8344, zoom: 8 },
+  AMB: { label: "Amberley", shortCode: "AMB", lat: -27.6406, lon: 152.7122, zoom: 8 },
+  AMBERLEY: { label: "Amberley", shortCode: "AMB", lat: -27.6406, lon: 152.7122, zoom: 8 },
+  YAMB: { label: "Amberley", shortCode: "YAMB", lat: -27.6406, lon: 152.7122, zoom: 8 },
+  TDL: { label: "Tindal", shortCode: "TDL", lat: -14.5211, lon: 132.3783, zoom: 8 },
+  TINDAL: { label: "Tindal", shortCode: "TDL", lat: -14.5211, lon: 132.3783, zoom: 8 },
+  YPTN: { label: "Tindal", shortCode: "YPTN", lat: -14.5211, lon: 132.3783, zoom: 8 },
+  EDN: { label: "Edinburgh", shortCode: "EDN", lat: -34.7025, lon: 138.6208, zoom: 8 },
+  EDINBURGH: { label: "Edinburgh", shortCode: "EDN", lat: -34.7025, lon: 138.6208, zoom: 8 },
+  YPED: { label: "Edinburgh", shortCode: "YPED", lat: -34.7025, lon: 138.6208, zoom: 8 }
+};
+const DEFAULT_TRACKING_LOCATION = TRACKING_LOCATIONS.ESL;
+const resolveTrackingLocation = (school, locationName) => {
+  const keys = [school, locationName].filter(Boolean).map((value) => String(value).trim().toUpperCase());
+  for (const key of keys) {
+    if (TRACKING_LOCATIONS[key]) return TRACKING_LOCATIONS[key];
+  }
+  return DEFAULT_TRACKING_LOCATION;
+};
+const buildTrackerUrl = (location, enlarged = false) => {
+  const params = new URLSearchParams({
+    lat: location.lat.toString(),
+    lon: location.lon.toString(),
+    zoom: (enlarged ? Math.max(location.zoom, 9) : location.zoom).toString()
+  });
+  params.append("hideSidebar", "");
+  if (!enlarged) params.append("hideButtons", "");
+  return `https://globe.adsb.lol/?${params.toString()}`;
+};
+const FlightTrackingWidget = ({ school, locationName }) => {
+  const [isExpanded, setIsExpanded] = reactExports.useState(false);
+  const trackingLocation = reactExports.useMemo(() => resolveTrackingLocation(school, locationName), [school, locationName]);
+  const compactTrackerUrl = reactExports.useMemo(() => buildTrackerUrl(trackingLocation), [trackingLocation]);
+  const expandedTrackerUrl = reactExports.useMemo(() => buildTrackerUrl(trackingLocation, true), [trackingLocation]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col flex-1", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-start gap-3 mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Flight Tracking" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
+            trackingLocation.label,
+            " (",
+            trackingLocation.shortCode,
+            ")"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "a",
+          {
+            href: expandedTrackerUrl,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            className: "px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors whitespace-nowrap",
+            children: "Open"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg overflow-hidden border border-gray-700 bg-gray-900 h-64", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "iframe",
+        {
+          title: `Flight tracking map centered on ${trackingLocation.label}`,
+          src: compactTrackerUrl,
+          className: "w-full h-full",
+          loading: "lazy",
+          referrerPolicy: "no-referrer-when-downgrade"
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 grid grid-cols-2 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setIsExpanded(true),
+            className: "px-4 py-2 rounded-md transition-colors font-semibold btn-green-brushed text-sm",
+            children: "Enlarge Map"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "a",
+          {
+            href: expandedTrackerUrl,
+            target: "_blank",
+            rel: "noopener noreferrer",
+            className: "px-4 py-2 rounded-md transition-colors font-semibold btn-aluminium-brushed text-sm text-center",
+            children: "ADS-B.lol"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-4 pt-4 border-t border-gray-700 text-xs text-gray-500", children: "Free public ADS-B display centered on the active DFP location." })
+    ] }),
+    isExpanded && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-600 rounded-lg shadow-2xl w-full max-w-6xl h-[82vh] flex flex-col overflow-hidden", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-4 border-b border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-white", children: [
+            "Flight Tracking - ",
+            trackingLocation.label
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-gray-400", children: [
+            "Live ADS-B map centred on ",
+            trackingLocation.shortCode
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "a",
+            {
+              href: expandedTrackerUrl,
+              target: "_blank",
+              rel: "noopener noreferrer",
+              className: "px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-md text-sm font-semibold transition-colors",
+              children: "Open Full Tracker"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setIsExpanded(false),
+              className: "px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm font-semibold transition-colors",
+              children: "Close"
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "iframe",
+        {
+          title: `Expanded flight tracking map centered on ${trackingLocation.label}`,
+          src: expandedTrackerUrl,
+          className: "w-full flex-1 bg-gray-900",
+          referrerPolicy: "no-referrer-when-downgrade"
+        }
+      )
+    ] }) })
+  ] });
+};
 const formatTime$1 = (time) => {
   const hours = Math.floor(time);
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
-const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNavigate, onOpenAuth }) => {
+const SupervisorDashboard = ({ instructorsData, traineesData, date, events, school, currentLocation, onNavigate, onOpenAuth }) => {
   const flightsNeedingAuth = reactExports.useMemo(() => {
     const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
     return events.filter(
@@ -17377,10 +17522,10 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
       /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Supervisor Dashboard" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400", children: "Overview of personnel and program status for today." })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-stretch gap-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "AUTH" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 space-y-3 flex-1", children: flightsNeedingAuth.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: flightsNeedingAuth.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 text-sm", children: formatTime$1(event.startTime) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -17403,9 +17548,13 @@ const SupervisorDashboard = ({ instructorsData, traineesData, date, events, onNa
           }
         ) })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit flex-1 min-w-[350px] max-w-md", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Weather (TAF)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, {}) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0 flex-1 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TafWeatherWidget, {}) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex-1 min-w-[350px] max-w-md min-h-[34rem]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "p-4 text-lg font-semibold text-gray-200 border-b border-gray-700 text-center", children: "Flight Tracking" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-0 flex-1 flex flex-col", children: /* @__PURE__ */ jsxRuntimeExports.jsx(FlightTrackingWidget, { school, locationName: currentLocation }) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-6", children: [
@@ -75005,6 +75154,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             traineesData,
             date,
             events: eventsForDate,
+            school,
+            currentLocation: school === "ESL" ? "East Sale" : "Pearce",
             onNavigate: handleNavigation,
             onOpenAuth: (e) => {
               const latestEvent = events.find((ev) => ev.id === e.id) || e;

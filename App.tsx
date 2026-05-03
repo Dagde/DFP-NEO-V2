@@ -14019,6 +14019,8 @@ updates.forEach(update => {
                             traineesData={traineesData}
                             date={date}
                             events={eventsForDate}
+                            school={school}
+                            currentLocation={school === 'ESL' ? 'East Sale' : 'Pearce'}
                             onNavigate={handleNavigation}
                             onOpenAuth={(e) => { 
                                 // Find the latest version of the event from main events state
