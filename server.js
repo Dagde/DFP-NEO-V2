@@ -6333,6 +6333,7 @@ async function ensureDailySnapshotTable(db) {
         "traineeEvents" JSONB NOT NULL DEFAULT '[]',
         "pt051Assessments" JSONB NOT NULL DEFAULT '{}',
         "traineeProfiles" JSONB NOT NULL DEFAULT '[]',
+        "staffProfiles" JSONB NOT NULL DEFAULT '[]',
         "lmpCompletedIds" JSONB NOT NULL DEFAULT '{}',
         "staffCurrency" JSONB NOT NULL DEFAULT '{}',
         "staffLogbook" JSONB NOT NULL DEFAULT '{}',
@@ -6340,6 +6341,10 @@ async function ensureDailySnapshotTable(db) {
         "savedBy" TEXT,
         CONSTRAINT "DailySnapshot_pkey" PRIMARY KEY ("id")
       );
+    `);
+    // Add staffProfiles column if it doesn't exist (for existing tables)
+    await db.$executeRawUnsafe(`
+      ALTER TABLE "DailySnapshot" ADD COLUMN IF NOT EXISTS "staffProfiles" JSONB NOT NULL DEFAULT '[]';
     `);
     // Add baselineEvents column if it doesn't exist (for existing tables)
     await db.$executeRawUnsafe(`
@@ -6696,6 +6701,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       traineeEvents,
       pt051Assessments,
       traineeProfiles,
+      staffProfiles,
       lmpCompletedIds,
       staffCurrency,
       staffLogbook,
@@ -6735,19 +6741,21 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
             "traineeEvents" = $3::jsonb,
             "pt051Assessments" = $4::jsonb,
             "traineeProfiles" = $5::jsonb,
-            "lmpCompletedIds" = $6::jsonb,
-            "staffCurrency" = $7::jsonb,
-            "staffLogbook" = $8::jsonb,
+            "staffProfiles" = $6::jsonb,
+            "lmpCompletedIds" = $7::jsonb,
+            "staffCurrency" = $8::jsonb,
+            "staffLogbook" = $9::jsonb,
             "savedAt" = NOW(),
-            "savedBy" = $9::text,
-            "baselineEvents" = $10::jsonb
-          WHERE date = $11::text
+            "savedBy" = $10::text,
+            "baselineEvents" = $11::jsonb
+          WHERE date = $12::text
         `,
           JSON.stringify(scheduleEvents || []),
           JSON.stringify(staffEvents || []),
           JSON.stringify(traineeEvents || []),
           JSON.stringify(pt051Assessments || {}),
           JSON.stringify(traineeProfiles || []),
+          JSON.stringify(staffProfiles || []),
           JSON.stringify(lmpCompletedIds || {}),
           JSON.stringify(staffCurrency || {}),
           JSON.stringify(staffLogbook || {}),
@@ -6764,18 +6772,20 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
             "traineeEvents" = $3::jsonb,
             "pt051Assessments" = $4::jsonb,
             "traineeProfiles" = $5::jsonb,
-            "lmpCompletedIds" = $6::jsonb,
-            "staffCurrency" = $7::jsonb,
-            "staffLogbook" = $8::jsonb,
+            "staffProfiles" = $6::jsonb,
+            "lmpCompletedIds" = $7::jsonb,
+            "staffCurrency" = $8::jsonb,
+            "staffLogbook" = $9::jsonb,
             "savedAt" = NOW(),
-            "savedBy" = $9::text
-          WHERE date = $10::text
+            "savedBy" = $10::text
+          WHERE date = $11::text
         `,
           JSON.stringify(scheduleEvents || []),
           JSON.stringify(staffEvents || []),
           JSON.stringify(traineeEvents || []),
           JSON.stringify(pt051Assessments || {}),
           JSON.stringify(traineeProfiles || []),
+          JSON.stringify(staffProfiles || []),
           JSON.stringify(lmpCompletedIds || {}),
           JSON.stringify(staffCurrency || {}),
           JSON.stringify(staffLogbook || {}),
@@ -6788,9 +6798,9 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
       await db.$executeRawUnsafe(`
         INSERT INTO "DailySnapshot"
           ("id", "date", "scheduleEvents", "staffEvents", "traineeEvents",
-           "pt051Assessments", "traineeProfiles", "lmpCompletedIds",
+           "pt051Assessments", "traineeProfiles", "staffProfiles", "lmpCompletedIds",
            "staffCurrency", "staffLogbook", "savedAt", "savedBy", "baselineEvents")
-        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, NOW(), $11::text, $12::jsonb)
+        VALUES ($1::text, $2::text, $3::jsonb, $4::jsonb, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10::jsonb, $11::jsonb, NOW(), $12::text, $13::jsonb)
       `,
         id, date,
         JSON.stringify(scheduleEvents || []),
@@ -6798,6 +6808,7 @@ app.post('/api/daily-snapshot/save', async (req, res) => {
         JSON.stringify(traineeEvents || []),
         JSON.stringify(pt051Assessments || {}),
         JSON.stringify(traineeProfiles || []),
+        JSON.stringify(staffProfiles || []),
         JSON.stringify(lmpCompletedIds || {}),
         JSON.stringify(staffCurrency || {}),
         JSON.stringify(staffLogbook || {}),

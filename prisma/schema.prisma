@@ -324,6 +324,7 @@ model DailySnapshot {
   traineeEvents    Json     // Trainee events filtered from schedule
   pt051Assessments Json     // Full PT-051 assessment records as of that date
   traineeProfiles  Json     // Trainee profiles with performance history
+  staffProfiles    Json     @default("[]") // Staff assigned to the unit/location as of that snapshot date
   lmpCompletedIds  Json     // { traineeFullName: string[] } - completedEventIds per trainee
   staffCurrency    Json     // { personnelName: currencyStatus[] } per staff member
   staffLogbook     Json     // Logbook entries (flight times) from publishedSchedules for staff

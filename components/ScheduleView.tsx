@@ -135,6 +135,18 @@ const getResourceCategory = (res: string) => {
     return 'Other';
 };
 
+const formatSnapshotDate = (dateStr: string) => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    if (!year || !month || !day) return dateStr;
+    const dateObj = new Date(Date.UTC(year, month - 1, day));
+    return dateObj.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: '2-digit',
+        timeZone: 'UTC',
+    }).replace(/ /g, '-');
+};
+
 const ScheduleView: React.FC<ScheduleViewProps> = ({
     date, onDateChange, onDateSelect, snapshotDates = [], events, resources, instructors, traineesData, airframeCount, standbyCount, ftdCount, cptCount,
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
@@ -1034,7 +1046,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                                                 : 'bg-gray-700/60 text-gray-300 hover:bg-gray-700'
                                                         }`}
                                                     >
-                                                        {snapshotDate}
+                                                        {formatSnapshotDate(snapshotDate)}
                                                     </button>
                                                 ))}
                                             </div>

@@ -5139,6 +5139,17 @@ const getResourceCategory$1 = (res) => {
   if (res.startsWith("Ground")) return "Ground";
   return "Other";
 };
+const formatSnapshotDate = (dateStr) => {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  if (!year || !month || !day) return dateStr;
+  const dateObj = new Date(Date.UTC(year, month - 1, day));
+  return dateObj.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC"
+  }).replace(/ /g, "-");
+};
 const ScheduleView = ({
   date,
   onDateChange,
@@ -5937,7 +5948,7 @@ const ScheduleView = ({
                               setShowDatePicker(false);
                             },
                             className: `w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${snapshotDate === date ? "bg-sky-600 text-white" : "bg-gray-700/60 text-gray-300 hover:bg-gray-700"}`,
-                            children: snapshotDate
+                            children: formatSnapshotDate(snapshotDate)
                           },
                           snapshotDate
                         )) })
@@ -70620,6 +70631,29 @@ ${"=".repeat(60)}`);
       currencyStatus: t.currencyStatus || [],
       isPaused: t.isPaused || false
     }));
+    const staffProfilesSnapshot = instructorsData.map((inst) => ({
+      id: inst.id,
+      idNumber: inst.idNumber,
+      name: inst.name,
+      rank: inst.rank,
+      role: inst.role,
+      unit: inst.unit,
+      location: inst.location,
+      flight: inst.flight,
+      service: inst.service,
+      category: inst.category,
+      isQFI: !!inst.isQFI,
+      isOFI: !!inst.isOFI,
+      isCFI: !!inst.isCFI,
+      isFlyingSupervisor: !!inst.isFlyingSupervisor,
+      isTestingOfficer: !!inst.isTestingOfficer,
+      isCommandingOfficer: !!inst.isCommandingOfficer,
+      isExecutive: !!inst.isExecutive,
+      isPaused: !!inst.isPaused,
+      currencyStatus: inst.currencyStatus || [],
+      snapshotSchool: school,
+      snapshotDate: targetDate
+    }));
     const lmpCompletedIdsMap = {};
     traineesData.forEach((t) => {
       const individualLMP = traineeLMPs.get(t.fullName);
@@ -70641,6 +70675,7 @@ ${"=".repeat(60)}`);
       traineeEvents: traineeEventsForDate,
       pt051Assessments: pt051AssessmentsObj,
       traineeProfiles: traineeProfilesSnapshot,
+      staffProfiles: staffProfilesSnapshot,
       lmpCompletedIds: lmpCompletedIdsMap,
       staffCurrency: staffCurrencyMap,
       staffLogbook: {},
@@ -72462,6 +72497,29 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         currencyStatus: t.currencyStatus || [],
         isPaused: t.isPaused || false
       }));
+      const staffProfilesSnapshot = instructorsData.map((inst) => ({
+        id: inst.id,
+        idNumber: inst.idNumber,
+        name: inst.name,
+        rank: inst.rank,
+        role: inst.role,
+        unit: inst.unit,
+        location: inst.location,
+        flight: inst.flight,
+        service: inst.service,
+        category: inst.category,
+        isQFI: !!inst.isQFI,
+        isOFI: !!inst.isOFI,
+        isCFI: !!inst.isCFI,
+        isFlyingSupervisor: !!inst.isFlyingSupervisor,
+        isTestingOfficer: !!inst.isTestingOfficer,
+        isCommandingOfficer: !!inst.isCommandingOfficer,
+        isExecutive: !!inst.isExecutive,
+        isPaused: !!inst.isPaused,
+        currencyStatus: inst.currencyStatus || [],
+        snapshotSchool: school,
+        snapshotDate: buildDfpDate
+      }));
       const lmpCompletedIdsMap = {};
       traineesData.forEach((t) => {
         const individualLMP = traineeLMPs.get(t.fullName);
@@ -72483,6 +72541,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         traineeEvents: traineeEventsForDate,
         pt051Assessments: pt051AssessmentsObj,
         traineeProfiles: traineeProfilesSnapshot,
+        staffProfiles: staffProfilesSnapshot,
         lmpCompletedIds: lmpCompletedIdsMap,
         staffCurrency: staffCurrencyMap,
         staffLogbook: staffLogbookMap,

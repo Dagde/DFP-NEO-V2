@@ -8202,6 +8202,30 @@ const App: React.FC = () => {
             isPaused: t.isPaused || false,
         }));
 
+        const staffProfilesSnapshot = instructorsData.map((inst: any) => ({
+            id: inst.id,
+            idNumber: inst.idNumber,
+            name: inst.name,
+            rank: inst.rank,
+            role: inst.role,
+            unit: inst.unit,
+            location: inst.location,
+            flight: inst.flight,
+            service: inst.service,
+            category: inst.category,
+            isQFI: !!inst.isQFI,
+            isOFI: !!inst.isOFI,
+            isCFI: !!inst.isCFI,
+            isFlyingSupervisor: !!inst.isFlyingSupervisor,
+            isTestingOfficer: !!inst.isTestingOfficer,
+            isCommandingOfficer: !!inst.isCommandingOfficer,
+            isExecutive: !!inst.isExecutive,
+            isPaused: !!inst.isPaused,
+            currencyStatus: inst.currencyStatus || [],
+            snapshotSchool: school,
+            snapshotDate: targetDate,
+        }));
+
         // Build per-trainee LMP completedEventIds map
         const lmpCompletedIdsMap: Record<string, string[]> = {};
         traineesData.forEach((t: any) => {
@@ -8229,6 +8253,7 @@ const App: React.FC = () => {
             traineeEvents: traineeEventsForDate,
             pt051Assessments: pt051AssessmentsObj,
             traineeProfiles: traineeProfilesSnapshot,
+            staffProfiles: staffProfilesSnapshot,
             lmpCompletedIds: lmpCompletedIdsMap,
             staffCurrency: staffCurrencyMap,
             staffLogbook: {},
@@ -10603,6 +10628,30 @@ const App: React.FC = () => {
                 isPaused: t.isPaused || false,
             }));
 
+            const staffProfilesSnapshot = instructorsData.map((inst: any) => ({
+                id: inst.id,
+                idNumber: inst.idNumber,
+                name: inst.name,
+                rank: inst.rank,
+                role: inst.role,
+                unit: inst.unit,
+                location: inst.location,
+                flight: inst.flight,
+                service: inst.service,
+                category: inst.category,
+                isQFI: !!inst.isQFI,
+                isOFI: !!inst.isOFI,
+                isCFI: !!inst.isCFI,
+                isFlyingSupervisor: !!inst.isFlyingSupervisor,
+                isTestingOfficer: !!inst.isTestingOfficer,
+                isCommandingOfficer: !!inst.isCommandingOfficer,
+                isExecutive: !!inst.isExecutive,
+                isPaused: !!inst.isPaused,
+                currencyStatus: inst.currencyStatus || [],
+                snapshotSchool: school,
+                snapshotDate: buildDfpDate,
+            }));
+
             // Build per-trainee LMP completedEventIds map
             const lmpCompletedIdsMap: Record<string, string[]> = {};
             traineesData.forEach((t: any) => {
@@ -10630,6 +10679,7 @@ const App: React.FC = () => {
                 traineeEvents: traineeEventsForDate,
                 pt051Assessments: pt051AssessmentsObj,
                 traineeProfiles: traineeProfilesSnapshot,
+                staffProfiles: staffProfilesSnapshot,
                 lmpCompletedIds: lmpCompletedIdsMap,
                 staffCurrency: staffCurrencyMap,
                 staffLogbook: staffLogbookMap,
