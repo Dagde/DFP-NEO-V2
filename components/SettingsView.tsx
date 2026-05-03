@@ -2389,7 +2389,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                    )}
                     {/* Events Limits Window */}
                    {shouldShowSection('event-limits') && (
-                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-96 h-fit">
+                    <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit">
                         <div className="p-4 flex justify-between items-center border-b border-gray-700">
                             <h2 className="text-lg font-semibold text-gray-200">Events Limits</h2>
                             {isEditingLimits ? (
@@ -2408,7 +2408,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                             </button>
                             )}
                         </div>
-                        <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
+                        <div className="p-4 space-y-4">
                             {/* Execs */}
                             <fieldset className="p-3 border border-gray-600 rounded-lg">
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Execs</legend>

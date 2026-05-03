@@ -52115,7 +52115,7 @@ const SettingsView = ({
           ] })
         ] })
       ] }),
-      shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-96 h-fit", children: [
+      shouldShowSection("event-limits") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl h-fit", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center border-b border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Events Limits" }),
           isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSaveLimits, className: "px-3 py-1 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-xs font-semibold", children: "Save" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -52128,7 +52128,7 @@ const SettingsView = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4 max-h-96 overflow-y-auto", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Execs" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
@@ -56756,6 +56756,7 @@ const sectionLabels = {
   "currencies": "Currencies",
   "sct-events": "SCT Events",
   "people-profile": "People Profile",
+  "scheduling-rules": "Scheduling Rules",
   "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
@@ -56770,6 +56771,7 @@ const sectionLabels = {
   "staff-combined-data": "Staff Combined Data",
   "validation": "AC History",
   "historical-data": "Historical Data",
+  "locale-settings": "Locale Settings",
   "timezone": "Timezone",
   "location": "Location",
   "units": "Units",
@@ -56794,6 +56796,10 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M4 20c0-4 3.582-7 8-7s8 3 8 7" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M16 3.13a4 4 0 010 7.75" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M20 15c1.333 1 2 2.333 2 4" })
+  ] }),
+  "scheduling-rules": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M4 7h16M4 12h16M4 17h16" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 5v4M16 10v4M11 15v4" })
   ] }),
   "event-limits": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "10" }),
@@ -56867,6 +56873,11 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("polyline", { points: "12 6 12 12 16 14" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3.05 11a9 9 0 011.4-3.7" })
   ] }),
+  "locale-settings": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "10", r: "3" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2v3M12 15v3" })
+  ] }),
   "timezone": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "10" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "2", y1: "12", x2: "22", y2: "12" }),
@@ -56895,6 +56906,7 @@ const sectionDescriptions = {
   "currencies": "Manage qualification expiry dates",
   "sct-events": "Event scoring rules and triggers",
   "people-profile": "Set NEO Build basis course",
+  "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
   "business-rules": "System logic and automation",
@@ -56909,6 +56921,7 @@ const sectionDescriptions = {
   "staff-combined-data": "Combined staff data overview",
   "validation": "Aircraft availability history",
   "historical-data": "Seed & refresh historical training records",
+  "locale-settings": "Locations, timezone and unit assignment",
   "timezone": "Configure timezone settings",
   "location": "Manage base locations",
   "units": "Configure unit settings",
@@ -56923,6 +56936,7 @@ const sectionColors = {
   "sct-events": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
   "people-profile": "from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400",
   // OPERATIONS RULES - amber icons
+  "scheduling-rules": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "event-limits": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "duty-turnaround": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "business-rules": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
@@ -56941,6 +56955,7 @@ const sectionColors = {
   "validation": "from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400",
   "historical-data": "from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400",
   // SYSTEM SETTINGS - cyan icons
+  "locale-settings": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "timezone": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "location": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
@@ -56955,7 +56970,7 @@ const sectionGroups = [
     shortLabel: "Setup",
     description: "Organisation structure, locations, units, timezone, display preferences and emergency control.",
     accent: "cyan",
-    sections: ["organisation", "location", "units", "timezone", "appearance", "emergency"]
+    sections: ["organisation", "locale-settings", "appearance", "emergency"]
   },
   {
     label: "People & Access",
@@ -56976,15 +56991,14 @@ const sectionGroups = [
     shortLabel: "Ops",
     description: "Operational thresholds, duty limits, turnaround timing, build logic and aircraft availability history.",
     accent: "amber",
-    sections: ["event-limits", "duty-turnaround", "business-rules", "validation"]
+    sections: ["scheduling-rules", "validation"]
   },
   {
     label: "Data & Records",
     shortLabel: "Data",
-    description: "Data sources, imports, historical records, combined views and diagnostics.",
+    description: "Data sources, imports and enduring historical records.",
     accent: "emerald",
-    sections: ["data-sources", "data-loaders", "historical-data", "staff-combined-data"],
-    diagnosticSections: ["staff-mockdata", "trainee-mockdata"]
+    sections: ["data-sources", "data-loaders", "historical-data"]
   }
 ];
 const SettingsViewWithMenu = (props) => {
@@ -57028,12 +57042,15 @@ const SettingsViewWithMenu = (props) => {
     };
     return classes[accent] || classes.sky;
   };
+  const getSectionAccent = (section, fallback) => {
+    if (section === "emergency") return getAccentClasses("red");
+    return getAccentClasses(fallback);
+  };
   const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   const visibleSettingGroups = sectionGroups.map((group) => ({
     ...group,
-    visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label)),
-    visibleDiagnostics: (group.diagnosticSections || []).filter((section) => matchesSettingsSearch(section, group.label))
-  })).filter((group) => group.visibleSections.length > 0 || group.visibleDiagnostics.length > 0);
+    visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
+  })).filter((group) => group.visibleSections.length > 0);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
@@ -57063,7 +57080,7 @@ const SettingsViewWithMenu = (props) => {
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-4", children: visibleSettingGroups.map((group) => {
         const accent = getAccentClasses(group.accent);
-        const groupSections = [...group.visibleSections, ...group.visibleDiagnostics];
+        const groupSections = group.visibleSections;
         const groupActive = groupSections.includes(activeSection);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border ${groupActive ? accent.border : "border-gray-800"} bg-gray-900/45 p-2`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -57075,33 +57092,25 @@ const SettingsViewWithMenu = (props) => {
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold", children: group.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs text-gray-600", children: group.sections.length + (group.diagnosticSections?.length || 0) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs text-gray-600", children: group.sections.length })
               ]
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
-            group.visibleSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: group.visibleSections.map((section) => {
+            const sectionAccent = getSectionAccent(section, group.accent);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
               {
                 onClick: () => setActiveSection(section),
-                className: `w-full rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? "bg-gray-700 text-white" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
-                children: sectionLabels[section]
+                className: `flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
+                children: [
+                  section === "emergency" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-2 rounded-full ${sectionAccent.rail}` }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: sectionLabels[section] })
+                ]
               },
               section
-            )),
-            group.visibleDiagnostics.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "pt-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer rounded px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-gray-600 hover:bg-gray-800 hover:text-gray-400", children: "Diagnostics" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-0.5", children: group.visibleDiagnostics.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => setActiveSection(section),
-                  className: `w-full rounded px-4 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? "bg-gray-700 text-white" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
-                  children: sectionLabels[section]
-                },
-                section
-              )) })
-            ] })
-          ] })
+            );
+          }) })
         ] }, group.label);
       }) }),
       !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
@@ -57158,39 +57167,24 @@ const SettingsViewWithMenu = (props) => {
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`, children: group.shortLabel })
                   ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-800", children: group.visibleSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                    "button",
-                    {
-                      onClick: () => setActiveSection(section),
-                      className: "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70",
-                      children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-2 w-2 rounded-full ${accent.rail}` }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-100", children: sectionLabels[section] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
-                        ] })
-                      ]
-                    },
-                    section
-                  )) }),
-                  group.visibleDiagnostics.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "border-t border-gray-700/70 bg-gray-950/20", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Diagnostics" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-800 border-t border-gray-800", children: group.visibleDiagnostics.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-800", children: group.visibleSections.map((section) => {
+                    const sectionAccent = getSectionAccent(section, group.accent);
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "button",
                       {
                         onClick: () => setActiveSection(section),
-                        className: "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70",
+                        className: `flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${section === "emergency" ? "hover:bg-red-500/10" : "hover:bg-gray-800/70"}`,
                         children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 h-2 w-2 rounded-full bg-gray-600" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-2 w-2 rounded-full ${sectionAccent.rail}` }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-200", children: sectionLabels[section] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `block text-sm font-semibold ${section === "emergency" ? "text-red-300" : "text-gray-100"}`, children: sectionLabels[section] }),
                             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
                           ] })
                         ]
                       },
                       section
-                    )) })
-                  ] })
+                    );
+                  }) })
                 ]
               },
               group.label
@@ -57254,7 +57248,25 @@ const SettingsViewWithMenu = (props) => {
             }
           ) })
         ] }),
-        activeSection !== "scoring-matrix" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection === "locale-settings" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-cyan-200", children: "Locale Settings" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Configure location first, then timezone, then unit assignments." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "location" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "timezone" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "units" })
+        ] }),
+        activeSection === "scheduling-rules" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-amber-200", children: "Scheduling Rules" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-amber-100/70", children: "Event limits, duty and turnaround rules, and dispatch constraints in one place." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "event-limits" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "duty-turnaround" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "business-rules" })
+        ] }),
+        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {

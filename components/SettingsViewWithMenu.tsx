@@ -133,11 +133,14 @@ type SettingsSection =
     | 'appearance'
     | 'emergency';
 
-const sectionLabels: Record<SettingsSection, string> = {
+type SettingsMenuSection = SettingsSection | 'locale-settings' | 'scheduling-rules';
+
+const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
     'currencies': 'Currencies',
     'sct-events': 'SCT Events',
     'people-profile': 'People Profile',
+    'scheduling-rules': 'Scheduling Rules',
     'event-limits': 'Event Limits',
     'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
@@ -152,6 +155,7 @@ const sectionLabels: Record<SettingsSection, string> = {
     'staff-combined-data': 'Staff Combined Data',
     'validation': 'AC History',
     'historical-data': 'Historical Data',
+    'locale-settings': 'Locale Settings',
     'timezone': 'Timezone',
     'location': 'Location',
     'units': 'Units',
@@ -191,7 +195,7 @@ const allSections: SettingsSection[] = [
 type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
 
 // ─── Icon definitions for each section ───────────────────────────────────────
-const sectionIcons: Record<SettingsSection, React.ReactNode> = {
+const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
   'scoring-matrix': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
@@ -217,6 +221,12 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
       <path d="M4 20c0-4 3.582-7 8-7s8 3 8 7"/>
       <path d="M16 3.13a4 4 0 010 7.75"/>
       <path d="M20 15c1.333 1 2 2.333 2 4"/>
+    </svg>
+  ),
+  'scheduling-rules': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <path d="M4 7h16M4 12h16M4 17h16"/>
+      <path d="M8 5v4M16 10v4M11 15v4"/>
     </svg>
   ),
   'event-limits': (
@@ -319,6 +329,13 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
       <path d="M3.05 11a9 9 0 011.4-3.7"/>
     </svg>
   ),
+  'locale-settings': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0118 0z"/>
+      <circle cx="12" cy="10" r="3"/>
+      <path d="M12 2v3M12 15v3"/>
+    </svg>
+  ),
   'timezone': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <circle cx="12" cy="12" r="10"/>
@@ -366,11 +383,12 @@ const sectionIcons: Record<SettingsSection, React.ReactNode> = {
 };
 
 // Descriptions for each section
-const sectionDescriptions: Record<SettingsSection, string> = {
+const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'scoring-matrix': 'Configure scoring logic and weighting',
   'currencies': 'Manage qualification expiry dates',
   'sct-events': 'Event scoring rules and triggers',
   'people-profile': 'Set NEO Build basis course',
+  'scheduling-rules': 'Event limits, duty rules, turnarounds and dispatch limits',
   'event-limits': 'Define operational thresholds',
   'duty-turnaround': 'Crew duty limits & rest times',
   'business-rules': 'System logic and automation',
@@ -385,6 +403,7 @@ const sectionDescriptions: Record<SettingsSection, string> = {
   'staff-combined-data': 'Combined staff data overview',
   'validation': 'Aircraft availability history',
   'historical-data': 'Seed & refresh historical training records',
+  'locale-settings': 'Locations, timezone and unit assignment',
   'timezone': 'Configure timezone settings',
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
@@ -400,13 +419,14 @@ const sectionDescriptions: Record<SettingsSection, string> = {
 // DATA MANAGEMENT: data-loaders, data-sources, staff-database, trainee-database, staff-combined-data, staff-mockdata, trainee-mockdata (emerald)
 // HISTORICAL & ANALYSIS: validation (rose)
 // SYSTEM SETTINGS: timezone, location, units, organisation (cyan)
-const sectionColors: Record<SettingsSection, string> = {
+const sectionColors: Record<SettingsMenuSection, string> = {
   // SYSTEM CONFIGURATION - sky blue icons
   'scoring-matrix':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'currencies':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'sct-events':        'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   'people-profile':    'from-sky-500/20 to-sky-600/10 border-sky-500/30 text-sky-400',
   // OPERATIONS RULES - amber icons
+  'scheduling-rules':  'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'event-limits':      'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'duty-turnaround':   'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'business-rules':    'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
@@ -425,6 +445,7 @@ const sectionColors: Record<SettingsSection, string> = {
   'validation':        'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
   'historical-data':   'from-violet-500/20 to-violet-600/10 border-violet-500/30 text-violet-400',
   // SYSTEM SETTINGS - cyan icons
+  'locale-settings':   'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'timezone':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
@@ -440,15 +461,14 @@ const sectionGroups: {
   shortLabel: string;
   description: string;
   accent: string;
-  sections: SettingsSection[];
-  diagnosticSections?: SettingsSection[];
+  sections: SettingsMenuSection[];
 }[] = [
   {
     label: 'System Setup',
     shortLabel: 'Setup',
     description: 'Organisation structure, locations, units, timezone, display preferences and emergency control.',
     accent: 'cyan',
-    sections: ['organisation', 'location', 'units', 'timezone', 'appearance', 'emergency'],
+    sections: ['organisation', 'locale-settings', 'appearance', 'emergency'],
   },
   {
     label: 'People & Access',
@@ -469,20 +489,19 @@ const sectionGroups: {
     shortLabel: 'Ops',
     description: 'Operational thresholds, duty limits, turnaround timing, build logic and aircraft availability history.',
     accent: 'amber',
-    sections: ['event-limits', 'duty-turnaround', 'business-rules', 'validation'],
+    sections: ['scheduling-rules', 'validation'],
   },
   {
     label: 'Data & Records',
     shortLabel: 'Data',
-    description: 'Data sources, imports, historical records, combined views and diagnostics.',
+    description: 'Data sources, imports and enduring historical records.',
     accent: 'emerald',
-    sections: ['data-sources', 'data-loaders', 'historical-data', 'staff-combined-data'],
-    diagnosticSections: ['staff-mockdata', 'trainee-mockdata'],
+    sections: ['data-sources', 'data-loaders', 'historical-data'],
   },
 ];
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
-    type ActiveSection = SettingsSection | 'home';
+    type ActiveSection = SettingsMenuSection | 'home';
     const [activeSection, setActiveSection] = useState<ActiveSection>('home');
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
@@ -510,7 +529,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.onShowSuccess(`Trainee removed from mockdata display`);
     };
 
-    const matchesSettingsSearch = (section: SettingsSection, groupLabel: string) => {
+    const matchesSettingsSearch = (section: SettingsMenuSection, groupLabel: string) => {
         const query = settingsSearch.trim().toLowerCase();
         if (!query) return true;
         return [
@@ -532,14 +551,18 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return classes[accent] || classes.sky;
     };
 
+    const getSectionAccent = (section: SettingsMenuSection, fallback: string) => {
+        if (section === 'emergency') return getAccentClasses('red');
+        return getAccentClasses(fallback);
+    };
+
     const getGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
     const visibleSettingGroups = sectionGroups
         .map(group => ({
             ...group,
             visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
-            visibleDiagnostics: (group.diagnosticSections || []).filter(section => matchesSettingsSearch(section, group.label)),
         }))
-        .filter(group => group.visibleSections.length > 0 || group.visibleDiagnostics.length > 0);
+        .filter(group => group.visibleSections.length > 0);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
 
     return (
@@ -569,7 +592,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                 <nav className="space-y-4">
                     {visibleSettingGroups.map(group => {
                         const accent = getAccentClasses(group.accent);
-                        const groupSections = [...group.visibleSections, ...group.visibleDiagnostics];
+                        const groupSections = group.visibleSections;
                         const groupActive = groupSections.includes(activeSection as SettingsSection);
                         return (
                             <div key={group.label} className={`rounded-lg border ${groupActive ? accent.border : 'border-gray-800'} bg-gray-900/45 p-2`}>
@@ -580,44 +603,28 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 >
                                     <span className={`h-2.5 w-2.5 rounded-full ${accent.rail}`} />
                                     <span className="font-bold">{group.label}</span>
-                                    <span className="ml-auto text-xs text-gray-600">{group.sections.length + (group.diagnosticSections?.length || 0)}</span>
+                                    <span className="ml-auto text-xs text-gray-600">{group.sections.length}</span>
                                 </a>
                                 <div className="space-y-0.5">
-                                    {group.visibleSections.map(section => (
-                                        <button
-                                            key={section}
-                                            onClick={() => setActiveSection(section)}
-                                            className={`w-full rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${
-                                                activeSection === section
-                                                    ? 'bg-gray-700 text-white'
-                                                    : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
-                                            }`}
-                                        >
-                                            {sectionLabels[section]}
-                                        </button>
-                                    ))}
-                                    {group.visibleDiagnostics.length > 0 && (
-                                        <details className="pt-1">
-                                            <summary className="cursor-pointer rounded px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-gray-600 hover:bg-gray-800 hover:text-gray-400">
-                                                Diagnostics
-                                            </summary>
-                                            <div className="mt-1 space-y-0.5">
-                                                {group.visibleDiagnostics.map(section => (
-                                                    <button
-                                                        key={section}
-                                                        onClick={() => setActiveSection(section)}
-                                                        className={`w-full rounded px-4 py-1.5 text-left text-xs font-semibold transition-colors ${
-                                                            activeSection === section
-                                                                ? 'bg-gray-700 text-white'
-                                                                : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
-                                                        }`}
-                                                    >
-                                                        {sectionLabels[section]}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </details>
-                                    )}
+                                    {group.visibleSections.map(section => {
+                                        const sectionAccent = getSectionAccent(section, group.accent);
+                                        return (
+                                            <button
+                                                key={section}
+                                                onClick={() => setActiveSection(section)}
+                                                className={`flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${
+                                                    activeSection === section
+                                                        ? `${sectionAccent.badge} ${sectionAccent.text}`
+                                                        : section === 'emergency'
+                                                            ? 'text-red-300 hover:bg-red-500/10 hover:text-red-200'
+                                                            : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
+                                                }`}
+                                            >
+                                                {section === 'emergency' && <span className={`h-2 w-2 rounded-full ${sectionAccent.rail}`} />}
+                                                <span>{sectionLabels[section]}</span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         );
@@ -691,43 +698,26 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                     </div>
 
                                                     <div className="divide-y divide-gray-800">
-                                                        {group.visibleSections.map(section => (
-                                                            <button
-                                                                key={section}
-                                                                onClick={() => setActiveSection(section)}
-                                                                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70"
-                                                            >
-                                                                <span className={`mt-1 h-2 w-2 rounded-full ${accent.rail}`} />
-                                                                <span className="min-w-0">
-                                                                    <span className="block text-sm font-semibold text-gray-100">{sectionLabels[section]}</span>
-                                                                    <span className="mt-0.5 block text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</span>
-                                                                </span>
-                                                            </button>
-                                                        ))}
+                                                        {group.visibleSections.map(section => {
+                                                            const sectionAccent = getSectionAccent(section, group.accent);
+                                                            return (
+                                                                <button
+                                                                    key={section}
+                                                                    onClick={() => setActiveSection(section)}
+                                                                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
+                                                                        section === 'emergency' ? 'hover:bg-red-500/10' : 'hover:bg-gray-800/70'
+                                                                    }`}
+                                                                >
+                                                                    <span className={`mt-1 h-2 w-2 rounded-full ${sectionAccent.rail}`} />
+                                                                    <span className="min-w-0">
+                                                                        <span className={`block text-sm font-semibold ${section === 'emergency' ? 'text-red-300' : 'text-gray-100'}`}>{sectionLabels[section]}</span>
+                                                                        <span className="mt-0.5 block text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</span>
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
 
-                                                    {group.visibleDiagnostics.length > 0 && (
-                                                        <details className="border-t border-gray-700/70 bg-gray-950/20">
-                                                            <summary className="cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
-                                                                Diagnostics
-                                                            </summary>
-                                                            <div className="divide-y divide-gray-800 border-t border-gray-800">
-                                                                {group.visibleDiagnostics.map(section => (
-                                                                    <button
-                                                                        key={section}
-                                                                        onClick={() => setActiveSection(section)}
-                                                                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70"
-                                                                    >
-                                                                        <span className="mt-1 h-2 w-2 rounded-full bg-gray-600" />
-                                                                        <span className="min-w-0">
-                                                                            <span className="block text-sm font-semibold text-gray-200">{sectionLabels[section]}</span>
-                                                                            <span className="mt-0.5 block text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</span>
-                                                                        </span>
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        </details>
-                                                    )}
                                                 </section>
                                             );
                                         })}
@@ -766,11 +756,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 </svg>
                                 Back
                             </button>
-                            <div className={`w-5 h-5 flex-shrink-0 ${sectionColors[activeSection as SettingsSection]?.split(' ')[3] || 'text-sky-400'}`}>
-                                {sectionIcons[activeSection as SettingsSection]}
+                            <div className={`w-5 h-5 flex-shrink-0 ${sectionColors[activeSection as SettingsMenuSection]?.split(' ')[3] || 'text-sky-400'}`}>
+                                {sectionIcons[activeSection as SettingsMenuSection]}
                             </div>
                             <h2 className="text-xl sm:text-2xl font-bold text-white">
-                                {sectionLabels[activeSection as SettingsSection]}
+                                {sectionLabels[activeSection as SettingsMenuSection]}
                             </h2>
                             <div className="ml-auto flex items-center gap-[10px]">
                                 {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -778,7 +768,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <strong>Read-Only Mode</strong>
                                     </div>
                                 )}
-                                <AuditButton pageName={`Settings - ${sectionLabels[activeSection as SettingsSection]}`} />
+                                <AuditButton pageName={`Settings - ${sectionLabels[activeSection as SettingsMenuSection]}`} />
                             </div>
                         </div>
 
@@ -825,8 +815,34 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         </div>
                     )}
 
+                    {activeSection === 'locale-settings' && (
+                        <div className="space-y-5">
+                            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
+                                <h3 className="text-lg font-bold text-cyan-200">Locale Settings</h3>
+                                <p className="mt-1 text-sm text-cyan-100/70">Configure location first, then timezone, then unit assignments.</p>
+                            </div>
+                            <SettingsView {...props} hideHeader={true} activeSection="location" />
+                            <SettingsView {...props} hideHeader={true} activeSection="timezone" />
+                            <SettingsView {...props} hideHeader={true} activeSection="units" />
+                        </div>
+                    )}
+
+                    {activeSection === 'scheduling-rules' && (
+                        <div className="space-y-5">
+                            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                                <h3 className="text-lg font-bold text-amber-200">Scheduling Rules</h3>
+                                <p className="mt-1 text-sm text-amber-100/70">Event limits, duty and turnaround rules, and dispatch constraints in one place.</p>
+                            </div>
+                            <SettingsView {...props} hideHeader={true} activeSection="event-limits" />
+                            <SettingsView {...props} hideHeader={true} activeSection="duty-turnaround" />
+                            <SettingsView {...props} hideHeader={true} activeSection="business-rules" />
+                        </div>
+                    )}
+
                     {/* All other sections rendered via SettingsView */}
                     {activeSection !== 'scoring-matrix' &&
+                     activeSection !== 'locale-settings' &&
+                     activeSection !== 'scheduling-rules' &&
                      activeSection !== 'user-list' &&
                      activeSection !== 'staff-database' &&
                      activeSection !== 'staff-mockdata' &&
