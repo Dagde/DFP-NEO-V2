@@ -696,7 +696,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         <p className="text-xs text-white/75">Create named awards and define how each ranking is calculated.</p>
                                     </div>
                                     <div className="p-4 space-y-4">
-                                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(140px,180px)_minmax(180px,220px)_auto] gap-3 items-end">
+                                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(190px,260px)_auto] gap-3 items-end">
                                             <label className="text-sm text-gray-300">
                                                 Award
                                                 <select
@@ -707,40 +707,42 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
                                                 </select>
                                             </label>
-                                            <label className="text-sm text-gray-300">
-                                                LMP
-                                                <select
-                                                    value={activeAward.lmpType}
-                                                    onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
-                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                >
-                                                    {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
-                                                </select>
-                                            </label>
-                                            <label className="text-sm text-gray-300">
-                                                Course
-                                                <select
-                                                    value={activeAward.course}
-                                                    onChange={event => updateActiveAwardCourse(event.target.value)}
-                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                >
-                                                    {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
-                                                </select>
-                                            </label>
-                                            <div className="flex gap-2">
+                                            <div className="space-y-2">
+                                                <label className="block text-sm text-gray-300">
+                                                    LMP
+                                                    <select
+                                                        value={activeAward.lmpType}
+                                                        onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
+                                                        className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                    >
+                                                        {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
+                                                    </select>
+                                                </label>
+                                                <label className="block text-sm text-gray-300">
+                                                    Course
+                                                    <select
+                                                        value={activeAward.course}
+                                                        onChange={event => updateActiveAwardCourse(event.target.value)}
+                                                        className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                    >
+                                                        {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
+                                                    </select>
+                                                </label>
+                                            </div>
+                                            <div className="flex gap-2 justify-start sm:justify-end self-end">
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsEditingAward(prev => !prev)}
-                                                    className="px-3 py-2 text-sm font-semibold bg-gray-700 hover:bg-gray-600 text-white rounded-md"
+                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
                                                     {isEditingAward ? 'Done' : 'Edit'}
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={addAward}
-                                                    className="px-3 py-2 text-sm font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md"
+                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
-                                                    Add Award
+                                                    Add
                                                 </button>
                                             </div>
                                         </div>
