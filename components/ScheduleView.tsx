@@ -624,7 +624,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const markers = [];
         for (let i = START_HOUR; i <= END_HOUR; i++) {
             markers.push(
-                <div key={i} className="absolute h-full top-0 text-xs text-gray-500 flex items-center" style={{ left: (i - START_HOUR) * PIXELS_PER_HOUR * zoomLevel }}>
+                <div key={i} data-schedule-time-label="true" className="absolute h-full top-0 text-xs text-gray-500 flex items-center" style={{ left: (i - START_HOUR) * PIXELS_PER_HOUR * zoomLevel }}>
                     <span className="-translate-x-1/2">{`${String(i).padStart(2, '0')}:00`}</span>
                 </div>
             );
@@ -636,7 +636,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (firstLightHour !== null) {
             const flLeft = (firstLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
             markers.push(
-                <div key="fl-label" className="absolute h-full top-0 text-xs text-white font-bold flex items-center" style={{ left: flLeft }}>
+                <div key="fl-label" data-schedule-daylight-label="true" className="absolute h-full top-0 text-xs text-white font-bold flex items-center" style={{ left: flLeft }}>
                     <span className="-translate-x-1/2">{`FL ${daylightTimes.firstLight}`}</span>
                 </div>
             );
@@ -645,7 +645,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         if (lastLightHour !== null) {
             const llLeft = (lastLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel;
             markers.push(
-                <div key="ll-label" className="absolute h-full top-0 text-xs text-white font-bold flex items-center" style={{ left: llLeft }}>
+                <div key="ll-label" data-schedule-daylight-label="true" className="absolute h-full top-0 text-xs text-white font-bold flex items-center" style={{ left: llLeft }}>
                     <span className="-translate-x-1/2">{`LL ${daylightTimes.lastLight}`}</span>
                 </div>
             );
@@ -658,13 +658,13 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         const lines = [];
         for (let i = START_HOUR; i <= END_HOUR; i++) {
             lines.push(
-                <div key={`v-${i}`} className="absolute h-full top-0" style={{ left: (i - START_HOUR) * PIXELS_PER_HOUR * zoomLevel }}>
+                <div key={`v-${i}`} data-schedule-hour-line="true" className="absolute h-full top-0" style={{ left: (i - START_HOUR) * PIXELS_PER_HOUR * zoomLevel }}>
                     <div className="w-px h-full bg-gray-700/50"></div>
                 </div>
             );
             if (i < END_HOUR) {
                 lines.push(
-                    <div key={`v-${i}-30`} className="absolute h-full top-0" style={{ left: (i - START_HOUR + 0.5) * PIXELS_PER_HOUR * zoomLevel }}>
+                    <div key={`v-${i}-30`} data-schedule-half-hour-line="true" className="absolute h-full top-0" style={{ left: (i - START_HOUR + 0.5) * PIXELS_PER_HOUR * zoomLevel }}>
                         <div className="w-px h-full bg-gray-700/25"></div>
                     </div>
                 );
@@ -672,7 +672,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         }
         for (let i = 1; i <= resources.length; i++) {
             lines.push(
-                <div key={`h-${i}`} className="absolute left-0 w-full bg-gray-700/25" style={{ top: i * ROW_HEIGHT, height: '1px' }}></div>
+                <div key={`h-${i}`} data-schedule-row-line="true" className="absolute left-0 w-full bg-gray-700/25" style={{ top: i * ROW_HEIGHT, height: '1px' }}></div>
             );
         }
         return lines;
@@ -687,6 +687,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 lines.push(
                     <div 
                         key={`sep-${i}`} 
+                        data-schedule-separator="true"
                         className="absolute left-0 w-full border-t-2 border-gray-500 z-10" 
                         style={{ top: i * ROW_HEIGHT }} 
                     />
@@ -706,12 +707,14 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 {firstLightHour !== null && (
                     <div
                         className="absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30"
+                        data-schedule-daylight-line="true"
                         style={{ left: `${(firstLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel}px` }}
                     />
                 )}
                 {lastLightHour !== null && (
                      <div
                         className="absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30"
+                        data-schedule-daylight-line="true"
                         style={{ left: `${(lastLightHour - START_HOUR) * PIXELS_PER_HOUR * zoomLevel}px` }}
                     />
                 )}
@@ -728,6 +731,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             shades.push(
                 <div
                     key="night-shade-morning"
+                    data-schedule-night-shade="true"
                     className="absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]"
                     style={{ width: `${width}px` }}
                 />
@@ -739,6 +743,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
             shades.push(
                 <div
                     key="night-shade-evening"
+                    data-schedule-night-shade="true"
                     className="absolute top-0 h-full bg-white/5 pointer-events-none z-[1]"
                     style={{ left: `${left}px`, width: `${width}px` }}
                 />
@@ -772,6 +777,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
         
         return (
             <div 
+                data-schedule-current-time="true"
                 className="absolute top-0 h-full z-[30] pointer-events-none"
                 style={{ left: `${leftPosition}px` }}
             >
@@ -960,7 +966,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     };
 
     return (
-        <div ref={scrollContainerRef} className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
+        <div ref={scrollContainerRef} data-schedule-surface="true" className="flex-1 overflow-auto relative bg-gray-900 select-none" style={isPauseSelectMode ? { cursor: 'crosshair' } : undefined}>
             <div 
                 style={{
                     width: `${AIRFRAME_COLUMN_WIDTH + (TOTAL_HOURS * PIXELS_PER_HOUR * zoomLevel)}px`,
@@ -971,7 +977,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 }}
             >
                 {/* Date Control (Top Left) */}
-                <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
+                <div data-schedule-corner="true" className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
                     <div className="flex items-center gap-1 h-full">
                         <div
                             className={`relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer hover:bg-gray-600 transition-colors ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}
@@ -1062,12 +1068,12 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 </div>
 
                 {/* Time Header (Top Row) */}
-                <div className="sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative">
+                <div data-schedule-time-header="true" className="sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative">
                     {renderTimeHeaders()}
                 </div>
 
                 {/* Resource Column (Left Col) */}
-                <div className="sticky left-0 z-30 bg-gray-800 border-r border-gray-700" style={{width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden"}}>
+                <div data-schedule-resource-column="true" className="sticky left-0 z-30 bg-gray-800 border-r border-gray-700" style={{width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden"}}>
                     <AirframeColumn
                         resources={resources}
                         onReorder={onReorderResources}
@@ -1083,6 +1089,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 {/* Main Grid */}
                 <div 
                     ref={scheduleGridRef}
+                    data-schedule-grid="true"
                     className="relative bg-gray-900"
                     onMouseDown={(e) => handleMouseDown(e)}
                     onMouseMove={handleMouseMove}

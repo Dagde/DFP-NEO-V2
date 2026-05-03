@@ -3777,7 +3777,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     violet: { "400": [167, 139, 250], "500": [139, 92, 246] },
     rose: { "400": [251, 113, 133], "500": [244, 63, 94] }
   };
-  const tailwindBgToRgba = (cls) => {
+  const tailwindBgToRgba = (cls, mode = "dark") => {
     if (!cls || !cls.startsWith("bg-")) return null;
     const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
     if (!match) return null;
@@ -3786,7 +3786,12 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (!rgb) return null;
     const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
     let alpha;
-    if (opacity >= 75) alpha = 0.57;
+    if (mode === "light") {
+      if (opacity >= 75) alpha = 0.88;
+      else if (opacity >= 45) alpha = 0.78;
+      else if (opacity >= 30) alpha = 0.68;
+      else alpha = Math.max(0.58, opacity / 100);
+    } else if (opacity >= 75) alpha = 0.57;
     else if (opacity >= 45) alpha = 0.42;
     else if (opacity >= 30) alpha = 0.35;
     else alpha = opacity / 100 * 0.7;
@@ -3808,6 +3813,12 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     if (isHexColorEarly(c)) return hexToRgba(c, 0.57);
     return tailwindBgToRgba(c);
   })();
+  const resolvedLightBgColor = (() => {
+    if (event.type === "deployment" || event.type === "unavailability" || isUnavailabilityConflict || isConflicting) return null;
+    const c = event.color || "";
+    if (isHexColorEarly(c)) return hexToRgba(c, 0.86);
+    return tailwindBgToRgba(c, "light");
+  })();
   const style = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
@@ -3818,7 +3829,8 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     // Apply resolved background color as inline style to override Tailwind CDN rendering
     ...resolvedBgColor ? { backgroundColor: resolvedBgColor } : {},
     // Also set as CSS custom property for the !important override in index.html
-    ...resolvedBgColor ? { ["--tile-bg"]: resolvedBgColor } : {}
+    ...resolvedBgColor ? { ["--tile-bg"]: resolvedBgColor } : {},
+    ...resolvedLightBgColor ? { ["--tile-light-bg"]: resolvedLightBgColor } : {}
   };
   const getDynamicRingClass = () => {
     if (isConflicting || isUnavailabilityConflict) {
@@ -5571,7 +5583,7 @@ const ScheduleView = ({
     const markers = [];
     for (let i = START_HOUR$5; i <= END_HOUR$5; i++) {
       markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-label": "true", className: "absolute h-full top-0 text-xs text-gray-500 flex items-center", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `${String(i).padStart(2, "0")}:00` }) }, i)
       );
     }
     const firstLightHour = timeStringToHours2(daylightTimes.firstLight);
@@ -5579,13 +5591,13 @@ const ScheduleView = ({
     if (firstLightHour !== null) {
       const flLeft = (firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
       markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl-label")
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-daylight-label": "true", className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: flLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `FL ${daylightTimes.firstLight}` }) }, "fl-label")
       );
     }
     if (lastLightHour !== null) {
       const llLeft = (lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel;
       markers.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll-label")
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-daylight-label": "true", className: "absolute h-full top-0 text-xs text-white font-bold flex items-center", style: { left: llLeft }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "-translate-x-1/2", children: `LL ${daylightTimes.lastLight}` }) }, "ll-label")
       );
     }
     return markers;
@@ -5594,17 +5606,17 @@ const ScheduleView = ({
     const lines = [];
     for (let i = START_HOUR$5; i <= END_HOUR$5; i++) {
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-hour-line": "true", className: "absolute h-full top-0", style: { left: (i - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/50" }) }, `v-${i}`)
       );
       if (i < END_HOUR$5) {
         lines.push(
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute h-full top-0", style: { left: (i - START_HOUR$5 + 0.5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-half-hour-line": "true", className: "absolute h-full top-0", style: { left: (i - START_HOUR$5 + 0.5) * PIXELS_PER_HOUR$5 * zoomLevel }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-px h-full bg-gray-700/25" }) }, `v-${i}-30`)
         );
       }
     }
     for (let i = 1; i <= resources.length; i++) {
       lines.push(
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$5, height: "1px" } }, `h-${i}`)
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-row-line": "true", className: "absolute left-0 w-full bg-gray-700/25", style: { top: i * ROW_HEIGHT$5, height: "1px" } }, `h-${i}`)
       );
     }
     return lines;
@@ -5619,6 +5631,7 @@ const ScheduleView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "div",
             {
+              "data-schedule-separator": "true",
               className: "absolute left-0 w-full border-t-2 border-gray-500 z-10",
               style: { top: i * ROW_HEIGHT$5 }
             },
@@ -5638,6 +5651,7 @@ const ScheduleView = ({
         "div",
         {
           className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
+          "data-schedule-daylight-line": "true",
           style: { left: `${(firstLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px` }
         }
       ),
@@ -5645,6 +5659,7 @@ const ScheduleView = ({
         "div",
         {
           className: "absolute top-0 h-full z-[5] pointer-events-none border-l border-dashed border-white/30",
+          "data-schedule-daylight-line": "true",
           style: { left: `${(lastLightHour - START_HOUR$5) * PIXELS_PER_HOUR$5 * zoomLevel}px` }
         }
       )
@@ -5660,6 +5675,7 @@ const ScheduleView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
+            "data-schedule-night-shade": "true",
             className: "absolute top-0 left-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { width: `${width}px` }
           },
@@ -5674,6 +5690,7 @@ const ScheduleView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
+            "data-schedule-night-shade": "true",
             className: "absolute top-0 h-full bg-white/5 pointer-events-none z-[1]",
             style: { left: `${left}px`, width: `${width}px` }
           },
@@ -5699,6 +5716,7 @@ const ScheduleView = ({
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
+        "data-schedule-current-time": "true",
         className: "absolute top-0 h-full z-[30] pointer-events-none",
         style: { left: `${leftPosition}px` },
         children: [
@@ -5864,7 +5882,7 @@ const ScheduleView = ({
       });
     });
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: scrollContainerRef, "data-schedule-surface": "true", className: "flex-1 overflow-auto relative bg-gray-900 select-none", style: isPauseSelectMode ? { cursor: "crosshair" } : void 0, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       style: {
@@ -5875,7 +5893,7 @@ const ScheduleView = ({
         gridTemplateRows: `${TIME_HEADER_HEIGHT$5}px 1fr`
       },
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-corner": "true", className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
@@ -5961,8 +5979,8 @@ const ScheduleView = ({
           ),
           isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
         ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-time-header": "true", className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-schedule-resource-column": "true", className: "sticky left-0 z-30 bg-gray-800 border-r border-gray-700", style: { width: `${RESOURCE_COLUMN_WIDTH}px`, overflow: "hidden" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           AirframeColumn,
           {
             resources,
@@ -5979,6 +5997,7 @@ const ScheduleView = ({
           "div",
           {
             ref: scheduleGridRef,
+            "data-schedule-grid": "true",
             className: "relative bg-gray-900",
             onMouseDown: (e) => handleMouseDown(e),
             onMouseMove: handleMouseMove,

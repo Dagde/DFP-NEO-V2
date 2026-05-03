@@ -147,10 +147,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     rose:    { '400': [251,113,133], '500': [244,63,94] },
   };
 
-  // Convert any Tailwind bg class (e.g. 'bg-sky-400/80', 'bg-purple-400/50') to muted rgba.
-  // Tailwind /50 and /80 render at full 50%/80% opacity which is too bright for the dark UI.
-  // We remap to 0.42 and 0.57 alpha to match the intended muted design.
-  const tailwindBgToRgba = (cls: string): string | null => {
+  // Convert any Tailwind bg class (e.g. 'bg-sky-400/80', 'bg-purple-400/50') to rgba.
+  // The dark theme uses muted alpha; light mode needs denser tiles so white schedule text stays readable.
+  const tailwindBgToRgba = (cls: string, mode: 'dark' | 'light' = 'dark'): string | null => {
     if (!cls || !cls.startsWith('bg-')) return null;
     const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
     if (!match) return null;
@@ -159,7 +158,12 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     if (!rgb) return null;
     const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
     let alpha: number;
-    if (opacity >= 75) alpha = 0.57;
+    if (mode === 'light') {
+      if (opacity >= 75) alpha = 0.88;
+      else if (opacity >= 45) alpha = 0.78;
+      else if (opacity >= 30) alpha = 0.68;
+      else alpha = Math.max(0.58, opacity / 100);
+    } else if (opacity >= 75) alpha = 0.57;
     else if (opacity >= 45) alpha = 0.42;
     else if (opacity >= 30) alpha = 0.35;
     else alpha = (opacity / 100) * 0.7;
@@ -184,6 +188,13 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     return tailwindBgToRgba(c);
   })();
 
+  const resolvedLightBgColor: string | null = (() => {
+    if (event.type === 'deployment' || event.type === 'unavailability' || isUnavailabilityConflict || isConflicting) return null;
+    const c = event.color || '';
+    if (isHexColorEarly(c)) return hexToRgba(c, 0.86);
+    return tailwindBgToRgba(c, 'light');
+  })();
+
   const style: React.CSSProperties = {
     left: `${(effectiveStartTime - startHour) * pixelsPerHour}px`,
     top: `${row * rowHeight}px`,
@@ -194,6 +205,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     ...(resolvedBgColor ? { backgroundColor: resolvedBgColor } : {}),
     // Also set as CSS custom property for the !important override in index.html
     ...(resolvedBgColor ? { ['--tile-bg' as any]: resolvedBgColor } : {}),
+    ...(resolvedLightBgColor ? { ['--tile-light-bg' as any]: resolvedLightBgColor } : {}),
   };
   
   const getDynamicRingClass = () => {
