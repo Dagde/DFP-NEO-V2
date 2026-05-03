@@ -46401,6 +46401,10 @@ const AuthorisationFlyout = ({
               ] })
             ] })
           ] }),
+          event.authNotes?.trim() && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg p-3 border border-gray-600", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-300 mb-2", children: "AUTH Notes" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-200 whitespace-pre-wrap", children: event.authNotes })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg p-3 border border-gray-600", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center mb-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "h-4 w-4 text-green-400 mr-2", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 13l4 4L19 7" }) }),

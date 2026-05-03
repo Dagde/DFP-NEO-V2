@@ -460,6 +460,13 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                         </div>
                     </div>
 
+                    {event.authNotes?.trim() && (
+                        <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
+                            <h3 className="text-sm font-semibold text-gray-300 mb-2">AUTH Notes</h3>
+                            <p className="text-sm text-gray-200 whitespace-pre-wrap">{event.authNotes}</p>
+                        </div>
+                    )}
+
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
                         <div className="flex items-center mb-2">
                             <svg className="h-4 w-4 text-green-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
