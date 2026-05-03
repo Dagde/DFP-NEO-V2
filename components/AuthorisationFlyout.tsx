@@ -137,7 +137,7 @@ interface AuthorisationFlyoutProps {
   onClose: () => void;
   onAuthorise: (eventId: string, notes: string, role: 'autho' | 'captain', isVerbal: boolean, selectedPersonName: string) => void;
   onClearAuth: (eventId: string) => void;
-  instructorsList: { name: string; rank: string; unit?: string }[];
+  instructorsList: { name: string; rank: string; unit?: string; pin?: string }[];
   currentUserName: string;
   currentUserRank: string;
   currentUserUnit?: string;
@@ -199,12 +199,6 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
 
   const [selectedAutho, setSelectedAutho] = useState(() => event.authoSignedBy || defaultAutho);
   const [selectedCaptain, setSelectedCaptain] = useState(() => event.captainSignedBy || defaultCaptain);
-
-  React.useEffect(() => {
-    if (isVerbal && !event.authoSignedBy && !event.captainSignedBy) {
-      setSelectedAutho(selectedCaptain);
-    }
-  }, [isVerbal, selectedCaptain, event.authoSignedBy, event.captainSignedBy]);
 
   // ─── Currency computation ────────────────────────────────────────────────
 
@@ -288,7 +282,6 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
   const handleSignClick = (role: 'autho' | 'captain') => {
     if (role === 'autho' && !selectedAutho) return;
     if (role === 'captain' && !selectedCaptain) return;
-    if (isVerbal && selectedAutho !== selectedCaptain) return;
     setSigningRole(role);
     if (role === 'autho') setShowAuthConfirmation(true);
     else setShowPinEntry(true);
@@ -312,12 +305,23 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
 
   const handleVerbalAuthChange = (checked: boolean) => {
     setIsVerbal(checked);
-    if (checked && !event.authoSignedBy && !event.captainSignedBy) setSelectedAutho(selectedCaptain);
   };
 
   const hasAnySignature  = !!(event.authoSignedBy ?? event.captainSignedBy);
   const isFullyAuthorised = !!(event.authoSignedBy && event.captainSignedBy);
-  const pinForVerification = '1111';
+  const getPinForStaffSelection = (selectedPersonName: string) => {
+    const selected = selectedPersonName.trim();
+    const matchingStaff = instructorsList.find(staff =>
+      staff.name === selected ||
+      `${staff.rank} ${staff.name}` === selected
+    );
+    return matchingStaff?.pin || '1111';
+  };
+  const pinForVerification = signingRole === 'autho'
+    ? getPinForStaffSelection(selectedAutho)
+    : signingRole === 'captain'
+      ? getPinForStaffSelection(selectedCaptain)
+      : '1111';
 
   // ─── Currencies Box (inline component — accesses outer scope) ────────────
 
@@ -517,14 +521,13 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                             selectedStaff={selectedAutho}
                                             onSelect={setSelectedAutho}
                                             placeholder="Select Authorising Officer..."
-                                            disabled={isVerbal}
                                         />
                                         <button 
                                             onClick={() => handleSignClick('autho')} 
-                                            disabled={!selectedAutho || (isVerbal && selectedAutho !== selectedCaptain)}
+                                            disabled={!selectedAutho}
                                             className="w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
                                         >
-                                            Sign as AUTHO {isVerbal && "(Locked to PIC)"}
+                                            Sign as AUTHO
                                         </button>
                                     </div>
                                 ) : (
@@ -545,16 +548,13 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                         <StaffSearchDropdown
                                             staff={instructorsList}
                                             selectedStaff={selectedCaptain}
-                                            onSelect={(newSelection) => {
-                                                setSelectedCaptain(newSelection);
-                                                if (isVerbal && !event.authoSignedBy) setSelectedAutho(newSelection);
-                                            }}
+                                            onSelect={setSelectedCaptain}
                                             placeholder="Select Captain (PIC)..."
                                             disabled={!!(event.authoSignedBy && !event.isVerbalAuth)}
                                         />
                                         <button
                                             onClick={() => handleSignClick('captain')}
-                                            disabled={!selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth) || (isVerbal && selectedAutho !== selectedCaptain)}
+                                            disabled={!selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth || isVerbal)}
                                             className="w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed"
                                         >
                                             Sign as PIC
@@ -580,7 +580,7 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                                         Verbal AUTH received. See Notes.
                                         {isVerbal && (
                                             <span className="ml-2 text-amber-400 font-medium">
-                                                (Both AUTHO and PIC must be same person)
+                                                (AUTHO or PIC may sign either box)
                                             </span>
                                         )}
                                     </span>

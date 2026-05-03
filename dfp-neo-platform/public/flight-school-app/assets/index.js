@@ -46158,11 +46158,6 @@ const AuthorisationFlyout = ({
   }, [event.instructor, event.pilot, instructorsList]);
   const [selectedAutho, setSelectedAutho] = reactExports.useState(() => event.authoSignedBy || defaultAutho);
   const [selectedCaptain, setSelectedCaptain] = reactExports.useState(() => event.captainSignedBy || defaultCaptain);
-  React.useEffect(() => {
-    if (isVerbal && !event.authoSignedBy && !event.captainSignedBy) {
-      setSelectedAutho(selectedCaptain);
-    }
-  }, [isVerbal, selectedCaptain, event.authoSignedBy, event.captainSignedBy]);
   const allCurrencyDefs = reactExports.useMemo(() => {
     const defs = [];
     for (const req of currencyRequirements) {
@@ -46229,7 +46224,6 @@ const AuthorisationFlyout = ({
   const handleSignClick = (role) => {
     if (role === "autho" && !selectedAutho) return;
     if (role === "captain" && !selectedCaptain) return;
-    if (isVerbal && selectedAutho !== selectedCaptain) return;
     setSigningRole(role);
     if (role === "autho") setShowAuthConfirmation(true);
     else setShowPinEntry(true);
@@ -46267,11 +46261,17 @@ const AuthorisationFlyout = ({
   };
   const handleVerbalAuthChange = (checked) => {
     setIsVerbal(checked);
-    if (checked && !event.authoSignedBy && !event.captainSignedBy) setSelectedAutho(selectedCaptain);
   };
   const hasAnySignature = !!(event.authoSignedBy ?? event.captainSignedBy);
   const isFullyAuthorised = !!(event.authoSignedBy && event.captainSignedBy);
-  const pinForVerification = "1111";
+  const getPinForStaffSelection = (selectedPersonName) => {
+    const selected = selectedPersonName.trim();
+    const matchingStaff = instructorsList.find(
+      (staff) => staff.name === selected || `${staff.rank} ${staff.name}` === selected
+    );
+    return matchingStaff?.pin || "1111";
+  };
+  const pinForVerification = signingRole === "autho" ? getPinForStaffSelection(selectedAutho) : signingRole === "captain" ? getPinForStaffSelection(selectedCaptain) : "1111";
   const CurrenciesBox = () => {
     if (!hasCurrencyData) return null;
     const getInstructorLabel = () => {
@@ -46448,20 +46448,16 @@ const AuthorisationFlyout = ({
                   staff: instructorsList,
                   selectedStaff: selectedAutho,
                   onSelect: setSelectedAutho,
-                  placeholder: "Select Authorising Officer...",
-                  disabled: isVerbal
+                  placeholder: "Select Authorising Officer..."
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   onClick: () => handleSignClick("autho"),
-                  disabled: !selectedAutho || isVerbal && selectedAutho !== selectedCaptain,
+                  disabled: !selectedAutho,
                   className: "w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed",
-                  children: [
-                    "Sign as AUTHO ",
-                    isVerbal && "(Locked to PIC)"
-                  ]
+                  children: "Sign as AUTHO"
                 }
               )
             ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
@@ -46481,10 +46477,7 @@ const AuthorisationFlyout = ({
                   {
                     staff: instructorsList,
                     selectedStaff: selectedCaptain,
-                    onSelect: (newSelection) => {
-                      setSelectedCaptain(newSelection);
-                      if (isVerbal && !event.authoSignedBy) setSelectedAutho(newSelection);
-                    },
+                    onSelect: setSelectedCaptain,
                     placeholder: "Select Captain (PIC)...",
                     disabled: !!(event.authoSignedBy && !event.isVerbalAuth)
                   }
@@ -46493,7 +46486,7 @@ const AuthorisationFlyout = ({
                   "button",
                   {
                     onClick: () => handleSignClick("captain"),
-                    disabled: !selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth) || isVerbal && selectedAutho !== selectedCaptain,
+                    disabled: !selectedCaptain || !(event.authoSignedBy || event.isVerbalAuth || isVerbal),
                     className: "w-full px-3 py-1.5 bg-sky-600 text-white rounded-md hover:bg-sky-700 text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed",
                     children: "Sign as PIC"
                   }
@@ -46516,7 +46509,7 @@ const AuthorisationFlyout = ({
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-sm ${event.authoSignedBy ? "text-gray-500" : "text-gray-300"}`, children: [
                 "Verbal AUTH received. See Notes.",
-                isVerbal && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-amber-400 font-medium", children: "(Both AUTHO and PIC must be same person)" })
+                isVerbal && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-amber-400 font-medium", children: "(AUTHO or PIC may sign either box)" })
               ] })
             ] })
           ] })
@@ -72709,42 +72702,79 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const authoSigner = selectedPersonName;
     let wasFullyAuthed = false;
     let eventThatWasUpdated = null;
-    const updateEventsInState = (eventsList) => {
-      return eventsList.map((e) => {
-        if (e.id === eventId) {
-          const updatedEvent = { ...e, authNotes: notes };
-          if (role === "autho") {
-            updatedEvent.authoSignedBy = authoSigner;
-            updatedEvent.authoSignedAt = now;
-          } else if (role === "captain") {
-            updatedEvent.captainSignedBy = authoSigner;
-            updatedEvent.captainSignedAt = now;
-            updatedEvent.isVerbalAuth = isVerbal;
-          }
-          const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
-          if (isNowFullyAuthorized) {
-            wasFullyAuthed = true;
-          }
-          eventThatWasUpdated = updatedEvent;
-          return updatedEvent;
-        }
-        return e;
-      });
+    let affectedScheduleDate = null;
+    const updateEventAuth = (e) => {
+      if (e.id !== eventId) return e;
+      const updatedEvent = { ...e, authNotes: notes, isVerbalAuth: isVerbal };
+      if (role === "autho") {
+        updatedEvent.authoSignedBy = authoSigner;
+        updatedEvent.authoSignedAt = now;
+      } else if (role === "captain") {
+        updatedEvent.captainSignedBy = authoSigner;
+        updatedEvent.captainSignedAt = now;
+      }
+      const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
+      if (isNowFullyAuthorized) {
+        wasFullyAuthed = true;
+      }
+      eventThatWasUpdated = updatedEvent;
+      return updatedEvent;
     };
+    const updateEventsInState = (eventsList) => eventsList.map(updateEventAuth);
+    const updatedPublishedSchedules = Object.fromEntries(
+      Object.entries(publishedSchedules).map(([key, eventsList]) => {
+        const updatedEventsForDate = eventsList.map((e) => {
+          if (e.id === eventId) {
+            affectedScheduleDate = key;
+          }
+          return updateEventAuth(e);
+        });
+        return [key, updatedEventsForDate];
+      })
+    );
+    if (!affectedScheduleDate && eventThatWasUpdated?.date) {
+      affectedScheduleDate = eventThatWasUpdated.date;
+      updatedPublishedSchedules[affectedScheduleDate] = (updatedPublishedSchedules[affectedScheduleDate] || []).map(updateEventAuth);
+    }
+    if (affectedScheduleDate && updatedPublishedSchedules[affectedScheduleDate]) {
+      persistScheduleForDate(affectedScheduleDate, updatedPublishedSchedules[affectedScheduleDate]);
+    }
     setEvents((prev) => updateEventsInState(prev));
-    setPublishedSchedules((prev) => Object.fromEntries(
-      Object.entries(prev).map(([key, eventsList]) => [key, updateEventsInState(eventsList)])
-    ));
+    setPublishedSchedules(updatedPublishedSchedules);
     if (eventThatWasUpdated) {
       setEventForAuth(eventThatWasUpdated);
     }
-    if (role === "captain" && !wasFullyAuthed) {
+    if (role === "captain" && !wasFullyAuthed && !isVerbal) {
       setShowAuthFlyout(false);
       setEventForAuth(null);
     }
     if (wasFullyAuthed) {
       setSuccessMessage("Flight Authorised!");
     }
+  };
+  const clearAuthorisationForEvent = (eventId) => {
+    let affectedScheduleDate = null;
+    const clearAuthFields = (e) => {
+      if (e.id !== eventId) return e;
+      const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
+      return { ...rest, authNotes: "" };
+    };
+    const updatedPublishedSchedules = Object.fromEntries(
+      Object.entries(publishedSchedules).map(([key, eventsList]) => {
+        const updatedEventsForDate = eventsList.map((e) => {
+          if (e.id === eventId) affectedScheduleDate = key;
+          return clearAuthFields(e);
+        });
+        return [key, updatedEventsForDate];
+      })
+    );
+    if (affectedScheduleDate && updatedPublishedSchedules[affectedScheduleDate]) {
+      persistScheduleForDate(affectedScheduleDate, updatedPublishedSchedules[affectedScheduleDate]);
+    }
+    setEvents((prev) => prev.map(clearAuthFields));
+    setPublishedSchedules(updatedPublishedSchedules);
+    setEventForAuth(null);
+    setShowAuthFlyout(false);
   };
   const handleBulkUpdateInstructors = reactExports.useCallback((updatedInstructors) => {
     const updatedMap = new Map(updatedInstructors.map((i) => [i.idNumber, i]));
@@ -76573,29 +76603,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           event: eventForAuth,
           onClose: () => setShowAuthFlyout(false),
           onAuthorise: handleAuthorise,
-          onClearAuth: (eventId) => {
-            setEvents((prev) => prev.map((e) => {
-              if (e.id === eventId) {
-                const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
-                return { ...rest, authNotes: "" };
-              }
-              return e;
-            }));
-            setPublishedSchedules((prev) => Object.fromEntries(
-              Object.entries(prev).map(([key, eventsList]) => [
-                key,
-                eventsList.map((e) => {
-                  if (e.id === eventId) {
-                    const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
-                    return { ...rest, authNotes: "" };
-                  }
-                  return e;
-                })
-              ])
-            ));
-            setEventForAuth(null);
-            setShowAuthFlyout(false);
-          },
+          onClearAuth: clearAuthorisationForEvent,
           instructorsList: instructorsData,
           currentUserName,
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "",

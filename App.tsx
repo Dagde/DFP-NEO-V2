@@ -11062,45 +11062,63 @@ updates.forEach(update => {
         
         let wasFullyAuthed = false;
         let eventThatWasUpdated: ScheduleEvent | null = null;
+        let affectedScheduleDate: string | null = null;
         
-        const updateEventsInState = (eventsList: ScheduleEvent[]) => {
-            return eventsList.map(e => {
-                if (e.id === eventId) {
-                    const updatedEvent = { ...e, authNotes: notes };
-                    
-                    if (role === 'autho') {
-                        updatedEvent.authoSignedBy = authoSigner;
-                        updatedEvent.authoSignedAt = now;
-                    } else if (role === 'captain') {
-                        updatedEvent.captainSignedBy = authoSigner; // Use selected person, not event instructor/pilot
-                        updatedEvent.captainSignedAt = now;
-                        updatedEvent.isVerbalAuth = isVerbal;
-                    }
-                    
-                    const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
-                    if (isNowFullyAuthorized) {
-                        wasFullyAuthed = true;
-                    }
-                    
-                    eventThatWasUpdated = updatedEvent;
-                    return updatedEvent;
-                }
-                return e;
-            });
+        const updateEventAuth = (e: ScheduleEvent): ScheduleEvent => {
+            if (e.id !== eventId) return e;
+
+            const updatedEvent = { ...e, authNotes: notes, isVerbalAuth: isVerbal };
+
+            if (role === 'autho') {
+                updatedEvent.authoSignedBy = authoSigner;
+                updatedEvent.authoSignedAt = now;
+            } else if (role === 'captain') {
+                updatedEvent.captainSignedBy = authoSigner;
+                updatedEvent.captainSignedAt = now;
+            }
+
+            const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
+            if (isNowFullyAuthorized) {
+                wasFullyAuthed = true;
+            }
+
+            eventThatWasUpdated = updatedEvent;
+            return updatedEvent;
         };
-    
+
+        const updateEventsInState = (eventsList: ScheduleEvent[]) => eventsList.map(updateEventAuth);
+
+        const updatedPublishedSchedules = Object.fromEntries(
+            Object.entries(publishedSchedules).map(([key, eventsList]) => {
+                const updatedEventsForDate = (eventsList as ScheduleEvent[]).map(e => {
+                    if (e.id === eventId) {
+                        affectedScheduleDate = key;
+                    }
+                    return updateEventAuth(e);
+                });
+                return [key, updatedEventsForDate];
+            })
+        );
+
+        if (!affectedScheduleDate && eventThatWasUpdated?.date) {
+            affectedScheduleDate = eventThatWasUpdated.date;
+            updatedPublishedSchedules[affectedScheduleDate] = (updatedPublishedSchedules[affectedScheduleDate] || []).map(updateEventAuth);
+        }
+
+        if (affectedScheduleDate && updatedPublishedSchedules[affectedScheduleDate]) {
+            persistScheduleForDate(affectedScheduleDate, updatedPublishedSchedules[affectedScheduleDate]);
+        }
+
         setEvents(prev => updateEventsInState(prev));
-        setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => Object.fromEntries(
-            Object.entries(prev).map(([key, eventsList]) => [key, updateEventsInState(eventsList)])
-        ));
-        
+        setPublishedSchedules(updatedPublishedSchedules);
+
         if (eventThatWasUpdated) {
             setEventForAuth(eventThatWasUpdated);
         }
-        
+
         // Only close the modal if NOT fully authorized
         // If fully authorized, keep modal open to show completion view
-        if (role === 'captain' && !wasFullyAuthed) {
+        if (role === 'captain' && !wasFullyAuthed && !isVerbal) {
             setShowAuthFlyout(false);
             setEventForAuth(null);
         }
@@ -11108,6 +11126,35 @@ updates.forEach(update => {
         if (wasFullyAuthed) {
             setSuccessMessage('Flight Authorised!');
         }
+    };
+
+    const clearAuthorisationForEvent = (eventId: string) => {
+        let affectedScheduleDate: string | null = null;
+
+        const clearAuthFields = (e: ScheduleEvent): ScheduleEvent => {
+            if (e.id !== eventId) return e;
+            const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
+            return { ...rest, authNotes: '' };
+        };
+
+        const updatedPublishedSchedules = Object.fromEntries(
+            Object.entries(publishedSchedules).map(([key, eventsList]) => {
+                const updatedEventsForDate = (eventsList as ScheduleEvent[]).map(e => {
+                    if (e.id === eventId) affectedScheduleDate = key;
+                    return clearAuthFields(e);
+                });
+                return [key, updatedEventsForDate];
+            })
+        );
+
+        if (affectedScheduleDate && updatedPublishedSchedules[affectedScheduleDate]) {
+            persistScheduleForDate(affectedScheduleDate, updatedPublishedSchedules[affectedScheduleDate]);
+        }
+
+        setEvents((prev) => prev.map(clearAuthFields));
+        setPublishedSchedules(updatedPublishedSchedules);
+        setEventForAuth(null);
+        setShowAuthFlyout(false);
     };
 
     const handleBulkUpdateInstructors = useCallback((updatedInstructors: Instructor[]) => {
@@ -15576,29 +15623,7 @@ updates.forEach(update => {
                     event={eventForAuth}
                     onClose={() => setShowAuthFlyout(false)}
                     onAuthorise={handleAuthorise}
-                    onClearAuth={(eventId) => {
-                         setEvents((prev) => prev.map(e => {
-                            if (e.id === eventId) {
-                                const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
-                                return { ...rest, authNotes: '' };
-                            }
-                            return e;
-                        }));
-                         setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => Object.fromEntries(
-                            Object.entries(prev).map(([key, eventsList]) => [
-                                key,
-                                (eventsList as ScheduleEvent[]).map(e => {
-                                    if (e.id === eventId) {
-                                        const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
-                                        return { ...rest, authNotes: '' };
-                                    }
-                                    return e;
-                                })
-                            ])
-                         ));
-                        setEventForAuth(null);
-                        setShowAuthFlyout(false);
-                    }}
+                    onClearAuth={clearAuthorisationForEvent}
                     instructorsList={instructorsData}
                     currentUserName={currentUserName}
                     currentUserRank={sessionUser?.militaryRank || sessionUser?.role || currentUser?.rank || ''}
