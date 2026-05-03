@@ -318,6 +318,14 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
 
   const dualSignatureAnnotation = (() => {
     if (!isVerbal) return '';
+    if (signingRole === 'autho' && event.captainSignedBy) {
+      const signer = event.captainSignedOnBehalfBy || event.captainSignedBy;
+      return `${signer} will be recorded as signing AUTHO authorisation on behalf of ${selectedAutho} under verbal AUTH.`;
+    }
+    if (signingRole === 'captain' && event.authoSignedBy) {
+      const signer = event.authoSignedOnBehalfBy || event.authoSignedBy;
+      return `${signer} will be recorded as signing PIC authorisation on behalf of ${selectedCaptain} under verbal AUTH.`;
+    }
     if (signingRole === 'autho' && isSameSigner(selectedAutho, event.captainSignedBy)) {
       return `${selectedAutho} will be recorded as signing both AUTHO and PIC for this verbal authorisation.`;
     }
@@ -338,9 +346,9 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     return matchingStaff?.pin || '1111';
   };
   const pinForVerification = signingRole === 'autho'
-    ? getPinForStaffSelection(selectedAutho)
+    ? getPinForStaffSelection(isVerbal && event.captainSignedBy ? (event.captainSignedOnBehalfBy || event.captainSignedBy) : selectedAutho)
     : signingRole === 'captain'
-      ? getPinForStaffSelection(selectedCaptain)
+      ? getPinForStaffSelection(isVerbal && event.authoSignedBy ? (event.authoSignedOnBehalfBy || event.authoSignedBy) : selectedCaptain)
       : '1111';
 
   // ─── Currencies Box (inline component — accesses outer scope) ────────────
@@ -459,6 +467,11 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                         </div>
                         <p className="text-green-400 font-bold text-base ml-6">{event.authoSignedBy}</p>
                         <p className="text-gray-400 text-xs ml-6">Signed: {formatAuthTime(event.authoSignedAt)}</p>
+                        {event.authoSignedOnBehalfBy && (
+                            <p className="text-amber-300 text-xs font-semibold ml-6 mt-1">
+                                Signed by {event.authoSignedOnBehalfBy} on behalf of AUTHO under verbal AUTH.
+                            </p>
+                        )}
                     </div>
 
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
@@ -468,6 +481,11 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                         </div>
                         <p className="text-green-400 font-bold text-base ml-6">{event.captainSignedBy}</p>
                         <p className="text-gray-400 text-xs ml-6">Signed: {formatAuthTime(event.captainSignedAt)}</p>
+                        {event.captainSignedOnBehalfBy && (
+                            <p className="text-amber-300 text-xs font-semibold ml-6 mt-1">
+                                Signed by {event.captainSignedOnBehalfBy} on behalf of PIC under verbal AUTH.
+                            </p>
+                        )}
                     </div>
                 </div>
 

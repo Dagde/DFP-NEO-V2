@@ -182,8 +182,10 @@ export interface ScheduleEvent {
   authNotes?: string;
   authoSignedBy?: string;
   authoSignedAt?: string;
+  authoSignedOnBehalfBy?: string;
   captainSignedBy?: string;
   captainSignedAt?: string;
+  captainSignedOnBehalfBy?: string;
   isVerbalAuth?: boolean;
   dualAuthSignedBy?: string;
   dualAuthSignedAt?: string;

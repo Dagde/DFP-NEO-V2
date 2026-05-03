@@ -11080,23 +11080,49 @@ updates.forEach(update => {
             if (role === 'autho') {
                 updatedEvent.authoSignedBy = authoSigner;
                 updatedEvent.authoSignedAt = now;
+                if (isVerbal && updatedEvent.captainSignedBy) {
+                    updatedEvent.authoSignedOnBehalfBy = updatedEvent.captainSignedOnBehalfBy || updatedEvent.captainSignedBy;
+                } else {
+                    delete updatedEvent.authoSignedOnBehalfBy;
+                }
             } else if (role === 'captain') {
                 updatedEvent.captainSignedBy = authoSigner;
                 updatedEvent.captainSignedAt = now;
+                if (isVerbal && updatedEvent.authoSignedBy) {
+                    updatedEvent.captainSignedOnBehalfBy = updatedEvent.authoSignedOnBehalfBy || updatedEvent.authoSignedBy;
+                } else {
+                    delete updatedEvent.captainSignedOnBehalfBy;
+                }
             }
 
             const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
             const isDualSignedVerbalAuth = !!(
                 updatedEvent.isVerbalAuth &&
                 isNowFullyAuthorized &&
-                isSameAuthSigner(updatedEvent.authoSignedBy, updatedEvent.captainSignedBy)
+                (
+                    updatedEvent.authoSignedOnBehalfBy ||
+                    updatedEvent.captainSignedOnBehalfBy ||
+                    isSameAuthSigner(updatedEvent.authoSignedBy, updatedEvent.captainSignedBy)
+                )
             );
             if (isDualSignedVerbalAuth) {
-                const signer = updatedEvent.authoSignedBy || updatedEvent.captainSignedBy || authoSigner;
+                const signer = updatedEvent.captainSignedOnBehalfBy ||
+                    updatedEvent.authoSignedOnBehalfBy ||
+                    updatedEvent.authoSignedBy ||
+                    updatedEvent.captainSignedBy ||
+                    authoSigner;
                 updatedEvent.dualAuthSignedBy = signer;
                 updatedEvent.dualAuthSignedAt = now;
-                updatedEvent.dualAuthSignedAnnotation = `${signer} signed both AUTHO and PIC for this verbal authorisation.`;
+                if (updatedEvent.captainSignedOnBehalfBy) {
+                    updatedEvent.dualAuthSignedAnnotation = `${signer} signed PIC authorisation on behalf of ${updatedEvent.captainSignedBy} under verbal AUTH.`;
+                } else if (updatedEvent.authoSignedOnBehalfBy) {
+                    updatedEvent.dualAuthSignedAnnotation = `${signer} signed AUTHO authorisation on behalf of ${updatedEvent.authoSignedBy} under verbal AUTH.`;
+                } else {
+                    updatedEvent.dualAuthSignedAnnotation = `${signer} signed both AUTHO and PIC for this verbal authorisation.`;
+                }
             } else {
+                delete updatedEvent.authoSignedOnBehalfBy;
+                delete updatedEvent.captainSignedOnBehalfBy;
                 delete updatedEvent.dualAuthSignedBy;
                 delete updatedEvent.dualAuthSignedAt;
                 delete updatedEvent.dualAuthSignedAnnotation;
@@ -11160,8 +11186,10 @@ updates.forEach(update => {
             const {
                 authoSignedBy,
                 authoSignedAt,
+                authoSignedOnBehalfBy,
                 captainSignedBy,
                 captainSignedAt,
+                captainSignedOnBehalfBy,
                 isVerbalAuth,
                 dualAuthSignedBy,
                 dualAuthSignedAt,

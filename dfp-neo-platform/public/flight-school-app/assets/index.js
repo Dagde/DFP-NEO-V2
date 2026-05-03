@@ -46275,6 +46275,14 @@ const AuthorisationFlyout = ({
   };
   const dualSignatureAnnotation = (() => {
     if (!isVerbal) return "";
+    if (signingRole === "autho" && event.captainSignedBy) {
+      const signer = event.captainSignedOnBehalfBy || event.captainSignedBy;
+      return `${signer} will be recorded as signing AUTHO authorisation on behalf of ${selectedAutho} under verbal AUTH.`;
+    }
+    if (signingRole === "captain" && event.authoSignedBy) {
+      const signer = event.authoSignedOnBehalfBy || event.authoSignedBy;
+      return `${signer} will be recorded as signing PIC authorisation on behalf of ${selectedCaptain} under verbal AUTH.`;
+    }
     if (signingRole === "autho" && isSameSigner(selectedAutho, event.captainSignedBy)) {
       return `${selectedAutho} will be recorded as signing both AUTHO and PIC for this verbal authorisation.`;
     }
@@ -46292,7 +46300,7 @@ const AuthorisationFlyout = ({
     );
     return matchingStaff?.pin || "1111";
   };
-  const pinForVerification = signingRole === "autho" ? getPinForStaffSelection(selectedAutho) : signingRole === "captain" ? getPinForStaffSelection(selectedCaptain) : "1111";
+  const pinForVerification = signingRole === "autho" ? getPinForStaffSelection(isVerbal && event.captainSignedBy ? event.captainSignedOnBehalfBy || event.captainSignedBy : selectedAutho) : signingRole === "captain" ? getPinForStaffSelection(isVerbal && event.authoSignedBy ? event.authoSignedOnBehalfBy || event.authoSignedBy : selectedCaptain) : "1111";
   const CurrenciesBox = () => {
     if (!hasCurrencyData) return null;
     const getInstructorLabel = () => {
@@ -46402,6 +46410,11 @@ const AuthorisationFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs ml-6", children: [
               "Signed: ",
               formatAuthTime(event.authoSignedAt)
+            ] }),
+            event.authoSignedOnBehalfBy && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-amber-300 text-xs font-semibold ml-6 mt-1", children: [
+              "Signed by ",
+              event.authoSignedOnBehalfBy,
+              " on behalf of AUTHO under verbal AUTH."
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg p-3 border border-gray-600", children: [
@@ -46413,6 +46426,11 @@ const AuthorisationFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs ml-6", children: [
               "Signed: ",
               formatAuthTime(event.captainSignedAt)
+            ] }),
+            event.captainSignedOnBehalfBy && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-amber-300 text-xs font-semibold ml-6 mt-1", children: [
+              "Signed by ",
+              event.captainSignedOnBehalfBy,
+              " on behalf of PIC under verbal AUTH."
             ] })
           ] })
         ] }),
@@ -72746,18 +72764,36 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (role === "autho") {
         updatedEvent.authoSignedBy = authoSigner;
         updatedEvent.authoSignedAt = now;
+        if (isVerbal && updatedEvent.captainSignedBy) {
+          updatedEvent.authoSignedOnBehalfBy = updatedEvent.captainSignedOnBehalfBy || updatedEvent.captainSignedBy;
+        } else {
+          delete updatedEvent.authoSignedOnBehalfBy;
+        }
       } else if (role === "captain") {
         updatedEvent.captainSignedBy = authoSigner;
         updatedEvent.captainSignedAt = now;
+        if (isVerbal && updatedEvent.authoSignedBy) {
+          updatedEvent.captainSignedOnBehalfBy = updatedEvent.authoSignedOnBehalfBy || updatedEvent.authoSignedBy;
+        } else {
+          delete updatedEvent.captainSignedOnBehalfBy;
+        }
       }
       const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
-      const isDualSignedVerbalAuth = !!(updatedEvent.isVerbalAuth && isNowFullyAuthorized && isSameAuthSigner(updatedEvent.authoSignedBy, updatedEvent.captainSignedBy));
+      const isDualSignedVerbalAuth = !!(updatedEvent.isVerbalAuth && isNowFullyAuthorized && (updatedEvent.authoSignedOnBehalfBy || updatedEvent.captainSignedOnBehalfBy || isSameAuthSigner(updatedEvent.authoSignedBy, updatedEvent.captainSignedBy)));
       if (isDualSignedVerbalAuth) {
-        const signer = updatedEvent.authoSignedBy || updatedEvent.captainSignedBy || authoSigner;
+        const signer = updatedEvent.captainSignedOnBehalfBy || updatedEvent.authoSignedOnBehalfBy || updatedEvent.authoSignedBy || updatedEvent.captainSignedBy || authoSigner;
         updatedEvent.dualAuthSignedBy = signer;
         updatedEvent.dualAuthSignedAt = now;
-        updatedEvent.dualAuthSignedAnnotation = `${signer} signed both AUTHO and PIC for this verbal authorisation.`;
+        if (updatedEvent.captainSignedOnBehalfBy) {
+          updatedEvent.dualAuthSignedAnnotation = `${signer} signed PIC authorisation on behalf of ${updatedEvent.captainSignedBy} under verbal AUTH.`;
+        } else if (updatedEvent.authoSignedOnBehalfBy) {
+          updatedEvent.dualAuthSignedAnnotation = `${signer} signed AUTHO authorisation on behalf of ${updatedEvent.authoSignedBy} under verbal AUTH.`;
+        } else {
+          updatedEvent.dualAuthSignedAnnotation = `${signer} signed both AUTHO and PIC for this verbal authorisation.`;
+        }
       } else {
+        delete updatedEvent.authoSignedOnBehalfBy;
+        delete updatedEvent.captainSignedOnBehalfBy;
         delete updatedEvent.dualAuthSignedBy;
         delete updatedEvent.dualAuthSignedAt;
         delete updatedEvent.dualAuthSignedAnnotation;
@@ -72807,8 +72843,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       const {
         authoSignedBy,
         authoSignedAt,
+        authoSignedOnBehalfBy,
         captainSignedBy,
         captainSignedAt,
+        captainSignedOnBehalfBy,
         isVerbalAuth,
         dualAuthSignedBy,
         dualAuthSignedAt,
