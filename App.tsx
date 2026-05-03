@@ -11063,6 +11063,14 @@ updates.forEach(update => {
         let wasFullyAuthed = false;
         let eventThatWasUpdated: ScheduleEvent | null = null;
         let affectedScheduleDate: string | null = null;
+
+        const normaliseAuthSigner = (value: string | undefined) => value?.trim().toLowerCase() || '';
+        const isSameAuthSigner = (a: string | undefined, b: string | undefined) => {
+            const left = normaliseAuthSigner(a);
+            const right = normaliseAuthSigner(b);
+            if (!left || !right) return false;
+            return left === right || left.endsWith(` ${right}`) || right.endsWith(` ${left}`);
+        };
         
         const updateEventAuth = (e: ScheduleEvent): ScheduleEvent => {
             if (e.id !== eventId) return e;
@@ -11078,6 +11086,22 @@ updates.forEach(update => {
             }
 
             const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
+            const isDualSignedVerbalAuth = !!(
+                updatedEvent.isVerbalAuth &&
+                isNowFullyAuthorized &&
+                isSameAuthSigner(updatedEvent.authoSignedBy, updatedEvent.captainSignedBy)
+            );
+            if (isDualSignedVerbalAuth) {
+                const signer = updatedEvent.authoSignedBy || updatedEvent.captainSignedBy || authoSigner;
+                updatedEvent.dualAuthSignedBy = signer;
+                updatedEvent.dualAuthSignedAt = now;
+                updatedEvent.dualAuthSignedAnnotation = `${signer} signed both AUTHO and PIC for this verbal authorisation.`;
+            } else {
+                delete updatedEvent.dualAuthSignedBy;
+                delete updatedEvent.dualAuthSignedAt;
+                delete updatedEvent.dualAuthSignedAnnotation;
+            }
+
             if (isNowFullyAuthorized) {
                 wasFullyAuthed = true;
             }
@@ -11124,7 +11148,7 @@ updates.forEach(update => {
         }
     
         if (wasFullyAuthed) {
-            setSuccessMessage('Flight Authorised!');
+            setSuccessMessage(eventThatWasUpdated?.dualAuthSignedAnnotation || 'Flight Authorised!');
         }
     };
 
@@ -11133,7 +11157,17 @@ updates.forEach(update => {
 
         const clearAuthFields = (e: ScheduleEvent): ScheduleEvent => {
             if (e.id !== eventId) return e;
-            const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
+            const {
+                authoSignedBy,
+                authoSignedAt,
+                captainSignedBy,
+                captainSignedAt,
+                isVerbalAuth,
+                dualAuthSignedBy,
+                dualAuthSignedAt,
+                dualAuthSignedAnnotation,
+                ...rest
+            } = e;
             return { ...rest, authNotes: '' };
         };
 

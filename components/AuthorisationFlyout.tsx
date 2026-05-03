@@ -307,6 +307,26 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
     setIsVerbal(checked);
   };
 
+  const normaliseSigner = (value: string | undefined) => value?.trim().toLowerCase() || '';
+
+  const isSameSigner = (a: string | undefined, b: string | undefined) => {
+    const left = normaliseSigner(a);
+    const right = normaliseSigner(b);
+    if (!left || !right) return false;
+    return left === right || left.endsWith(` ${right}`) || right.endsWith(` ${left}`);
+  };
+
+  const dualSignatureAnnotation = (() => {
+    if (!isVerbal) return '';
+    if (signingRole === 'autho' && isSameSigner(selectedAutho, event.captainSignedBy)) {
+      return `${selectedAutho} will be recorded as signing both AUTHO and PIC for this verbal authorisation.`;
+    }
+    if (signingRole === 'captain' && isSameSigner(selectedCaptain, event.authoSignedBy)) {
+      return `${selectedCaptain} will be recorded as signing both AUTHO and PIC for this verbal authorisation.`;
+    }
+    return '';
+  })();
+
   const hasAnySignature  = !!(event.authoSignedBy ?? event.captainSignedBy);
   const isFullyAuthorised = !!(event.authoSignedBy && event.captainSignedBy);
   const getPinForStaffSelection = (selectedPersonName: string) => {
@@ -415,6 +435,9 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                             <p className="text-green-400 font-semibold">Authorisation Approved</p>
                         </div>
                         <p className="text-gray-400 text-xs">This flight has been fully authorised and is cleared to proceed</p>
+                        {event.dualAuthSignedAnnotation && (
+                            <p className="mt-2 text-xs font-semibold text-amber-300">{event.dualAuthSignedAnnotation}</p>
+                        )}
                     </div>
 
                     <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
@@ -602,12 +625,19 @@ const AuthorisationFlyout: React.FC<AuthorisationFlyoutProps> = ({
                 </div>
             </div>
         </div>
-        {showAuthConfirmation && <AuthorisationConfirmation onConfirm={handleConfirmAuthForSign} onCancel={handleCancelAuthForSign} />}
+        {showAuthConfirmation && (
+            <AuthorisationConfirmation
+                onConfirm={handleConfirmAuthForSign}
+                onCancel={handleCancelAuthForSign}
+                annotation={dualSignatureAnnotation}
+            />
+        )}
         {showPinEntry && (
             <PinEntryFlyout
                 correctPin={pinForVerification}
                 onConfirm={isClearingAuth ? handleCorrectPinForClear : handleCorrectPinForSign}
                 onCancel={handleCancelPin}
+                annotation={dualSignatureAnnotation || undefined}
             />
         )}
         {showClearConfirmation && <ClearAuthConfirmation onConfirm={handleProceedToPinForClear} onCancel={() => setShowClearConfirmation(false)} />}

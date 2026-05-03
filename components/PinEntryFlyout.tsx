@@ -6,9 +6,10 @@ interface PinEntryFlyoutProps {
   onCancel: () => void;
   title?: string;
   message?: string;
+  annotation?: string;
 }
 
-const PinEntryFlyout: React.FC<PinEntryFlyoutProps> = ({ correctPin, onConfirm, onCancel, title, message }) => {
+const PinEntryFlyout: React.FC<PinEntryFlyoutProps> = ({ correctPin, onConfirm, onCancel, title, message, annotation }) => {
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
 
@@ -31,6 +32,11 @@ const PinEntryFlyout: React.FC<PinEntryFlyoutProps> = ({ correctPin, onConfirm, 
                 <form onSubmit={handleSubmit}>
                     <div className="p-6 space-y-4">
                         <label htmlFor="pin-input" className="block text-sm font-medium text-gray-400">{message || 'Please enter your PIN to continue.'}</label>
+                        {annotation && (
+                            <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200">
+                                {annotation}
+                            </div>
+                        )}
                         <input
                             id="pin-input"
                             type="text"

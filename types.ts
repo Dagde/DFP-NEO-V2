@@ -185,6 +185,9 @@ export interface ScheduleEvent {
   captainSignedBy?: string;
   captainSignedAt?: string;
   isVerbalAuth?: boolean;
+  dualAuthSignedBy?: string;
+  dualAuthSignedAt?: string;
+  dualAuthSignedAnnotation?: string;
   preStart?: number;
   postEnd?: number;
   landTime?: number;

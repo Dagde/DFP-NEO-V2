@@ -11133,7 +11133,7 @@ const ScoreDetailView = ({ trainee, scoreData, onBack }) => {
     ] })
   ] });
 };
-const PinEntryFlyout = ({ correctPin, onConfirm, onCancel, title, message }) => {
+const PinEntryFlyout = ({ correctPin, onConfirm, onCancel, title, message, annotation }) => {
   const [pin, setPin] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const handleSubmit = (e) => {
@@ -11150,6 +11150,7 @@ const PinEntryFlyout = ({ correctPin, onConfirm, onCancel, title, message }) => 
     /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "pin-input", className: "block text-sm font-medium text-gray-400", children: message || "Please enter your PIN to continue." }),
+        annotation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200", children: annotation }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "input",
           {
@@ -45882,10 +45883,13 @@ This action cannot be undone.`;
     )
   ] });
 };
-const AuthorisationConfirmation = ({ onConfirm, onCancel }) => {
+const AuthorisationConfirmation = ({ onConfirm, onCancel, message, annotation }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Confirm Authorisation" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: "Are you sure you wish to authorise this flight?" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: message || "Are you sure you wish to authorise this flight?" }),
+      annotation && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-200", children: annotation })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onCancel, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "NO" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm font-semibold", children: "YES" })
@@ -46262,6 +46266,23 @@ const AuthorisationFlyout = ({
   const handleVerbalAuthChange = (checked) => {
     setIsVerbal(checked);
   };
+  const normaliseSigner = (value) => value?.trim().toLowerCase() || "";
+  const isSameSigner = (a, b) => {
+    const left = normaliseSigner(a);
+    const right = normaliseSigner(b);
+    if (!left || !right) return false;
+    return left === right || left.endsWith(` ${right}`) || right.endsWith(` ${left}`);
+  };
+  const dualSignatureAnnotation = (() => {
+    if (!isVerbal) return "";
+    if (signingRole === "autho" && isSameSigner(selectedAutho, event.captainSignedBy)) {
+      return `${selectedAutho} will be recorded as signing both AUTHO and PIC for this verbal authorisation.`;
+    }
+    if (signingRole === "captain" && isSameSigner(selectedCaptain, event.authoSignedBy)) {
+      return `${selectedCaptain} will be recorded as signing both AUTHO and PIC for this verbal authorisation.`;
+    }
+    return "";
+  })();
   const hasAnySignature = !!(event.authoSignedBy ?? event.captainSignedBy);
   const isFullyAuthorised = !!(event.authoSignedBy && event.captainSignedBy);
   const getPinForStaffSelection = (selectedPersonName) => {
@@ -46332,7 +46353,8 @@ const AuthorisationFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "h-5 w-5 text-green-400 mr-2", fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 13l4 4L19 7" }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-green-400 font-semibold", children: "Authorisation Approved" })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "This flight has been fully authorised and is cleared to proceed" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "This flight has been fully authorised and is cleared to proceed" }),
+            event.dualAuthSignedAnnotation && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs font-semibold text-amber-300", children: event.dualAuthSignedAnnotation })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded-lg p-3 border border-gray-600", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Flight Summary" }),
@@ -46520,13 +46542,21 @@ const AuthorisationFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Close" })
       ] })
     ] }) }),
-    showAuthConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(AuthorisationConfirmation, { onConfirm: handleConfirmAuthForSign, onCancel: handleCancelAuthForSign }),
+    showAuthConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      AuthorisationConfirmation,
+      {
+        onConfirm: handleConfirmAuthForSign,
+        onCancel: handleCancelAuthForSign,
+        annotation: dualSignatureAnnotation
+      }
+    ),
     showPinEntry && /* @__PURE__ */ jsxRuntimeExports.jsx(
       PinEntryFlyout,
       {
         correctPin: pinForVerification,
         onConfirm: isClearingAuth ? handleCorrectPinForClear : handleCorrectPinForSign,
-        onCancel: handleCancelPin
+        onCancel: handleCancelPin,
+        annotation: dualSignatureAnnotation || void 0
       }
     ),
     showClearConfirmation && /* @__PURE__ */ jsxRuntimeExports.jsx(ClearAuthConfirmation, { onConfirm: handleProceedToPinForClear, onCancel: () => setShowClearConfirmation(false) })
@@ -72703,6 +72733,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     let wasFullyAuthed = false;
     let eventThatWasUpdated = null;
     let affectedScheduleDate = null;
+    const normaliseAuthSigner = (value) => value?.trim().toLowerCase() || "";
+    const isSameAuthSigner = (a, b) => {
+      const left = normaliseAuthSigner(a);
+      const right = normaliseAuthSigner(b);
+      if (!left || !right) return false;
+      return left === right || left.endsWith(` ${right}`) || right.endsWith(` ${left}`);
+    };
     const updateEventAuth = (e) => {
       if (e.id !== eventId) return e;
       const updatedEvent = { ...e, authNotes: notes, isVerbalAuth: isVerbal };
@@ -72714,6 +72751,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         updatedEvent.captainSignedAt = now;
       }
       const isNowFullyAuthorized = !!(updatedEvent.authoSignedBy && updatedEvent.captainSignedBy);
+      const isDualSignedVerbalAuth = !!(updatedEvent.isVerbalAuth && isNowFullyAuthorized && isSameAuthSigner(updatedEvent.authoSignedBy, updatedEvent.captainSignedBy));
+      if (isDualSignedVerbalAuth) {
+        const signer = updatedEvent.authoSignedBy || updatedEvent.captainSignedBy || authoSigner;
+        updatedEvent.dualAuthSignedBy = signer;
+        updatedEvent.dualAuthSignedAt = now;
+        updatedEvent.dualAuthSignedAnnotation = `${signer} signed both AUTHO and PIC for this verbal authorisation.`;
+      } else {
+        delete updatedEvent.dualAuthSignedBy;
+        delete updatedEvent.dualAuthSignedAt;
+        delete updatedEvent.dualAuthSignedAnnotation;
+      }
       if (isNowFullyAuthorized) {
         wasFullyAuthed = true;
       }
@@ -72749,14 +72797,24 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       setEventForAuth(null);
     }
     if (wasFullyAuthed) {
-      setSuccessMessage("Flight Authorised!");
+      setSuccessMessage(eventThatWasUpdated?.dualAuthSignedAnnotation || "Flight Authorised!");
     }
   };
   const clearAuthorisationForEvent = (eventId) => {
     let affectedScheduleDate = null;
     const clearAuthFields = (e) => {
       if (e.id !== eventId) return e;
-      const { authoSignedBy, authoSignedAt, captainSignedBy, captainSignedAt, isVerbalAuth, ...rest } = e;
+      const {
+        authoSignedBy,
+        authoSignedAt,
+        captainSignedBy,
+        captainSignedAt,
+        isVerbalAuth,
+        dualAuthSignedBy,
+        dualAuthSignedAt,
+        dualAuthSignedAnnotation,
+        ...rest
+      } = e;
       return { ...rest, authNotes: "" };
     };
     const updatedPublishedSchedules = Object.fromEntries(
