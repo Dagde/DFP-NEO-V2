@@ -723,14 +723,14 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => setIsEditingAward(prev => !prev)}
-                                                    className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
                                                     {isEditingAward ? 'Done' : 'Edit'}
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={addAward}
-                                                    className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                                    className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
                                                     <span className="leading-tight">Add<br />Award</span>
                                                 </button>

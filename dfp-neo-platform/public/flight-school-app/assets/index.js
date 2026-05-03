@@ -59523,7 +59523,7 @@ const CourseProgressView = ({
                       {
                         type: "button",
                         onClick: () => setIsEditingAward((prev) => !prev),
-                        className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                        className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                         children: isEditingAward ? "Done" : "Edit"
                       }
                     ),
@@ -59532,7 +59532,7 @@ const CourseProgressView = ({
                       {
                         type: "button",
                         onClick: addAward,
-                        className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                        className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
                         children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
                           "Add",
                           /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
