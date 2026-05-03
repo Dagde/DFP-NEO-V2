@@ -14,6 +14,7 @@ import AppearanceSettings from './AppearanceSettings';
 import { HistoricalDataSeeder } from './HistoricalDataSeeder';
 import PeopleProfilePage from './PeopleProfilePage';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
+import { logAudit } from '../utils/auditLogger';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -500,6 +501,470 @@ const sectionGroups: {
   },
 ];
 
+const timezoneOptions = [
+    { value: -12, label: 'UTC-12:00' },
+    { value: -11, label: 'UTC-11:00' },
+    { value: -10, label: 'UTC-10:00 (Hawaii)' },
+    { value: -9, label: 'UTC-09:00 (Alaska)' },
+    { value: -8, label: 'UTC-08:00 (Pacific)' },
+    { value: -7, label: 'UTC-07:00 (Mountain)' },
+    { value: -6, label: 'UTC-06:00 (Central)' },
+    { value: -5, label: 'UTC-05:00 (Eastern)' },
+    { value: -4, label: 'UTC-04:00' },
+    { value: -3, label: 'UTC-03:00' },
+    { value: -2, label: 'UTC-02:00' },
+    { value: -1, label: 'UTC-01:00' },
+    { value: 0, label: 'UTC+00:00 (GMT/UTC)' },
+    { value: 1, label: 'UTC+01:00 (CET)' },
+    { value: 2, label: 'UTC+02:00' },
+    { value: 3, label: 'UTC+03:00' },
+    { value: 4, label: 'UTC+04:00' },
+    { value: 5, label: 'UTC+05:00' },
+    { value: 5.5, label: 'UTC+05:30 (India)' },
+    { value: 6, label: 'UTC+06:00' },
+    { value: 7, label: 'UTC+07:00' },
+    { value: 8, label: 'UTC+08:00 (Singapore/Perth)' },
+    { value: 9, label: 'UTC+09:00 (Japan/Korea)' },
+    { value: 9.5, label: 'UTC+09:30 (Adelaide)' },
+    { value: 10, label: 'UTC+10:00 (AEST Sydney/Brisbane)' },
+    { value: 10.5, label: 'UTC+10:30' },
+    { value: 11, label: 'UTC+11:00 (AEDT Sydney)' },
+    { value: 12, label: 'UTC+12:00 (New Zealand)' },
+    { value: 13, label: 'UTC+13:00 (NZDT)' },
+];
+
+const formatTimezoneLabel = (offset: number) => {
+    return timezoneOptions.find(option => option.value === offset)?.label || `UTC${offset >= 0 ? '+' : ''}${offset}:00`;
+};
+
+const LocaleSettingsSection: React.FC<{
+    locations: string[];
+    onUpdateLocations: (locations: string[]) => void;
+    locationAbbreviations?: Record<string, string>;
+    onUpdateLocationAbbreviations?: (abbrevs: Record<string, string>) => void;
+    serviceDefinitions?: Array<{ longName: string; shortName: string }>;
+    onUpdateServiceDefinitions?: (defs: Array<{ longName: string; shortName: string }>) => void;
+    units: string[];
+    onUpdateUnits: (units: string[]) => void;
+    unitLocations: Record<string, string>;
+    onUpdateUnitLocations: (locations: Record<string, string>) => void;
+    locationOpAreas?: Record<string, string[]>;
+    onUpdateLocationOpAreas?: (areas: Record<string, string[]>) => void;
+    timezoneOffset: number;
+    onUpdateTimezoneOffset: (offset: number) => void;
+    currentUserPermission: SettingsViewWithMenuProps['currentUserPermission'];
+    onShowSuccess: (message: string) => void;
+}> = ({
+    locations,
+    onUpdateLocations,
+    locationAbbreviations = {},
+    onUpdateLocationAbbreviations,
+    serviceDefinitions = [
+        { longName: 'Air Force', shortName: 'RAAF' },
+        { longName: 'Navy', shortName: 'RAN' },
+        { longName: 'Army', shortName: 'ARA' },
+    ],
+    onUpdateServiceDefinitions,
+    units,
+    onUpdateUnits,
+    unitLocations,
+    onUpdateUnitLocations,
+    locationOpAreas = {},
+    onUpdateLocationOpAreas,
+    timezoneOffset,
+    onUpdateTimezoneOffset,
+    currentUserPermission,
+    onShowSuccess,
+}) => {
+    const canEditSettings = ['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission);
+    const [isEditing, setIsEditing] = useState(false);
+    const [tempLocations, setTempLocations] = useState<string[]>(locations);
+    const [tempLocationAbbreviations, setTempLocationAbbreviations] = useState<Record<string, string>>(locationAbbreviations);
+    const [tempUnits, setTempUnits] = useState<string[]>(units);
+    const [tempUnitLocations, setTempUnitLocations] = useState<Record<string, string>>(unitLocations);
+    const [tempOpAreas, setTempOpAreas] = useState<Record<string, string[]>>(locationOpAreas);
+    const [tempTimezoneOffset, setTempTimezoneOffset] = useState(timezoneOffset);
+    const [tempServiceDefinitions, setTempServiceDefinitions] = useState(serviceDefinitions);
+    const [newLocation, setNewLocation] = useState('');
+    const [newUnitByLocation, setNewUnitByLocation] = useState<Record<string, string>>({});
+    const [newAreaByLocation, setNewAreaByLocation] = useState<Record<string, string>>({});
+    const [newServiceLong, setNewServiceLong] = useState('');
+    const [newServiceShort, setNewServiceShort] = useState('');
+
+    React.useEffect(() => {
+        if (!isEditing) {
+            setTempLocations(locations);
+            setTempLocationAbbreviations(locationAbbreviations);
+            setTempUnits(units);
+            setTempUnitLocations(unitLocations);
+            setTempOpAreas(locationOpAreas);
+            setTempTimezoneOffset(timezoneOffset);
+            setTempServiceDefinitions(serviceDefinitions);
+        }
+    }, [isEditing, locations, locationAbbreviations, units, unitLocations, locationOpAreas, timezoneOffset, serviceDefinitions]);
+
+    const resetDrafts = () => {
+        setTempLocations(locations);
+        setTempLocationAbbreviations(locationAbbreviations);
+        setTempUnits(units);
+        setTempUnitLocations(unitLocations);
+        setTempOpAreas(locationOpAreas);
+        setTempTimezoneOffset(timezoneOffset);
+        setTempServiceDefinitions(serviceDefinitions);
+        setNewLocation('');
+        setNewUnitByLocation({});
+        setNewAreaByLocation({});
+        setNewServiceLong('');
+        setNewServiceShort('');
+    };
+
+    const startEdit = () => {
+        resetDrafts();
+        setIsEditing(true);
+    };
+
+    const cancelEdit = () => {
+        resetDrafts();
+        setIsEditing(false);
+    };
+
+    const addLocation = () => {
+        const name = newLocation.trim();
+        if (!name || tempLocations.includes(name)) return;
+        setTempLocations([...tempLocations, name]);
+        setTempLocationAbbreviations(prev => ({ ...prev, [name]: '' }));
+        setTempOpAreas(prev => ({ ...prev, [name]: [] }));
+        setNewLocation('');
+    };
+
+    const removeLocation = (location: string) => {
+        const nextLocations = tempLocations.filter(loc => loc !== location);
+        const fallbackLocation = nextLocations[0] || '';
+        setTempLocations(nextLocations);
+        setTempLocationAbbreviations(prev => {
+            const next = { ...prev };
+            delete next[location];
+            return next;
+        });
+        setTempOpAreas(prev => {
+            const next = { ...prev };
+            delete next[location];
+            return next;
+        });
+        setTempUnitLocations(prev => Object.fromEntries(
+            Object.entries(prev).map(([unit, assignedLocation]) => [unit, assignedLocation === location ? fallbackLocation : assignedLocation])
+        ));
+    };
+
+    const renameLocation = (oldLocation: string, newName: string) => {
+        setTempLocations(prev => prev.map(loc => loc === oldLocation ? newName : loc));
+        setTempLocationAbbreviations(prev => {
+            const next = { ...prev, [newName]: prev[oldLocation] || '' };
+            if (newName !== oldLocation) delete next[oldLocation];
+            return next;
+        });
+        setTempOpAreas(prev => {
+            const next = { ...prev, [newName]: prev[oldLocation] || [] };
+            if (newName !== oldLocation) delete next[oldLocation];
+            return next;
+        });
+        setTempUnitLocations(prev => Object.fromEntries(
+            Object.entries(prev).map(([unit, assignedLocation]) => [unit, assignedLocation === oldLocation ? newName : assignedLocation])
+        ));
+    };
+
+    const addUnitToLocation = (location: string) => {
+        const unitName = (newUnitByLocation[location] || '').trim();
+        if (!unitName || tempUnits.includes(unitName)) return;
+        setTempUnits([...tempUnits, unitName]);
+        setTempUnitLocations(prev => ({ ...prev, [unitName]: location }));
+        setNewUnitByLocation(prev => ({ ...prev, [location]: '' }));
+    };
+
+    const removeUnit = (unit: string) => {
+        setTempUnits(prev => prev.filter(item => item !== unit));
+        setTempUnitLocations(prev => {
+            const next = { ...prev };
+            delete next[unit];
+            return next;
+        });
+    };
+
+    const addAreaToLocation = (location: string) => {
+        const area = (newAreaByLocation[location] || '').trim().toUpperCase();
+        if (!area) return;
+        const existing = tempOpAreas[location] || [];
+        if (existing.includes(area)) return;
+        setTempOpAreas(prev => ({ ...prev, [location]: [...existing, area].sort() }));
+        setNewAreaByLocation(prev => ({ ...prev, [location]: '' }));
+    };
+
+    const removeArea = (location: string, area: string) => {
+        setTempOpAreas(prev => ({
+            ...prev,
+            [location]: (prev[location] || []).filter(item => item !== area),
+        }));
+    };
+
+    const addService = () => {
+        const longName = newServiceLong.trim();
+        const shortName = newServiceShort.trim().toUpperCase();
+        if (!longName || !shortName || tempServiceDefinitions.some(service => service.shortName === shortName)) return;
+        setTempServiceDefinitions([...tempServiceDefinitions, { longName, shortName }]);
+        setNewServiceLong('');
+        setNewServiceShort('');
+    };
+
+    const removeService = (shortName: string) => {
+        setTempServiceDefinitions(prev => prev.filter(service => service.shortName !== shortName));
+    };
+
+    const saveLocaleSettings = () => {
+        const cleanLocations = tempLocations.map(location => location.trim()).filter(Boolean);
+        const uniqueLocations = Array.from(new Set(cleanLocations));
+        const fallbackLocation = uniqueLocations[0] || '';
+        const cleanAbbreviations = Object.fromEntries(
+            uniqueLocations.map(location => [location, (tempLocationAbbreviations[location] || '').trim().toUpperCase()])
+        );
+        const cleanUnits = Array.from(new Set(tempUnits.map(unit => unit.trim()).filter(Boolean)));
+        const cleanUnitLocations = Object.fromEntries(
+            cleanUnits.map(unit => [unit, uniqueLocations.includes(tempUnitLocations[unit]) ? tempUnitLocations[unit] : fallbackLocation])
+        );
+        const cleanOpAreas = Object.fromEntries(
+            uniqueLocations.map(location => [location, Array.from(new Set((tempOpAreas[location] || []).map(area => area.trim().toUpperCase()).filter(Boolean))).sort()])
+        );
+
+        onUpdateLocations(uniqueLocations);
+        if (onUpdateLocationAbbreviations) onUpdateLocationAbbreviations(cleanAbbreviations);
+        onUpdateTimezoneOffset(tempTimezoneOffset);
+        onUpdateUnits(cleanUnits);
+        onUpdateUnitLocations(cleanUnitLocations);
+        if (onUpdateLocationOpAreas) onUpdateLocationOpAreas(cleanOpAreas);
+        if (onUpdateServiceDefinitions) onUpdateServiceDefinitions(tempServiceDefinitions);
+        setIsEditing(false);
+        onShowSuccess('Locale settings updated');
+        logAudit({
+            page: 'Settings - Locale Settings',
+            action: 'update',
+            description: 'Updated location-led locale settings',
+            changes: `${uniqueLocations.length} locations, ${cleanUnits.length} units, timezone ${formatTimezoneLabel(tempTimezoneOffset)}`,
+        });
+    };
+
+    const displayedLocations = isEditing ? tempLocations : locations;
+    const displayedUnits = isEditing ? tempUnits : units;
+    const displayedUnitLocations = isEditing ? tempUnitLocations : unitLocations;
+    const displayedOpAreas = isEditing ? tempOpAreas : locationOpAreas;
+    const displayedAbbreviations = isEditing ? tempLocationAbbreviations : locationAbbreviations;
+    const displayedTimezone = isEditing ? tempTimezoneOffset : timezoneOffset;
+    const displayedServices = isEditing ? tempServiceDefinitions : serviceDefinitions;
+
+    return (
+        <div className="space-y-5">
+            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
+                <div className="flex flex-wrap items-start gap-3">
+                    <div>
+                        <h3 className="text-lg font-bold text-cyan-200">Locale Settings</h3>
+                        <p className="mt-1 text-sm text-cyan-100/70">Locations are the parent record. Each location carries its timezone, assigned units, and training areas.</p>
+                    </div>
+                    <div className="ml-auto flex gap-2">
+                        {isEditing ? (
+                            <>
+                                <button onClick={saveLocaleSettings} className="rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-700">Save</button>
+                                <button onClick={cancelEdit} className="rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600">Cancel</button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={startEdit}
+                                disabled={!canEditSettings}
+                                className={`rounded-md px-3 py-2 text-sm font-semibold ${canEditSettings ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-800 text-gray-500 cursor-not-allowed'}`}
+                            >
+                                Edit
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {isEditing && (
+                <div className="rounded-lg border border-gray-700 bg-gray-800 p-4">
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-gray-500">Add Location</label>
+                    <div className="flex flex-wrap gap-2">
+                        <input
+                            value={newLocation}
+                            onChange={event => setNewLocation(event.target.value)}
+                            placeholder="New location name"
+                            className="min-w-64 flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+                        />
+                        <button onClick={addLocation} className="rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">Add Location</button>
+                    </div>
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+                {displayedLocations.map(location => {
+                    const assignedUnits = displayedUnits.filter(unit => displayedUnitLocations[unit] === location);
+                    const trainingAreas = displayedOpAreas[location] || [];
+                    return (
+                        <section key={location} className="rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
+                            <div className="border-b border-gray-700 bg-gray-900/45 px-4 py-3">
+                                <div className="flex flex-wrap items-start gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        {isEditing ? (
+                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_6rem]">
+                                                <input
+                                                    value={location}
+                                                    onChange={event => renameLocation(location, event.target.value)}
+                                                    className="rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-lg font-bold text-white focus:border-sky-500 focus:outline-none"
+                                                />
+                                                <input
+                                                    value={tempLocationAbbreviations[location] || ''}
+                                                    onChange={event => setTempLocationAbbreviations(prev => ({ ...prev, [location]: event.target.value.toUpperCase() }))}
+                                                    maxLength={5}
+                                                    placeholder="Code"
+                                                    className="rounded-md border border-gray-600 bg-gray-950 px-3 py-2 text-center font-mono text-sm font-bold uppercase text-yellow-300 focus:border-sky-500 focus:outline-none"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <h4 className="truncate text-xl font-bold text-white">{location}</h4>
+                                                {displayedAbbreviations[location] && (
+                                                    <p className="mt-1 font-mono text-xs font-bold uppercase tracking-widest text-yellow-300">{displayedAbbreviations[location]}</p>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                    {isEditing && (
+                                        <button onClick={() => removeLocation(location)} className="rounded-md border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/10">Remove</button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 p-4">
+                                <div>
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-widest text-gray-500">Assigned Timezone</label>
+                                    {isEditing ? (
+                                        <select
+                                            value={displayedTimezone}
+                                            onChange={event => setTempTimezoneOffset(parseFloat(event.target.value))}
+                                            className="w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+                                        >
+                                            {timezoneOptions.map(option => (
+                                                <option key={option.value} value={option.value}>{option.label}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <div className="rounded-md bg-gray-900/70 px-3 py-2 text-sm font-semibold text-gray-200">{formatTimezoneLabel(displayedTimezone)}</div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500">Assigned Units</label>
+                                        <span className="text-xs text-gray-600">{assignedUnits.length}</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {assignedUnits.length === 0 && <p className="rounded-md border border-dashed border-gray-700 px-3 py-2 text-sm text-gray-500">No units assigned.</p>}
+                                        {assignedUnits.map(unit => (
+                                            <div key={unit} className="flex items-center gap-2 rounded-md bg-gray-900/70 px-3 py-2">
+                                                <span className="flex-1 text-sm font-semibold text-gray-200">{unit}</span>
+                                                {isEditing && (
+                                                    <>
+                                                        <select
+                                                            value={tempUnitLocations[unit] || location}
+                                                            onChange={event => setTempUnitLocations(prev => ({ ...prev, [unit]: event.target.value }))}
+                                                            className="rounded-md border border-gray-600 bg-gray-950 px-2 py-1 text-xs text-white"
+                                                        >
+                                                            {tempLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                                                        </select>
+                                                        <button onClick={() => removeUnit(unit)} className="text-xs font-semibold text-red-300 hover:text-red-200">Remove</button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {isEditing && (
+                                        <div className="mt-2 flex gap-2">
+                                            <input
+                                                value={newUnitByLocation[location] || ''}
+                                                onChange={event => setNewUnitByLocation(prev => ({ ...prev, [location]: event.target.value }))}
+                                                placeholder="New unit for this location"
+                                                className="min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+                                            />
+                                            <button onClick={() => addUnitToLocation(location)} className="rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">Add</button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <label className="block text-xs font-semibold uppercase tracking-widest text-gray-500">Assigned Training Areas</label>
+                                        <span className="text-xs text-gray-600">{trainingAreas.length}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {trainingAreas.length === 0 && <p className="rounded-md border border-dashed border-gray-700 px-3 py-2 text-sm text-gray-500">No training areas assigned.</p>}
+                                        {trainingAreas.map(area => (
+                                            <span key={area} className="inline-flex items-center gap-2 rounded-md bg-gray-900/70 px-3 py-1.5 text-sm font-semibold text-gray-200">
+                                                {area}
+                                                {isEditing && <button onClick={() => removeArea(location, area)} className="text-gray-500 hover:text-red-300">x</button>}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    {isEditing && (
+                                        <div className="mt-2 flex gap-2">
+                                            <input
+                                                value={newAreaByLocation[location] || ''}
+                                                onChange={event => setNewAreaByLocation(prev => ({ ...prev, [location]: event.target.value.toUpperCase() }))}
+                                                placeholder="New training area"
+                                                className="min-w-0 flex-1 rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm uppercase text-white focus:border-sky-500 focus:outline-none"
+                                            />
+                                            <button onClick={() => addAreaToLocation(location)} className="rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">Add</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    );
+                })}
+            </div>
+
+            <section className="rounded-lg border border-gray-700 bg-gray-800 shadow-lg">
+                <div className="border-b border-gray-700 bg-gray-900/45 px-4 py-3">
+                    <h4 className="text-lg font-bold text-white">Service Branches</h4>
+                    <p className="mt-1 text-sm text-gray-500">Recognised service names and short codes used when filtering personnel.</p>
+                </div>
+                <div className="space-y-2 p-4">
+                    {displayedServices.map(service => (
+                        <div key={service.shortName} className="flex items-center gap-3 rounded-md bg-gray-900/70 px-3 py-2">
+                            <span className="w-16 rounded bg-gray-700 px-2 py-1 text-center font-mono text-xs font-bold text-yellow-300">{service.shortName}</span>
+                            <span className="flex-1 text-sm text-gray-200">{service.longName}</span>
+                            {isEditing && <button onClick={() => removeService(service.shortName)} className="text-xs font-semibold text-red-300 hover:text-red-200">Remove</button>}
+                        </div>
+                    ))}
+                    {isEditing && (
+                        <div className="grid grid-cols-1 gap-2 pt-2 sm:grid-cols-[8rem_1fr_auto]">
+                            <input
+                                value={newServiceShort}
+                                onChange={event => setNewServiceShort(event.target.value.toUpperCase())}
+                                maxLength={6}
+                                placeholder="Code"
+                                className="rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm uppercase text-yellow-300 focus:border-sky-500 focus:outline-none"
+                            />
+                            <input
+                                value={newServiceLong}
+                                onChange={event => setNewServiceLong(event.target.value)}
+                                placeholder="Service name"
+                                className="rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+                            />
+                            <button onClick={addService} className="rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700">Add</button>
+                        </div>
+                    )}
+                </div>
+            </section>
+        </div>
+    );
+};
+
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     type ActiveSection = SettingsMenuSection | 'home';
     const [activeSection, setActiveSection] = useState<ActiveSection>('home');
@@ -816,15 +1281,24 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     )}
 
                     {activeSection === 'locale-settings' && (
-                        <div className="space-y-5">
-                            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
-                                <h3 className="text-lg font-bold text-cyan-200">Locale Settings</h3>
-                                <p className="mt-1 text-sm text-cyan-100/70">Configure location first, then timezone, then unit assignments.</p>
-                            </div>
-                            <SettingsView {...props} hideHeader={true} activeSection="location" />
-                            <SettingsView {...props} hideHeader={true} activeSection="timezone" />
-                            <SettingsView {...props} hideHeader={true} activeSection="units" />
-                        </div>
+                        <LocaleSettingsSection
+                            locations={props.locations}
+                            onUpdateLocations={props.onUpdateLocations}
+                            locationAbbreviations={props.locationAbbreviations}
+                            onUpdateLocationAbbreviations={props.onUpdateLocationAbbreviations}
+                            serviceDefinitions={props.serviceDefinitions}
+                            onUpdateServiceDefinitions={props.onUpdateServiceDefinitions}
+                            units={props.units}
+                            onUpdateUnits={props.onUpdateUnits}
+                            unitLocations={props.unitLocations}
+                            onUpdateUnitLocations={props.onUpdateUnitLocations}
+                            locationOpAreas={props.locationOpAreas}
+                            onUpdateLocationOpAreas={props.onUpdateLocationOpAreas}
+                            timezoneOffset={props.timezoneOffset}
+                            onUpdateTimezoneOffset={props.onUpdateTimezoneOffset}
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
+                        />
                     )}
 
                     {activeSection === 'scheduling-rules' && (
