@@ -59533,7 +59533,11 @@ const CourseProgressView = ({
                         type: "button",
                         onClick: addAward,
                         className: "w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-                        children: "Add Award"
+                        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+                          "Add",
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                          "Award"
+                        ] })
                       }
                     )
                   ] })

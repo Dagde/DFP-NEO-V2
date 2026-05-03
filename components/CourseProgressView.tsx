@@ -732,7 +732,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     onClick={addAward}
                                                     className="w-[72px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
                                                 >
-                                                    Add Award
+                                                    <span className="leading-tight">Add<br />Award</span>
                                                 </button>
                                             </div>
                                         </div>
