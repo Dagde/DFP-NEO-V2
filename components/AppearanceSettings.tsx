@@ -4,110 +4,140 @@ import { useTheme, AppTheme } from '../context/ThemeContext';
 const AppearanceSettings: React.FC = () => {
     const { theme, setTheme } = useTheme();
 
-    const options: { value: AppTheme; label: string; description: string }[] = [
+    const options: { value: AppTheme; label: string; description: string; tags: string[] }[] = [
         {
             value: 'dark',
             label: 'Dark Mode',
             description: 'Dark backgrounds with light text. Optimised for low-light environments.',
+            tags: ['Low light', 'High contrast', 'Default'],
         },
         {
             value: 'light',
             label: 'Light Mode',
-            description: 'Light backgrounds with dark text. Optimised for bright environments.',
+            description: 'Clean daylight surfaces with dark text, navy chrome, and softer operational panels.',
+            tags: ['Bright rooms', 'Readable tables', 'Daylight'],
         },
     ];
 
     return (
         <div className="space-y-6">
-            <div>
-                <h3 className="text-base font-semibold text-white mb-1">Theme</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                    Choose how DFP-NEO looks on your device. Your preference is saved locally.
+            <div className="rounded-lg border border-gray-700 bg-gray-900/40 p-5">
+                <h3 className="text-lg font-bold text-white mb-1">Appearance</h3>
+                <p className="text-sm text-gray-400 max-w-3xl">
+                    Choose the operational colour system for this device. Light mode now re-themes panels, tables,
+                    controls, menus, overlays, and common status surfaces rather than only changing the background.
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+            </div>
+
+            <div>
+                <div className="grid grid-cols-1 gap-4 max-w-5xl xl:grid-cols-2">
                     {options.map((opt) => {
                         const isSelected = theme === opt.value;
+                        const isLight = opt.value === 'light';
                         return (
                             <button
                                 key={opt.value}
                                 onClick={() => setTheme(opt.value)}
-                                className={`relative flex flex-col gap-3 p-4 rounded-xl border-2 text-left transition-all duration-200 cursor-pointer
+                                className={`relative flex flex-col gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 cursor-pointer
                                     ${isSelected
-                                        ? 'border-sky-500 bg-sky-500/10'
+                                        ? 'border-sky-500 bg-sky-500/10 shadow-lg'
                                         : 'border-gray-700 bg-gray-800 hover:border-gray-500 hover:bg-gray-700/60'
                                     }`}
                             >
                                 {/* Theme preview card */}
                                 <div
-                                    className={`w-full h-24 rounded-lg overflow-hidden border ${isSelected ? 'border-sky-500/40' : 'border-gray-600'} flex-shrink-0`}
+                                    className={`w-full h-40 rounded-lg overflow-hidden border ${isSelected ? 'border-sky-500/40' : 'border-gray-600'} flex-shrink-0`}
                                     style={{
-                                        background: opt.value === 'dark'
+                                        background: !isLight
                                             ? 'linear-gradient(135deg, #111827 0%, #1f2937 100%)'
-                                            : 'linear-gradient(135deg, #f1f5f9 0%, #ffffff 100%)',
+                                            : 'linear-gradient(135deg, #eef4f8 0%, #ffffff 100%)',
                                     }}
                                 >
-                                    {/* Mini app chrome preview */}
                                     <div className="flex h-full">
-                                        {/* Sidebar */}
                                         <div
-                                            className="w-8 h-full flex-shrink-0"
+                                            className="w-14 h-full flex-shrink-0"
                                             style={{
-                                                background: opt.value === 'dark' ? '#0f172a' : '#1e293b',
+                                                background: !isLight ? '#0f172a' : '#142235',
                                             }}
                                         >
-                                            <div className="flex flex-col gap-1 pt-2 items-center">
-                                                {[1,2,3,4].map(i => (
+                                            <div className="flex flex-col gap-2 pt-3 items-center">
+                                                {[1,2,3,4,5].map(i => (
                                                     <div
                                                         key={i}
-                                                        className="rounded"
+                                                        className="rounded-sm"
                                                         style={{
-                                                            width: 20,
+                                                            width: i === 1 ? 32 : 26,
                                                             height: 8,
                                                             background: i === 1
                                                                 ? '#0ea5e9'
-                                                                : opt.value === 'dark' ? '#374151' : '#334155',
+                                                                : !isLight ? '#374151' : '#34465c',
                                                         }}
                                                     />
                                                 ))}
                                             </div>
                                         </div>
-                                        {/* Main area */}
-                                        <div className="flex-1 p-2 flex flex-col gap-1.5">
-                                            {/* Header bar */}
+                                        <div className="flex-1 p-3 flex flex-col gap-3">
                                             <div
-                                                className="w-full rounded h-3"
+                                                className="w-full rounded h-5"
                                                 style={{
-                                                    background: opt.value === 'dark' ? '#1f2937' : '#e2e8f0',
+                                                    background: !isLight ? '#1f2937' : '#ffffff',
+                                                    border: !isLight ? '1px solid #374151' : '1px solid #c5d3e1',
                                                 }}
                                             />
-                                            {/* Content rows */}
-                                            <div className="flex gap-1.5">
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {[
+                                                    ['#0ea5e9', '#38bdf8'],
+                                                    ['#8b5cf6', '#a78bfa'],
+                                                    ['#d97706', '#f59e0b'],
+                                                ].map(([accent, fill], index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="rounded"
+                                                        style={{
+                                                            height: 28,
+                                                            background: !isLight ? '#1f2937' : '#ffffff',
+                                                            border: `1px solid ${isLight ? '#c5d3e1' : '#374151'}`,
+                                                            boxShadow: isLight ? '0 4px 12px rgba(15,23,42,0.08)' : 'none',
+                                                        }}
+                                                    >
+                                                        <div style={{ height: 4, background: accent, borderRadius: '3px 3px 0 0' }} />
+                                                        <div style={{ margin: 6, height: 7, background: fill, opacity: 0.55, borderRadius: 4 }} />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="flex gap-2">
                                                 <div
-                                                    className="rounded flex-1 h-2"
+                                                    className="rounded flex-1"
                                                     style={{
-                                                        background: opt.value === 'dark' ? '#374151' : '#cbd5e1',
+                                                        height: 48,
+                                                        background: !isLight ? '#1f2937' : '#ffffff',
+                                                        border: !isLight ? '1px solid #374151' : '1px solid #c5d3e1',
                                                     }}
-                                                />
+                                                >
+                                                    {[1,2,3].map(i => (
+                                                        <div
+                                                            key={i}
+                                                            style={{
+                                                                height: 6,
+                                                                margin: '7px 8px',
+                                                                borderRadius: 4,
+                                                                background: !isLight
+                                                                    ? (i === 1 ? '#64748b' : '#374151')
+                                                                    : (i === 1 ? '#26384d' : '#dce6ef'),
+                                                            }}
+                                                        />
+                                                    ))}
+                                                </div>
                                                 <div
-                                                    className="rounded h-2"
+                                                    className="rounded"
                                                     style={{
-                                                        width: 30,
-                                                        background: '#0ea5e9',
+                                                        width: 60,
+                                                        height: 48,
+                                                        background: !isLight ? '#0f172a' : '#e8f1f8',
+                                                        border: !isLight ? '1px solid #334155' : '1px solid #c5d3e1',
                                                     }}
                                                 />
                                             </div>
-                                            {[1,2,3].map(i => (
-                                                <div
-                                                    key={i}
-                                                    className="w-full rounded h-2"
-                                                    style={{
-                                                        background: opt.value === 'dark'
-                                                            ? (i % 2 === 0 ? '#374151' : '#1f2937')
-                                                            : (i % 2 === 0 ? '#e2e8f0' : '#f1f5f9'),
-                                                        opacity: 0.8,
-                                                    }}
-                                                />
-                                            ))}
                                         </div>
                                     </div>
                                 </div>
@@ -123,13 +153,20 @@ const AppearanceSettings: React.FC = () => {
                                             <div className="w-2 h-2 rounded-full bg-sky-500" />
                                         )}
                                     </div>
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="text-sm font-semibold text-white leading-tight">
                                             {opt.label}
                                         </p>
                                         <p className="text-xs text-gray-400 mt-0.5 leading-snug">
                                             {opt.description}
                                         </p>
+                                        <div className="mt-3 flex flex-wrap gap-1.5">
+                                            {opt.tags.map(tag => (
+                                                <span key={tag} className="rounded border border-gray-700 bg-gray-900/40 px-2 py-1 text-[11px] font-semibold text-gray-400">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -148,7 +185,7 @@ const AppearanceSettings: React.FC = () => {
             </div>
 
             {/* Current status */}
-            <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-700/30 border border-gray-700 rounded-lg px-3 py-2 max-w-2xl">
+            <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-700/30 border border-gray-700 rounded-lg px-3 py-2 max-w-5xl">
                 <svg className="w-4 h-4 text-sky-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
