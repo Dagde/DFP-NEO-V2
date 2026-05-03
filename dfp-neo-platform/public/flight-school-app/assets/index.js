@@ -5142,6 +5142,8 @@ const getResourceCategory$1 = (res) => {
 const ScheduleView = ({
   date,
   onDateChange,
+  onDateSelect,
+  snapshotDates = [],
   events,
   resources,
   instructors,
@@ -5194,6 +5196,7 @@ const ScheduleView = ({
   // Default to UTC+11
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
+  const [showDatePicker, setShowDatePicker] = reactExports.useState(false);
   const scheduleGridRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const now = /* @__PURE__ */ new Date();
@@ -5862,11 +5865,89 @@ const ScheduleView = ({
       },
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 h-full", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 ${isNeoBuild ? "neo-build-date-indicator" : ""}`, style: { height: "100%", width: "100%" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(-1), className: "text-gray-400 hover:text-white transition-colors p-0.5", children: "←" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onDateChange(1), className: "text-gray-400 hover:text-white transition-colors p-0.5", children: "→" })
-          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer hover:bg-gray-600 transition-colors ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
+              style: { height: "100%", width: "100%" },
+              onClick: () => setShowDatePicker((prev) => !prev),
+              title: "Open date picker",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: (event) => {
+                      event.stopPropagation();
+                      onDateChange(-1);
+                    },
+                    className: "text-gray-400 hover:text-white transition-colors p-0.5",
+                    children: "←"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: (event) => {
+                      event.stopPropagation();
+                      onDateChange(1);
+                    },
+                    className: "text-gray-400 hover:text-white transition-colors p-0.5",
+                    children: "→"
+                  }
+                ),
+                showDatePicker && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl",
+                    onClick: (event) => event.stopPropagation(),
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2", children: "Select DFP Date" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "date",
+                          value: date,
+                          onChange: (event) => {
+                            const selectedDate2 = event.target.value;
+                            if (!selectedDate2) return;
+                            if (onDateSelect) {
+                              onDateSelect(selectedDate2);
+                            } else {
+                              const current = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
+                              const selected = (/* @__PURE__ */ new Date(`${selectedDate2}T00:00:00Z`)).getTime();
+                              const diff = Math.round((selected - current) / 864e5);
+                              if (diff !== 0) onDateChange(diff);
+                            }
+                            setShowDatePicker(false);
+                          },
+                          className: "w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                        }
+                      ),
+                      snapshotDates.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2", children: "Saved Records" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-36 overflow-y-auto space-y-1", children: snapshotDates.slice(0, 12).map((snapshotDate) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => {
+                              if (onDateSelect) {
+                                onDateSelect(snapshotDate);
+                              }
+                              setShowDatePicker(false);
+                            },
+                            className: `w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${snapshotDate === date ? "bg-sky-600 text-white" : "bg-gray-700/60 text-gray-300 hover:bg-gray-700"}`,
+                            children: snapshotDate
+                          },
+                          snapshotDate
+                        )) })
+                      ] })
+                    ]
+                  }
+                )
+              ]
+            }
+          ),
           isNeoBuild && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "neo-build-label", children: "NEO Build" })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "sticky top-0 z-20 bg-gray-800 border-b border-gray-700 relative", children: renderTimeHeaders() }),

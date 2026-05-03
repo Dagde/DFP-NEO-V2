@@ -12,6 +12,8 @@ import { VisualAdjustGuide } from './VisualAdjustGuide';
 interface ScheduleViewProps {
   date: string;
   onDateChange: (increment: number) => void;
+  onDateSelect?: (date: string) => void;
+  snapshotDates?: string[];
   events: ScheduleEvent[];
   resources: string[];
   instructors: string[];
@@ -134,7 +136,7 @@ const getResourceCategory = (res: string) => {
 };
 
 const ScheduleView: React.FC<ScheduleViewProps> = ({
-    date, onDateChange, events, resources, instructors, traineesData, airframeCount, standbyCount, ftdCount, cptCount,
+    date, onDateChange, onDateSelect, snapshotDates = [], events, resources, instructors, traineesData, airframeCount, standbyCount, ftdCount, cptCount,
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, syllabusDetails,
     personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds, unavailabilityConflicts,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, baselineEvents,
@@ -148,6 +150,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
     // Initialize with timezone-adjusted time
     const [currentTime, setCurrentTime] = useState(() => {
@@ -958,14 +961,87 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 {/* Date Control (Top Left) */}
                 <div className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
                     <div className="flex items-center gap-1 h-full">
-                        <div className={`bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 ${isNeoBuild ? 'neo-build-date-indicator' : ''}`} style={{height: "100%", width: "100%"}}>
-                            <button onClick={() => onDateChange(-1)} className="text-gray-400 hover:text-white transition-colors p-0.5">
+                        <div
+                            className={`relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer hover:bg-gray-600 transition-colors ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}
+                            style={{height: "100%", width: "100%"}}
+                            onClick={() => setShowDatePicker(prev => !prev)}
+                            title="Open date picker"
+                        >
+                            <button
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDateChange(-1);
+                                }}
+                                className="text-gray-400 hover:text-white transition-colors p-0.5"
+                            >
                                 ←
                             </button>
                             <span className="text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap">{formattedDisplayDate}</span>
-                            <button onClick={() => onDateChange(1)} className="text-gray-400 hover:text-white transition-colors p-0.5">
+                            <button
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDateChange(1);
+                                }}
+                                className="text-gray-400 hover:text-white transition-colors p-0.5"
+                            >
                                 →
                             </button>
+                            {showDatePicker && (
+                                <div
+                                    className="absolute top-full left-0 mt-2 w-64 rounded-lg border border-gray-600 bg-gray-800 p-3 shadow-2xl"
+                                    onClick={(event) => event.stopPropagation()}
+                                >
+                                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                                        Select DFP Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(event) => {
+                                            const selectedDate = event.target.value;
+                                            if (!selectedDate) return;
+                                            if (onDateSelect) {
+                                                onDateSelect(selectedDate);
+                                            } else {
+                                                const current = new Date(`${date}T00:00:00Z`).getTime();
+                                                const selected = new Date(`${selectedDate}T00:00:00Z`).getTime();
+                                                const diff = Math.round((selected - current) / 86400000);
+                                                if (diff !== 0) onDateChange(diff);
+                                            }
+                                            setShowDatePicker(false);
+                                        }}
+                                        className="w-full rounded-md border border-gray-600 bg-gray-900 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                    />
+                                    {snapshotDates.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                                                Saved Records
+                                            </p>
+                                            <div className="max-h-36 overflow-y-auto space-y-1">
+                                                {snapshotDates.slice(0, 12).map(snapshotDate => (
+                                                    <button
+                                                        key={snapshotDate}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (onDateSelect) {
+                                                                onDateSelect(snapshotDate);
+                                                            }
+                                                            setShowDatePicker(false);
+                                                        }}
+                                                        className={`w-full rounded px-2 py-1.5 text-left text-xs transition-colors ${
+                                                            snapshotDate === date
+                                                                ? 'bg-sky-600 text-white'
+                                                                : 'bg-gray-700/60 text-gray-300 hover:bg-gray-700'
+                                                        }`}
+                                                    >
+                                                        {snapshotDate}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         {isNeoBuild && (
                             <div className="neo-build-label">NEO Build</div>
