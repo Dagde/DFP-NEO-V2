@@ -191,6 +191,18 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         return lmpType === 'BPC+IPC' && !itemLmpType && item.type !== 'Academics';
     };
 
+    const isUuidLike = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value.trim());
+
+    const getValidEventCode = (item: SyllabusItemDetail) => {
+        const code = (item.code || '').trim();
+        if (code && !isUuidLike(code)) return code;
+
+        const id = (item.id || '').trim();
+        if (id && !isUuidLike(id)) return id;
+
+        return '';
+    };
+
     const awardEventOptions = useMemo(() => {
         if (!activeAward) return [];
 
@@ -202,23 +214,23 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             const lmp = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || [];
             lmp.forEach(item => {
                 if (!itemMatchesLmpType(item, activeAward.lmpType)) return;
-                const value = item.id || item.code;
+                const value = getValidEventCode(item);
                 if (!value || optionMap.has(value)) return;
-                const label = item.code && item.code !== value ? `${item.code} - ${value}` : value;
                 optionMap.set(value, {
                     value,
-                    label,
-                    order: eventOrder.get(value) ?? eventOrder.get(item.code) ?? Number.MAX_SAFE_INTEGER,
+                    label: value,
+                    order: eventOrder.get(value) ?? eventOrder.get(item.id) ?? Number.MAX_SAFE_INTEGER,
                 });
             });
         });
 
         pt051Assessments.forEach(assessment => {
-            if (!eligibleNames.has(assessment.traineeFullName) || !assessment.flightNumber || optionMap.has(assessment.flightNumber)) return;
-            optionMap.set(assessment.flightNumber, {
-                value: assessment.flightNumber,
-                label: assessment.flightNumber,
-                order: eventOrder.get(assessment.flightNumber) ?? Number.MAX_SAFE_INTEGER,
+            const flightNumber = (assessment.flightNumber || '').trim();
+            if (!eligibleNames.has(assessment.traineeFullName) || !flightNumber || isUuidLike(flightNumber) || optionMap.has(flightNumber)) return;
+            optionMap.set(flightNumber, {
+                value: flightNumber,
+                label: flightNumber,
+                order: eventOrder.get(flightNumber) ?? Number.MAX_SAFE_INTEGER,
             });
         });
 
