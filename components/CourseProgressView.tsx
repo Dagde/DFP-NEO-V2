@@ -54,7 +54,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         {
             id: 'dux',
             name: 'Dux',
-            course: 'all',
+            course: '',
             lmpType: 'BPC+IPC',
             includeAllScoredEvents: true,
             minimumScoredEvents: 1,
@@ -92,16 +92,32 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
             .sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
     }, [traineesData, activeCourseNames]);
 
+    const defaultCourseByProgress = useMemo(() => {
+        if (activeCourses.length === 0) return '';
+
+        const completedByCourse = new Map(activeCourses.map(course => [course.name, 0]));
+        activeTrainees.forEach(trainee => {
+            const traineeName = trainee.fullName || trainee.name;
+            const completedEvents = (scores.get(traineeName) || [])
+                .filter(score => !score.event.includes('MB') && !score.event.includes('-REM-') && !score.event.includes('-RF')).length;
+            completedByCourse.set(trainee.course, (completedByCourse.get(trainee.course) || 0) + completedEvents);
+        });
+
+        return activeCourses
+            .slice()
+            .sort((a, b) => (completedByCourse.get(b.name) || 0) - (completedByCourse.get(a.name) || 0) || a.name.localeCompare(b.name))[0]?.name || '';
+    }, [activeCourses, activeTrainees, scores]);
+
     useEffect(() => {
-        if (!scoreCourse && activeCourses[0]) {
-            setScoreCourse(activeCourses[0].name);
+        if (!scoreCourse && defaultCourseByProgress) {
+            setScoreCourse(defaultCourseByProgress);
             return;
         }
 
         if (scoreCourse && !activeCourses.some(course => course.name === scoreCourse)) {
-            setScoreCourse(activeCourses[0]?.name || '');
+            setScoreCourse(defaultCourseByProgress || activeCourses[0]?.name || '');
         }
-    }, [activeCourses, scoreCourse]);
+    }, [activeCourses, defaultCourseByProgress, scoreCourse]);
 
     const activeAward = awards.find(award => award.id === activeAwardId) || awards[0];
 
@@ -115,10 +131,15 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     useEffect(() => {
         if (!activeAward) return;
-        if (activeAward.course !== 'all' && !activeCourses.some(course => course.name === activeAward.course)) {
-            setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: 'all' } : award));
+        if ((!activeAward.course || activeAward.course === 'all') && defaultCourseByProgress) {
+            setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress } : award));
+            return;
         }
-    }, [activeAward, activeCourses]);
+
+        if (activeAward.course !== 'all' && !activeCourses.some(course => course.name === activeAward.course)) {
+            setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress || 'all' } : award));
+        }
+    }, [activeAward, activeCourses, defaultCourseByProgress]);
 
     const availableAwardLmpTypes = useMemo(() => {
         const lmpTypes = new Set<string>();
@@ -283,6 +304,15 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const updateActiveAward = (updates: Partial<CourseAward>) => {
         setAwards(prev => prev.map(award => award.id === activeAward.id ? { ...award, ...updates } : award));
+    };
+
+    const updateActiveAwardCourse = (courseName: string) => {
+        const nextCourseLmp = activeCourses.find(course => course.name === courseName)?.lmpType;
+        updateActiveAward({
+            course: courseName,
+            lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || 'BPC+IPC',
+            includeAllScoredEvents: true,
+        });
     };
 
     const updateAwardCriterion = (id: string, updates: Partial<{ event: string; weight: number; enabled: boolean }>) => {
@@ -658,7 +688,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         <p className="text-xs text-white/75">Create named awards and define how each ranking is calculated.</p>
                                     </div>
                                     <div className="p-4 space-y-4">
-                                        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
+                                        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(180px,240px)_auto] gap-3 items-end">
                                             <label className="text-sm text-gray-300">
                                                 Award
                                                 <select
@@ -667,6 +697,16 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 >
                                                     {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="text-sm text-gray-300">
+                                                Course
+                                                <select
+                                                    value={activeAward.course}
+                                                    onChange={event => updateActiveAwardCourse(event.target.value)}
+                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                >
+                                                    {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
                                                 </select>
                                             </label>
                                             <div className="flex gap-2">
@@ -708,25 +748,6 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     onChange={event => updateActiveAward({ name: event.target.value })}
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 />
-                                            </label>
-                                            <label className="text-sm text-gray-300">
-                                                Course
-                                                <select
-                                                    value={activeAward.course}
-                                                    onChange={event => {
-                                                        const nextCourse = event.target.value;
-                                                        const nextCourseLmp = activeCourses.find(course => course.name === nextCourse)?.lmpType;
-                                                        updateActiveAward({
-                                                            course: nextCourse,
-                                                            lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || 'BPC+IPC',
-                                                            includeAllScoredEvents: true,
-                                                        });
-                                                    }}
-                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                >
-                                                    <option value="all">All active courses</option>
-                                                    {activeCourses.map(course => <option key={course.name} value={course.name}>{course.name}</option>)}
-                                                </select>
                                             </label>
                                             <label className="text-sm text-gray-300">
                                                 Award LMP

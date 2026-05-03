@@ -58980,7 +58980,7 @@ const CourseProgressView = ({
     {
       id: "dux",
       name: "Dux",
-      course: "all",
+      course: "",
       lmpType: "BPC+IPC",
       includeAllScoredEvents: true,
       minimumScoredEvents: 1,
@@ -59006,15 +59006,25 @@ const CourseProgressView = ({
   const activeTrainees = reactExports.useMemo(() => {
     return traineesData.filter((trainee) => !trainee.isPaused && activeCourseNames.has(trainee.course)).sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name));
   }, [traineesData, activeCourseNames]);
+  const defaultCourseByProgress = reactExports.useMemo(() => {
+    if (activeCourses.length === 0) return "";
+    const completedByCourse = new Map(activeCourses.map((course) => [course.name, 0]));
+    activeTrainees.forEach((trainee) => {
+      const traineeName = trainee.fullName || trainee.name;
+      const completedEvents = (scores.get(traineeName) || []).filter((score) => !score.event.includes("MB") && !score.event.includes("-REM-") && !score.event.includes("-RF")).length;
+      completedByCourse.set(trainee.course, (completedByCourse.get(trainee.course) || 0) + completedEvents);
+    });
+    return activeCourses.slice().sort((a, b) => (completedByCourse.get(b.name) || 0) - (completedByCourse.get(a.name) || 0) || a.name.localeCompare(b.name))[0]?.name || "";
+  }, [activeCourses, activeTrainees, scores]);
   reactExports.useEffect(() => {
-    if (!scoreCourse && activeCourses[0]) {
-      setScoreCourse(activeCourses[0].name);
+    if (!scoreCourse && defaultCourseByProgress) {
+      setScoreCourse(defaultCourseByProgress);
       return;
     }
     if (scoreCourse && !activeCourses.some((course) => course.name === scoreCourse)) {
-      setScoreCourse(activeCourses[0]?.name || "");
+      setScoreCourse(defaultCourseByProgress || activeCourses[0]?.name || "");
     }
-  }, [activeCourses, scoreCourse]);
+  }, [activeCourses, defaultCourseByProgress, scoreCourse]);
   const activeAward = awards.find((award) => award.id === activeAwardId) || awards[0];
   const getAwardDisplayName = (award) => {
     return award.lmpType ? `${award.name} - ${award.lmpType}` : award.name;
@@ -59024,10 +59034,14 @@ const CourseProgressView = ({
   }, [activeAwardId]);
   reactExports.useEffect(() => {
     if (!activeAward) return;
-    if (activeAward.course !== "all" && !activeCourses.some((course) => course.name === activeAward.course)) {
-      setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: "all" } : award));
+    if ((!activeAward.course || activeAward.course === "all") && defaultCourseByProgress) {
+      setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress } : award));
+      return;
     }
-  }, [activeAward, activeCourses]);
+    if (activeAward.course !== "all" && !activeCourses.some((course) => course.name === activeAward.course)) {
+      setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, course: defaultCourseByProgress || "all" } : award));
+    }
+  }, [activeAward, activeCourses, defaultCourseByProgress]);
   const availableAwardLmpTypes = reactExports.useMemo(() => {
     const lmpTypes = /* @__PURE__ */ new Set();
     activeCourses.forEach((course) => {
@@ -59158,6 +59172,14 @@ const CourseProgressView = ({
   }, [activeTrainees, activeAward, pt051ScoreRecords, awardEventOptions]);
   const updateActiveAward = (updates) => {
     setAwards((prev) => prev.map((award) => award.id === activeAward.id ? { ...award, ...updates } : award));
+  };
+  const updateActiveAwardCourse = (courseName) => {
+    const nextCourseLmp = activeCourses.find((course) => course.name === courseName)?.lmpType;
+    updateActiveAward({
+      course: courseName,
+      lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "BPC+IPC",
+      includeAllScoredEvents: true
+    });
   };
   const getCriterionForEvent = (eventCode) => {
     return activeAward.criteria.find((criterion) => criterion.event.toUpperCase() === eventCode.toUpperCase());
@@ -59463,7 +59485,7 @@ const CourseProgressView = ({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(180px,240px)_auto] gap-3 items-end", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
                     "Award",
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59473,6 +59495,18 @@ const CourseProgressView = ({
                         onChange: (event) => setActiveAwardId(event.target.value),
                         className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                         children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: getAwardDisplayName(award) }, award.id))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                    "Course",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "select",
+                      {
+                        value: activeAward.course,
+                        onChange: (event) => updateActiveAwardCourse(event.target.value),
+                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                        children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
                       }
                     )
                   ] }),
@@ -59525,29 +59559,6 @@ const CourseProgressView = ({
                           value: activeAward.name,
                           onChange: (event) => updateActiveAward({ name: event.target.value }),
                           className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                      "Course",
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                        "select",
-                        {
-                          value: activeAward.course,
-                          onChange: (event) => {
-                            const nextCourse = event.target.value;
-                            const nextCourseLmp = activeCourses.find((course) => course.name === nextCourse)?.lmpType;
-                            updateActiveAward({
-                              course: nextCourse,
-                              lmpType: nextCourseLmp || activeAward.lmpType || availableAwardLmpTypes[0] || "BPC+IPC",
-                              includeAllScoredEvents: true
-                            });
-                          },
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                          children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All active courses" }),
-                            activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
-                          ]
                         }
                       )
                     ] }),
