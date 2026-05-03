@@ -434,38 +434,56 @@ const sectionColors: Record<SettingsSection, string> = {
   'emergency':         'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
 };
 
-// Groups for the icon grid
-const sectionGroups: { label: string; sections: SettingsSection[] }[] = [
+// Groups for the settings home screen. These group by user intent, not implementation detail.
+const sectionGroups: {
+  label: string;
+  shortLabel: string;
+  description: string;
+  accent: string;
+  sections: SettingsSection[];
+  diagnosticSections?: SettingsSection[];
+}[] = [
   {
-    label: 'SYSTEM CONFIGURATION',
-    sections: ['scoring-matrix', 'currencies', 'sct-events', 'people-profile'],
+    label: 'Organisation',
+    shortLabel: 'Org',
+    description: 'Base structure, locations, unit ownership, timezone and display preferences.',
+    accent: 'cyan',
+    sections: ['organisation', 'location', 'units', 'timezone', 'appearance'],
   },
   {
-    label: 'OPERATIONS RULES',
+    label: 'People & Access',
+    shortLabel: 'People',
+    description: 'Users, permissions, staff and trainee records, and NEO Build profile settings.',
+    accent: 'violet',
+    sections: ['user-list', 'permissions', 'staff-database', 'trainee-database', 'people-profile'],
+  },
+  {
+    label: 'Training System',
+    shortLabel: 'Training',
+    description: 'Scoring, currencies, SCT events and aircraft availability history.',
+    accent: 'sky',
+    sections: ['scoring-matrix', 'currencies', 'sct-events', 'validation'],
+  },
+  {
+    label: 'DFP Build Rules',
+    shortLabel: 'Rules',
+    description: 'Operational limits, duty rules, turnaround timing and automation logic.',
+    accent: 'amber',
     sections: ['event-limits', 'duty-turnaround', 'business-rules'],
   },
   {
-    label: 'ACCESS & SECURITY',
-    sections: ['permissions', 'user-list'],
+    label: 'Data & Records',
+    shortLabel: 'Data',
+    description: 'Data sources, imports, historical records, combined views and diagnostics.',
+    accent: 'emerald',
+    sections: ['data-sources', 'data-loaders', 'historical-data', 'staff-combined-data'],
+    diagnosticSections: ['staff-mockdata', 'trainee-mockdata'],
   },
   {
-    label: 'DATA MANAGEMENT',
-    sections: ['data-loaders', 'data-sources', 'staff-database', 'trainee-database', 'staff-combined-data', 'staff-mockdata', 'trainee-mockdata'],
-  },
-  {
-    label: 'HISTORICAL & ANALYSIS',
-    sections: ['validation', 'historical-data'],
-  },
-  {
-    label: 'SYSTEM SETTINGS',
-    sections: ['timezone', 'location', 'units', 'organisation'],
-  },
-  {
-    label: 'DISPLAY',
-    sections: ['appearance'],
-  },
-  {
-    label: 'EMERGENCY',
+    label: 'System Control',
+    shortLabel: 'Control',
+    description: 'Emergency control functions and system freeze behaviour.',
+    accent: 'red',
     sections: ['emergency'],
   },
 ];
@@ -477,6 +495,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
     const { isFrozen } = useSystemFreeze();
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>('Airmanship');
+    const [settingsSearch, setSettingsSearch] = useState('');
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
@@ -498,6 +517,28 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         props.onShowSuccess(`Trainee removed from mockdata display`);
     };
 
+    const matchesSettingsSearch = (section: SettingsSection, groupLabel: string) => {
+        const query = settingsSearch.trim().toLowerCase();
+        if (!query) return true;
+        return [
+            groupLabel,
+            sectionLabels[section],
+            sectionDescriptions[section],
+        ].some(value => value.toLowerCase().includes(query));
+    };
+
+    const getAccentClasses = (accent: string) => {
+        const classes: Record<string, { rail: string; badge: string; text: string; border: string; shadow: string }> = {
+            cyan: { rail: 'bg-cyan-400', badge: 'bg-cyan-500/10 border-cyan-500/30', text: 'text-cyan-300', border: 'border-cyan-500/30', shadow: 'hover:shadow-cyan-950/30' },
+            violet: { rail: 'bg-violet-400', badge: 'bg-violet-500/10 border-violet-500/30', text: 'text-violet-300', border: 'border-violet-500/30', shadow: 'hover:shadow-violet-950/30' },
+            sky: { rail: 'bg-sky-400', badge: 'bg-sky-500/10 border-sky-500/30', text: 'text-sky-300', border: 'border-sky-500/30', shadow: 'hover:shadow-sky-950/30' },
+            amber: { rail: 'bg-amber-400', badge: 'bg-amber-500/10 border-amber-500/30', text: 'text-amber-300', border: 'border-amber-500/30', shadow: 'hover:shadow-amber-950/30' },
+            emerald: { rail: 'bg-emerald-400', badge: 'bg-emerald-500/10 border-emerald-500/30', text: 'text-emerald-300', border: 'border-emerald-500/30', shadow: 'hover:shadow-emerald-950/30' },
+            red: { rail: 'bg-red-400', badge: 'bg-red-500/10 border-red-500/30', text: 'text-red-300', border: 'border-red-500/30', shadow: 'hover:shadow-red-950/30' },
+        };
+        return classes[accent] || classes.sky;
+    };
+
     return (
         <div className="flex-1 flex overflow-hidden bg-gray-900">
             {/* Main Content - full width, no left menu */}
@@ -506,71 +547,149 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
 
                     {/* ── ICON GRID HOME ───────────────────────────────────── */}
                     {activeSection === 'home' && (
-                        <div className="space-y-6 sm:space-y-8">
+                        <div className="space-y-5">
                             {/* Page title */}
-                            <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-gray-700/60">
-                                <div>
-                                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
-                                    <p className="text-xs sm:text-sm text-gray-400 mt-0.5">Configure system rules, data sources and operational parameters</p>
-                                </div>
-                                <div className="ml-auto flex items-center gap-[10px]">
-                                    {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
-                                        <span className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap">
-                                            Read-Only Mode
-                                        </span>
-                                    )}
-                                    <AuditButton pageName="Settings" />
-                                </div>
-                            </div>
-
-                            {/* Section groups */}
-                            {sectionGroups.map((group) => (
-                                <div key={group.label}>
-                                    {/* Group label */}
-                                    <h2 className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                        <span className="flex-1 h-px bg-gray-700/60" />
-                                        {group.label}
-                                        <span className="flex-1 h-px bg-gray-700/60" />
-                                    </h2>
-
-                                    {/* Icon cards grid */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-                                        {group.sections.map((section) => {
-                                            const colorClasses = sectionColors[section].split(' ');
-                                            const gradFrom = colorClasses[0];
-                                            const gradTo = colorClasses[1];
-                                            const borderC = colorClasses[2];
-                                            const textC = colorClasses[3];
-                                            return (
-                                                <button
-                                                    key={section}
-                                                    onClick={() => setActiveSection(section)}
-                                                    className={`group relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5 bg-gradient-to-br ${gradFrom} ${gradTo} border ${borderC} rounded-xl sm:rounded-2xl hover:scale-[1.04] hover:shadow-xl hover:shadow-black/40 active:scale-95 transition-all duration-200 cursor-pointer min-h-[90px] sm:min-h-[110px] lg:min-h-[130px]`}
-                                                >
-                                                    {/* Icon */}
-                                                    <div className={`${textC} w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 flex-shrink-0 group-hover:scale-110 transition-transform duration-200`}>
-                                                        {sectionIcons[section]}
-                                                    </div>
-                                                    {/* Label */}
-                                                    <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-gray-200 text-center leading-tight">
-                                                        {sectionLabels[section]}
-                                                    </span>
-                                                    {/* Description - only on large screens */}
-                                                    <span className="hidden xl:block text-[10px] text-gray-500 text-center leading-tight px-1">
-                                                        {sectionDescriptions[section]}
-                                                    </span>
-                                                    {/* Hover arrow */}
-                                                    <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                        <svg className={`w-3 h-3 ${textC}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                        </svg>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
+                            <div className="rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden">
+                                <div className="flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4">
+                                    <div className="min-w-0">
+                                        <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
+                                        <p className="text-sm text-gray-400 mt-0.5">Configure the operating model, people, training rules, data and system controls.</p>
+                                    </div>
+                                    <div className="ml-auto flex items-center gap-[10px]">
+                                        {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
+                                            <span className="text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap">
+                                                Read-Only Mode
+                                            </span>
+                                        )}
+                                        <AuditButton pageName="Settings" />
                                     </div>
                                 </div>
-                            ))}
+                                <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr]">
+                                    <aside className="border-b border-gray-700 bg-gray-900/40 p-4 lg:border-b-0 lg:border-r">
+                                        <div className="mb-4">
+                                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
+                                            <input
+                                                type="search"
+                                                value={settingsSearch}
+                                                onChange={(event) => setSettingsSearch(event.target.value)}
+                                                placeholder="Search settings..."
+                                                className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                            />
+                                        </div>
+                                        <nav className="space-y-1">
+                                            {sectionGroups.map(group => {
+                                                const accent = getAccentClasses(group.accent);
+                                                return (
+                                                    <a
+                                                        key={group.label}
+                                                        href={`#settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                                                        className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
+                                                    >
+                                                        <span className={`h-2.5 w-2.5 rounded-full ${accent.rail}`} />
+                                                        <span className="font-semibold">{group.label}</span>
+                                                        <span className="ml-auto text-xs text-gray-600 group-hover:text-gray-400">
+                                                            {group.sections.length + (group.diagnosticSections?.length || 0)}
+                                                        </span>
+                                                    </a>
+                                                );
+                                            })}
+                                        </nav>
+                                        <div className="mt-5 rounded-md border border-gray-700 bg-gray-800/60 p-3">
+                                            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Layout</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-gray-400">
+                                                Grouped by operational intent. No underlying functionality has moved.
+                                            </p>
+                                        </div>
+                                    </aside>
+
+                                    <main className="p-4 lg:p-5">
+                                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                            {sectionGroups.map((group) => {
+                                                const accent = getAccentClasses(group.accent);
+                                                const visibleSections = group.sections.filter(section => matchesSettingsSearch(section, group.label));
+                                                const visibleDiagnostics = (group.diagnosticSections || []).filter(section => matchesSettingsSearch(section, group.label));
+                                                if (visibleSections.length === 0 && visibleDiagnostics.length === 0) return null;
+
+                                                return (
+                                                    <section
+                                                        id={`settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                                                        key={group.label}
+                                                        className={`rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`}
+                                                    >
+                                                        <div className="flex items-start gap-3 border-b border-gray-700/80 bg-gray-800/65 px-4 py-3">
+                                                            <span className={`mt-1 h-9 w-1.5 rounded-full ${accent.rail}`} />
+                                                            <div className="min-w-0">
+                                                                <h2 className="text-lg font-bold text-white">{group.label}</h2>
+                                                                <p className="mt-0.5 text-xs leading-relaxed text-gray-400">{group.description}</p>
+                                                            </div>
+                                                            <span className={`ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`}>
+                                                                {group.shortLabel}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
+                                                            {visibleSections.map((section) => {
+                                                                const textC = sectionColors[section].split(' ')[3];
+                                                                return (
+                                                                    <button
+                                                                        key={section}
+                                                                        onClick={() => setActiveSection(section)}
+                                                                        className={`group flex min-h-[74px] items-start gap-3 rounded-md border border-gray-700 bg-gray-800/70 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-500 hover:bg-gray-800 hover:shadow-lg ${accent.shadow}`}
+                                                                    >
+                                                                        <div className={`mt-0.5 h-6 w-6 flex-shrink-0 ${textC}`}>
+                                                                            {sectionIcons[section]}
+                                                                        </div>
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-sm font-semibold text-gray-100">{sectionLabels[section]}</p>
+                                                                            <p className="mt-1 text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</p>
+                                                                        </div>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {visibleDiagnostics.length > 0 && (
+                                                            <div className="border-t border-gray-700/70 px-3 pb-3 pt-2">
+                                                                <details className="group rounded-md border border-gray-700 bg-gray-950/30">
+                                                                    <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500 group-open:border-b group-open:border-gray-700">
+                                                                        Diagnostics
+                                                                    </summary>
+                                                                    <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2">
+                                                                        {visibleDiagnostics.map(section => (
+                                                                            <button
+                                                                                key={section}
+                                                                                onClick={() => setActiveSection(section)}
+                                                                                className="rounded-md border border-gray-700 bg-gray-800/60 px-3 py-2 text-left text-xs text-gray-300 hover:border-gray-500 hover:bg-gray-800"
+                                                                            >
+                                                                                <span className="font-semibold text-gray-200">{sectionLabels[section]}</span>
+                                                                                <span className="mt-1 block text-gray-500">{sectionDescriptions[section]}</span>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </details>
+                                                            </div>
+                                                        )}
+                                                    </section>
+                                                );
+                                            })}
+                                        </div>
+                                        {sectionGroups.every(group =>
+                                            group.sections.every(section => !matchesSettingsSearch(section, group.label)) &&
+                                            (group.diagnosticSections || []).every(section => !matchesSettingsSearch(section, group.label))
+                                        ) && (
+                                            <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center">
+                                                <p className="font-semibold text-gray-300">No settings match that search.</p>
+                                                <button
+                                                    onClick={() => setSettingsSearch('')}
+                                                    className="mt-3 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600"
+                                                >
+                                                    Clear Search
+                                                </button>
+                                            </div>
+                                        )}
+                                    </main>
+                                </div>
+                            </div>
                         </div>
                     )}
 

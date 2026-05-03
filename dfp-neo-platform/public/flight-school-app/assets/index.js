@@ -56951,35 +56951,46 @@ const sectionColors = {
 };
 const sectionGroups = [
   {
-    label: "SYSTEM CONFIGURATION",
-    sections: ["scoring-matrix", "currencies", "sct-events", "people-profile"]
+    label: "Organisation",
+    shortLabel: "Org",
+    description: "Base structure, locations, unit ownership, timezone and display preferences.",
+    accent: "cyan",
+    sections: ["organisation", "location", "units", "timezone", "appearance"]
   },
   {
-    label: "OPERATIONS RULES",
+    label: "People & Access",
+    shortLabel: "People",
+    description: "Users, permissions, staff and trainee records, and NEO Build profile settings.",
+    accent: "violet",
+    sections: ["user-list", "permissions", "staff-database", "trainee-database", "people-profile"]
+  },
+  {
+    label: "Training System",
+    shortLabel: "Training",
+    description: "Scoring, currencies, SCT events and aircraft availability history.",
+    accent: "sky",
+    sections: ["scoring-matrix", "currencies", "sct-events", "validation"]
+  },
+  {
+    label: "DFP Build Rules",
+    shortLabel: "Rules",
+    description: "Operational limits, duty rules, turnaround timing and automation logic.",
+    accent: "amber",
     sections: ["event-limits", "duty-turnaround", "business-rules"]
   },
   {
-    label: "ACCESS & SECURITY",
-    sections: ["permissions", "user-list"]
+    label: "Data & Records",
+    shortLabel: "Data",
+    description: "Data sources, imports, historical records, combined views and diagnostics.",
+    accent: "emerald",
+    sections: ["data-sources", "data-loaders", "historical-data", "staff-combined-data"],
+    diagnosticSections: ["staff-mockdata", "trainee-mockdata"]
   },
   {
-    label: "DATA MANAGEMENT",
-    sections: ["data-loaders", "data-sources", "staff-database", "trainee-database", "staff-combined-data", "staff-mockdata", "trainee-mockdata"]
-  },
-  {
-    label: "HISTORICAL & ANALYSIS",
-    sections: ["validation", "historical-data"]
-  },
-  {
-    label: "SYSTEM SETTINGS",
-    sections: ["timezone", "location", "units", "organisation"]
-  },
-  {
-    label: "DISPLAY",
-    sections: ["appearance"]
-  },
-  {
-    label: "EMERGENCY",
+    label: "System Control",
+    shortLabel: "Control",
+    description: "Emergency control functions and system freeze behaviour.",
+    accent: "red",
     sections: ["emergency"]
   }
 ];
@@ -56989,6 +57000,7 @@ const SettingsViewWithMenu = (props) => {
   const [filteredTraineeMockdata, setFilteredTraineeMockdata] = reactExports.useState([]);
   const { isFrozen } = useSystemFreeze();
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
+  const [settingsSearch, setSettingsSearch] = reactExports.useState("");
   React.useEffect(() => {
     setFilteredMockdata(props.instructorsData);
   }, [props.instructorsData]);
@@ -57003,47 +57015,148 @@ const SettingsViewWithMenu = (props) => {
     setFilteredTraineeMockdata((prev) => prev.filter((trainee) => trainee.idNumber !== idNumber));
     props.onShowSuccess(`Trainee removed from mockdata display`);
   };
+  const matchesSettingsSearch = (section, groupLabel) => {
+    const query = settingsSearch.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      groupLabel,
+      sectionLabels[section],
+      sectionDescriptions[section]
+    ].some((value) => value.toLowerCase().includes(query));
+  };
+  const getAccentClasses = (accent) => {
+    const classes = {
+      cyan: { rail: "bg-cyan-400", badge: "bg-cyan-500/10 border-cyan-500/30", text: "text-cyan-300", border: "border-cyan-500/30", shadow: "hover:shadow-cyan-950/30" },
+      violet: { rail: "bg-violet-400", badge: "bg-violet-500/10 border-violet-500/30", text: "text-violet-300", border: "border-violet-500/30", shadow: "hover:shadow-violet-950/30" },
+      sky: { rail: "bg-sky-400", badge: "bg-sky-500/10 border-sky-500/30", text: "text-sky-300", border: "border-sky-500/30", shadow: "hover:shadow-sky-950/30" },
+      amber: { rail: "bg-amber-400", badge: "bg-amber-500/10 border-amber-500/30", text: "text-amber-300", border: "border-amber-500/30", shadow: "hover:shadow-amber-950/30" },
+      emerald: { rail: "bg-emerald-400", badge: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-300", border: "border-emerald-500/30", shadow: "hover:shadow-emerald-950/30" },
+      red: { rail: "bg-red-400", badge: "bg-red-500/10 border-red-500/30", text: "text-red-300", border: "border-red-500/30", shadow: "hover:shadow-red-950/30" }
+    };
+    return classes[accent] || classes.sky;
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
-    activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6 sm:space-y-8", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3 pb-3 border-b border-gray-700/60", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs sm:text-sm text-gray-400 mt-0.5", children: "Configure system rules, data sources and operational parameters" })
+    activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Configure the operating model, people, training rules, data and system controls." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
           !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Settings" })
         ] })
       ] }),
-      sectionGroups.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-1 h-px bg-gray-700/60" }),
-          group.label,
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-1 h-px bg-gray-700/60" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-[16rem_1fr]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "border-b border-gray-700 bg-gray-900/40 p-4 lg:border-b-0 lg:border-r", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "search",
+                value: settingsSearch,
+                onChange: (event) => setSettingsSearch(event.target.value),
+                placeholder: "Search settings...",
+                className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-1", children: sectionGroups.map((group) => {
+            const accent = getAccentClasses(group.accent);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "a",
+              {
+                href: `#settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+                className: "group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: group.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs text-gray-600 group-hover:text-gray-400", children: group.sections.length + (group.diagnosticSections?.length || 0) })
+                ]
+              },
+              group.label
+            );
+          }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 rounded-md border border-gray-700 bg-gray-800/60 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Layout" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Grouped by operational intent. No underlying functionality has moved." })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3", children: group.sections.map((section) => {
-          const colorClasses = sectionColors[section].split(" ");
-          const gradFrom = colorClasses[0];
-          const gradTo = colorClasses[1];
-          const borderC = colorClasses[2];
-          const textC = colorClasses[3];
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              onClick: () => setActiveSection(section),
-              className: `group relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5 bg-gradient-to-br ${gradFrom} ${gradTo} border ${borderC} rounded-xl sm:rounded-2xl hover:scale-[1.04] hover:shadow-xl hover:shadow-black/40 active:scale-95 transition-all duration-200 cursor-pointer min-h-[90px] sm:min-h-[110px] lg:min-h-[130px]`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `${textC} w-7 h-7 sm:w-9 sm:h-9 lg:w-11 lg:h-11 flex-shrink-0 group-hover:scale-110 transition-transform duration-200`, children: sectionIcons[section] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] sm:text-xs lg:text-sm font-medium text-gray-200 text-center leading-tight", children: sectionLabels[section] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "hidden xl:block text-[10px] text-gray-500 text-center leading-tight px-1", children: sectionDescriptions[section] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: `w-3 h-3 ${textC}`, fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" }) }) })
-              ]
-            },
-            section
-          );
-        }) })
-      ] }, group.label))
-    ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { className: "p-4 lg:p-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-2", children: sectionGroups.map((group) => {
+            const accent = getAccentClasses(group.accent);
+            const visibleSections = group.sections.filter((section) => matchesSettingsSearch(section, group.label));
+            const visibleDiagnostics = (group.diagnosticSections || []).filter((section) => matchesSettingsSearch(section, group.label));
+            if (visibleSections.length === 0 && visibleDiagnostics.length === 0) return null;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "section",
+              {
+                id: `settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+                className: `rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3 border-b border-gray-700/80 bg-gray-800/65 px-4 py-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-9 w-1.5 rounded-full ${accent.rail}` }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: group.label }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs leading-relaxed text-gray-400", children: group.description })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`, children: group.shortLabel })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-3 sm:grid-cols-2", children: visibleSections.map((section) => {
+                    const textC = sectionColors[section].split(" ")[3];
+                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        onClick: () => setActiveSection(section),
+                        className: `group flex min-h-[74px] items-start gap-3 rounded-md border border-gray-700 bg-gray-800/70 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-500 hover:bg-gray-800 hover:shadow-lg ${accent.shadow}`,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-0.5 h-6 w-6 flex-shrink-0 ${textC}`, children: sectionIcons[section] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-100", children: sectionLabels[section] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
+                          ] })
+                        ]
+                      },
+                      section
+                    );
+                  }) }),
+                  visibleDiagnostics.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700/70 px-3 pb-3 pt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "group rounded-md border border-gray-700 bg-gray-950/30", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500 group-open:border-b group-open:border-gray-700", children: "Diagnostics" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-2 sm:grid-cols-2", children: visibleDiagnostics.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "button",
+                      {
+                        onClick: () => setActiveSection(section),
+                        className: "rounded-md border border-gray-700 bg-gray-800/60 px-3 py-2 text-left text-xs text-gray-300 hover:border-gray-500 hover:bg-gray-800",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: sectionLabels[section] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-gray-500", children: sectionDescriptions[section] })
+                        ]
+                      },
+                      section
+                    )) })
+                  ] }) })
+                ]
+              },
+              group.label
+            );
+          }) }),
+          sectionGroups.every(
+            (group) => group.sections.every((section) => !matchesSettingsSearch(section, group.label)) && (group.diagnosticSections || []).every((section) => !matchesSettingsSearch(section, group.label))
+          ) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No settings match that search." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setSettingsSearch(""),
+                className: "mt-3 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600",
+                children: "Clear Search"
+              }
+            )
+          ] })
+        ] })
+      ] })
+    ] }) }),
     activeSection !== "home" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
       isFrozen && activeSection !== "emergency" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 flex flex-wrap items-center gap-3", children: [
