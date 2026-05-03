@@ -6,6 +6,7 @@ import AuditButton from './AuditButton';
 import CourseDataWindow from './CourseDataWindow';
 import FullPageProgressGraph from './FullPageProgressGraph';
 import { logAudit } from '../utils/auditLogger';
+import { CourseRiskThresholds } from '../utils/courseProgressMetrics';
 
 interface CourseProgressViewProps {
     traineesData: Trainee[];
@@ -50,6 +51,12 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
     const [scoreCourse, setScoreCourse] = useState<string>('');
     const [activeAwardId, setActiveAwardId] = useState('dux');
     const [isEditingAward, setIsEditingAward] = useState(false);
+    const [showRiskSettings, setShowRiskSettings] = useState(false);
+    const [riskThresholds, setRiskThresholds] = useState<CourseRiskThresholds>({
+        onTrackMax: 3.5,
+        watchMax: 4.0,
+        atRiskMax: 4.5,
+    });
     const [awards, setAwards] = useState<CourseAward[]>([
         {
             id: 'dux',
@@ -572,14 +579,19 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         printWindow.document.close();
     };
 
+    const updateRiskThreshold = (key: keyof CourseRiskThresholds, value: number) => {
+        setRiskThresholds(prev => ({ ...prev, [key]: value }));
+    };
+
     return (
         <>
             {showFullGraph ? (
                 <FullPageProgressGraph
                     courses={activeCourses}
                     allTrainees={traineesData}
-                    scores={scores}
+                    pt051Assessments={pt051Assessments}
                     traineeLMPs={traineeLMPs}
+                    riskThresholds={riskThresholds}
                     courseColors={courseColors}
                     initialSelectedCourse={selectedGraphCourse}
                     onClose={() => {
@@ -593,7 +605,16 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                         <header>
                             <h1 className="text-3xl font-bold text-white">Course Progress</h1>
                             <p className="text-lg text-gray-400">High-level overview of trainee progression through the syllabus.</p>
-                            <div className="flex justify-end mt-2"><AuditButton pageName="Course Progress" /></div>
+                            <div className="flex justify-end gap-2 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowRiskSettings(true)}
+                                    className="w-[75px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                >
+                                    Risk<br />Settings
+                                </button>
+                                <AuditButton pageName="Course Progress" />
+                            </div>
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
@@ -602,8 +623,9 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                     key={course.name}
                                     course={course}
                                     allTrainees={traineesData}
-                                    scores={scores}
+                                    pt051Assessments={pt051Assessments}
                                     traineeLMPs={traineeLMPs}
+                                    riskThresholds={riskThresholds}
                                     onUpdateGradDate={onUpdateGradDate}
                                     onUpdateStartDate={onUpdateStartDate}
                                     onShowFullGraph={() => {
@@ -892,6 +914,66 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                             </div>
                         </section>
                     </div>
+                    {showRiskSettings && (
+                        <div className="fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in" onClick={() => setShowRiskSettings(false)}>
+                            <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50" onClick={event => event.stopPropagation()}>
+                                <div className="p-4 border-b border-gray-700 bg-sky-900/20">
+                                    <h2 className="text-xl font-bold text-sky-400">Course Risk Settings</h2>
+                                    <p className="text-xs text-gray-400 mt-1">Thresholds apply to every course card and progress graph.</p>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <label className="block text-sm text-gray-300">
+                                        On Track maximum events/week
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step={0.1}
+                                            value={riskThresholds.onTrackMax}
+                                            onChange={event => updateRiskThreshold('onTrackMax', parseFloat(event.target.value) || 0)}
+                                            className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </label>
+                                    <label className="block text-sm text-gray-300">
+                                        Watch maximum events/week
+                                        <input
+                                            type="number"
+                                            min={riskThresholds.onTrackMax}
+                                            step={0.1}
+                                            value={riskThresholds.watchMax}
+                                            onChange={event => updateRiskThreshold('watchMax', parseFloat(event.target.value) || riskThresholds.onTrackMax)}
+                                            className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </label>
+                                    <label className="block text-sm text-gray-300">
+                                        At Risk maximum events/week
+                                        <input
+                                            type="number"
+                                            min={riskThresholds.watchMax}
+                                            step={0.1}
+                                            value={riskThresholds.atRiskMax}
+                                            onChange={event => updateRiskThreshold('atRiskMax', parseFloat(event.target.value) || riskThresholds.watchMax)}
+                                            className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                        />
+                                    </label>
+                                    <div className="rounded-md border border-gray-700 bg-gray-900/40 p-3 text-xs text-gray-300 space-y-1">
+                                        <p>&le; {riskThresholds.onTrackMax.toFixed(1)}/wk: On Track</p>
+                                        <p>{(riskThresholds.onTrackMax + 0.1).toFixed(1)}-{riskThresholds.watchMax.toFixed(1)}/wk: Watch</p>
+                                        <p>{(riskThresholds.watchMax + 0.1).toFixed(1)}-{riskThresholds.atRiskMax.toFixed(1)}/wk: At Risk</p>
+                                        <p>&gt; {riskThresholds.atRiskMax.toFixed(1)}/wk: Critical</p>
+                                    </div>
+                                </div>
+                                <div className="px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowRiskSettings(false)}
+                                        className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md"
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </>

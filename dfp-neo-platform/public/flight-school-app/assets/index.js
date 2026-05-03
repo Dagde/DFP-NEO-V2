@@ -58209,11 +58209,174 @@ const AddRemedialPackageFlyout = ({
     ] })
   ] }) });
 };
+const isProgressEvent = (item) => {
+  return (item.type === "Flight" || item.type === "FTD") && !item.isRemedial && !item.id.includes(" MB") && !item.code.includes(" MB");
+};
+const getEventCode = (item) => (item.code || item.id || "").trim();
+const normaliseName = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").trim();
+const getAssessmentDate = (assessment) => {
+  if (!assessment.date) return null;
+  const date = /* @__PURE__ */ new Date(`${assessment.date}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+const getAssessmentEventCode = (assessment) => (assessment.flightNumber || assessment.eventId || "").trim();
+const isCompletedPt051 = (assessment) => {
+  return assessment.isCompleted !== false && typeof assessment.overallGrade === "number";
+};
+const getCompletedEventDates = (trainee, validEventCodes, eventIdToCode, pt051Assessments) => {
+  const traineeNames = new Set([trainee.fullName, trainee.name, normaliseName(trainee.fullName), normaliseName(trainee.name)].filter(Boolean));
+  const completed = /* @__PURE__ */ new Map();
+  pt051Assessments.forEach((assessment) => {
+    if (!isCompletedPt051(assessment)) return;
+    if (!traineeNames.has(assessment.traineeFullName) && !traineeNames.has(normaliseName(assessment.traineeFullName))) return;
+    const rawEventCode = getAssessmentEventCode(assessment);
+    const eventCode = eventIdToCode.get(rawEventCode) || rawEventCode;
+    if (!validEventCodes.has(eventCode)) return;
+    const date = getAssessmentDate(assessment);
+    if (!date) return;
+    const existingDate = completed.get(eventCode);
+    if (!existingDate || date > existingDate) {
+      completed.set(eventCode, date);
+    }
+  });
+  return completed;
+};
+const getEventAtCount = (events, count) => {
+  if (count <= 0) return "Not Started";
+  return events[Math.min(count - 1, events.length - 1)]?.code || "N/A";
+};
+const getRiskLabel = (requiredPace, thresholds) => {
+  if (requiredPace <= thresholds.onTrackMax) return "On Track";
+  if (requiredPace <= thresholds.watchMax) return "Watch";
+  if (requiredPace <= thresholds.atRiskMax) return "At Risk";
+  return "Critical";
+};
+const getRiskColorClass = (riskLabel) => {
+  if (riskLabel === "On Track") return "text-emerald-200 bg-emerald-500/20 border-emerald-300/40";
+  if (riskLabel === "Watch") return "text-amber-100 bg-amber-400/20 border-amber-300/40";
+  if (riskLabel === "At Risk") return "text-orange-100 bg-orange-500/20 border-orange-300/40";
+  return "text-red-100 bg-red-500/25 border-red-300/50";
+};
+const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051Assessments, thresholds) => {
+  const courseTrainees = allTrainees.filter((trainee) => trainee.course === course.name && !trainee.isPaused);
+  const representativeLMP = courseTrainees.map((trainee) => traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || []).find((lmp) => lmp.length > 0) || [];
+  const progressEvents = representativeLMP.filter(isProgressEvent);
+  new Set(progressEvents.map(getEventCode).filter(Boolean));
+  const eventIdToCode = /* @__PURE__ */ new Map();
+  progressEvents.forEach((item) => {
+    const eventCode = getEventCode(item);
+    if (!eventCode) return;
+    eventIdToCode.set(item.id, eventCode);
+    eventIdToCode.set(item.code, eventCode);
+  });
+  const totalEvents = progressEvents.length;
+  const trainees = courseTrainees.map((trainee) => {
+    const individualLMP = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || representativeLMP;
+    const traineeProgressEvents = individualLMP.filter(isProgressEvent);
+    const traineeValidCodes = new Set(traineeProgressEvents.map(getEventCode).filter(Boolean));
+    const traineeEventIdToCode = new Map(eventIdToCode);
+    traineeProgressEvents.forEach((item) => {
+      const eventCode = getEventCode(item);
+      if (!eventCode) return;
+      traineeEventIdToCode.set(item.id, eventCode);
+      traineeEventIdToCode.set(item.code, eventCode);
+    });
+    const completedEventDates = getCompletedEventDates(trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
+    const completedCount = completedEventDates.size;
+    let nextEvent = "Finished";
+    if (completedCount < traineeProgressEvents.length) {
+      nextEvent = "N/A";
+      for (const item of traineeProgressEvents) {
+        const eventCode = getEventCode(item);
+        if (!eventCode || completedEventDates.has(eventCode)) continue;
+        const prerequisitesMet = item.prerequisites.every((prereq) => {
+          const prereqCode = traineeEventIdToCode.get(prereq) || prereq;
+          return !traineeValidCodes.has(prereqCode) || completedEventDates.has(prereqCode);
+        });
+        if (prerequisitesMet) {
+          nextEvent = item.code || eventCode;
+          break;
+        }
+      }
+    }
+    return {
+      trainee,
+      completedCount,
+      totalEvents: traineeProgressEvents.length,
+      percentage: traineeProgressEvents.length > 0 ? completedCount / traineeProgressEvents.length * 100 : 0,
+      nextEvent,
+      latestCompletedEvent: getEventAtCount(traineeProgressEvents, completedCount)
+    };
+  }).sort((a, b) => b.completedCount - a.completedCount);
+  const progressCounts = trainees.map((trainee) => trainee.completedCount).sort((a, b) => a - b);
+  const frontRunnerCount = progressCounts[progressCounts.length - 1] || 0;
+  const backMarkerCount = progressCounts[0] || 0;
+  const medianCount = progressCounts.length === 0 ? 0 : progressCounts.length % 2 === 1 ? progressCounts[Math.floor(progressCounts.length / 2)] : (progressCounts[progressCounts.length / 2 - 1] + progressCounts[progressCounts.length / 2]) / 2;
+  const averageCompletedEvents = trainees.length > 0 ? trainees.reduce((sum, trainee) => sum + trainee.completedCount, 0) / trainees.length : 0;
+  const today = /* @__PURE__ */ new Date();
+  today.setHours(0, 0, 0, 0);
+  const gradDate = /* @__PURE__ */ new Date(`${course.gradDate}T00:00:00`);
+  const weeksRemaining = Math.max(0, (gradDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24 * 7));
+  const eventsRemaining = Math.max(0, totalEvents - averageCompletedEvents);
+  const requiredPace = eventsRemaining === 0 ? 0 : weeksRemaining > 0 ? eventsRemaining / weeksRemaining : Number.POSITIVE_INFINITY;
+  const riskLabel = getRiskLabel(requiredPace, thresholds);
+  const weeklyProgress = [];
+  const courseStartDate = /* @__PURE__ */ new Date(`${course.startDate}T00:00:00`);
+  courseStartDate.setHours(0, 0, 0, 0);
+  let weekDate = new Date(courseStartDate);
+  while (weekDate <= today) {
+    const weekEnd = new Date(weekDate);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+    const traineeWeeklyCounts = trainees.map((metric) => {
+      const individualLMP = traineeLMPs.get(metric.trainee.fullName) || traineeLMPs.get(metric.trainee.name) || representativeLMP;
+      const traineeProgressEvents = individualLMP.filter(isProgressEvent);
+      const traineeValidCodes = new Set(traineeProgressEvents.map(getEventCode).filter(Boolean));
+      const traineeEventIdToCode = new Map(eventIdToCode);
+      traineeProgressEvents.forEach((item) => {
+        const eventCode = getEventCode(item);
+        if (!eventCode) return;
+        traineeEventIdToCode.set(item.id, eventCode);
+        traineeEventIdToCode.set(item.code, eventCode);
+      });
+      const completedEventDates = getCompletedEventDates(metric.trainee, traineeValidCodes, traineeEventIdToCode, pt051Assessments);
+      const count = Array.from(completedEventDates.values()).filter((date) => date <= weekEnd).length;
+      return { name: metric.trainee.fullName || metric.trainee.name, count };
+    });
+    if (traineeWeeklyCounts.length > 0) {
+      traineeWeeklyCounts.sort((a, b) => b.count - a.count);
+      weeklyProgress.push({
+        weekDate: new Date(weekDate),
+        highest: traineeWeeklyCounts[0].count,
+        lowest: traineeWeeklyCounts[traineeWeeklyCounts.length - 1].count,
+        average: traineeWeeklyCounts.reduce((sum, trainee) => sum + trainee.count, 0) / traineeWeeklyCounts.length,
+        highestTrainee: traineeWeeklyCounts[0].name,
+        lowestTrainee: traineeWeeklyCounts[traineeWeeklyCounts.length - 1].name
+      });
+    }
+    weekDate.setDate(weekDate.getDate() + 7);
+  }
+  return {
+    course,
+    totalEvents,
+    trainees,
+    frontRunnerEvent: getEventAtCount(progressEvents, frontRunnerCount),
+    medianEvent: getEventAtCount(progressEvents, Math.floor(medianCount)),
+    backMarkerEvent: getEventAtCount(progressEvents, backMarkerCount),
+    medianProgressPercentage: totalEvents > 0 ? medianCount / totalEvents * 100 : 0,
+    averageCompletedEvents,
+    requiredPace,
+    riskLabel,
+    riskColorClass: getRiskColorClass(riskLabel),
+    weeklyProgress
+  };
+};
 const CourseDataWindow = ({
   course,
   allTrainees,
-  scores,
+  pt051Assessments,
   traineeLMPs,
+  riskThresholds,
   onUpdateGradDate,
   onUpdateStartDate,
   onShowFullGraph
@@ -58222,88 +58385,9 @@ const CourseDataWindow = ({
   const isHexColor = (color) => color.startsWith("#") || color.startsWith("rgb");
   const courseColorClass = isHexColor(courseColor || "") ? "" : courseColor || "";
   const courseColorStyle = isHexColor(courseColor || "") ? { backgroundColor: courseColor } : {};
-  const getCompletedCount = (traineeScores) => {
-    return traineeScores.filter((s) => !s.event.includes("MB") && !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
-  };
   const courseData = reactExports.useMemo(() => {
-    const courseTrainees = allTrainees.filter((t) => t.course === courseName && !t.isPaused);
-    const representativeLMP = traineeLMPs.get(courseTrainees[0]?.fullName) || [];
-    const schedulableSyllabusEvents = representativeLMP.filter((item) => !item.id.includes(" MB") && !item.isRemedial);
-    const totalSyllabusEvents = schedulableSyllabusEvents.length;
-    const traineesWithDetails = courseTrainees.map((trainee) => {
-      const individualLMP = traineeLMPs.get(trainee.fullName) || [];
-      const traineeScores = scores.get(trainee.fullName) || [];
-      const completedEventIds = new Set(traineeScores.map((s) => s.event));
-      let nextEvent = "Finished";
-      const completedCount = getCompletedCount(traineeScores);
-      if (completedCount < totalSyllabusEvents) {
-        nextEvent = "N/A";
-        for (const item of individualLMP) {
-          if (!completedEventIds.has(item.id) && !item.code.includes(" MB")) {
-            const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p));
-            if (prereqsMet) {
-              nextEvent = item.code;
-              break;
-            }
-          }
-        }
-      }
-      const percentage = totalSyllabusEvents > 0 ? completedCount / totalSyllabusEvents * 100 : 0;
-      return { trainee, percentage, nextEvent, completedCount };
-    }).sort((a, b) => b.completedCount - a.completedCount);
-    const progressCounts = traineesWithDetails.map((t) => t.completedCount).sort((a, b) => a - b);
-    const frontRunnerCount = progressCounts.length > 0 ? progressCounts[progressCounts.length - 1] : 0;
-    const frontRunnerEventIndex = frontRunnerCount - 1;
-    let frontRunnerEvent = "N/A";
-    if (frontRunnerCount > 0 && frontRunnerEventIndex < schedulableSyllabusEvents.length) {
-      frontRunnerEvent = schedulableSyllabusEvents[frontRunnerEventIndex].code;
-    } else if (courseTrainees.length > 0) {
-      frontRunnerEvent = "Not Started";
-    }
-    const backMarkerCount = progressCounts.length > 0 ? progressCounts[0] : 0;
-    const backMarkerEventIndex = backMarkerCount - 1;
-    let backMarkerEvent = "N/A";
-    if (backMarkerCount > 0 && backMarkerEventIndex < schedulableSyllabusEvents.length) {
-      backMarkerEvent = schedulableSyllabusEvents[backMarkerEventIndex].code;
-    } else if (courseTrainees.length > 0) {
-      backMarkerEvent = "Not Started";
-    }
-    let medianCountValue = 0;
-    if (progressCounts.length > 0) {
-      const mid = Math.floor(progressCounts.length / 2);
-      medianCountValue = progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
-    }
-    let medianEvent = "N/A";
-    const medianEventIndex = Math.floor(medianCountValue) - 1;
-    if (totalSyllabusEvents > 0 && medianEventIndex >= 0 && medianEventIndex < schedulableSyllabusEvents.length) {
-      medianEvent = schedulableSyllabusEvents[medianEventIndex].code;
-    } else if (medianCountValue < 1 && courseTrainees.length > 0) {
-      medianEvent = "Not Started";
-    }
-    const medianProgressPercentage = totalSyllabusEvents > 0 ? medianCountValue / totalSyllabusEvents * 100 : 0;
-    let requiredPace = 0;
-    const eventsRemaining = totalSyllabusEvents - medianCountValue;
-    if (eventsRemaining > 0 && gradDate) {
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      const grad = new Date(gradDate);
-      const daysRemaining = (grad.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24);
-      if (daysRemaining > 0) {
-        const weeksRemaining = daysRemaining / 7;
-        requiredPace = eventsRemaining / weeksRemaining;
-      }
-    }
-    return {
-      trainees: traineesWithDetails.sort((a, b) => b.percentage - a.percentage),
-      medianProgressPercentage,
-      medianEvent,
-      totalSyllabusEvents,
-      frontRunnerEvent,
-      backMarkerEvent,
-      requiredPace,
-      medianCountValue
-    };
-  }, [courseName, allTrainees, scores, traineeLMPs, gradDate]);
+    return calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
+  }, [course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`, style: courseColorStyle, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }),
@@ -58357,12 +58441,13 @@ const CourseDataWindow = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-white/70", children: [
             "Back Marker: ",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white/90", children: courseData.backMarkerEvent })
-          ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `inline-flex mt-1 px-2 py-0.5 rounded border text-[11px] font-semibold ${courseData.riskColorClass}`, children: courseData.riskLabel })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right flex flex-col justify-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white/70", children: "Required Pace" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "font-bold text-lg text-white", children: [
-            courseData.requiredPace.toFixed(1),
+            Number.isFinite(courseData.requiredPace) ? courseData.requiredPace.toFixed(1) : "∞",
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "/wk" })
           ] })
         ] })
@@ -58391,225 +58476,32 @@ const CourseDataWindow = ({
     ) })
   ] });
 };
-function calculateCourseStatistics(trainees, scores, traineeLMPs, courses) {
-  console.log("[CourseStatistics] Input data:", {
-    traineesCount: trainees.length,
-    scoresMapSize: scores.size,
-    traineeLMPsMapSize: traineeLMPs.size,
-    coursesCount: courses.length
-  });
-  if (trainees.length === 0) {
-    console.log("[CourseStatistics] No trainees provided");
-    return {
-      frontRunnerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
-      backMarkerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
-      courseAverageStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 }
-    };
-  }
-  const traineeStats = [];
-  for (const trainee of trainees) {
-    const course = courses.find((c) => c.name === trainee.course);
-    if (!course) {
-      console.log(`[CourseStatistics] No course found for trainee ${trainee.fullName}, course: ${trainee.course}`);
-      continue;
-    }
-    const traineeScores = scores.get(trainee.fullName) || [];
-    const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
-    console.log(`[CourseStatistics] Processing trainee: ${trainee.fullName}`, {
-      scoresCount: traineeScores.length,
-      lmpCount: traineeLMP.length,
-      courseName: course.name,
-      courseStart: course.startDate,
-      courseGrad: course.gradDate
-    });
-    let completedEvents = 0;
-    for (const score of traineeScores) {
-      if (score.event.includes("MB") || score.event.includes("-REM-") || score.event.includes("-RF")) {
-        continue;
-      }
-      const syllabusItem = traineeLMP.find((item) => item.id === score.event);
-      if (syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial) {
-        completedEvents++;
-      }
-    }
-    const totalRequired = traineeLMP.filter(
-      (item) => (item.type === "Flight" || item.type === "FTD") && !item.isRemedial
-    ).length;
-    console.log(`[CourseStatistics] ${trainee.fullName}: completed=${completedEvents}, total=${totalRequired}`);
-    if (totalRequired === 0) {
-      console.log(`[CourseStatistics] Skipping ${trainee.fullName} - no required events`);
-      continue;
-    }
-    const completionRate = completedEvents / totalRequired;
-    const courseStartDate = /* @__PURE__ */ new Date(course.startDate + "T00:00:00Z");
-    const today = /* @__PURE__ */ new Date();
-    const weeksElapsed = Math.max(0, (today.getTime() - courseStartDate.getTime()) / (1e3 * 60 * 60 * 24 * 7));
-    const courseEndDate = /* @__PURE__ */ new Date(course.gradDate + "T00:00:00Z");
-    const weeksRemaining = Math.max(0, (courseEndDate.getTime() - today.getTime()) / (1e3 * 60 * 60 * 24 * 7));
-    const eventsRemaining = totalRequired - completedEvents;
-    const eventsPerWeek = weeksRemaining > 0 ? eventsRemaining / weeksRemaining : 0;
-    console.log(`[CourseStatistics] ${trainee.fullName}: weeksRemaining=${weeksRemaining.toFixed(1)}, eventsRemaining=${eventsRemaining}, eventsPerWeek=${eventsPerWeek.toFixed(1)}`);
-    traineeStats.push({
-      name: trainee.fullName,
-      completedEvents,
-      totalRequired,
-      completionRate,
-      eventsPerWeek,
-      weeksElapsed,
-      weeksRemaining
-    });
-  }
-  if (traineeStats.length === 0) {
-    console.log("[CourseStatistics] No trainee stats calculated - returning zeros");
-    return {
-      frontRunnerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
-      backMarkerStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 },
-      courseAverageStats: { eventsPerWeek: 0, totalEvents: 0, totalWeeks: 0, completionRate: 0 }
-    };
-  }
-  console.log(`[CourseStatistics] Calculated stats for ${traineeStats.length} trainees`);
-  traineeStats.sort((a, b) => b.completionRate - a.completionRate);
-  const frontRunner = traineeStats[0];
-  const backMarker = traineeStats[traineeStats.length - 1];
-  const averageCompletionRate = traineeStats.reduce((sum, t) => sum + t.completionRate, 0) / traineeStats.length;
-  const averageEventsPerWeek = traineeStats.reduce((sum, t) => sum + t.eventsPerWeek, 0) / traineeStats.length;
-  const averageTotalEvents = traineeStats.reduce((sum, t) => sum + t.completedEvents, 0) / traineeStats.length;
-  const averageWeeksRemaining = traineeStats.reduce((sum, t) => sum + t.weeksRemaining, 0) / traineeStats.length;
-  const result = {
-    frontRunnerStats: {
-      eventsPerWeek: frontRunner.eventsPerWeek,
-      totalEvents: frontRunner.completedEvents,
-      totalWeeks: frontRunner.weeksRemaining,
-      completionRate: frontRunner.completionRate
-    },
-    backMarkerStats: {
-      eventsPerWeek: backMarker.eventsPerWeek,
-      totalEvents: backMarker.completedEvents,
-      totalWeeks: backMarker.weeksRemaining,
-      completionRate: backMarker.completionRate
-    },
-    courseAverageStats: {
-      eventsPerWeek: averageEventsPerWeek,
-      totalEvents: averageTotalEvents,
-      totalWeeks: averageWeeksRemaining,
-      completionRate: averageCompletionRate
-    }
-  };
-  console.log("[CourseStatistics] Final result:", {
-    frontRunner: `${frontRunner.name}: ${frontRunner.eventsPerWeek.toFixed(1)}/wk`,
-    backMarker: `${backMarker.name}: ${backMarker.eventsPerWeek.toFixed(1)}/wk`,
-    average: `${averageEventsPerWeek.toFixed(1)}/wk`
-  });
-  return result;
-}
 const FullPageProgressGraph = ({
   courses,
   allTrainees,
-  scores,
+  pt051Assessments,
   traineeLMPs,
+  riskThresholds,
   courseColors,
   initialSelectedCourse,
   onClose
 }) => {
   const [selectedCourse2, setSelectedCourse] = reactExports.useState(initialSelectedCourse);
   const courseGraphData = reactExports.useMemo(() => {
-    const data = [];
-    for (const course of courses) {
-      if (!courseColors[course.name]) continue;
-      const courseTrainees = allTrainees.filter((t) => t.course === course.name && !t.isPaused);
-      if (courseTrainees.length === 0) continue;
-      const representativeLMP = traineeLMPs.get(courseTrainees[0]?.fullName) || [];
-      const flightAndFtdEvents = representativeLMP.filter(
-        (item) => (item.type === "Flight" || item.type === "FTD") && !item.isRemedial
-      );
-      const totalEvents = flightAndFtdEvents.length;
-      if (totalEvents === 0) continue;
-      const startDate = /* @__PURE__ */ new Date(course.startDate + "T00:00:00Z");
-      const endDate = /* @__PURE__ */ new Date(course.gradDate + "T00:00:00Z");
-      let firstEventDate = null;
-      for (const trainee of courseTrainees) {
-        const traineeScores = scores.get(trainee.fullName) || [];
-        const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
-        for (const score of traineeScores) {
-          if (score.event.includes("MB") || score.event.includes("-REM-") || score.event.includes("-RF")) {
-            continue;
-          }
-          const syllabusItem = traineeLMP.find((item) => item.id === score.event);
-          if (syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial) {
-            const scoreDate = /* @__PURE__ */ new Date(score.date + "T00:00:00Z");
-            if (!firstEventDate || scoreDate < firstEventDate) {
-              firstEventDate = scoreDate;
-            }
-          }
-        }
-      }
-      const effectiveStartDate = firstEventDate || startDate;
-      const weeklyProgress = [];
-      const today = /* @__PURE__ */ new Date();
-      today.setHours(0, 0, 0, 0);
-      let currentWeekStart = new Date(effectiveStartDate);
-      currentWeekStart.setHours(0, 0, 0, 0);
-      while (currentWeekStart <= today) {
-        const weekEnd = new Date(currentWeekStart);
-        weekEnd.setDate(weekEnd.getDate() + 7);
-        const traineeProgress = [];
-        for (const trainee of courseTrainees) {
-          const traineeScores = scores.get(trainee.fullName) || [];
-          const traineeLMP = traineeLMPs.get(trainee.fullName) || [];
-          let completedCount = 0;
-          for (const score of traineeScores) {
-            const scoreDate = /* @__PURE__ */ new Date(score.date + "T00:00:00Z");
-            if (scoreDate <= weekEnd) {
-              if (score.event.includes("MB") || score.event.includes("-REM-") || score.event.includes("-RF")) {
-                continue;
-              }
-              const syllabusItem = traineeLMP.find((item) => item.id === score.event);
-              if (syllabusItem && (syllabusItem.type === "Flight" || syllabusItem.type === "FTD") && !syllabusItem.isRemedial) {
-                completedCount++;
-              }
-            }
-          }
-          traineeProgress.push({ name: trainee.fullName, count: completedCount });
-        }
-        if (traineeProgress.length > 0) {
-          traineeProgress.sort((a, b) => b.count - a.count);
-          const highest = traineeProgress[0].count;
-          const lowest = traineeProgress[traineeProgress.length - 1].count;
-          const average = traineeProgress.reduce((sum, t) => sum + t.count, 0) / traineeProgress.length;
-          weeklyProgress.push({
-            weekDate: new Date(currentWeekStart),
-            highest,
-            lowest,
-            average,
-            highestTrainee: traineeProgress[0].name,
-            lowestTrainee: traineeProgress[traineeProgress.length - 1].name
-          });
-        }
-        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
-      }
-      console.log(`[ProgressGraph] Course: ${course.name}`);
-      console.log(`  - Course Start: ${startDate.toLocaleDateString()}`);
-      console.log(`  - Course Grad: ${endDate.toLocaleDateString()}`);
-      console.log(`  - Total Events: ${totalEvents}`);
-      console.log(`  - First Event Date: ${firstEventDate?.toLocaleDateString() || "No events yet"}`);
-      console.log(`  - Weekly Progress Points: ${weeklyProgress.length}`);
-      if (weeklyProgress.length > 0) {
-        console.log(`  - Sample Week 1:`, weeklyProgress[0]);
-        console.log(`  - Sample Last Week:`, weeklyProgress[weeklyProgress.length - 1]);
-      }
-      data.push({
+    return courses.filter((course) => courseColors[course.name]).map((course) => {
+      const metric = calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
+      return {
         course,
-        startDate,
-        endDate,
-        totalEvents,
-        weeklyProgress,
+        startDate: /* @__PURE__ */ new Date(`${course.startDate}T00:00:00`),
+        endDate: /* @__PURE__ */ new Date(`${course.gradDate}T00:00:00`),
+        totalEvents: metric.totalEvents,
+        weeklyProgress: metric.weeklyProgress,
+        metric,
         color: courseColors[course.name]
-      });
-    }
-    console.log(`[ProgressGraph] Total courses with data: ${data.length}`);
-    return data;
-  }, [courses, allTrainees, scores, traineeLMPs, courseColors]);
-  const displayData = selectedCourse2 ? courseGraphData.filter((d) => d.course.name === selectedCourse2) : courseGraphData;
+      };
+    }).filter((data) => data.totalEvents > 0 && data.metric.trainees.length > 0);
+  }, [courses, allTrainees, traineeLMPs, pt051Assessments, riskThresholds, courseColors]);
+  const displayData = selectedCourse2 ? courseGraphData.filter((data) => data.course.name === selectedCourse2) : courseGraphData;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
@@ -58629,7 +58521,7 @@ const FullPageProgressGraph = ({
           "select",
           {
             value: selectedCourse2 || "",
-            onChange: (e) => setSelectedCourse(e.target.value || null),
+            onChange: (event) => setSelectedCourse(event.target.value || null),
             className: "bg-gray-700 text-white rounded-md px-3 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "All Courses" }),
@@ -58639,39 +58531,18 @@ const FullPageProgressGraph = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      CourseGraph,
-      {
-        data,
-        allTrainees,
-        scores,
-        traineeLMPs,
-        courses
-      },
-      data.course.name
-    )) }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-8 max-w-7xl mx-auto", children: displayData.map((data) => /* @__PURE__ */ jsxRuntimeExports.jsx(CourseGraph, { data }, data.course.name)) }) })
   ] });
 };
-const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
-  const { course, startDate, endDate, totalEvents, weeklyProgress, color } = data;
-  const { frontRunnerStats, backMarkerStats, courseAverageStats } = reactExports.useMemo(() => {
-    const courseTrainees = allTrainees.filter((t) => t.course === course.name && !t.isPaused);
-    if (courseTrainees.length === 0) {
-      return {
-        frontRunnerStats: { eventsPerWeek: 0 },
-        backMarkerStats: { eventsPerWeek: 0 },
-        courseAverageStats: { eventsPerWeek: 0 }
-      };
-    }
-    return calculateCourseStatistics(courseTrainees, scores, traineeLMPs, [course]);
-  }, [course, allTrainees, scores, traineeLMPs]);
+const CourseGraph = ({ data }) => {
+  const { course, startDate, endDate, totalEvents, weeklyProgress, color, metric } = data;
   const SVG_WIDTH = 800;
   const SVG_HEIGHT = 450;
   const PADDING = { top: 50, right: 50, bottom: 70, left: 70 };
   const CHART_WIDTH = SVG_WIDTH - PADDING.left - PADDING.right;
   const CHART_HEIGHT = SVG_HEIGHT - PADDING.top - PADDING.bottom;
   const dateToX = (date) => {
-    const totalTime = endDate.getTime() - startDate.getTime();
+    const totalTime = Math.max(1, endDate.getTime() - startDate.getTime());
     const elapsed = date.getTime() - startDate.getTime();
     const x = PADDING.left + elapsed / totalTime * CHART_WIDTH;
     return Math.max(PADDING.left, Math.min(PADDING.left + CHART_WIDTH, x));
@@ -58679,42 +58550,29 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
   const eventsToY = (count) => {
     return PADDING.top + CHART_HEIGHT - count / totalEvents * CHART_HEIGHT;
   };
-  const referenceLines = reactExports.useMemo(() => {
-    const lines = [];
-    const rates = [
-      { rate: 3.5, color: "#34d399", label: "3.5/wk", dash: "8 4" },
-      // Green
-      { rate: 4, color: "#fbbf24", label: "4.0/wk", dash: "none" },
-      // Yellow
-      { rate: 4.5, color: "#f87171", label: "4.5/wk", dash: "8 4" }
-      // Red
-    ];
-    for (const { rate, color: color2, label, dash } of rates) {
-      const weeksNeeded = totalEvents / rate;
-      const daysNeeded = weeksNeeded * 7;
-      const lineStartDate = new Date(endDate);
-      lineStartDate.setDate(lineStartDate.getDate() - Math.floor(daysNeeded));
-      lines.push({
-        x1: dateToX(lineStartDate),
-        y1: eventsToY(0),
-        x2: dateToX(endDate),
-        y2: eventsToY(totalEvents),
-        color: color2,
-        label,
-        dash
-      });
-    }
-    return lines;
-  }, [startDate, endDate, totalEvents]);
-  const yAxisTicks = reactExports.useMemo(() => {
-    const ticks = [];
-    const tickCount = 8;
-    for (let i = 0; i <= tickCount; i++) {
-      const value = totalEvents / tickCount * i;
-      ticks.push({ value: Math.round(value), y: eventsToY(value) });
-    }
-    return ticks;
-  }, [totalEvents]);
+  const buildReferenceLine = (rate, color2, label, dash) => {
+    const courseWeeks = Math.max(0, (endDate.getTime() - startDate.getTime()) / (1e3 * 60 * 60 * 24 * 7));
+    const projectedEvents = Math.min(totalEvents, courseWeeks * rate);
+    const endLineDate = projectedEvents >= totalEvents ? new Date(startDate.getTime() + totalEvents / rate * 7 * 24 * 60 * 60 * 1e3) : endDate;
+    return {
+      x1: dateToX(startDate),
+      y1: eventsToY(0),
+      x2: dateToX(endLineDate),
+      y2: eventsToY(projectedEvents),
+      color: color2,
+      label,
+      dash
+    };
+  };
+  const referenceLines = [
+    buildReferenceLine(3.5, "#34d399", "3.5/wk", "8 4"),
+    buildReferenceLine(4, "#fbbf24", "4.0/wk", "none"),
+    buildReferenceLine(4.5, "#f87171", "4.5/wk", "8 4")
+  ];
+  const yAxisTicks = Array.from({ length: 9 }, (_, index) => {
+    const value = totalEvents / 8 * index;
+    return { value: Math.round(value), y: eventsToY(value) };
+  });
   const xAxisTicks = reactExports.useMemo(() => {
     const ticks = [];
     const current = new Date(startDate);
@@ -58722,7 +58580,6 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
     while (current <= endDate) {
       if (current >= startDate) {
         ticks.push({
-          date: new Date(current),
           x: dateToX(current),
           label: current.toLocaleDateString("en-GB", { month: "short", year: "2-digit" })
         });
@@ -58731,60 +58588,47 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
     }
     return ticks;
   }, [startDate, endDate]);
-  const averagePath = reactExports.useMemo(() => {
-    if (weeklyProgress.length === 0) return "";
-    const points = weeklyProgress.map((wp) => ({
-      x: dateToX(wp.weekDate),
-      y: eventsToY(wp.average)
-    }));
-    return points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-  }, [weeklyProgress]);
-  const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
-  isHexColor(color) ? color : color.includes("sky") ? "#38bdf8" : color.includes("purple") ? "#c084fc" : color.includes("yellow") ? "#facc15" : color.includes("pink") ? "#f472b6" : color.includes("teal") ? "#2dd4bf" : color.includes("indigo") ? "#818cf8" : color.includes("cyan") ? "#22d3ee" : color.includes("fuchsia") ? "#e879f9" : color.includes("blue") ? "#60a5fa" : color.includes("green") ? "#4ade80" : color.includes("red") ? "#f87171" : color.includes("amber") ? "#f59e0b" : color.includes("lime") ? "#a3e635" : "#9ca3af";
+  const averagePath = weeklyProgress.map((week, index) => `${index === 0 ? "M" : "L"} ${dateToX(week.weekDate)} ${eventsToY(week.average)}`).join(" ");
+  const today = /* @__PURE__ */ new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayX = dateToX(today);
+  const isHexColor = (value) => value && (value.startsWith("#") || value.startsWith("rgb"));
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mb-4 p-3 rounded-lg ${isHexColor(color) ? "" : color}`, style: isHexColor(color) ? { backgroundColor: color } : {}, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white text-center", children: course.name }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-sm text-white/80 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-between gap-3 text-sm text-white/80 mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
           "Start: ",
           startDate.toLocaleDateString("en-GB")
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-          "Total Events: ",
+          "Total PT-051 Events: ",
           totalEvents
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
           "Graduation: ",
           endDate.toLocaleDateString("en-GB")
-        ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded border font-semibold ${metric.riskColorClass}`, children: metric.riskLabel })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 rounded-lg p-3 mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Events Per Week Required:" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex space-x-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 bg-green-500 rounded-full mr-2" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
-            "Front Runner: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-green-400", children: frontRunnerStats.eventsPerWeek.toFixed(1) }),
-            "/wk"
-          ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-gray-300 mb-2", children: "Course Risk Projection:" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-x-6 gap-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
+          "Average completed: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-blue-300", children: metric.averageCompletedEvents.toFixed(1) }),
+          " events"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 bg-blue-500 rounded-full mr-2" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
-            "Course Average: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-blue-400", children: courseAverageStats.eventsPerWeek.toFixed(1) }),
-            "/wk"
-          ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
+          "Required pace: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-blue-300", children: Number.isFinite(metric.requiredPace) ? metric.requiredPace.toFixed(1) : "∞" }),
+          "/wk"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3 h-3 bg-red-500 rounded-full mr-2" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
-            "Back Marker: ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-red-400", children: backMarkerStats.eventsPerWeek.toFixed(1) }),
-            "/wk"
-          ] })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
+          "School profile: ",
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-emerald-300", children: "3.5" }),
+          "/wk"
         ] })
       ] })
     ] }),
@@ -58792,171 +58636,42 @@ const CourseGraph = ({ data, allTrainees, scores, traineeLMPs, courses }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("defs", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("pattern", { id: `grid-${course.name}`, width: "40", height: "40", patternUnits: "userSpaceOnUse", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M 40 0 L 0 0 0 40", fill: "none", stroke: "#374151", strokeWidth: "0.5" }) }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: PADDING.left, y: PADDING.top, width: CHART_WIDTH, height: CHART_HEIGHT, fill: `url(#grid-${course.name})` }),
       yAxisTicks.map((tick) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "line",
-          {
-            x1: PADDING.left,
-            x2: PADDING.left + CHART_WIDTH,
-            y1: tick.y,
-            y2: tick.y,
-            stroke: "#374151",
-            strokeWidth: "0.5"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "text",
-          {
-            x: PADDING.left - 10,
-            y: tick.y + 4,
-            textAnchor: "end",
-            fontSize: "11",
-            fill: "#9ca3af",
-            children: tick.value
-          }
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: PADDING.left, x2: PADDING.left + CHART_WIDTH, y1: tick.y, y2: tick.y, stroke: "#374151", strokeWidth: "0.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: PADDING.left - 10, y: tick.y + 4, textAnchor: "end", fontSize: "11", fill: "#9ca3af", children: tick.value })
       ] }, `y-${tick.value}`)),
       xAxisTicks.map((tick) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "line",
-          {
-            x1: tick.x,
-            x2: tick.x,
-            y1: PADDING.top,
-            y2: PADDING.top + CHART_HEIGHT,
-            stroke: "#374151",
-            strokeWidth: "0.5"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "text",
-          {
-            x: tick.x,
-            y: PADDING.top + CHART_HEIGHT + 20,
-            textAnchor: "middle",
-            fontSize: "10",
-            fill: "#9ca3af",
-            children: tick.label
-          }
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: tick.x, x2: tick.x, y1: PADDING.top, y2: PADDING.top + CHART_HEIGHT, stroke: "#374151", strokeWidth: "0.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: tick.x, y: PADDING.top + CHART_HEIGHT + 20, textAnchor: "middle", fontSize: "10", fill: "#9ca3af", children: tick.label })
       ] }, `x-${tick.x}`)),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "path",
-        {
-          d: `M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`,
-          fill: "none",
-          stroke: "#6b7280",
-          strokeWidth: "1"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "text",
-        {
-          x: PADDING.left / 2,
-          y: PADDING.top + CHART_HEIGHT / 2,
-          transform: `rotate(-90 ${PADDING.left / 2} ${PADDING.top + CHART_HEIGHT / 2})`,
-          textAnchor: "middle",
-          fontSize: "12",
-          fill: "#d1d5db",
-          fontWeight: "bold",
-          children: "Events Completed"
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "text",
-        {
-          x: PADDING.left + CHART_WIDTH / 2,
-          y: SVG_HEIGHT - 15,
-          textAnchor: "middle",
-          fontSize: "12",
-          fill: "#d1d5db",
-          fontWeight: "bold",
-          children: "Date"
-        }
-      ),
-      referenceLines.map((line, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "line",
-        {
-          x1: line.x1,
-          y1: line.y1,
-          x2: line.x2,
-          y2: line.y2,
-          stroke: line.color,
-          strokeWidth: "0.25",
-          strokeDasharray: line.dash
-        },
-        `ref-${i}`
-      )),
-      averagePath && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "path",
-        {
-          d: averagePath,
-          fill: "none",
-          stroke: "#60a5fa",
-          strokeWidth: "1.25"
-        }
-      ),
-      weeklyProgress.length > 0 && weeklyProgress.map((wp, i) => {
-        const x = dateToX(wp.weekDate);
-        const yHigh = eventsToY(wp.highest);
-        const yLow = eventsToY(wp.lowest);
-        const yAvg = eventsToY(wp.average);
-        if (i === 0 || i === weeklyProgress.length - 1) {
-          console.log(`[Graph] Week ${i + 1}: x=${x}, highest=${wp.highest} (y=${yHigh}), lowest=${wp.lowest} (y=${yLow}), avg=${wp.average.toFixed(1)} (y=${yAvg})`);
-        }
+      /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: `M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`, fill: "none", stroke: "#6b7280", strokeWidth: "1" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: PADDING.left / 2, y: PADDING.top + CHART_HEIGHT / 2, transform: `rotate(-90 ${PADDING.left / 2} ${PADDING.top + CHART_HEIGHT / 2})`, textAnchor: "middle", fontSize: "12", fill: "#d1d5db", fontWeight: "bold", children: "Events Completed" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: PADDING.left + CHART_WIDTH / 2, y: SVG_HEIGHT - 15, textAnchor: "middle", fontSize: "12", fill: "#d1d5db", fontWeight: "bold", children: "Date" }),
+      referenceLines.map((line) => /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: line.x1, y1: line.y1, x2: line.x2, y2: line.y2, stroke: line.color, strokeWidth: "1.25", strokeDasharray: line.dash }, line.label)),
+      averagePath && /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: averagePath, fill: "none", stroke: "#60a5fa", strokeWidth: "1.75" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: todayX, x2: todayX, y1: PADDING.top, y2: PADDING.top + CHART_HEIGHT, stroke: "#e5e7eb", strokeWidth: "1", strokeDasharray: "5 5" }),
+      weeklyProgress.map((week, index) => {
+        const x = dateToX(week.weekDate);
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "circle",
-            {
-              cx: x,
-              cy: yHigh,
-              r: "1.25",
-              fill: "#4ade80",
-              stroke: "#1f2937",
-              strokeWidth: "0.5",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `Week ${i + 1}: Highest - ${wp.highest} events (${wp.highestTrainee})` })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "circle",
-            {
-              cx: x,
-              cy: yLow,
-              r: "1.25",
-              fill: "#f87171",
-              stroke: "#1f2937",
-              strokeWidth: "0.5",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `Week ${i + 1}: Lowest - ${wp.lowest} events (${wp.lowestTrainee})` })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "circle",
-            {
-              cx: x,
-              cy: yAvg,
-              r: "1",
-              fill: "#60a5fa",
-              stroke: "#1f2937",
-              strokeWidth: "0.5",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `Week ${i + 1}: Average - ${wp.average.toFixed(1)} events` })
-            }
-          )
-        ] }, `week-${i}`);
+          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: x, cy: eventsToY(week.highest), r: "1.75", fill: "#4ade80", stroke: "#1f2937", strokeWidth: "0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `Week ${index + 1}: Highest - ${week.highest} events (${week.highestTrainee})` }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: x, cy: eventsToY(week.lowest), r: "1.75", fill: "#f87171", stroke: "#1f2937", strokeWidth: "0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `Week ${index + 1}: Lowest - ${week.lowest} events (${week.lowestTrainee})` }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: x, cy: eventsToY(week.average), r: "1.35", fill: "#60a5fa", stroke: "#1f2937", strokeWidth: "0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `Week ${index + 1}: Average - ${week.average.toFixed(1)} events` }) })
+        ] }, `week-${index}`);
       }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { transform: `translate(${PADDING.left + 15}, ${PADDING.top - 30})`, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "0", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Reference Lines:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "100", y1: "-3", x2: "120", y2: "-3", stroke: "#f87171", strokeWidth: "2", strokeDasharray: "8 4" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "125", y: "0", fontSize: "9", fill: "#9ca3af", children: "3.5/wk" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "170", y1: "-3", x2: "190", y2: "-3", stroke: "#fbbf24", strokeWidth: "2" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "195", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.0/wk" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "240", y1: "-3", x2: "260", y2: "-3", stroke: "#4ade80", strokeWidth: "2", strokeDasharray: "8 4" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "265", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.5/wk" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "320", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Progress:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "380", cy: "-3", r: "3", fill: "#4ade80", stroke: "#1f2937", strokeWidth: "1.5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "385", y: "0", fontSize: "9", fill: "#9ca3af", children: "Highest" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "430", cy: "-3", r: "3", fill: "#f87171", stroke: "#1f2937", strokeWidth: "1.5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "435", y: "0", fontSize: "9", fill: "#9ca3af", children: "Lowest" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "480", y1: "-3", x2: "495", y2: "-3", stroke: "#60a5fa", strokeWidth: "2.5" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "500", y: "0", fontSize: "9", fill: "#9ca3af", children: "Average" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "0", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Reference:" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "70", y1: "-3", x2: "90", y2: "-3", stroke: "#34d399", strokeWidth: "2", strokeDasharray: "8 4" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "95", y: "0", fontSize: "9", fill: "#9ca3af", children: "3.5/wk" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "140", y1: "-3", x2: "160", y2: "-3", stroke: "#fbbf24", strokeWidth: "2" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "165", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.0/wk" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "210", y1: "-3", x2: "230", y2: "-3", stroke: "#f87171", strokeWidth: "2", strokeDasharray: "8 4" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "235", y: "0", fontSize: "9", fill: "#9ca3af", children: "4.5/wk" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "290", y: "0", fontSize: "10", fill: "#d1d5db", fontWeight: "bold", children: "Actual:" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "340", cy: "-3", r: "3", fill: "#4ade80" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "346", y: "0", fontSize: "9", fill: "#9ca3af", children: "Highest" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "400", cy: "-3", r: "3", fill: "#f87171" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "406", y: "0", fontSize: "9", fill: "#9ca3af", children: "Lowest" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "460", y1: "-3", x2: "475", y2: "-3", stroke: "#60a5fa", strokeWidth: "2.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "480", y: "0", fontSize: "9", fill: "#9ca3af", children: "Average" })
       ] })
     ] })
   ] });
@@ -58976,6 +58691,12 @@ const CourseProgressView = ({
   const [scoreCourse, setScoreCourse] = reactExports.useState("");
   const [activeAwardId, setActiveAwardId] = reactExports.useState("dux");
   const [isEditingAward, setIsEditingAward] = reactExports.useState(false);
+  const [showRiskSettings, setShowRiskSettings] = reactExports.useState(false);
+  const [riskThresholds, setRiskThresholds] = reactExports.useState({
+    onTrackMax: 3.5,
+    watchMax: 4,
+    atRiskMax: 4.5
+  });
   const [awards, setAwards] = reactExports.useState([
     {
       id: "dux",
@@ -59368,13 +59089,17 @@ const CourseProgressView = ({
         `);
     printWindow.document.close();
   };
+  const updateRiskThreshold = (key, value) => {
+    setRiskThresholds((prev) => ({ ...prev, [key]: value }));
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: showFullGraph ? /* @__PURE__ */ jsxRuntimeExports.jsx(
     FullPageProgressGraph,
     {
       courses: activeCourses,
       allTrainees: traineesData,
-      scores,
+      pt051Assessments,
       traineeLMPs,
+      riskThresholds,
       courseColors,
       initialSelectedCourse: selectedGraphCourse,
       onClose: () => {
@@ -59382,326 +59107,427 @@ const CourseProgressView = ({
         setSelectedGraphCourse(null);
       }
     }
-  ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6 max-w-full mx-auto w-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Course Progress" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400", children: "High-level overview of trainee progression through the syllabus." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Course Progress" }) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6", children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-      CourseDataWindow,
-      {
-        course,
-        allTrainees: traineesData,
-        scores,
-        traineeLMPs,
-        onUpdateGradDate,
-        onUpdateStartDate,
-        onShowFullGraph: () => {
-          setSelectedGraphCourse(course.name);
-          setShowFullGraph(true);
-        }
-      },
-      course.name
-    )) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "Course Scores & Rankings" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "PT-051 overall grades and editable award ranking criteria for active course trainees." })
+  ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-y-auto", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6 max-w-full mx-auto w-full", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Course Progress" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400", children: "High-level overview of trainee progression through the syllabus." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 mt-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              type: "button",
+              onClick: () => setShowRiskSettings(true),
+              className: "w-[75px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+              children: [
+                "Risk",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                "Settings"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Course Progress" })
+        ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(scoreCourse)}`,
-            style: getCourseBorderStyle(scoreCourse),
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  className: `px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 ${getCourseHeaderClass(scoreCourse)}`,
-                  style: getCourseHeaderStyle(scoreCourse),
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Only events with saved PT-051 overall grades are shown." })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-end gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300 min-w-60", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6", children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CourseDataWindow,
+        {
+          course,
+          allTrainees: traineesData,
+          pt051Assessments,
+          traineeLMPs,
+          riskThresholds,
+          onUpdateGradDate,
+          onUpdateStartDate,
+          onShowFullGraph: () => {
+            setSelectedGraphCourse(course.name);
+            setShowFullGraph(true);
+          }
+        },
+        course.name
+      )) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-bold text-white", children: "Course Scores & Rankings" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "PT-051 overall grades and editable award ranking criteria for active course trainees." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 2xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.55fr)] gap-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(scoreCourse)}`,
+              style: getCourseBorderStyle(scoreCourse),
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: `px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 ${getCourseHeaderClass(scoreCourse)}`,
+                    style: getCourseHeaderStyle(scoreCourse),
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Scores" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Only events with saved PT-051 overall grades are shown." })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-end gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300 min-w-60", children: [
+                          "Course",
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            "select",
+                            {
+                              value: scoreCourse,
+                              onChange: (event) => setScoreCourse(event.target.value),
+                              className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                              children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
+                            }
+                          )
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: printCourseScores,
+                            className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
+                            children: "Print"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: exportCourseScoresCsv,
+                            className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
+                            children: "Export CSV"
+                          }
+                        )
+                      ] })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "sticky left-0 z-10 bg-gray-900/95 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-300 min-w-56", children: "Trainee" }),
+                    scoredEvents.map((eventCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3 text-center text-xs font-semibold uppercase text-gray-300 min-w-24 whitespace-nowrap", children: eventCode }, eventCode))
+                  ] }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
+                    scoreCourseTrainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: getDisplayName(trainee.fullName || trainee.name) }) }),
+                      scoredEvents.map((eventCode) => {
+                        const score = getLatestScoreForEvent(trainee, eventCode);
+                        return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode}`);
+                      })
+                    ] }, trainee.idNumber || trainee.fullName)),
+                    scoreCourseTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available for this course." }) })
+                  ] })
+                ] }) })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAward.course)}`,
+              style: getCourseBorderStyle(activeAward.course),
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: `px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`,
+                    style: getCourseHeaderStyle(activeAward.course),
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Rankings" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Create named awards and define how each ranking is calculated." })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
                         "Course",
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "select",
                           {
-                            value: scoreCourse,
-                            onChange: (event) => setScoreCourse(event.target.value),
+                            value: activeAward.course,
+                            onChange: (event) => updateActiveAwardCourse(event.target.value),
                             className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                             children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
                           }
                         )
                       ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
+                        "Award",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "select",
+                          {
+                            value: activeAward.id,
+                            onChange: (event) => setActiveAwardId(event.target.value),
+                            className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                            children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: getAwardDisplayName(award) }, award.id))
+                          }
+                        )
+                      ] })
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 justify-start sm:justify-end self-end", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
                         {
                           type: "button",
-                          onClick: printCourseScores,
-                          className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
-                          children: "Print"
+                          onClick: () => setIsEditingAward((prev) => !prev),
+                          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                          children: isEditingAward ? "Done" : "Edit"
                         }
                       ),
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "button",
                         {
                           type: "button",
-                          onClick: exportCourseScoresCsv,
-                          className: "px-3 py-2 text-xs font-semibold text-gray-300 hover:text-white bg-gray-700/60 hover:bg-gray-700 rounded-md border border-gray-600/70",
-                          children: "Export CSV"
-                        }
-                      )
-                    ] })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "sticky left-0 z-10 bg-gray-900/95 px-4 py-3 text-left text-xs font-semibold uppercase text-gray-300 min-w-56", children: "Trainee" }),
-                  scoredEvents.map((eventCode) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-3 text-center text-xs font-semibold uppercase text-gray-300 min-w-24 whitespace-nowrap", children: eventCode }, eventCode))
-                ] }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
-                  scoreCourseTrainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: getDisplayName(trainee.fullName || trainee.name) }) }),
-                    scoredEvents.map((eventCode) => {
-                      const score = getLatestScoreForEvent(trainee, eventCode);
-                      return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode}`);
-                    })
-                  ] }, trainee.idNumber || trainee.fullName)),
-                  scoreCourseTrainees.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-8 text-center text-gray-400", colSpan: Math.max(1, scoredEvents.length + 1), children: "No active trainees available for this course." }) })
-                ] })
-              ] }) })
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
-          {
-            className: `bg-gray-800 rounded-lg border overflow-hidden ${getCourseBorderClass(activeAward.course)}`,
-            style: getCourseBorderStyle(activeAward.course),
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  className: `px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`,
-                  style: getCourseHeaderStyle(activeAward.course),
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white", children: "Course Rankings" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-white/75", children: "Create named awards and define how each ranking is calculated." })
-                  ]
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
-                      "Course",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
-                        {
-                          value: activeAward.course,
-                          onChange: (event) => updateActiveAwardCourse(event.target.value),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                          children: activeCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course.name, children: course.name }, course.name))
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
-                      "Award",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
-                        {
-                          value: activeAward.id,
-                          onChange: (event) => setActiveAwardId(event.target.value),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                          children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: getAwardDisplayName(award) }, award.id))
+                          onClick: addAward,
+                          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+                            "Add",
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                            "Award"
+                          ] })
                         }
                       )
                     ] })
                   ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 justify-start sm:justify-end self-end", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: () => setIsEditingAward((prev) => !prev),
-                        className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-                        children: isEditingAward ? "Done" : "Edit"
-                      }
-                    ),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: addAward,
-                        className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-                        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
-                          "Add",
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-                          "Award"
-                        ] })
-                      }
-                    )
-                  ] })
-                ] }),
-                !isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 text-xs text-gray-300", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
-                    "Course: ",
-                    activeAward.course === "all" ? "All active courses" : activeAward.course
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
-                    "LMP: ",
-                    activeAward.lmpType
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
-                    "Events: ",
-                    selectedAwardEventRows.length
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
-                    "Minimum scores: ",
-                    activeAward.minimumScoredEvents
-                  ] })
-                ] }) }),
-                isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                      "Award Name",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          value: activeAward.name,
-                          onChange: (event) => updateActiveAward({ name: event.target.value }),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        }
-                      )
+                  !isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-gray-700 bg-gray-900/35 px-3 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2 text-xs text-gray-300", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                      "Course: ",
+                      activeAward.course === "all" ? "All active courses" : activeAward.course
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                      "Award LMP",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
-                        {
-                          value: activeAward.lmpType,
-                          onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                          children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
-                        }
-                      )
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                      "LMP: ",
+                      activeAward.lmpType
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                      "Minimum scored events",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "input",
-                        {
-                          type: "number",
-                          min: 1,
-                          value: activeAward.minimumScoredEvents,
-                          onChange: (event) => updateActiveAward({ minimumScoredEvents: Math.max(1, parseInt(event.target.value, 10) || 1) }),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        }
-                      )
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                      "Events: ",
+                      selectedAwardEventRows.length
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                      "button",
-                      {
-                        type: "button",
-                        onClick: removeAward,
-                        disabled: awards.length <= 1,
-                        className: "w-full px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
-                        children: "Remove Award"
-                      }
-                    ) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-200", children: "Scoring Events" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Events cascade from the selected LMP. Tick the events used for this award and adjust weights where required." })
-                      ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-semibold text-gray-300", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-800 px-2 py-1", children: [
+                      "Minimum scores: ",
+                      activeAward.minimumScoredEvents
+                    ] })
+                  ] }) }),
+                  isEditingAward && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                        "Award Name",
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           "input",
                           {
-                            type: "checkbox",
-                            checked: activeAward.includeAllScoredEvents,
-                            onChange: (event) => toggleAllAwardEvents(event.target.checked),
-                            className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                            value: activeAward.name,
+                            onChange: (event) => updateActiveAward({ name: event.target.value }),
+                            className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                           }
-                        ),
-                        "Select all"
-                      ] })
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                        "Award LMP",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "select",
+                          {
+                            value: activeAward.lmpType,
+                            onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
+                            className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                            children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                        "Minimum scored events",
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "input",
+                          {
+                            type: "number",
+                            min: 1,
+                            value: activeAward.minimumScoredEvents,
+                            onChange: (event) => updateActiveAward({ minimumScoredEvents: Math.max(1, parseInt(event.target.value, 10) || 1) }),
+                            className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          onClick: removeAward,
+                          disabled: awards.length <= 1,
+                          className: "w-full px-3 py-2 text-sm font-semibold text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed",
+                          children: "Remove Award"
+                        }
+                      ) })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto rounded-md border border-gray-700 divide-y divide-gray-700", children: [
-                      awardEventOptions.map((option) => {
-                        const criterion = getCriterionForEvent(option.value);
-                        const selected = isAwardEventSelected(option.value);
-                        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_90px] gap-2 items-center px-3 py-2 bg-gray-900/35", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-gray-200", children: "Scoring Events" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Events cascade from the selected LMP. Tick the events used for this award and adjust weights where required." })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center gap-2 text-xs font-semibold text-gray-300", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(
                             "input",
                             {
                               type: "checkbox",
-                              checked: selected,
-                              onChange: (event) => toggleAwardEvent(option.value, event.target.checked),
+                              checked: activeAward.includeAllScoredEvents,
+                              onChange: (event) => toggleAllAwardEvents(event.target.checked),
                               className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
                             }
                           ),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-gray-100 truncate", children: option.label }) }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            "input",
-                            {
-                              type: "number",
-                              min: 0.1,
-                              step: 0.1,
-                              value: criterion?.weight ?? 1,
-                              onChange: (event) => setAwardEventWeight(option.value, parseFloat(event.target.value) || 1),
-                              disabled: !selected,
-                              className: "bg-gray-900 border border-gray-600 rounded-md px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-40",
-                              "aria-label": `${option.label} weight`
-                            }
-                          )
-                        ] }, option.value);
-                      }),
-                      awardEventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-6 text-center text-sm text-gray-400", children: "No LMP events available for this course and LMP selection." })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500", children: [
-                      getAwardDisplayName(activeAward),
-                      " ranking includes ",
-                      activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length,
-                      " selected event",
-                      (activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length) === 1 ? "" : "s",
-                      "."
+                          "Select all"
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-72 overflow-y-auto rounded-md border border-gray-700 divide-y divide-gray-700", children: [
+                        awardEventOptions.map((option) => {
+                          const criterion = getCriterionForEvent(option.value);
+                          const selected = isAwardEventSelected(option.value);
+                          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[auto_minmax(0,1fr)_90px] gap-2 items-center px-3 py-2 bg-gray-900/35", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "input",
+                              {
+                                type: "checkbox",
+                                checked: selected,
+                                onChange: (event) => toggleAwardEvent(option.value, event.target.checked),
+                                className: "h-4 w-4 rounded border-gray-500 bg-gray-900 text-sky-500 focus:ring-sky-500"
+                              }
+                            ),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "min-w-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-medium text-gray-100 truncate", children: option.label }) }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx(
+                              "input",
+                              {
+                                type: "number",
+                                min: 0.1,
+                                step: 0.1,
+                                value: criterion?.weight ?? 1,
+                                onChange: (event) => setAwardEventWeight(option.value, parseFloat(event.target.value) || 1),
+                                disabled: !selected,
+                                className: "bg-gray-900 border border-gray-600 rounded-md px-2 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-40",
+                                "aria-label": `${option.label} weight`
+                              }
+                            )
+                          ] }, option.value);
+                        }),
+                        awardEventOptions.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-6 text-center text-sm text-gray-400", children: "No LMP events available for this course and LMP selection." })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-500", children: [
+                        getAwardDisplayName(activeAward),
+                        " ranking includes ",
+                        activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length,
+                        " selected event",
+                        (activeAward.includeAllScoredEvents ? awardEventOptions.length : activeAward.criteria.filter((criterion) => criterion.enabled).length) === 1 ? "" : "s",
+                        "."
+                      ] })
                     ] })
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto border border-gray-700 rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-xs font-semibold uppercase text-gray-300", children: "Rank" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-xs font-semibold uppercase text-gray-300", children: "Trainee" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Average" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Scores" })
-                  ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
-                    awardRankings.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-300", children: index + 1 }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-white", children: getDisplayName(row.trainee.fullName || row.trainee.name) }) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right font-mono text-sky-300", children: row.rankingScore.toFixed(2) }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right text-gray-300", children: row.scoredCount })
-                    ] }, row.trainee.idNumber || row.trainee.fullName)),
-                    awardRankings.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-6 text-center text-gray-400", colSpan: 4, children: "No ranking data available for the selected criteria." }) })
-                  ] })
-                ] }) })
-              ] })
-            ]
-          }
-        )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto border border-gray-700 rounded-md", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-900/80", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-xs font-semibold uppercase text-gray-300", children: "Rank" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-left text-xs font-semibold uppercase text-gray-300", children: "Trainee" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Average" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2 text-right text-xs font-semibold uppercase text-gray-300", children: "Scores" })
+                    ] }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
+                      awardRankings.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-300", children: index + 1 }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-white", children: getDisplayName(row.trainee.fullName || row.trainee.name) }) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right font-mono text-sky-300", children: row.rankingScore.toFixed(2) }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right text-gray-300", children: row.scoredCount })
+                      ] }, row.trainee.idNumber || row.trainee.fullName)),
+                      awardRankings.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-6 text-center text-gray-400", colSpan: 4, children: "No ranking data available for the selected criteria." }) })
+                    ] })
+                  ] }) })
+                ] })
+              ]
+            }
+          )
+        ] })
       ] })
-    ] })
-  ] }) }) });
+    ] }),
+    showRiskSettings && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: () => setShowRiskSettings(false), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-sky-500/50", onClick: (event) => event.stopPropagation(), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-sky-900/20", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-sky-400", children: "Course Risk Settings" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1", children: "Thresholds apply to every course card and progress graph." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-5 space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
+          "On Track maximum events/week",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: 0,
+              step: 0.1,
+              value: riskThresholds.onTrackMax,
+              onChange: (event) => updateRiskThreshold("onTrackMax", parseFloat(event.target.value) || 0),
+              className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
+          "Watch maximum events/week",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: riskThresholds.onTrackMax,
+              step: 0.1,
+              value: riskThresholds.watchMax,
+              onChange: (event) => updateRiskThreshold("watchMax", parseFloat(event.target.value) || riskThresholds.onTrackMax),
+              className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
+          "At Risk maximum events/week",
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              min: riskThresholds.watchMax,
+              step: 0.1,
+              value: riskThresholds.atRiskMax,
+              onChange: (event) => updateRiskThreshold("atRiskMax", parseFloat(event.target.value) || riskThresholds.watchMax),
+              className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-gray-700 bg-gray-900/40 p-3 text-xs text-gray-300 space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            "≤ ",
+            riskThresholds.onTrackMax.toFixed(1),
+            "/wk: On Track"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            (riskThresholds.onTrackMax + 0.1).toFixed(1),
+            "-",
+            riskThresholds.watchMax.toFixed(1),
+            "/wk: Watch"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            (riskThresholds.watchMax + 0.1).toFixed(1),
+            "-",
+            riskThresholds.atRiskMax.toFixed(1),
+            "/wk: At Risk"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+            "> ",
+            riskThresholds.atRiskMax.toFixed(1),
+            "/wk: Critical"
+          ] })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setShowRiskSettings(false),
+          className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold btn-aluminium-brushed rounded-md",
+          children: "Done"
+        }
+      ) })
+    ] }) })
+  ] }) });
 };
 const COURSE_MASTER_LMPS = [
   "BPC+IPC",
