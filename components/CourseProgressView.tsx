@@ -465,12 +465,20 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         setActiveAwardId(nextAwards[0].id);
     };
 
+    const getDisplayName = (name: string) => {
+        const activeCoursePattern = activeCourses
+            .map(course => course.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+            .join('|');
+        if (!activeCoursePattern) return name;
+        return name.replace(new RegExp(`\\s+[–-]\\s+(?:${activeCoursePattern})$`), '').trim();
+    };
+
     const scoreMatrixRows = useMemo(() => {
         return scoreCourseTrainees.map(trainee => ({
-            traineeName: trainee.fullName || trainee.name,
+            traineeName: getDisplayName(trainee.fullName || trainee.name),
             scores: scoredEvents.map(eventCode => getLatestScoreForEvent(trainee, eventCode)?.score ?? ''),
         }));
-    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords]);
+    }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
 
     const escapeCsvValue = (value: string | number): string => {
         const raw = String(value);
@@ -654,7 +662,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                 {scoreCourseTrainees.map(trainee => (
                                                     <tr key={trainee.idNumber || trainee.fullName} className="hover:bg-gray-700/30">
                                                         <td className="sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56">
-                                                            <div className="font-medium">{trainee.fullName || trainee.name}</div>
+                                                            <div className="font-medium">{getDisplayName(trainee.fullName || trainee.name)}</div>
                                                         </td>
                                                         {scoredEvents.map(eventCode => {
                                                             const score = getLatestScoreForEvent(trainee, eventCode);
@@ -688,7 +696,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         <p className="text-xs text-white/75">Create named awards and define how each ranking is calculated.</p>
                                     </div>
                                     <div className="p-4 space-y-4">
-                                        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(180px,240px)_auto] gap-3 items-end">
+                                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(140px,180px)_minmax(180px,220px)_auto] gap-3 items-end">
                                             <label className="text-sm text-gray-300">
                                                 Award
                                                 <select
@@ -697,6 +705,16 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 >
                                                     {awards.map(award => <option key={award.id} value={award.id}>{getAwardDisplayName(award)}</option>)}
+                                                </select>
+                                            </label>
+                                            <label className="text-sm text-gray-300">
+                                                LMP
+                                                <select
+                                                    value={activeAward.lmpType}
+                                                    onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
+                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                >
+                                                    {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
                                                 </select>
                                             </label>
                                             <label className="text-sm text-gray-300">
@@ -748,16 +766,6 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     onChange={event => updateActiveAward({ name: event.target.value })}
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 />
-                                            </label>
-                                            <label className="text-sm text-gray-300">
-                                                Award LMP
-                                                <select
-                                                    value={activeAward.lmpType}
-                                                    onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
-                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                >
-                                                    {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
-                                                </select>
                                             </label>
                                             <label className="text-sm text-gray-300">
                                                 Minimum scored events
@@ -851,8 +859,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                         <tr key={row.trainee.idNumber || row.trainee.fullName} className="hover:bg-gray-700/30">
                                                             <td className="px-3 py-2 text-gray-300">{index + 1}</td>
                                                             <td className="px-3 py-2">
-                                                                <div className="font-medium text-white">{row.trainee.fullName || row.trainee.name}</div>
-                                                                <div className="text-xs text-gray-500">{row.trainee.course}</div>
+                                                                <div className="font-medium text-white">{getDisplayName(row.trainee.fullName || row.trainee.name)}</div>
                                                             </td>
                                                             <td className="px-3 py-2 text-right font-mono text-sky-300">{row.rankingScore.toFixed(2)}</td>
                                                             <td className="px-3 py-2 text-right text-gray-300">{row.scoredCount}</td>

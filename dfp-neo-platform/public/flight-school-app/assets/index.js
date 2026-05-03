@@ -59282,12 +59282,17 @@ const CourseProgressView = ({
     setAwards(nextAwards);
     setActiveAwardId(nextAwards[0].id);
   };
+  const getDisplayName = (name) => {
+    const activeCoursePattern = activeCourses.map((course) => course.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    if (!activeCoursePattern) return name;
+    return name.replace(new RegExp(`\\s+[–-]\\s+(?:${activeCoursePattern})$`), "").trim();
+  };
   const scoreMatrixRows = reactExports.useMemo(() => {
     return scoreCourseTrainees.map((trainee) => ({
-      traineeName: trainee.fullName || trainee.name,
+      traineeName: getDisplayName(trainee.fullName || trainee.name),
       scores: scoredEvents.map((eventCode) => getLatestScoreForEvent(trainee, eventCode)?.score ?? "")
     }));
-  }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords]);
+  }, [scoreCourseTrainees, scoredEvents, pt051ScoreRecords, activeCourses]);
   const escapeCsvValue = (value) => {
     const raw = String(value);
     return /[",\n]/.test(raw) ? `"${raw.replace(/"/g, '""')}"` : raw;
@@ -59455,7 +59460,7 @@ const CourseProgressView = ({
                 ] }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
                   scoreCourseTrainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: trainee.fullName || trainee.name }) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "sticky left-0 z-10 bg-gray-800 px-4 py-3 text-gray-100 min-w-56", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium", children: getDisplayName(trainee.fullName || trainee.name) }) }),
                     scoredEvents.map((eventCode) => {
                       const score = getLatestScoreForEvent(trainee, eventCode);
                       return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-3 text-center font-mono text-gray-200", children: score ? score.score : "" }, `${trainee.idNumber}-${eventCode}`);
@@ -59485,7 +59490,7 @@ const CourseProgressView = ({
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-4", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(180px,240px)_auto] gap-3 items-end", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(140px,180px)_minmax(180px,220px)_auto] gap-3 items-end", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
                     "Award",
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59495,6 +59500,18 @@ const CourseProgressView = ({
                         onChange: (event) => setActiveAwardId(event.target.value),
                         className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
                         children: awards.map((award) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: award.id, children: getAwardDisplayName(award) }, award.id))
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                    "LMP",
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "select",
+                      {
+                        value: activeAward.lmpType,
+                        onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
+                        className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                        children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
                       }
                     )
                   ] }),
@@ -59559,18 +59576,6 @@ const CourseProgressView = ({
                           value: activeAward.name,
                           onChange: (event) => updateActiveAward({ name: event.target.value }),
                           className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
-                      "Award LMP",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
-                        {
-                          value: activeAward.lmpType,
-                          onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                          children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
                         }
                       )
                     ] }),
@@ -59669,10 +59674,7 @@ const CourseProgressView = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-gray-700", children: [
                     awardRankings.map((row, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-gray-700/30", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-gray-300", children: index + 1 }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "px-3 py-2", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-white", children: row.trainee.fullName || row.trainee.name }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: row.trainee.course })
-                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-medium text-white", children: getDisplayName(row.trainee.fullName || row.trainee.name) }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right font-mono text-sky-300", children: row.rankingScore.toFixed(2) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 text-right text-gray-300", children: row.scoredCount })
                     ] }, row.trainee.idNumber || row.trainee.fullName)),
