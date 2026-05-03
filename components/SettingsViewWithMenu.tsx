@@ -444,11 +444,11 @@ const sectionGroups: {
   diagnosticSections?: SettingsSection[];
 }[] = [
   {
-    label: 'Organisation',
-    shortLabel: 'Org',
-    description: 'Base structure, locations, unit ownership, timezone and display preferences.',
+    label: 'System Setup',
+    shortLabel: 'Setup',
+    description: 'Organisation structure, locations, units, timezone, display preferences and emergency control.',
     accent: 'cyan',
-    sections: ['organisation', 'location', 'units', 'timezone', 'appearance'],
+    sections: ['organisation', 'location', 'units', 'timezone', 'appearance', 'emergency'],
   },
   {
     label: 'People & Access',
@@ -458,18 +458,18 @@ const sectionGroups: {
     sections: ['user-list', 'permissions', 'staff-database', 'trainee-database', 'people-profile'],
   },
   {
-    label: 'Training System',
+    label: 'Training Standards',
     shortLabel: 'Training',
-    description: 'Scoring, currencies, SCT events and aircraft availability history.',
+    description: 'Scoring rules, currencies and SCT event standards used across the training system.',
     accent: 'sky',
-    sections: ['scoring-matrix', 'currencies', 'sct-events', 'validation'],
+    sections: ['scoring-matrix', 'currencies', 'sct-events'],
   },
   {
-    label: 'DFP Build Rules',
-    shortLabel: 'Rules',
-    description: 'Operational limits, duty rules, turnaround timing and automation logic.',
+    label: 'Operations & DFP Rules',
+    shortLabel: 'Ops',
+    description: 'Operational thresholds, duty limits, turnaround timing, build logic and aircraft availability history.',
     accent: 'amber',
-    sections: ['event-limits', 'duty-turnaround', 'business-rules'],
+    sections: ['event-limits', 'duty-turnaround', 'business-rules', 'validation'],
   },
   {
     label: 'Data & Records',
@@ -478,13 +478,6 @@ const sectionGroups: {
     accent: 'emerald',
     sections: ['data-sources', 'data-loaders', 'historical-data', 'staff-combined-data'],
     diagnosticSections: ['staff-mockdata', 'trainee-mockdata'],
-  },
-  {
-    label: 'System Control',
-    shortLabel: 'Control',
-    description: 'Emergency control functions and system freeze behaviour.',
-    accent: 'red',
-    sections: ['emergency'],
   },
 ];
 
@@ -539,21 +532,121 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         return classes[accent] || classes.sky;
     };
 
+    const getGroupId = (label: string) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    const visibleSettingGroups = sectionGroups
+        .map(group => ({
+            ...group,
+            visibleSections: group.sections.filter(section => matchesSettingsSearch(section, group.label)),
+            visibleDiagnostics: (group.diagnosticSections || []).filter(section => matchesSettingsSearch(section, group.label)),
+        }))
+        .filter(group => group.visibleSections.length > 0 || group.visibleDiagnostics.length > 0);
+    const hasSettingsMatches = visibleSettingGroups.length > 0;
+
     return (
         <div className="flex-1 flex overflow-hidden bg-gray-900">
-            {/* Main Content - full width, no left menu */}
+            <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
+                <button
+                    onClick={() => setActiveSection('home')}
+                    className={`mb-4 w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+                        activeSection === 'home'
+                            ? 'border-sky-500/50 bg-sky-500/10 text-white'
+                            : 'border-gray-800 bg-gray-900/50 text-gray-300 hover:border-gray-700 hover:bg-gray-900'
+                    }`}
+                >
+                    <span className="block text-sm font-bold">Settings Home</span>
+                    <span className="mt-1 block text-xs text-gray-500">All configuration areas</span>
+                </button>
+                <div className="mb-4">
+                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
+                    <input
+                        type="search"
+                        value={settingsSearch}
+                        onChange={(event) => setSettingsSearch(event.target.value)}
+                        placeholder="Search settings..."
+                        className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    />
+                </div>
+                <nav className="space-y-4">
+                    {visibleSettingGroups.map(group => {
+                        const accent = getAccentClasses(group.accent);
+                        const groupSections = [...group.visibleSections, ...group.visibleDiagnostics];
+                        const groupActive = groupSections.includes(activeSection as SettingsSection);
+                        return (
+                            <div key={group.label} className={`rounded-lg border ${groupActive ? accent.border : 'border-gray-800'} bg-gray-900/45 p-2`}>
+                                <a
+                                    href={`#${getGroupId(group.label)}`}
+                                    onClick={() => activeSection !== 'home' && setActiveSection('home')}
+                                    className="mb-1 flex items-center gap-3 rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800"
+                                >
+                                    <span className={`h-2.5 w-2.5 rounded-full ${accent.rail}`} />
+                                    <span className="font-bold">{group.label}</span>
+                                    <span className="ml-auto text-xs text-gray-600">{group.sections.length + (group.diagnosticSections?.length || 0)}</span>
+                                </a>
+                                <div className="space-y-0.5">
+                                    {group.visibleSections.map(section => (
+                                        <button
+                                            key={section}
+                                            onClick={() => setActiveSection(section)}
+                                            className={`w-full rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${
+                                                activeSection === section
+                                                    ? 'bg-gray-700 text-white'
+                                                    : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
+                                            }`}
+                                        >
+                                            {sectionLabels[section]}
+                                        </button>
+                                    ))}
+                                    {group.visibleDiagnostics.length > 0 && (
+                                        <details className="pt-1">
+                                            <summary className="cursor-pointer rounded px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-gray-600 hover:bg-gray-800 hover:text-gray-400">
+                                                Diagnostics
+                                            </summary>
+                                            <div className="mt-1 space-y-0.5">
+                                                {group.visibleDiagnostics.map(section => (
+                                                    <button
+                                                        key={section}
+                                                        onClick={() => setActiveSection(section)}
+                                                        className={`w-full rounded px-4 py-1.5 text-left text-xs font-semibold transition-colors ${
+                                                            activeSection === section
+                                                                ? 'bg-gray-700 text-white'
+                                                                : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
+                                                        }`}
+                                                    >
+                                                        {sectionLabels[section]}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </details>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </nav>
+                {!hasSettingsMatches && (
+                    <div className="rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400">
+                        <p className="font-semibold text-gray-300">No matching settings.</p>
+                        <button
+                            onClick={() => setSettingsSearch('')}
+                            className="mt-3 rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600"
+                        >
+                            Clear Search
+                        </button>
+                    </div>
+                )}
+            </aside>
+
             <div className="flex-1 overflow-y-auto bg-gray-900">
                 <div className="p-4 sm:p-6">
 
                     {/* ── ICON GRID HOME ───────────────────────────────────── */}
                     {activeSection === 'home' && (
                         <div className="space-y-5">
-                            {/* Page title */}
                             <div className="rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden">
                                 <div className="flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4">
                                     <div className="min-w-0">
                                         <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
-                                        <p className="text-sm text-gray-400 mt-0.5">Configure the operating model, people, training rules, data and system controls.</p>
+                                        <p className="text-sm text-gray-400 mt-0.5">Configure the operating model through five practical administration areas.</p>
                                     </div>
                                     <div className="ml-auto flex items-center gap-[10px]">
                                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -564,59 +657,28 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                         <AuditButton pageName="Settings" />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 lg:grid-cols-[16rem_1fr]">
-                                    <aside className="border-b border-gray-700 bg-gray-900/40 p-4 lg:border-b-0 lg:border-r">
-                                        <div className="mb-4">
-                                            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
-                                            <input
-                                                type="search"
-                                                value={settingsSearch}
-                                                onChange={(event) => setSettingsSearch(event.target.value)}
-                                                placeholder="Search settings..."
-                                                className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                            />
-                                        </div>
-                                        <nav className="space-y-1">
-                                            {sectionGroups.map(group => {
-                                                const accent = getAccentClasses(group.accent);
-                                                return (
-                                                    <a
-                                                        key={group.label}
-                                                        href={`#settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                                                        className="group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white"
-                                                    >
-                                                        <span className={`h-2.5 w-2.5 rounded-full ${accent.rail}`} />
-                                                        <span className="font-semibold">{group.label}</span>
-                                                        <span className="ml-auto text-xs text-gray-600 group-hover:text-gray-400">
-                                                            {group.sections.length + (group.diagnosticSections?.length || 0)}
-                                                        </span>
-                                                    </a>
-                                                );
-                                            })}
-                                        </nav>
-                                        <div className="mt-5 rounded-md border border-gray-700 bg-gray-800/60 p-3">
-                                            <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">Layout</p>
-                                            <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                                                Grouped by operational intent. No underlying functionality has moved.
-                                            </p>
-                                        </div>
-                                    </aside>
-
-                                    <main className="p-4 lg:p-5">
-                                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                                            {sectionGroups.map((group) => {
-                                                const accent = getAccentClasses(group.accent);
-                                                const visibleSections = group.sections.filter(section => matchesSettingsSearch(section, group.label));
-                                                const visibleDiagnostics = (group.diagnosticSections || []).filter(section => matchesSettingsSearch(section, group.label));
-                                                if (visibleSections.length === 0 && visibleDiagnostics.length === 0) return null;
-
-                                                return (
-                                                    <section
-                                                        id={`settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
-                                                        key={group.label}
-                                                        className={`rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`}
-                                                    >
-                                                        <div className="flex items-start gap-3 border-b border-gray-700/80 bg-gray-800/65 px-4 py-3">
+                                <div className="p-4 lg:p-5">
+                                    <div className="mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden">
+                                        <label className="mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500">Find Setting</label>
+                                        <input
+                                            type="search"
+                                            value={settingsSearch}
+                                            onChange={(event) => setSettingsSearch(event.target.value)}
+                                            placeholder="Search settings..."
+                                            className="w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
+                                        {visibleSettingGroups.map((group) => {
+                                            const accent = getAccentClasses(group.accent);
+                                            return (
+                                                <section
+                                                    id={getGroupId(group.label)}
+                                                    key={group.label}
+                                                    className={`rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`}
+                                                >
+                                                    <div className="border-b border-gray-700/80 bg-gray-800/65 px-4 py-3">
+                                                        <div className="flex items-start gap-3">
                                                             <span className={`mt-1 h-9 w-1.5 rounded-full ${accent.rail}`} />
                                                             <div className="min-w-0">
                                                                 <h2 className="text-lg font-bold text-white">{group.label}</h2>
@@ -626,68 +688,61 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                                 {group.shortLabel}
                                                             </span>
                                                         </div>
+                                                    </div>
 
-                                                        <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2">
-                                                            {visibleSections.map((section) => {
-                                                                const textC = sectionColors[section].split(' ')[3];
-                                                                return (
+                                                    <div className="divide-y divide-gray-800">
+                                                        {group.visibleSections.map(section => (
+                                                            <button
+                                                                key={section}
+                                                                onClick={() => setActiveSection(section)}
+                                                                className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70"
+                                                            >
+                                                                <span className={`mt-1 h-2 w-2 rounded-full ${accent.rail}`} />
+                                                                <span className="min-w-0">
+                                                                    <span className="block text-sm font-semibold text-gray-100">{sectionLabels[section]}</span>
+                                                                    <span className="mt-0.5 block text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</span>
+                                                                </span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {group.visibleDiagnostics.length > 0 && (
+                                                        <details className="border-t border-gray-700/70 bg-gray-950/20">
+                                                            <summary className="cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500">
+                                                                Diagnostics
+                                                            </summary>
+                                                            <div className="divide-y divide-gray-800 border-t border-gray-800">
+                                                                {group.visibleDiagnostics.map(section => (
                                                                     <button
                                                                         key={section}
                                                                         onClick={() => setActiveSection(section)}
-                                                                        className={`group flex min-h-[74px] items-start gap-3 rounded-md border border-gray-700 bg-gray-800/70 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-500 hover:bg-gray-800 hover:shadow-lg ${accent.shadow}`}
+                                                                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70"
                                                                     >
-                                                                        <div className={`mt-0.5 h-6 w-6 flex-shrink-0 ${textC}`}>
-                                                                            {sectionIcons[section]}
-                                                                        </div>
-                                                                        <div className="min-w-0">
-                                                                            <p className="text-sm font-semibold text-gray-100">{sectionLabels[section]}</p>
-                                                                            <p className="mt-1 text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</p>
-                                                                        </div>
+                                                                        <span className="mt-1 h-2 w-2 rounded-full bg-gray-600" />
+                                                                        <span className="min-w-0">
+                                                                            <span className="block text-sm font-semibold text-gray-200">{sectionLabels[section]}</span>
+                                                                            <span className="mt-0.5 block text-xs leading-snug text-gray-500">{sectionDescriptions[section]}</span>
+                                                                        </span>
                                                                     </button>
-                                                                );
-                                                            })}
-                                                        </div>
-
-                                                        {visibleDiagnostics.length > 0 && (
-                                                            <div className="border-t border-gray-700/70 px-3 pb-3 pt-2">
-                                                                <details className="group rounded-md border border-gray-700 bg-gray-950/30">
-                                                                    <summary className="cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500 group-open:border-b group-open:border-gray-700">
-                                                                        Diagnostics
-                                                                    </summary>
-                                                                    <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2">
-                                                                        {visibleDiagnostics.map(section => (
-                                                                            <button
-                                                                                key={section}
-                                                                                onClick={() => setActiveSection(section)}
-                                                                                className="rounded-md border border-gray-700 bg-gray-800/60 px-3 py-2 text-left text-xs text-gray-300 hover:border-gray-500 hover:bg-gray-800"
-                                                                            >
-                                                                                <span className="font-semibold text-gray-200">{sectionLabels[section]}</span>
-                                                                                <span className="mt-1 block text-gray-500">{sectionDescriptions[section]}</span>
-                                                                            </button>
-                                                                        ))}
-                                                                    </div>
-                                                                </details>
+                                                                ))}
                                                             </div>
-                                                        )}
-                                                    </section>
-                                                );
-                                            })}
+                                                        </details>
+                                                    )}
+                                                </section>
+                                            );
+                                        })}
+                                    </div>
+                                    {!hasSettingsMatches && (
+                                        <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center">
+                                            <p className="font-semibold text-gray-300">No settings match that search.</p>
+                                            <button
+                                                onClick={() => setSettingsSearch('')}
+                                                className="mt-3 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600"
+                                            >
+                                                Clear Search
+                                            </button>
                                         </div>
-                                        {sectionGroups.every(group =>
-                                            group.sections.every(section => !matchesSettingsSearch(section, group.label)) &&
-                                            (group.diagnosticSections || []).every(section => !matchesSettingsSearch(section, group.label))
-                                        ) && (
-                                            <div className="rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center">
-                                                <p className="font-semibold text-gray-300">No settings match that search.</p>
-                                                <button
-                                                    onClick={() => setSettingsSearch('')}
-                                                    className="mt-3 rounded-md bg-gray-700 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-600"
-                                                >
-                                                    Clear Search
-                                                </button>
-                                            </div>
-                                        )}
-                                    </main>
+                                    )}
                                 </div>
                             </div>
                         </div>

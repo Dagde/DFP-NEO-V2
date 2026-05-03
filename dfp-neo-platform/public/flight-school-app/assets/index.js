@@ -56951,11 +56951,11 @@ const sectionColors = {
 };
 const sectionGroups = [
   {
-    label: "Organisation",
-    shortLabel: "Org",
-    description: "Base structure, locations, unit ownership, timezone and display preferences.",
+    label: "System Setup",
+    shortLabel: "Setup",
+    description: "Organisation structure, locations, units, timezone, display preferences and emergency control.",
     accent: "cyan",
-    sections: ["organisation", "location", "units", "timezone", "appearance"]
+    sections: ["organisation", "location", "units", "timezone", "appearance", "emergency"]
   },
   {
     label: "People & Access",
@@ -56965,18 +56965,18 @@ const sectionGroups = [
     sections: ["user-list", "permissions", "staff-database", "trainee-database", "people-profile"]
   },
   {
-    label: "Training System",
+    label: "Training Standards",
     shortLabel: "Training",
-    description: "Scoring, currencies, SCT events and aircraft availability history.",
+    description: "Scoring rules, currencies and SCT event standards used across the training system.",
     accent: "sky",
-    sections: ["scoring-matrix", "currencies", "sct-events", "validation"]
+    sections: ["scoring-matrix", "currencies", "sct-events"]
   },
   {
-    label: "DFP Build Rules",
-    shortLabel: "Rules",
-    description: "Operational limits, duty rules, turnaround timing and automation logic.",
+    label: "Operations & DFP Rules",
+    shortLabel: "Ops",
+    description: "Operational thresholds, duty limits, turnaround timing, build logic and aircraft availability history.",
     accent: "amber",
-    sections: ["event-limits", "duty-turnaround", "business-rules"]
+    sections: ["event-limits", "duty-turnaround", "business-rules", "validation"]
   },
   {
     label: "Data & Records",
@@ -56985,13 +56985,6 @@ const sectionGroups = [
     accent: "emerald",
     sections: ["data-sources", "data-loaders", "historical-data", "staff-combined-data"],
     diagnosticSections: ["staff-mockdata", "trainee-mockdata"]
-  },
-  {
-    label: "System Control",
-    shortLabel: "Control",
-    description: "Emergency control functions and system freeze behaviour.",
-    accent: "red",
-    sections: ["emergency"]
   }
 ];
 const SettingsViewWithMenu = (props) => {
@@ -57035,21 +57028,108 @@ const SettingsViewWithMenu = (props) => {
     };
     return classes[accent] || classes.sky;
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
-    activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Configure the operating model, people, training rules, data and system controls." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
-          !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Settings" })
-        ] })
+  const getGroupId = (label) => `settings-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const visibleSettingGroups = sectionGroups.map((group) => ({
+    ...group,
+    visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label)),
+    visibleDiagnostics: (group.diagnosticSections || []).filter((section) => matchesSettingsSearch(section, group.label))
+  })).filter((group) => group.visibleSections.length > 0 || group.visibleDiagnostics.length > 0);
+  const hasSettingsMatches = visibleSettingGroups.length > 0;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "button",
+        {
+          onClick: () => setActiveSection("home"),
+          className: `mb-4 w-full rounded-lg border px-3 py-3 text-left transition-colors ${activeSection === "home" ? "border-sky-500/50 bg-sky-500/10 text-white" : "border-gray-800 bg-gray-900/50 text-gray-300 hover:border-gray-700 hover:bg-gray-900"}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold", children: "Settings Home" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-500", children: "All configuration areas" })
+          ]
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "search",
+            value: settingsSearch,
+            onChange: (event) => setSettingsSearch(event.target.value),
+            placeholder: "Search settings...",
+            className: "w-full rounded-md border border-gray-700 bg-gray-950/70 px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+          }
+        )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-[16rem_1fr]", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "border-b border-gray-700 bg-gray-900/40 p-4 lg:border-b-0 lg:border-r", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-4", children: visibleSettingGroups.map((group) => {
+        const accent = getAccentClasses(group.accent);
+        const groupSections = [...group.visibleSections, ...group.visibleDiagnostics];
+        const groupActive = groupSections.includes(activeSection);
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border ${groupActive ? accent.border : "border-gray-800"} bg-gray-900/45 p-2`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "a",
+            {
+              href: `#${getGroupId(group.label)}`,
+              onClick: () => activeSection !== "home" && setActiveSection("home"),
+              className: "mb-1 flex items-center gap-3 rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold", children: group.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs text-gray-600", children: group.sections.length + (group.diagnosticSections?.length || 0) })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
+            group.visibleSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setActiveSection(section),
+                className: `w-full rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? "bg-gray-700 text-white" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
+                children: sectionLabels[section]
+              },
+              section
+            )),
+            group.visibleDiagnostics.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "pt-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer rounded px-3 py-1.5 text-[11px] font-semibold uppercase tracking-widest text-gray-600 hover:bg-gray-800 hover:text-gray-400", children: "Diagnostics" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-0.5", children: group.visibleDiagnostics.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  onClick: () => setActiveSection(section),
+                  className: `w-full rounded px-4 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? "bg-gray-700 text-white" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
+                  children: sectionLabels[section]
+                },
+                section
+              )) })
+            ] })
+          ] })
+        ] }, group.label);
+      }) }),
+      !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-800 bg-gray-900/70 p-4 text-sm text-gray-400", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No matching settings." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setSettingsSearch(""),
+            className: "mt-3 rounded-md bg-gray-700 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-600",
+            children: "Clear Search"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto bg-gray-900", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 sm:p-6", children: [
+      activeSection === "home" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/70 shadow-lg overflow-hidden", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Configure the operating model through five practical administration areas." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
+            !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Settings" })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 lg:p-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 rounded-lg border border-gray-700 bg-gray-900/45 p-4 xl:hidden", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-[11px] font-semibold uppercase tracking-widest text-gray-500", children: "Find Setting" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "input",
@@ -57062,88 +57142,61 @@ const SettingsViewWithMenu = (props) => {
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-1", children: sectionGroups.map((group) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 2xl:grid-cols-2", children: visibleSettingGroups.map((group) => {
             const accent = getAccentClasses(group.accent);
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "a",
-              {
-                href: `#settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-                className: "group flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: group.label }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs text-gray-600 group-hover:text-gray-400", children: group.sections.length + (group.diagnosticSections?.length || 0) })
-                ]
-              },
-              group.label
-            );
-          }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-5 rounded-md border border-gray-700 bg-gray-800/60 p-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Layout" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "Grouped by operational intent. No underlying functionality has moved." })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { className: "p-4 lg:p-5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-4 xl:grid-cols-2", children: sectionGroups.map((group) => {
-            const accent = getAccentClasses(group.accent);
-            const visibleSections = group.sections.filter((section) => matchesSettingsSearch(section, group.label));
-            const visibleDiagnostics = (group.diagnosticSections || []).filter((section) => matchesSettingsSearch(section, group.label));
-            if (visibleSections.length === 0 && visibleDiagnostics.length === 0) return null;
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "section",
               {
-                id: `settings-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+                id: getGroupId(group.label),
                 className: `rounded-lg border ${accent.border} bg-gray-900/45 shadow-md overflow-hidden`,
                 children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3 border-b border-gray-700/80 bg-gray-800/65 px-4 py-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700/80 bg-gray-800/65 px-4 py-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-9 w-1.5 rounded-full ${accent.rail}` }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: group.label }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs leading-relaxed text-gray-400", children: group.description })
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`, children: group.shortLabel })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-3 sm:grid-cols-2", children: visibleSections.map((section) => {
-                    const textC = sectionColors[section].split(" ")[3];
-                    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  ] }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-800", children: group.visibleSections.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    "button",
+                    {
+                      onClick: () => setActiveSection(section),
+                      className: "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70",
+                      children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-2 w-2 rounded-full ${accent.rail}` }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-100", children: sectionLabels[section] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
+                        ] })
+                      ]
+                    },
+                    section
+                  )) }),
+                  group.visibleDiagnostics.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "border-t border-gray-700/70 bg-gray-950/20", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500", children: "Diagnostics" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-800 border-t border-gray-800", children: group.visibleDiagnostics.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "button",
                       {
                         onClick: () => setActiveSection(section),
-                        className: `group flex min-h-[74px] items-start gap-3 rounded-md border border-gray-700 bg-gray-800/70 p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-gray-500 hover:bg-gray-800 hover:shadow-lg ${accent.shadow}`,
+                        className: "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-800/70",
                         children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `mt-0.5 h-6 w-6 flex-shrink-0 ${textC}`, children: sectionIcons[section] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-gray-100", children: sectionLabels[section] }),
-                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 h-2 w-2 rounded-full bg-gray-600" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-semibold text-gray-200", children: sectionLabels[section] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block text-xs leading-snug text-gray-500", children: sectionDescriptions[section] })
                           ] })
                         ]
                       },
                       section
-                    );
-                  }) }),
-                  visibleDiagnostics.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-gray-700/70 px-3 pb-3 pt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("details", { className: "group rounded-md border border-gray-700 bg-gray-950/30", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("summary", { className: "cursor-pointer px-3 py-2 text-xs font-semibold uppercase tracking-widest text-gray-500 group-open:border-b group-open:border-gray-700", children: "Diagnostics" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-2 sm:grid-cols-2", children: visibleDiagnostics.map((section) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      "button",
-                      {
-                        onClick: () => setActiveSection(section),
-                        className: "rounded-md border border-gray-700 bg-gray-800/60 px-3 py-2 text-left text-xs text-gray-300 hover:border-gray-500 hover:bg-gray-800",
-                        children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200", children: sectionLabels[section] }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-gray-500", children: sectionDescriptions[section] })
-                        ]
-                      },
-                      section
                     )) })
-                  ] }) })
+                  ] })
                 ]
               },
               group.label
             );
           }) }),
-          sectionGroups.every(
-            (group) => group.sections.every((section) => !matchesSettingsSearch(section, group.label)) && (group.diagnosticSections || []).every((section) => !matchesSettingsSearch(section, group.label))
-          ) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center", children: [
+          !hasSettingsMatches && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900/60 p-8 text-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold text-gray-300", children: "No settings match that search." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
@@ -57155,144 +57208,144 @@ const SettingsViewWithMenu = (props) => {
             )
           ] })
         ] })
-      ] })
-    ] }) }),
-    activeSection !== "home" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-      isFrozen && activeSection !== "emergency" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "button",
-          {
-            onClick: () => setActiveSection("home"),
-            className: "flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-white transition-colors",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }) }),
-              "Back"
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-5 h-5 flex-shrink-0 ${sectionColors[activeSection]?.split(" ")[3] || "text-sky-400"}`, children: sectionIcons[activeSection] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: sectionLabels[activeSection] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
-          !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${sectionLabels[activeSection]}` })
-        ] })
-      ] }),
-      activeSection === "scoring-matrix" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 flex items-center justify-between pr-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: ["Airmanship", "Preparation", "Technique", "Elements"].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ] }) }),
+      activeSection !== "home" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+        isFrozen && activeSection !== "emergency" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6 flex flex-wrap items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
-              onClick: () => setScoringMatrixTab(tab),
-              className: `px-6 py-3 text-sm font-medium transition-all border-b-2 ${scoringMatrixTab === tab ? "text-sky-400 border-sky-400" : "text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500"}`,
-              children: tab
-            },
-            tab
-          )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-3", children: !["Super Admin", "Admin"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-2 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only" }) }) })
+              onClick: () => setActiveSection("home"),
+              className: "flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-white transition-colors",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }) }),
+                "Back"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `w-5 h-5 flex-shrink-0 ${sectionColors[activeSection]?.split(" ")[3] || "text-sky-400"}`, children: sectionIcons[activeSection] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl sm:text-2xl font-bold text-white", children: sectionLabels[activeSection] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
+            !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${sectionLabels[activeSection]}` })
+          ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          SettingsView,
+        activeSection === "scoring-matrix" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 flex items-center justify-between pr-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex", children: ["Airmanship", "Preparation", "Technique", "Elements"].map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => setScoringMatrixTab(tab),
+                className: `px-6 py-3 text-sm font-medium transition-all border-b-2 ${scoringMatrixTab === tab ? "text-sky-400 border-sky-400" : "text-gray-400 border-transparent hover:text-gray-200 hover:border-gray-500"}`,
+                children: tab
+              },
+              tab
+            )) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-3", children: !["Super Admin", "Admin"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-2 py-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only" }) }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SettingsView,
+            {
+              ...props,
+              hideHeader: true,
+              activeSection: "scoring-matrix",
+              scoringMatrixActiveTab: scoringMatrixTab,
+              scoringMatrixReadOnly: !["Super Admin", "Admin"].includes(props.currentUserPermission)
+            }
+          ) })
+        ] }),
+        activeSection !== "scoring-matrix" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          UserListSection,
           {
-            ...props,
-            hideHeader: true,
-            activeSection: "scoring-matrix",
-            scoringMatrixActiveTab: scoringMatrixTab,
-            scoringMatrixReadOnly: !["Super Admin", "Admin"].includes(props.currentUserPermission)
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess,
+            onNavigateToProfile: props.onNavigateToProfile
           }
-        ) })
-      ] }),
-      activeSection !== "scoring-matrix" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
-      activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        UserListSection,
-        {
-          currentUserPermission: props.currentUserPermission,
-          onShowSuccess: props.onShowSuccess,
-          onNavigateToProfile: props.onNavigateToProfile
-        }
-      ),
-      activeSection === "staff-database" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StaffDatabaseTable,
-        {
-          currentUserPermission: props.currentUserPermission,
-          onShowSuccess: props.onShowSuccess,
-          onDataChanged: props.onDatabaseDataChanged,
-          onNavigateToProfile: props.onNavigateToProfile
-        }
-      ),
-      activeSection === "staff-mockdata" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        StaffMockDataTable,
-        {
-          instructorsData: filteredMockdata,
-          onDeleteFromMockdata: handleDeleteFromMockdata
-        }
-      ),
-      activeSection === "staff-combined-data" && /* @__PURE__ */ jsxRuntimeExports.jsx(StaffCombinedDataTable, { instructorsData: props.instructorsData }),
-      activeSection === "trainee-database" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        TraineeDatabaseTable,
-        {
-          currentUserPermission: props.currentUserPermission,
-          onShowSuccess: props.onShowSuccess,
-          onDataChanged: props.onDatabaseDataChanged,
-          onNavigateToProfile: props.onNavigateToProfile
-        }
-      ),
-      activeSection === "trainee-mockdata" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        TraineeMockDataTable,
-        {
-          traineesData: filteredTraineeMockdata,
-          onDeleteFromMockdata: handleDeleteTraineeFromMockdata
-        }
-      ),
-      activeSection === "data-sources" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        DataSourcesSettings,
-        {
-          onShowSuccess: props.onShowSuccess,
-          onSettingsChanged: (newSettings) => {
-            if (props.onDataSourceSettingsChange) {
-              props.onDataSourceSettingsChange(newSettings);
+        ),
+        activeSection === "staff-database" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          StaffDatabaseTable,
+          {
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess,
+            onDataChanged: props.onDatabaseDataChanged,
+            onNavigateToProfile: props.onNavigateToProfile
+          }
+        ),
+        activeSection === "staff-mockdata" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          StaffMockDataTable,
+          {
+            instructorsData: filteredMockdata,
+            onDeleteFromMockdata: handleDeleteFromMockdata
+          }
+        ),
+        activeSection === "staff-combined-data" && /* @__PURE__ */ jsxRuntimeExports.jsx(StaffCombinedDataTable, { instructorsData: props.instructorsData }),
+        activeSection === "trainee-database" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TraineeDatabaseTable,
+          {
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess,
+            onDataChanged: props.onDatabaseDataChanged,
+            onNavigateToProfile: props.onNavigateToProfile
+          }
+        ),
+        activeSection === "trainee-mockdata" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          TraineeMockDataTable,
+          {
+            traineesData: filteredTraineeMockdata,
+            onDeleteFromMockdata: handleDeleteTraineeFromMockdata
+          }
+        ),
+        activeSection === "data-sources" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DataSourcesSettings,
+          {
+            onShowSuccess: props.onShowSuccess,
+            onSettingsChanged: (newSettings) => {
+              if (props.onDataSourceSettingsChange) {
+                props.onDataSourceSettingsChange(newSettings);
+              }
             }
           }
-        }
-      ),
-      activeSection === "organisation" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        OrganisationSettings,
-        {
-          units: props.units,
-          currentAircraftAvailable: props.currentAircraftAvailable,
-          savedSettings: props.organisationSettings,
-          onSettingsChange: props.onUpdateOrganisationSettings,
-          settingsLoaded: props.settingsLoaded
-        }
-      ),
-      activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),
-      activeSection === "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        PeopleProfilePage,
-        {
-          traineesData: props.traineesData,
-          syllabusDetails: props.syllabusDetails,
-          locations: props.locations,
-          neoBuildCourse: props.neoBuildCourse || "",
-          onUpdateNeoBuildCourse: props.onUpdateNeoBuildCourse || (() => {
-          }),
-          excludedCourses: props.excludedCourses || [],
-          onUpdateExcludedCourses: props.onUpdateExcludedCourses || (() => {
-          }),
-          onShowSuccess: props.onShowSuccess,
-          currentUserPermission: props.currentUserPermission,
-          courseColors: props.courseColors
-        }
-      ),
-      activeSection === "historical-data" && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        HistoricalDataSeeder,
-        {
-          onClose: () => setActiveSection("home"),
-          onDataSeeded: () => {
+        ),
+        activeSection === "organisation" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          OrganisationSettings,
+          {
+            units: props.units,
+            currentAircraftAvailable: props.currentAircraftAvailable,
+            savedSettings: props.organisationSettings,
+            onSettingsChange: props.onUpdateOrganisationSettings,
+            settingsLoaded: props.settingsLoaded
           }
-        }
-      )
-    ] })
-  ] }) }) });
+        ),
+        activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),
+        activeSection === "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PeopleProfilePage,
+          {
+            traineesData: props.traineesData,
+            syllabusDetails: props.syllabusDetails,
+            locations: props.locations,
+            neoBuildCourse: props.neoBuildCourse || "",
+            onUpdateNeoBuildCourse: props.onUpdateNeoBuildCourse || (() => {
+            }),
+            excludedCourses: props.excludedCourses || [],
+            onUpdateExcludedCourses: props.onUpdateExcludedCourses || (() => {
+            }),
+            onShowSuccess: props.onShowSuccess,
+            currentUserPermission: props.currentUserPermission,
+            courseColors: props.courseColors
+          }
+        ),
+        activeSection === "historical-data" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          HistoricalDataSeeder,
+          {
+            onClose: () => setActiveSection("home"),
+            onDataSeeded: () => {
+            }
+          }
+        )
+      ] })
+    ] }) })
+  ] });
 };
 const AuthorisationView = () => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Authorisation View Component" });
