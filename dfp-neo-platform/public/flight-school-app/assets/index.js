@@ -59493,18 +59493,6 @@ const CourseProgressView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
-                      "LMP",
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(
-                        "select",
-                        {
-                          value: activeAward.lmpType,
-                          onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
-                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
-                          children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
-                        }
-                      )
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm text-gray-300", children: [
                       "Course",
                       /* @__PURE__ */ jsxRuntimeExports.jsx(
                         "select",
@@ -59578,6 +59566,18 @@ const CourseProgressView = ({
                           value: activeAward.name,
                           onChange: (event) => updateActiveAward({ name: event.target.value }),
                           className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "text-sm text-gray-300", children: [
+                      "Award LMP",
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "select",
+                        {
+                          value: activeAward.lmpType,
+                          onChange: (event) => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true }),
+                          className: "mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
+                          children: availableAwardLmpTypes.map((lmpType) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmpType, children: lmpType }, lmpType))
                         }
                       )
                     ] }),

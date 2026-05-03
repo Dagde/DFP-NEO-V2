@@ -699,16 +699,6 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                         <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto] gap-3 items-end">
                                             <div className="space-y-3">
                                                 <label className="block text-sm text-gray-300">
-                                                    LMP
-                                                    <select
-                                                        value={activeAward.lmpType}
-                                                        onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
-                                                        className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                                                    >
-                                                        {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
-                                                    </select>
-                                                </label>
-                                                <label className="block text-sm text-gray-300">
                                                     Course
                                                     <select
                                                         value={activeAward.course}
@@ -768,6 +758,16 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                                     onChange={event => updateActiveAward({ name: event.target.value })}
                                                     className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                                                 />
+                                            </label>
+                                            <label className="text-sm text-gray-300">
+                                                Award LMP
+                                                <select
+                                                    value={activeAward.lmpType}
+                                                    onChange={event => updateActiveAward({ lmpType: event.target.value, includeAllScoredEvents: true })}
+                                                    className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                                                >
+                                                    {availableAwardLmpTypes.map(lmpType => <option key={lmpType} value={lmpType}>{lmpType}</option>)}
+                                                </select>
                                             </label>
                                             <label className="text-sm text-gray-300">
                                                 Minimum scored events
