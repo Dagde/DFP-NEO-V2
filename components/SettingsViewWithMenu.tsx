@@ -1031,7 +1031,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const hasSettingsMatches = visibleSettingGroups.length > 0;
 
     return (
-        <div className="flex-1 flex overflow-hidden bg-gray-900">
+        <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900">
             <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
                 <button
                     onClick={() => setActiveSection('home')}

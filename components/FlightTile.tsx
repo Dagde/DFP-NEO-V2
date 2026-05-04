@@ -147,6 +147,15 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     rose:    { '400': [251,113,133], '500': [244,63,94] },
   };
 
+  const darkenRgbForLightTheme = (rgb: [number, number, number]): [number, number, number] => {
+    const strength = 0.62;
+    return [
+      Math.round(rgb[0] * strength),
+      Math.round(rgb[1] * strength),
+      Math.round(rgb[2] * strength),
+    ];
+  };
+
   // Convert any Tailwind bg class (e.g. 'bg-sky-400/80', 'bg-purple-400/50') to rgba.
   // The dark theme uses muted alpha; light mode needs denser tiles so white schedule text stays readable.
   const tailwindBgToRgba = (cls: string, mode: 'dark' | 'light' = 'dark'): string | null => {
@@ -156,6 +165,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     const [, colorName, shade, opacityStr] = match;
     const rgb = TAILWIND_COLORS[colorName]?.[shade];
     if (!rgb) return null;
+    const displayRgb = mode === 'light' ? darkenRgbForLightTheme(rgb) : rgb;
     const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
     let alpha: number;
     if (mode === 'light') {
@@ -167,15 +177,16 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     else if (opacity >= 45) alpha = 0.42;
     else if (opacity >= 30) alpha = 0.35;
     else alpha = (opacity / 100) * 0.7;
-    return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+    return `rgba(${displayRgb[0]},${displayRgb[1]},${displayRgb[2]},${alpha})`;
   };
 
   // Hex to rgba helper
-  const hexToRgba = (hex: string, alpha: number): string => {
+  const hexToRgba = (hex: string, alpha: number, darken = false): string => {
     try {
-      const r = parseInt(hex.slice(1,3), 16);
-      const g = parseInt(hex.slice(3,5), 16);
-      const b = parseInt(hex.slice(5,7), 16);
+      const strength = darken ? 0.62 : 1;
+      const r = Math.round(parseInt(hex.slice(1,3), 16) * strength);
+      const g = Math.round(parseInt(hex.slice(3,5), 16) * strength);
+      const b = Math.round(parseInt(hex.slice(5,7), 16) * strength);
       return `rgba(${r},${g},${b},${alpha})`;
     } catch { return hex; }
   };
@@ -191,7 +202,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const resolvedLightBgColor: string | null = (() => {
     if (event.type === 'deployment' || event.type === 'unavailability' || isUnavailabilityConflict || isConflicting) return null;
     const c = event.color || '';
-    if (isHexColorEarly(c)) return hexToRgba(c, 0.86);
+    if (isHexColorEarly(c)) return hexToRgba(c, 0.92, true);
     return tailwindBgToRgba(c, 'light');
   })();
 

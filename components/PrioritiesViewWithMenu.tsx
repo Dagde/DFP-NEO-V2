@@ -87,7 +87,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
     ];
 
     return (
-        <div className="flex-1 flex overflow-hidden bg-gray-900">
+        <div data-priorities-view="true" className="flex-1 flex overflow-hidden bg-gray-900">
             {/* Side Menu */}
             <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
                 <div className="p-6 border-b border-gray-700">

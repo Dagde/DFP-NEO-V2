@@ -3179,7 +3179,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         )
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 border-t border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-700 flex-shrink-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-course-legend": "true", className: "border-t border-gray-700 flex-shrink-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pt-4 mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-semibold text-gray-500 uppercase tracking-wider", children: "Courses" }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 pb-2 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0", children: allCourses.map(([courseName, color]) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-1 flex items-center justify-center", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -3777,6 +3777,14 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     violet: { "400": [167, 139, 250], "500": [139, 92, 246] },
     rose: { "400": [251, 113, 133], "500": [244, 63, 94] }
   };
+  const darkenRgbForLightTheme = (rgb) => {
+    const strength = 0.62;
+    return [
+      Math.round(rgb[0] * strength),
+      Math.round(rgb[1] * strength),
+      Math.round(rgb[2] * strength)
+    ];
+  };
   const tailwindBgToRgba = (cls, mode = "dark") => {
     if (!cls || !cls.startsWith("bg-")) return null;
     const match = cls.match(/^bg-([a-z]+)-(\d+)(?:\/(\d+))?$/);
@@ -3784,6 +3792,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     const [, colorName, shade, opacityStr] = match;
     const rgb = TAILWIND_COLORS[colorName]?.[shade];
     if (!rgb) return null;
+    const displayRgb = mode === "light" ? darkenRgbForLightTheme(rgb) : rgb;
     const opacity = opacityStr ? parseInt(opacityStr, 10) : 100;
     let alpha;
     if (mode === "light") {
@@ -3795,13 +3804,14 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     else if (opacity >= 45) alpha = 0.42;
     else if (opacity >= 30) alpha = 0.35;
     else alpha = opacity / 100 * 0.7;
-    return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+    return `rgba(${displayRgb[0]},${displayRgb[1]},${displayRgb[2]},${alpha})`;
   };
-  const hexToRgba = (hex, alpha) => {
+  const hexToRgba = (hex, alpha, darken = false) => {
     try {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
+      const strength = darken ? 0.62 : 1;
+      const r = Math.round(parseInt(hex.slice(1, 3), 16) * strength);
+      const g = Math.round(parseInt(hex.slice(3, 5), 16) * strength);
+      const b = Math.round(parseInt(hex.slice(5, 7), 16) * strength);
       return `rgba(${r},${g},${b},${alpha})`;
     } catch {
       return hex;
@@ -3816,7 +3826,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const resolvedLightBgColor = (() => {
     if (event.type === "deployment" || event.type === "unavailability" || isUnavailabilityConflict || isConflicting) return null;
     const c = event.color || "";
-    if (isHexColorEarly(c)) return hexToRgba(c, 0.86);
+    if (isHexColorEarly(c)) return hexToRgba(c, 0.92, true);
     return tailwindBgToRgba(c, "light");
   })();
   const style = {
@@ -19276,7 +19286,7 @@ const PrioritiesViewWithMenu = (props) => {
     { id: "highest-priority", label: "Highest Priority", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" }) }) },
     { id: "remedial-queue", label: "Remedial Queue", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }) }
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 border-b border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Build Priorities" }),
@@ -57502,7 +57512,7 @@ const SettingsViewWithMenu = (props) => {
     visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex overflow-hidden bg-gray-900", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
@@ -59310,11 +59320,19 @@ const CourseDataWindow = ({
   const { name: courseName, color: courseColor, gradDate, startDate } = course;
   const isHexColor = (color) => color.startsWith("#") || color.startsWith("rgb");
   const courseColorClass = isHexColor(courseColor || "") ? "" : courseColor || "";
-  const courseColorStyle = isHexColor(courseColor || "") ? { backgroundColor: courseColor } : {};
+  const darkenHexColor = (color) => {
+    if (!color.startsWith("#") || color.length < 7) return color;
+    const strength = 0.62;
+    const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+  const courseColorStyle = isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor(courseColor) } : {};
   const courseData = reactExports.useMemo(() => {
     return calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
   }, [course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-course-progress-card": "true", className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`, style: courseColorStyle, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center text-xs", children: [
@@ -59388,7 +59406,7 @@ const CourseDataWindow = ({
         "div",
         {
           className: `${courseColorClass} h-1.5 rounded-full`,
-          style: { width: `${percentage}%`, ...isHexColor(courseColor || "") ? { backgroundColor: courseColor } : {} }
+          style: { width: `${percentage}%`, ...isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor(courseColor) } : {} }
         }
       ) })
     ] }, trainee.idNumber)) }),
@@ -59899,13 +59917,21 @@ const CourseProgressView = ({
     return activeCourses.find((course) => course.name === courseName)?.color || courseColors[courseName] || "";
   };
   const isCssColor = (color) => color.startsWith("#") || color.startsWith("rgb");
+  const darkenHexColor = (color) => {
+    if (!color.startsWith("#") || color.length < 7) return color;
+    const strength = 0.62;
+    const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
   const getCourseHeaderClass = (courseName) => {
     const color = getCourseColor(courseName);
     return color && !isCssColor(color) ? color : "bg-gray-800";
   };
   const getCourseHeaderStyle = (courseName) => {
     const color = getCourseColor(courseName);
-    return color && isCssColor(color) ? { backgroundColor: color } : {};
+    return color && isCssColor(color) ? { backgroundColor: darkenHexColor(color) } : {};
   };
   const getCourseBorderStyle = (courseName) => {
     const color = getCourseColor(courseName);

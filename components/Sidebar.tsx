@@ -210,7 +210,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         {/* BOTTOM FIXED CONTAINER */}
         <div className="flex-shrink-0 border-t border-gray-700">
           {/* Courses Legend */}
-          <div className="border-t border-gray-700 flex-shrink-0">
+          <div data-sidebar-course-legend="true" className="border-t border-gray-700 flex-shrink-0">
             <div className="px-4 pt-4 mb-2">
               <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Courses</span>
             </div>

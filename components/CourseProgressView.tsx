@@ -440,6 +440,15 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const isCssColor = (color: string) => color.startsWith('#') || color.startsWith('rgb');
 
+    const darkenHexColor = (color: string) => {
+        if (!color.startsWith('#') || color.length < 7) return color;
+        const strength = 0.62;
+        const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+        const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+        const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+        return `rgb(${r}, ${g}, ${b})`;
+    };
+
     const getCourseHeaderClass = (courseName: string) => {
         const color = getCourseColor(courseName);
         return color && !isCssColor(color) ? color : 'bg-gray-800';
@@ -447,7 +456,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
 
     const getCourseHeaderStyle = (courseName: string): React.CSSProperties => {
         const color = getCourseColor(courseName);
-        return color && isCssColor(color) ? { backgroundColor: color } : {};
+        return color && isCssColor(color) ? { backgroundColor: darkenHexColor(color) } : {};
     };
 
     const getCourseBorderStyle = (courseName: string): React.CSSProperties => {

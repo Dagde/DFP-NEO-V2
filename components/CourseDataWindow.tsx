@@ -28,7 +28,15 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
     // Helper: determine if a color value is a hex/rgb value vs a Tailwind class
     const isHexColor = (color: string) => color.startsWith('#') || color.startsWith('rgb');
     const courseColorClass = isHexColor(courseColor || '') ? '' : (courseColor || '');
-    const courseColorStyle = isHexColor(courseColor || '') ? { backgroundColor: courseColor } : {};
+    const darkenHexColor = (color: string) => {
+        if (!color.startsWith('#') || color.length < 7) return color;
+        const strength = 0.62;
+        const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+        const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+        const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+        return `rgb(${r}, ${g}, ${b})`;
+    };
+    const courseColorStyle = isHexColor(courseColor || '') ? { backgroundColor: darkenHexColor(courseColor) } : {};
 
     const courseData = useMemo(() => {
         return calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
@@ -37,7 +45,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
     
 
     return (
-        <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit">
+        <div data-course-progress-card="true" className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit">
             <div className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`} style={courseColorStyle}>
                  <h2 className="text-lg font-bold text-white text-center mb-2">{courseName}</h2>
                  <div className="flex justify-between items-center text-xs">
@@ -93,7 +101,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
                         <div className="w-full bg-gray-700 rounded-full h-1.5">
                             <div
                                 className={`${courseColorClass} h-1.5 rounded-full`}
-                                style={{ width: `${percentage}%`, ...(isHexColor(courseColor || '') ? { backgroundColor: courseColor } : {}) }}
+                                style={{ width: `${percentage}%`, ...(isHexColor(courseColor || '') ? { backgroundColor: darkenHexColor(courseColor) } : {}) }}
                             ></div>
                         </div>
                     </div>
