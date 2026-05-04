@@ -66968,7 +66968,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         let searchStartTime = startTimeBoundary;
         if (isPlusOne) {
-          const nextEvent = generatedEvents.find((e) => getPersonnel(e).includes(trainee.fullName) && e.flightNumber === next.id);
+          const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
+          const nextEvent = generatedEvents.find(
+            (e) => getPersonnel(e).includes(trainee.fullName) && nextEventCodes.has(e.flightNumber)
+          );
           if (!nextEvent) {
             remainingForNextPass.push(trainee);
             continue;

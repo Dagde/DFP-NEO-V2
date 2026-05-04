@@ -2173,7 +2173,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // Plus-One Rule: Plus-one events are scheduled "after their primary"
                 // This means after the trainee's first scheduled event (their Next Event)
                 if (isPlusOne) { 
-                    const nextEvent = generatedEvents.find(e => getPersonnel(e).includes(trainee.fullName) && e.flightNumber === next!.id);
+                    const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
+                    const nextEvent = generatedEvents.find(e =>
+                        getPersonnel(e).includes(trainee.fullName) &&
+                        nextEventCodes.has(e.flightNumber)
+                    );
                     if (!nextEvent) { 
                         // Primary not scheduled yet, skip this trainee for now
                         remainingForNextPass.push(trainee);
