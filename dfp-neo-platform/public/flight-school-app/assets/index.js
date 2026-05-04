@@ -69010,8 +69010,9 @@ const App = () => {
     };
     loadSnapshotDates();
   }, []);
-  const loadSnapshotForDate = React.useCallback(async (targetDate) => {
-    if (loadedSnapshotDates.current.has(targetDate)) return;
+  const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
+    const { force = false, replace = false } = options;
+    if (!force && loadedSnapshotDates.current.has(targetDate)) return;
     loadedSnapshotDates.current.add(targetDate);
     try {
       const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
@@ -69024,12 +69025,12 @@ const App = () => {
       if (events2.length > 0) {
         setPublishedSchedules((prev) => {
           const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
-          if (existingNonSeed.length > 0) return prev;
+          if (!replace && existingNonSeed.length > 0) return prev;
           return { ...prev, [targetDate]: events2 };
         });
         const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
         setBaselineSchedules((prev) => {
-          if (prev[targetDate]) return prev;
+          if (!replace && prev[targetDate]) return prev;
           return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
         console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events2.length} events`);
@@ -70924,6 +70925,7 @@ ${"=".repeat(60)}`);
     setTimeout(() => setIsLocalityChangeVisible(false), 2e3);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
+    void loadSnapshotForDate(date, { force: true, replace: true });
   };
   const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));

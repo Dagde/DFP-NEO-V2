@@ -5169,8 +5169,12 @@ const App: React.FC = () => {
     }, []);
 
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
-    const loadSnapshotForDate = React.useCallback(async (targetDate: string) => {
-        if (loadedSnapshotDates.current.has(targetDate)) return; // already loaded
+    const loadSnapshotForDate = React.useCallback(async (
+        targetDate: string,
+        options: { force?: boolean; replace?: boolean } = {}
+    ) => {
+        const { force = false, replace = false } = options;
+        if (!force && loadedSnapshotDates.current.has(targetDate)) return; // already loaded
         loadedSnapshotDates.current.add(targetDate); // mark as attempted
         try {
             const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
@@ -5184,7 +5188,7 @@ const App: React.FC = () => {
                 setPublishedSchedules(prev => {
                     // Only load if no existing non-seed events for this date
                     const existingNonSeed = (prev[targetDate] || []).filter(e => !(e as any).isHistoricalSeed);
-                    if (existingNonSeed.length > 0) return prev;
+                    if (!replace && existingNonSeed.length > 0) return prev;
                     return { ...prev, [targetDate]: events };
                 });
                 // Restore baseline for this date too (enables change bar after navigation)
@@ -5192,7 +5196,7 @@ const App: React.FC = () => {
                     ? snap.baselineEvents
                     : events;
                 setBaselineSchedules(prev => {
-                    if (prev[targetDate]) return prev; // don't overwrite existing baseline
+                    if (!replace && prev[targetDate]) return prev; // don't overwrite existing baseline
                     return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
                 });
                 console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
@@ -7623,6 +7627,7 @@ const App: React.FC = () => {
         // Only reset UI state that is specific to each school
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
+        void loadSnapshotForDate(date, { force: true, replace: true });
     };
     
     // NOTE: School switch no longer resets events/courses to mock data.
