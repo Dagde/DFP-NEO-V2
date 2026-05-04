@@ -59469,7 +59469,7 @@ const FullPageProgressGraph = ({
   }, [courses, allTrainees, traineeLMPs, pt051Assessments, riskThresholds, courseColors]);
   const displayData = selectedCourse2 ? courseGraphData.filter((data) => data.course.name === selectedCourse2) : courseGraphData;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-progress-graph-header": "true", className: "bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",

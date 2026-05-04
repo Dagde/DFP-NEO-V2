@@ -59,7 +59,7 @@ const FullPageProgressGraph: React.FC<FullPageProgressGraphProps> = ({
 
     return (
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
-            <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
+            <div data-progress-graph-header="true" className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                     <button
                         onClick={onClose}

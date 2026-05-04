@@ -781,6 +781,13 @@ html[data-theme="light"] body {
     background-color: #eef3f8 !important;
     border-color: #b8c6d5 !important;
 }
+[data-theme="light"] [data-progress-graph-header="true"],
+[data-theme="light"] [data-progress-graph-header="true"] h1,
+[data-theme="light"] [data-progress-graph-header="true"] label,
+[data-theme="light"] [data-progress-graph-header="true"] .text-white,
+[data-theme="light"] [data-progress-graph-header="true"] .text-gray-300 {
+    color: #111827 !important;
+}
 
 /* Light-theme button system: inactive grey, active selected darker grey. */
 [data-theme="light"] button.bg-gray-700,
