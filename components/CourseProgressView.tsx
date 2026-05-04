@@ -657,6 +657,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                     style={getCourseBorderStyle(scoreCourse)}
                                 >
                                     <div
+                                        data-course-color="true"
                                         className={`px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 ${getCourseHeaderClass(scoreCourse)}`}
                                         style={getCourseHeaderStyle(scoreCourse)}
                                     >
@@ -732,6 +733,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
                                     style={getCourseBorderStyle(activeAward.course)}
                                 >
                                     <div
+                                        data-course-color="true"
                                         className={`px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`}
                                         style={getCourseHeaderStyle(activeAward.course)}
                                     >

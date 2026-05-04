@@ -51,6 +51,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     setShowRemoveCourseFlyout(false);
   };
 
+  const darkenHexColor = (color: string) => {
+    if (!color.startsWith('#') || color.length < 7) return color;
+    const strength = 0.62;
+    const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
   // User selector handlers
   const handleUserSelect = (user: {name: string; rank: string; unit?: string; pin?: string}) => {
     if (user.name === currentUserName) {
@@ -219,8 +228,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
                 {allCourses.map(([courseName, color]) => (
                   <div key={courseName} className="py-1 flex items-center justify-center">
                     <span 
+                      data-course-color="true"
                       className={`h-3 w-3 rounded-full ${(color || '').startsWith('#') ? '' : color} mr-2 flex-shrink-0`}
-                      style={(color || '').startsWith('#') ? { backgroundColor: color } : {}}
+                      style={(color || '').startsWith('#') ? { backgroundColor: darkenHexColor(color) } : {}}
                     ></span>
                     <span className="text-[9px] text-gray-300">{formatCourseName(courseName)}</span>
                   </div>

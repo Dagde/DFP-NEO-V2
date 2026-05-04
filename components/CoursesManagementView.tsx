@@ -159,6 +159,15 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
 
     const CourseCard: React.FC<{ course: Course }> = ({ course }) => {
         const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+        const darkenHexColor = (color: string) => {
+            if (!color.startsWith('#') || color.length < 7) return color;
+            const strength = 0.62;
+            const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+            const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+            const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+            return `rgb(${r}, ${g}, ${b})`;
+        };
+        const courseColor = courseColors[course.name] || '';
         
         return (
             <div 
@@ -168,8 +177,9 @@ const CoursesManagementView: React.FC<CoursesManagementViewProps> = ({
                 <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-3">
                         <div 
-                            className={`w-4 h-4 rounded ${!(courseColors[course.name] || '').startsWith('#') ? (courseColors[course.name] || 'bg-gray-400/50') : ''}`}
-                            style={(courseColors[course.name] || '').startsWith('#') ? { backgroundColor: courseColors[course.name] } : {}}
+                            data-course-color="true"
+                            className={`w-4 h-4 rounded ${!courseColor.startsWith('#') ? (courseColor || 'bg-gray-400/50') : ''}`}
+                            style={courseColor.startsWith('#') ? { backgroundColor: darkenHexColor(courseColor) } : {}}
                         ></div>
                         <h3 className="text-lg font-semibold text-white group-hover:text-sky-400 transition-colors">
                             {course.name}

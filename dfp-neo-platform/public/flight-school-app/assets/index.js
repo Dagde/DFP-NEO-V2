@@ -3054,6 +3054,14 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
     onArchiveCourse(courseNumber);
     setShowRemoveCourseFlyout(false);
   };
+  const darkenHexColor = (color) => {
+    if (!color.startsWith("#") || color.length < 7) return color;
+    const strength = 0.62;
+    const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+    const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+    const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
   const handlePinSubmit = () => {
     if (selectedUser && enteredPin === selectedUser.pin) {
       onUserChange(selectedUser.name);
@@ -3185,8 +3193,9 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "span",
               {
+                "data-course-color": "true",
                 className: `h-3 w-3 rounded-full ${(color || "").startsWith("#") ? "" : color} mr-2 flex-shrink-0`,
-                style: (color || "").startsWith("#") ? { backgroundColor: color } : {}
+                style: (color || "").startsWith("#") ? { backgroundColor: darkenHexColor(color) } : {}
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: formatCourseName(courseName) })
@@ -11011,6 +11020,14 @@ const CourseRosterView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 md:p-6 pb-16 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", children: coursesToDisplay.map((courseName) => {
         const courseTrainees = groupedTrainees[courseName] || [];
         const color = courseColorMap[courseName] || "bg-gray-500";
+        const darkenHexColor = (c) => {
+          if (!c.startsWith("#") || c.length < 7) return c;
+          const strength = 0.62;
+          const r = Math.round(parseInt(c.slice(1, 3), 16) * strength);
+          const g = Math.round(parseInt(c.slice(3, 5), 16) * strength);
+          const b = Math.round(parseInt(c.slice(5, 7), 16) * strength);
+          return `rgb(${r}, ${g}, ${b})`;
+        };
         const activeCount = courseTrainees.filter((t) => !t.isPaused).length;
         const pausedCount = courseTrainees.filter((t) => t.isPaused).length;
         const isHexColor = (c) => c && (c.startsWith("#") || c.startsWith("rgb"));
@@ -11018,8 +11035,9 @@ const CourseRosterView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
+              "data-course-color": "true",
               className: `px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? "" : color} flex justify-between items-center`,
-              style: isHexColor(color) ? { backgroundColor: color } : {},
+              style: isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {},
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: courseName }),
@@ -18955,7 +18973,7 @@ const PrioritiesView = ({
           totalPercentage,
           "%"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priority-help": "true", className: "mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold mb-1", children: "ℹ️ Weighted Priority System:" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "list-disc list-inside space-y-1 text-blue-200", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Percentages are auto-normalized to 100%" }),
@@ -59333,7 +59351,7 @@ const CourseDataWindow = ({
     return calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
   }, [course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-course-progress-card": "true", className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`, style: courseColorStyle, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-course-color": "true", className: `p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`, style: courseColorStyle, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white text-center mb-2", children: courseName }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center text-xs", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1", children: [
@@ -59405,6 +59423,7 @@ const CourseDataWindow = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700 rounded-full h-1.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
+          "data-course-color": "true",
           className: `${courseColorClass} h-1.5 rounded-full`,
           style: { width: `${percentage}%`, ...isHexColor(courseColor || "") ? { backgroundColor: darkenHexColor(courseColor) } : {} }
         }
@@ -60113,6 +60132,7 @@ const CourseProgressView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "div",
                   {
+                    "data-course-color": "true",
                     className: `px-4 py-3 border-b border-gray-700 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 ${getCourseHeaderClass(scoreCourse)}`,
                     style: getCourseHeaderStyle(scoreCourse),
                     children: [
@@ -60183,6 +60203,7 @@ const CourseProgressView = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   "div",
                   {
+                    "data-course-color": "true",
                     className: `px-4 py-3 border-b border-gray-700 ${getCourseHeaderClass(activeAward.course)}`,
                     style: getCourseHeaderStyle(activeAward.course),
                     children: [
@@ -60851,6 +60872,15 @@ const CoursesManagementView = ({
   };
   const CourseCard = ({ course }) => {
     const totalStudents = course.raafStart + course.navyStart + course.armyStart;
+    const darkenHexColor = (color) => {
+      if (!color.startsWith("#") || color.length < 7) return color;
+      const strength = 0.62;
+      const r = Math.round(parseInt(color.slice(1, 3), 16) * strength);
+      const g = Math.round(parseInt(color.slice(3, 5), 16) * strength);
+      const b = Math.round(parseInt(color.slice(5, 7), 16) * strength);
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+    const courseColor = courseColors[course.name] || "";
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
@@ -60862,8 +60892,9 @@ const CoursesManagementView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "div",
                 {
-                  className: `w-4 h-4 rounded ${!(courseColors[course.name] || "").startsWith("#") ? courseColors[course.name] || "bg-gray-400/50" : ""}`,
-                  style: (courseColors[course.name] || "").startsWith("#") ? { backgroundColor: courseColors[course.name] } : {}
+                  "data-course-color": "true",
+                  className: `w-4 h-4 rounded ${!courseColor.startsWith("#") ? courseColor || "bg-gray-400/50" : ""}`,
+                  style: courseColor.startsWith("#") ? { backgroundColor: darkenHexColor(courseColor) } : {}
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-white group-hover:text-sky-400 transition-colors", children: course.name })

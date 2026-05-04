@@ -46,7 +46,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
 
     return (
         <div data-course-progress-card="true" className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit">
-            <div className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`} style={courseColorStyle}>
+            <div data-course-color="true" className={`p-4 border-b border-gray-700 rounded-t-lg ${courseColorClass}`} style={courseColorStyle}>
                  <h2 className="text-lg font-bold text-white text-center mb-2">{courseName}</h2>
                  <div className="flex justify-between items-center text-xs">
                      <div className="flex items-center space-x-1">
@@ -100,6 +100,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
                         </div>
                         <div className="w-full bg-gray-700 rounded-full h-1.5">
                             <div
+                                data-course-color="true"
                                 className={`${courseColorClass} h-1.5 rounded-full`}
                                 style={{ width: `${percentage}%`, ...(isHexColor(courseColor || '') ? { backgroundColor: darkenHexColor(courseColor) } : {}) }}
                             ></div>

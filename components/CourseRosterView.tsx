@@ -317,6 +317,14 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                             {coursesToDisplay.map(courseName => {
                                 const courseTrainees = groupedTrainees[courseName] || [];
                                 const color = courseColorMap[courseName] || 'bg-gray-500';
+                                const darkenHexColor = (c: string) => {
+                                    if (!c.startsWith('#') || c.length < 7) return c;
+                                    const strength = 0.62;
+                                    const r = Math.round(parseInt(c.slice(1, 3), 16) * strength);
+                                    const g = Math.round(parseInt(c.slice(3, 5), 16) * strength);
+                                    const b = Math.round(parseInt(c.slice(5, 7), 16) * strength);
+                                    return `rgb(${r}, ${g}, ${b})`;
+                                };
                                 
                                 // Calculate active and paused counts
                                 const activeCount = courseTrainees.filter(t => !t.isPaused).length;
@@ -326,8 +334,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
                                         <div 
+                                            data-course-color="true"
                                             className={`px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? '' : color} flex justify-between items-center`}
-                                            style={isHexColor(color) ? { backgroundColor: color } : {}}
+                                            style={isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {}}
                                         >
                                             <div>
                                                 <span>{courseName}</span>

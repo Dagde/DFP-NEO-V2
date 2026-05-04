@@ -488,7 +488,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             <div className={`mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
                                 Total: {totalPercentage}%
                             </div>
-                            <div className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
+                            <div data-priority-help="true" className="mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300">
                                 <p className="font-semibold mb-1">&#x2139;&#xFE0F; Weighted Priority System:</p>
                                 <ul className="list-disc list-inside space-y-1 text-blue-200">
                                     <li>Percentages are auto-normalized to 100%</li>
