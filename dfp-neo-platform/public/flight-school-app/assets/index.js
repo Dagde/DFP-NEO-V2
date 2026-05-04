@@ -59507,6 +59507,9 @@ const CourseGraph = ({ data }) => {
   const PADDING = { top: 50, right: 50, bottom: 70, left: 70 };
   const CHART_WIDTH = SVG_WIDTH - PADDING.left - PADDING.right;
   const CHART_HEIGHT = SVG_HEIGHT - PADDING.top - PADDING.bottom;
+  const yTickCount = 7;
+  const yStep = Math.max(1, Math.ceil(totalEvents / yTickCount));
+  const yScaleMax = Math.max(yStep * yTickCount, totalEvents);
   const dateToX = (date) => {
     const totalTime = Math.max(1, endDate.getTime() - startDate.getTime());
     const elapsed = date.getTime() - startDate.getTime();
@@ -59514,7 +59517,7 @@ const CourseGraph = ({ data }) => {
     return Math.max(PADDING.left, Math.min(PADDING.left + CHART_WIDTH, x));
   };
   const eventsToY = (count) => {
-    return PADDING.top + CHART_HEIGHT - count / totalEvents * CHART_HEIGHT;
+    return PADDING.top + CHART_HEIGHT - count / yScaleMax * CHART_HEIGHT;
   };
   const buildReferenceLine = (rate, color2, label, dash) => {
     const courseWeeks = Math.max(0, (endDate.getTime() - startDate.getTime()) / (1e3 * 60 * 60 * 24 * 7));
@@ -59535,9 +59538,9 @@ const CourseGraph = ({ data }) => {
     buildReferenceLine(4, "#fbbf24", "4.0/wk", "none"),
     buildReferenceLine(4.5, "#f87171", "4.5/wk", "8 4")
   ];
-  const yAxisTicks = Array.from({ length: 9 }, (_, index) => {
-    const value = totalEvents / 8 * index;
-    return { value: Math.round(value), y: eventsToY(value) };
+  const yAxisTicks = Array.from({ length: yTickCount + 1 }, (_, index) => {
+    const value = yStep * index;
+    return { value, y: eventsToY(value) };
   });
   const xAxisTicks = reactExports.useMemo(() => {
     const ticks = [];
@@ -59551,6 +59554,19 @@ const CourseGraph = ({ data }) => {
         });
       }
       current.setMonth(current.getMonth() + 1);
+    }
+    return ticks;
+  }, [startDate, endDate]);
+  const xGridTicks = reactExports.useMemo(() => {
+    const ticks = [];
+    const current = new Date(startDate);
+    current.setHours(0, 0, 0, 0);
+    while (current <= endDate) {
+      ticks.push({
+        x: dateToX(current),
+        isMonthStart: current.getDate() <= 7
+      });
+      current.setDate(current.getDate() + 7);
     }
     return ticks;
   }, [startDate, endDate]);
@@ -59599,14 +59615,25 @@ const CourseGraph = ({ data }) => {
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: `0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`, className: "w-full h-auto", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("defs", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("pattern", { id: `grid-${course.name}`, width: "40", height: "40", patternUnits: "userSpaceOnUse", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M 40 0 L 0 0 0 40", fill: "none", stroke: "#374151", strokeWidth: "0.5" }) }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: PADDING.left, y: PADDING.top, width: CHART_WIDTH, height: CHART_HEIGHT, fill: `url(#grid-${course.name})` }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: PADDING.left, y: PADDING.top, width: CHART_WIDTH, height: CHART_HEIGHT, fill: "transparent" }),
       yAxisTicks.map((tick) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: PADDING.left, x2: PADDING.left + CHART_WIDTH, y1: tick.y, y2: tick.y, stroke: "#374151", strokeWidth: "0.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: PADDING.left, x2: PADDING.left + CHART_WIDTH, y1: tick.y, y2: tick.y, stroke: "#d1d5db", strokeWidth: "0.75" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: PADDING.left - 10, y: tick.y + 4, textAnchor: "end", fontSize: "11", fill: "#9ca3af", children: tick.value })
       ] }, `y-${tick.value}`)),
+      xGridTicks.map((tick, index) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "line",
+        {
+          x1: tick.x,
+          x2: tick.x,
+          y1: PADDING.top,
+          y2: PADDING.top + CHART_HEIGHT,
+          stroke: tick.isMonthStart ? "#d1d5db" : "#e5e7eb",
+          strokeWidth: tick.isMonthStart ? "0.75" : "0.5"
+        },
+        `x-grid-${index}`
+      )),
       xAxisTicks.map((tick) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: tick.x, x2: tick.x, y1: PADDING.top, y2: PADDING.top + CHART_HEIGHT, stroke: "#374151", strokeWidth: "0.5" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: tick.x, x2: tick.x, y1: PADDING.top, y2: PADDING.top + CHART_HEIGHT, stroke: "#9ca3af", strokeWidth: "0.75" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: tick.x, y: PADDING.top + CHART_HEIGHT + 20, textAnchor: "middle", fontSize: "10", fill: "#9ca3af", children: tick.label })
       ] }, `x-${tick.x}`)),
       /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: `M ${PADDING.left} ${PADDING.top} V ${PADDING.top + CHART_HEIGHT} H ${PADDING.left + CHART_WIDTH}`, fill: "none", stroke: "#6b7280", strokeWidth: "1" }),

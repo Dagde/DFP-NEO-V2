@@ -533,11 +533,11 @@ html[data-theme="light"] body {
     text-shadow: 0 1px 2px rgba(0,0,0,0.48);
 }
 [data-theme="light"] [data-schedule-hour-line="true"] > div {
-    background-color: rgba(86,105,126,0.62) !important;
+    background-color: #D3D3D3 !important;
     width: 1px;
 }
 [data-theme="light"] [data-schedule-half-hour-line="true"] > div {
-    background-color: rgba(100,116,139,0.34) !important;
+    background-color: #E6E6E6 !important;
 }
 [data-theme="light"] [data-schedule-row-line="true"] {
     background-color: rgba(87,103,121,0.42) !important;

@@ -104,6 +104,9 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
     const PADDING = { top: 50, right: 50, bottom: 70, left: 70 };
     const CHART_WIDTH = SVG_WIDTH - PADDING.left - PADDING.right;
     const CHART_HEIGHT = SVG_HEIGHT - PADDING.top - PADDING.bottom;
+    const yTickCount = 7;
+    const yStep = Math.max(1, Math.ceil(totalEvents / yTickCount));
+    const yScaleMax = Math.max(yStep * yTickCount, totalEvents);
 
     const dateToX = (date: Date) => {
         const totalTime = Math.max(1, endDate.getTime() - startDate.getTime());
@@ -113,7 +116,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
     };
 
     const eventsToY = (count: number) => {
-        return PADDING.top + CHART_HEIGHT - (count / totalEvents) * CHART_HEIGHT;
+        return PADDING.top + CHART_HEIGHT - (count / yScaleMax) * CHART_HEIGHT;
     };
 
     const buildReferenceLine = (rate: number, color: string, label: string, dash: string) => {
@@ -139,13 +142,13 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
         buildReferenceLine(4.5, '#f87171', '4.5/wk', '8 4'),
     ];
 
-    const yAxisTicks = Array.from({ length: 9 }, (_, index) => {
-        const value = (totalEvents / 8) * index;
-        return { value: Math.round(value), y: eventsToY(value) };
+    const yAxisTicks = Array.from({ length: yTickCount + 1 }, (_, index) => {
+        const value = yStep * index;
+        return { value, y: eventsToY(value) };
     });
 
     const xAxisTicks = useMemo(() => {
-        const ticks = [];
+        const ticks: { x: number; label: string }[] = [];
         const current = new Date(startDate);
         current.setDate(1);
         while (current <= endDate) {
@@ -156,6 +159,20 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
                 });
             }
             current.setMonth(current.getMonth() + 1);
+        }
+        return ticks;
+    }, [startDate, endDate]);
+
+    const xGridTicks = useMemo(() => {
+        const ticks: { x: number; isMonthStart: boolean }[] = [];
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+        while (current <= endDate) {
+            ticks.push({
+                x: dateToX(current),
+                isMonthStart: current.getDate() <= 7,
+            });
+            current.setDate(current.getDate() + 7);
         }
         return ticks;
     }, [startDate, endDate]);
@@ -192,23 +209,30 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
             </div>
 
             <svg viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`} className="w-full h-auto">
-                <defs>
-                    <pattern id={`grid-${course.name}`} width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#374151" strokeWidth="0.5" />
-                    </pattern>
-                </defs>
-                <rect x={PADDING.left} y={PADDING.top} width={CHART_WIDTH} height={CHART_HEIGHT} fill={`url(#grid-${course.name})`} />
+                <rect x={PADDING.left} y={PADDING.top} width={CHART_WIDTH} height={CHART_HEIGHT} fill="transparent" />
 
                 {yAxisTicks.map(tick => (
                     <g key={`y-${tick.value}`}>
-                        <line x1={PADDING.left} x2={PADDING.left + CHART_WIDTH} y1={tick.y} y2={tick.y} stroke="#374151" strokeWidth="0.5" />
+                        <line x1={PADDING.left} x2={PADDING.left + CHART_WIDTH} y1={tick.y} y2={tick.y} stroke="#d1d5db" strokeWidth="0.75" />
                         <text x={PADDING.left - 10} y={tick.y + 4} textAnchor="end" fontSize="11" fill="#9ca3af">{tick.value}</text>
                     </g>
                 ))}
 
+                {xGridTicks.map((tick, index) => (
+                    <line
+                        key={`x-grid-${index}`}
+                        x1={tick.x}
+                        x2={tick.x}
+                        y1={PADDING.top}
+                        y2={PADDING.top + CHART_HEIGHT}
+                        stroke={tick.isMonthStart ? '#d1d5db' : '#e5e7eb'}
+                        strokeWidth={tick.isMonthStart ? '0.75' : '0.5'}
+                    />
+                ))}
+
                 {xAxisTicks.map(tick => (
                     <g key={`x-${tick.x}`}>
-                        <line x1={tick.x} x2={tick.x} y1={PADDING.top} y2={PADDING.top + CHART_HEIGHT} stroke="#374151" strokeWidth="0.5" />
+                        <line x1={tick.x} x2={tick.x} y1={PADDING.top} y2={PADDING.top + CHART_HEIGHT} stroke="#9ca3af" strokeWidth="0.75" />
                         <text x={tick.x} y={PADDING.top + CHART_HEIGHT + 20} textAnchor="middle" fontSize="10" fill="#9ca3af">{tick.label}</text>
                     </g>
                 ))}
