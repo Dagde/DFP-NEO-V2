@@ -788,6 +788,11 @@ html[data-theme="light"] body {
 [data-theme="light"] [data-progress-graph-header="true"] .text-gray-300 {
     color: #111827 !important;
 }
+[data-theme="light"] [data-progress-graph-course-meta="true"],
+[data-theme="light"] [data-progress-graph-course-meta="true"] span {
+    color: #111827 !important;
+    text-shadow: none !important;
+}
 
 /* Light-theme button system: inactive grey, active selected darker grey. */
 [data-theme="light"] button.bg-gray-700,

@@ -59578,7 +59578,7 @@ const CourseGraph = ({ data }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mb-4 p-3 rounded-lg ${isHexColor(color) ? "" : color}`, style: isHexColor(color) ? { backgroundColor: color } : {}, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white text-center", children: course.name }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-between gap-3 text-sm text-white/80 mt-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-progress-graph-course-meta": "true", className: "flex flex-wrap justify-between gap-3 text-sm text-white/80 mt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
           "Start: ",
           startDate.toLocaleDateString("en-GB")

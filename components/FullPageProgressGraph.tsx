@@ -191,7 +191,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ data }) => {
         <div className="bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-4">
             <div className={`mb-4 p-3 rounded-lg ${isHexColor(color) ? '' : color}`} style={isHexColor(color) ? { backgroundColor: color } : {}}>
                 <h2 className="text-lg font-bold text-white text-center">{course.name}</h2>
-                <div className="flex flex-wrap justify-between gap-3 text-sm text-white/80 mt-2">
+                <div data-progress-graph-course-meta="true" className="flex flex-wrap justify-between gap-3 text-sm text-white/80 mt-2">
                     <span>Start: {startDate.toLocaleDateString('en-GB')}</span>
                     <span>Total PT-051 Events: {totalEvents}</span>
                     <span>Graduation: {endDate.toLocaleDateString('en-GB')}</span>
