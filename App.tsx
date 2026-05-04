@@ -2774,9 +2774,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     })());
 
                 if (!instructorInHardGroup) {
-                    // Instructor found but not from required hard group → place on STBY with no instructor
-                    hardModeStby = true;
-                    instructor = null; // no instructor assigned to this STBY event
+                    // Priority groups should influence allocation order, not force a STBY tile
+                    // while a real aircraft/FTD resource is available. The STBY line is reserved
+                    // for genuine resource exhaustion.
+                    console.log(`[Priority] ${syllabusItem.code} for ${trainee.fullName}: using ${instructor.name} on a real resource; no hard-group instructor was available.`);
                 }
             }
         }
@@ -3775,6 +3776,87 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         }
 
         console.log(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
+    }
+
+    // Final real-resource recovery pass.
+    // STBY is only valid when there is no real FTD resource available. The normal
+    // scheduleEvent path can reject a candidate for instructor-priority or event-limit
+    // reasons, while the STBY path later finds a usable instructor. Before creating
+    // any STBY FTD tile, try that same available-person logic on the real FTD lines.
+    const findAvailableFtdResourceForStbyCandidate = (startTime: number, duration: number): string | null => {
+        for (let i = 1; i <= ftdCount; i++) {
+            const resourceId = `FTD ${i}`;
+            const occupied = generatedEvents.some(e => {
+                if (e.resourceId !== resourceId) return false;
+                const existingEnd = e.startTime + e.duration + ftdTurnaround;
+                return startTime < existingEnd && startTime + duration > e.startTime;
+            });
+            if (!occupied) return resourceId;
+        }
+        return null;
+    };
+
+    let recoveredToRealFtdBeforeStby = 0;
+    const traineesNeedingFinalFtdRecovery = traineesNeedingStbyFtd.filter(trainee => {
+        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        if (!next || next.type !== 'FTD') return false;
+        return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+    });
+
+    for (const trainee of traineesNeedingFinalFtdRecovery) {
+        const { next } = traineeNextEventMap.get(trainee.fullName)!;
+        if (!next) continue;
+
+        const recoveryIncrement = 15 / 60;
+        let placedOnRealFtd = false;
+
+        for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 0.001; time += recoveryIncrement) {
+            const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
+            if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, 'ftd')) continue;
+
+            const resourceId = findAvailableFtdResourceForStbyCandidate(time, next.duration);
+            if (!resourceId) continue;
+
+            const instructor = findBestInstructorForStby(trainee, next, time, next.duration, 'ftd', generatedEvents);
+            if (!instructor) continue;
+
+            generatedEvents.push({
+                id: uuidv4(),
+                type: 'ftd',
+                instructor,
+                student: trainee.fullName,
+                pilot: instructor,
+                flightNumber: next.code,
+                duration: next.duration,
+                startTime: time,
+                resourceId,
+                color: courseColors[trainee.course] || 'bg-gray-500',
+                flightType: 'Dual',
+                locationType: 'Local',
+                origin: school,
+                destination: school,
+                preStart: next.preFlightTime,
+                postEnd: next.postFlightTime,
+            });
+
+            const tCounts = eventCounts.get(trainee.fullName);
+            const ipCounts = eventCounts.get(instructor);
+            if (tCounts) tCounts.flightFtd++;
+            if (ipCounts) ipCounts.flightFtd++;
+
+            recoveredToRealFtdBeforeStby++;
+            placedOnRealFtd = true;
+            console.log(`FTD final recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${resourceId} before STBY fallback`);
+            break;
+        }
+
+        if (!placedOnRealFtd) {
+            console.log(`FTD final recovery: ${trainee.fullName} still requires STBY consideration`);
+        }
+    }
+
+    if (recoveredToRealFtdBeforeStby > 0) {
+        console.log(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
     }
 
     const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter(trainee => {

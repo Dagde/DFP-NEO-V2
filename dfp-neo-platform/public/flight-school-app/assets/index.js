@@ -67374,7 +67374,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     const isSoloFlight = syllabusItem.sortieType === "Solo" || ["BGF11", "BGF18"].includes(syllabusItem.id);
     let instructor = null;
-    let hardModeStby = false;
     if (!isSoloFlight) {
       instructor = findAvailableInstructor(trainee, syllabusItem, isPlusOne, primaryPreferOnly);
       if (!instructor) {
@@ -67408,40 +67407,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return instrBase === traineeBase && instrFlight !== "" && traineeFlight !== "" && instrFlight === traineeFlight;
         })();
         if (!instructorInHardGroup) {
-          hardModeStby = true;
-          instructor = null;
+          console.log(`[Priority] ${syllabusItem.code} for ${trainee.fullName}: using ${instructor.name} on a real resource; no hard-group instructor was available.`);
         }
       }
     }
     let resourceId = null;
-    if (hardModeStby && (type === "flight" || type === "ftd")) {
-      const stbyPrefix = type === "flight" ? "STBY" : "FTD-STBY";
-      let stbyLine = 1;
-      while (generatedEvents.some((e) => e.resourceId === `${stbyPrefix} ${stbyLine}` && e.startTime < startTime + syllabusItem.duration && e.startTime + e.duration > startTime)) {
-        stbyLine++;
-      }
-      resourceId = `${stbyPrefix} ${stbyLine}`;
-      const stbyResult = {
-        id: v4(),
-        type,
-        instructor: "",
-        student: trainee.fullName,
-        pilot: trainee.fullName,
-        flightNumber: syllabusItem.code,
-        duration: syllabusItem.duration,
-        startTime,
-        resourceId,
-        color: courseColors[trainee.course] || "bg-gray-500",
-        flightType: syllabusItem.sortieType || "Dual",
-        locationType: "Local",
-        origin: school,
-        destination: school,
-        area: void 0,
-        preStart: syllabusItem.preFlightTime,
-        postEnd: syllabusItem.postFlightTime
-      };
-      return stbyResult;
-    }
     const resourcePrefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
     const resourceCount = type === "flight" ? availableAircraftCount : type === "ftd" ? ftdCount : type === "cpt" ? cptCount : 6;
     let resourceSearchStart = 1;
@@ -68095,6 +68065,70 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     console.log(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
+  }
+  const findAvailableFtdResourceForStbyCandidate = (startTime, duration) => {
+    for (let i = 1; i <= ftdCount; i++) {
+      const resourceId = `FTD ${i}`;
+      const occupied = generatedEvents.some((e) => {
+        if (e.resourceId !== resourceId) return false;
+        const existingEnd = e.startTime + e.duration + ftdTurnaround;
+        return startTime < existingEnd && startTime + duration > e.startTime;
+      });
+      if (!occupied) return resourceId;
+    }
+    return null;
+  };
+  let recoveredToRealFtdBeforeStby = 0;
+  const traineesNeedingFinalFtdRecovery = traineesNeedingStbyFtd.filter((trainee) => {
+    const { next } = traineeNextEventMap.get(trainee.fullName);
+    if (!next || next.type !== "FTD") return false;
+    return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
+  });
+  for (const trainee of traineesNeedingFinalFtdRecovery) {
+    const { next } = traineeNextEventMap.get(trainee.fullName);
+    if (!next) continue;
+    const recoveryIncrement = 15 / 60;
+    let placedOnRealFtd = false;
+    for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 1e-3; time += recoveryIncrement) {
+      const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
+      if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, "ftd")) continue;
+      const resourceId = findAvailableFtdResourceForStbyCandidate(time, next.duration);
+      if (!resourceId) continue;
+      const instructor = findBestInstructorForStby(trainee, next, time, next.duration, "ftd", generatedEvents);
+      if (!instructor) continue;
+      generatedEvents.push({
+        id: v4(),
+        type: "ftd",
+        instructor,
+        student: trainee.fullName,
+        pilot: instructor,
+        flightNumber: next.code,
+        duration: next.duration,
+        startTime: time,
+        resourceId,
+        color: courseColors[trainee.course] || "bg-gray-500",
+        flightType: "Dual",
+        locationType: "Local",
+        origin: school,
+        destination: school,
+        preStart: next.preFlightTime,
+        postEnd: next.postFlightTime
+      });
+      const tCounts = eventCounts.get(trainee.fullName);
+      const ipCounts = eventCounts.get(instructor);
+      if (tCounts) tCounts.flightFtd++;
+      if (ipCounts) ipCounts.flightFtd++;
+      recoveredToRealFtdBeforeStby++;
+      placedOnRealFtd = true;
+      console.log(`FTD final recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${resourceId} before STBY fallback`);
+      break;
+    }
+    if (!placedOnRealFtd) {
+      console.log(`FTD final recovery: ${trainee.fullName} still requires STBY consideration`);
+    }
+  }
+  if (recoveredToRealFtdBeforeStby > 0) {
+    console.log(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
   }
   const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
