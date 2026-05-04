@@ -10036,6 +10036,7 @@ const TraineeProfileFlyout = ({
                     /* @__PURE__ */ jsxRuntimeExports.jsx(
                       "span",
                       {
+                        "data-course-color": "true",
                         className: `font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || "").startsWith("#") ? "" : courseColors[trainee.course] || "bg-gray-500"}`,
                         style: (courseColors[trainee.course] || "").startsWith("#") ? { backgroundColor: courseColors[trainee.course] } : {},
                         children: trainee.course
