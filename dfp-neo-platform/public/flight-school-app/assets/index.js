@@ -68896,7 +68896,7 @@ const App = () => {
       try {
         const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
         try {
-          const snapRes = await fetch(`${apiBase2}/daily-snapshot`);
+          const snapRes = await fetch(`${apiBase2}/daily-snapshot?school=${school}`);
           if (snapRes.ok) {
             const snapData = await snapRes.json();
             const snapshots = snapData.snapshots || [];
@@ -68905,7 +68905,7 @@ const App = () => {
               setPublishedSchedules((prev) => {
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
-                  const dateKey = snap2.date;
+                  const dateKey = getDailySnapshotDate(snap2.date);
                   const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
                   const existingNonSeed = (merged[dateKey] || []).filter((e) => !e.isHistoricalSeed);
                   if (existingNonSeed.length === 0 && events2.length > 0) {
@@ -68917,7 +68917,7 @@ const App = () => {
               setBaselineSchedules((prev) => {
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
-                  const dateKey = snap2.date;
+                  const dateKey = getDailySnapshotDate(snap2.date);
                   const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
                   if (baselineEvts.length > 0 && !merged[dateKey]) {
                     merged[dateKey] = JSON.parse(JSON.stringify(baselineEvts));
@@ -68943,7 +68943,7 @@ const App = () => {
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
-                    merged[snap2.date] = snap2.alertsData;
+                    merged[getDailySnapshotDate(snap2.date)] = snap2.alertsData;
                   }
                 });
                 return merged;
@@ -68956,7 +68956,7 @@ const App = () => {
         const res = await fetch(`${apiBase2}/historical-data`);
         if (!res.ok) return;
         const data = await res.json();
-        if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+        if (school === "ESL" && data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
           const seedSchedules = data.publishedSchedules;
           const eventCount = Object.values(seedSchedules).flat().length;
           console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
@@ -68992,7 +68992,7 @@ const App = () => {
       }
     };
     loadHistoricalData();
-  }, []);
+  }, [school]);
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
       try {
@@ -69000,10 +69000,9 @@ const App = () => {
         const res = await fetch(`${apiBase2}/daily-snapshot/dates`);
         if (!res.ok) return;
         const data = await res.json();
-        const dates = (data.dates || []).map((d) => d.date);
+        const dates = [...new Set((data.dates || []).map((d) => d.date))];
         console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
         setSnapshotDates(dates);
-        dates.slice(0, 5).forEach((d) => loadedSnapshotDates.current.add(d));
       } catch (err) {
         console.warn("[Snapshot] Could not load snapshot dates:", err);
       }
@@ -69011,13 +69010,24 @@ const App = () => {
     loadSnapshotDates();
   }, []);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
-    const { force = false, replace = false } = options;
-    if (!force && loadedSnapshotDates.current.has(targetDate)) return;
-    loadedSnapshotDates.current.add(targetDate);
+    const { force = false, replace = false, schoolOverride } = options;
+    const snapshotSchool = schoolOverride ?? school;
+    const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool);
+    if (!force && loadedSnapshotDates.current.has(snapshotKey)) return;
+    loadedSnapshotDates.current.add(snapshotKey);
     try {
       const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
-      const res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
-      if (!res.ok) return;
+      let res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
+      if (!res.ok && snapshotSchool === "ESL") {
+        res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
+      }
+      if (!res.ok) {
+        if (replace) {
+          setPublishedSchedules((prev) => ({ ...prev, [targetDate]: [] }));
+          setBaselineSchedules((prev) => ({ ...prev, [targetDate]: [] }));
+        }
+        return;
+      }
       const data = await res.json();
       const snap2 = data.snapshot;
       if (!snap2) return;
@@ -69033,7 +69043,7 @@ const App = () => {
           if (!replace && prev[targetDate]) return prev;
           return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
-        console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events2.length} events`);
+        console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate} (${snapshotSchool}), ${events2.length} events`);
       }
       if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
         setPt051Assessments((prev) => {
@@ -69050,7 +69060,7 @@ const App = () => {
     } catch (err) {
       console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
     }
-  }, []);
+  }, [school]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -69139,6 +69149,12 @@ const App = () => {
   const [publishedSchedules, setPublishedSchedules] = reactExports.useState({});
   const [snapshotDates, setSnapshotDates] = reactExports.useState([]);
   const loadedSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
+  function getDailySnapshotKey(targetDate, targetSchool = school) {
+    return `${targetDate}__${targetSchool}`;
+  }
+  function getDailySnapshotDate(snapshotDate) {
+    return String(snapshotDate || "").replace(/__(ESL|PEA)$/i, "");
+  }
   const [nextDayBuildEvents, setNextDayBuildEvents] = reactExports.useState([]);
   const [buildDfpDate, setBuildDfpDate] = reactExports.useState(() => {
     try {
@@ -70925,7 +70941,7 @@ ${"=".repeat(60)}`);
     setTimeout(() => setIsLocalityChangeVisible(false), 2e3);
     setNextDayBuildEvents([]);
     setPublishedSchedules({});
-    void loadSnapshotForDate(date, { force: true, replace: true });
+    void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool });
   };
   const handleAddCourseFromTrainingRecords = async (data) => {
     setCourseColors((prev) => ({ ...prev, [data.number]: data.color }));
@@ -71335,6 +71351,7 @@ ${"=".repeat(60)}`);
     }
     const apiBase2 = getApiBaseUrl();
     const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+    const snapshotKey = getDailySnapshotKey(targetDate);
     const staffEventsForDate = allEventsForDate.filter(
       (e) => e.instructor && !e.student && e.type !== "logbook"
     );
@@ -71398,7 +71415,7 @@ ${"=".repeat(60)}`);
       pt051AssessmentsObj[key] = assessment;
     });
     const snapshotPayload = {
-      date: targetDate,
+      date: snapshotKey,
       scheduleEvents: allEventsForDate,
       staffEvents: staffEventsForDate,
       traineeEvents: traineeEventsForDate,
@@ -71410,14 +71427,15 @@ ${"=".repeat(60)}`);
       staffLogbook: {},
       savedBy
     };
-    console.log(`[Persist] Saving snapshot for ${targetDate}, ${allEventsForDate.length} events...`);
+    console.log(`[Persist] Saving snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events...`);
     fetch(`${apiBase2}/daily-snapshot/save`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(snapshotPayload)
     }).then((res) => res.json()).then((result) => {
       if (result.success) {
-        console.log(`✅ [Persist] Saved snapshot for ${targetDate}, ${allEventsForDate.length} events`);
+        loadedSnapshotDates.current.add(snapshotKey);
+        console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events`);
       } else {
         console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
       }
@@ -73263,8 +73281,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       pt051Assessments.forEach((assessment, key) => {
         pt051AssessmentsObj[key] = assessment;
       });
+      const snapshotKey = getDailySnapshotKey(buildDfpDate);
       const snapshotPayload = {
-        date: buildDfpDate,
+        date: snapshotKey,
         scheduleEvents: newEventsForDate,
         staffEvents: staffEventsForDate,
         traineeEvents: traineeEventsForDate,
@@ -73285,8 +73304,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         body: JSON.stringify(snapshotPayload)
       }).then((res) => res.json()).then((result) => {
         if (result.success) {
-          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
-          loadedSnapshotDates.current.add(buildDfpDate);
+          console.log(`✅ [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school}), ${newEventsForDate.length} events`);
+          loadedSnapshotDates.current.add(snapshotKey);
         } else {
           console.warn(`⚠️ [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
         }
@@ -74010,7 +74029,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const pollAlerts = async () => {
       try {
         const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
-        const res = await fetch(`${apiBase2}/daily-snapshot/${date}`);
+        const res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
         if (!res.ok) return;
         const data = await res.json();
         const snap2 = data.snapshot;
@@ -74027,7 +74046,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     pollAlerts();
     const interval = setInterval(pollAlerts, 5 * 1e3);
     return () => clearInterval(interval);
-  }, [date]);
+  }, [date, school]);
   const handleUpdateSyllabus = reactExports.useCallback((newSyllabus) => {
     const updatedMap = new Map(newSyllabus.map((s) => [s.code.trim().replace(/\s/g, "").toLowerCase(), s]));
     setSyllabusDetails((prevSyllabus) => {

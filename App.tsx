@@ -5031,7 +5031,7 @@ const App: React.FC = () => {
 
                 // ── PRIMARY: Load last 5 days of real DailySnapshots ──────────────
                 try {
-                    const snapRes = await fetch(`${apiBase}/daily-snapshot`);
+                    const snapRes = await fetch(`${apiBase}/daily-snapshot?school=${school}`);
                     if (snapRes.ok) {
                         const snapData = await snapRes.json();
                         const snapshots: any[] = snapData.snapshots || [];
@@ -5040,7 +5040,7 @@ const App: React.FC = () => {
                             setPublishedSchedules(prev => {
                                 const merged = { ...prev };
                                 snapshots.forEach(snap => {
-                                    const dateKey = snap.date;
+                                    const dateKey = getDailySnapshotDate(snap.date);
                                     const events: ScheduleEvent[] = Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : [];
                                     // Only use snapshot events if there are no existing non-seed events for this date
                                     const existingNonSeed = (merged[dateKey] || []).filter(e => !(e as any).isHistoricalSeed);
@@ -5055,7 +5055,7 @@ const App: React.FC = () => {
                             setBaselineSchedules(prev => {
                                 const merged = { ...prev };
                                 snapshots.forEach(snap => {
-                                    const dateKey = snap.date;
+                                    const dateKey = getDailySnapshotDate(snap.date);
                                     // Use stored baselineEvents if available, otherwise fall back to scheduleEvents
                                     const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
                                         ? snap.baselineEvents
@@ -5087,7 +5087,7 @@ const App: React.FC = () => {
                                 const merged = { ...prev };
                                 snapshots.forEach(snap => {
                                     if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
-                                        merged[snap.date] = snap.alertsData;
+                                        merged[getDailySnapshotDate(snap.date)] = snap.alertsData;
                                     }
                                 });
                                 return merged;
@@ -5103,7 +5103,7 @@ const App: React.FC = () => {
                 if (!res.ok) return;
                 const data = await res.json();
 
-                if (data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+                if (school === 'ESL' && data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
                     const seedSchedules = data.publishedSchedules as Record<string, ScheduleEvent[]>;
                     const eventCount = Object.values(seedSchedules).flat().length;
                     console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
@@ -5146,7 +5146,7 @@ const App: React.FC = () => {
             }
         };
         loadHistoricalData();
-    }, []);
+    }, [school]);
 
     // Load snapshot dates for calendar dropdown
     useEffect(() => {
@@ -5156,11 +5156,9 @@ const App: React.FC = () => {
                 const res = await fetch(`${apiBase}/daily-snapshot/dates`);
                 if (!res.ok) return;
                 const data = await res.json();
-                const dates: string[] = (data.dates || []).map((d: any) => d.date);
+                const dates: string[] = [...new Set((data.dates || []).map((d: any) => d.date))] as string[];
                 console.log(`[Snapshot] ✅ Loaded ${dates.length} snapshot dates for calendar`);
                 setSnapshotDates(dates);
-                // Mark the last 5 (already loaded on startup) as loaded
-                dates.slice(0, 5).forEach(d => loadedSnapshotDates.current.add(d));
             } catch (err) {
                 console.warn('[Snapshot] Could not load snapshot dates:', err);
             }
@@ -5171,15 +5169,28 @@ const App: React.FC = () => {
     // Load a single day snapshot on demand (when user navigates to a date not yet loaded)
     const loadSnapshotForDate = React.useCallback(async (
         targetDate: string,
-        options: { force?: boolean; replace?: boolean } = {}
+        options: { force?: boolean; replace?: boolean; schoolOverride?: 'ESL' | 'PEA' } = {}
     ) => {
-        const { force = false, replace = false } = options;
-        if (!force && loadedSnapshotDates.current.has(targetDate)) return; // already loaded
-        loadedSnapshotDates.current.add(targetDate); // mark as attempted
+        const { force = false, replace = false, schoolOverride } = options;
+        const snapshotSchool = schoolOverride ?? school;
+        const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool);
+        if (!force && loadedSnapshotDates.current.has(snapshotKey)) return; // already loaded
+        loadedSnapshotDates.current.add(snapshotKey); // mark as attempted
         try {
             const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-            const res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
-            if (!res.ok) return; // 404 = no snapshot for that date, that's fine
+            let res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
+            // Legacy snapshots were stored by date only. Only ESL may fall back to them;
+            // PEA must never hydrate from an unsuffixed snapshot because that can show ESL's DFP.
+            if (!res.ok && snapshotSchool === 'ESL') {
+                res = await fetch(`${apiBase}/daily-snapshot/${targetDate}`);
+            }
+            if (!res.ok) {
+                if (replace) {
+                    setPublishedSchedules(prev => ({ ...prev, [targetDate]: [] }));
+                    setBaselineSchedules(prev => ({ ...prev, [targetDate]: [] }));
+                }
+                return; // 404 = no snapshot for that date/location, that's fine
+            }
             const data = await res.json();
             const snap = data.snapshot;
             if (!snap) return;
@@ -5199,7 +5210,7 @@ const App: React.FC = () => {
                     if (!replace && prev[targetDate]) return prev; // don't overwrite existing baseline
                     return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
                 });
-                console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate}, ${events.length} events`);
+                console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate} (${snapshotSchool}), ${events.length} events`);
             }
             // Also merge PT-051 assessments from this snapshot
             if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
@@ -5218,7 +5229,7 @@ const App: React.FC = () => {
         } catch (err) {
             console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
         }
-    }, []);
+    }, [school]);
 
        // Show commit alert on app mount - DISABLED
        // useEffect(() => {
@@ -5348,6 +5359,14 @@ const App: React.FC = () => {
     const [snapshotDates, setSnapshotDates] = useState<string[]>([]);
     // Track which snapshot dates have already been loaded to avoid redundant fetches
     const loadedSnapshotDates = React.useRef<Set<string>>(new Set());
+
+    function getDailySnapshotKey(targetDate: string, targetSchool: 'ESL' | 'PEA' = school): string {
+        return `${targetDate}__${targetSchool}`;
+    }
+
+    function getDailySnapshotDate(snapshotDate: string): string {
+        return String(snapshotDate || '').replace(/__(ESL|PEA)$/i, '');
+    }
     
     // NDB state
     const [nextDayBuildEvents, setNextDayBuildEvents] = useState<Omit<ScheduleEvent, 'date'>[]>([]);
@@ -7627,7 +7646,7 @@ const App: React.FC = () => {
         // Only reset UI state that is specific to each school
         setNextDayBuildEvents([]); // Clear the build when changing schools
         setPublishedSchedules({}); // Clear published schedules on school change
-        void loadSnapshotForDate(date, { force: true, replace: true });
+        void loadSnapshotForDate(date, { force: true, replace: true, schoolOverride: newSchool });
     };
     
     // NOTE: School switch no longer resets events/courses to mock data.
@@ -8176,6 +8195,7 @@ const App: React.FC = () => {
 
         const apiBase = getApiBaseUrl();
         const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+        const snapshotKey = getDailySnapshotKey(targetDate);
 
         const staffEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
             e.instructor && !e.student && e.type !== 'logbook'
@@ -8252,7 +8272,7 @@ const App: React.FC = () => {
         });
 
         const snapshotPayload: Record<string, any> = {
-            date: targetDate,
+            date: snapshotKey,
             scheduleEvents: allEventsForDate,
             staffEvents: staffEventsForDate,
             traineeEvents: traineeEventsForDate,
@@ -8270,7 +8290,7 @@ const App: React.FC = () => {
             snapshotPayload.baselineEvents = baselineEventsForDate;
         }
 
-        console.log(`[Persist] Saving snapshot for ${targetDate}, ${allEventsForDate.length} events...`);
+        console.log(`[Persist] Saving snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events...`);
         fetch(`${apiBase}/daily-snapshot/save`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -8279,7 +8299,8 @@ const App: React.FC = () => {
         .then(res => res.json())
         .then(result => {
             if (result.success) {
-                console.log(`✅ [Persist] Saved snapshot for ${targetDate}, ${allEventsForDate.length} events`);
+                loadedSnapshotDates.current.add(snapshotKey);
+                console.log(`✅ [Persist] Saved snapshot for ${targetDate} (${school}), ${allEventsForDate.length} events`);
             } else {
                 console.warn(`⚠️ [Persist] Snapshot save failed for ${targetDate}:`, result.error);
             }
@@ -10677,8 +10698,9 @@ const App: React.FC = () => {
                 pt051AssessmentsObj[key] = assessment;
             });
 
+            const snapshotKey = getDailySnapshotKey(buildDfpDate);
             const snapshotPayload = {
-                date: buildDfpDate,
+                date: snapshotKey,
                 scheduleEvents: newEventsForDate,
                 staffEvents: staffEventsForDate,
                 traineeEvents: traineeEventsForDate,
@@ -10702,9 +10724,9 @@ const App: React.FC = () => {
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
-                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate}, ${newEventsForDate.length} events`);
+                    console.log(`\u2705 [Snapshot] Saved daily snapshot for ${buildDfpDate} (${school}), ${newEventsForDate.length} events`);
                     // Mark this date as loaded so loadSnapshotForDate won't overwrite it on navigation
-                    loadedSnapshotDates.current.add(buildDfpDate);
+                    loadedSnapshotDates.current.add(snapshotKey);
                 } else {
                     console.warn(`\u26A0\uFE0F [Snapshot] Save failed for ${buildDfpDate}:`, result.error);
                 }
@@ -11621,7 +11643,7 @@ updates.forEach(update => {
         const pollAlerts = async () => {
             try {
                 const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-                const res = await fetch(`${apiBase}/daily-snapshot/${date}`);
+                const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
                 if (!res.ok) return;
                 const data = await res.json();
                 const snap = data.snapshot;
@@ -11642,7 +11664,7 @@ updates.forEach(update => {
         const interval = setInterval(pollAlerts, 5 * 1000);
         return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [date]);
+    }, [date, school]);
 
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));

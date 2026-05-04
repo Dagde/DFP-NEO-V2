@@ -6833,7 +6833,9 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
       `SELECT date, "savedAt", "savedBy" FROM "DailySnapshot" ORDER BY date DESC`
     );
     const dates = (rows || []).map(r => ({
-      date: r.date,
+      date: String(r.date || '').replace(/__(ESL|PEA)$/i, ''),
+      snapshotKey: r.date,
+      school: (String(r.date || '').match(/__(ESL|PEA)$/i) || [])[1] || null,
       savedAt: r.savedAt,
       savedBy: r.savedBy
     }));
@@ -6849,9 +6851,20 @@ app.get('/api/daily-snapshot/dates', async (req, res) => {
 app.get('/api/daily-snapshot', async (req, res) => {
   try {
     const db = await getPrisma();
-    const rows = await db.$queryRawUnsafe(
-      `SELECT * FROM "DailySnapshot" ORDER BY date DESC LIMIT 5`
-    );
+    const school = String(req.query.school || '').toUpperCase();
+    const rows = (school === 'ESL')
+      ? await db.$queryRawUnsafe(
+          `SELECT * FROM "DailySnapshot" WHERE date LIKE $1::text OR date !~ '__(ESL|PEA)$' ORDER BY date DESC LIMIT 5`,
+          `%__${school}`
+        )
+      : (school === 'PEA')
+      ? await db.$queryRawUnsafe(
+          `SELECT * FROM "DailySnapshot" WHERE date LIKE $1::text ORDER BY date DESC LIMIT 5`,
+          `%__${school}`
+        )
+      : await db.$queryRawUnsafe(
+          `SELECT * FROM "DailySnapshot" ORDER BY date DESC LIMIT 5`
+        );
     console.log(`✅ GET /api/daily-snapshot - Loaded ${(rows||[]).length} recent snapshots`);
     res.json({ snapshots: rows || [] });
   } catch (error) {
@@ -6865,9 +6878,9 @@ app.get('/api/daily-snapshot/:date', async (req, res) => {
   try {
     const db = await getPrisma();
     const { date } = req.params;
-    // Validate date format
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+    // Validate date format. Location-aware snapshots use YYYY-MM-DD__ESL/PEA.
+    if (!/^\d{4}-\d{2}-\d{2}(?:__(?:ESL|PEA))?$/i.test(date)) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD or YYYY-MM-DD__ESL/PEA' });
     }
     const rows = await db.$queryRawUnsafe(
       `SELECT * FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
