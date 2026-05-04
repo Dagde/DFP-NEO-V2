@@ -56,6 +56,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
                             id={`start-date-${courseName.replace(/\s+/g, '-')}`}
                             value={startDate}
                             onChange={(e) => onUpdateStartDate(courseName, e.target.value)}
+                            data-course-date-input="true"
                             className="bg-transparent text-white/80 font-semibold border-0 rounded p-1 focus:ring-2 focus:ring-sky-500 focus:outline-none w-28 appearance-none"
                             style={{ colorScheme: 'dark' }}
                         />
@@ -67,6 +68,7 @@ const CourseDataWindow: React.FC<CourseDataWindowProps> = ({
                             id={`grad-date-${courseName.replace(/\s+/g, '-')}`}
                             value={gradDate}
                             onChange={(e) => onUpdateGradDate(courseName, e.target.value)}
+                            data-course-date-input="true"
                             className="bg-transparent text-white/80 font-semibold border-0 rounded p-1 focus:ring-2 focus:ring-sky-500 focus:outline-none w-28 appearance-none"
                             style={{ colorScheme: 'dark' }}
                         />

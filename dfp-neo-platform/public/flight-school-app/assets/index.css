@@ -640,6 +640,17 @@ html[data-theme="light"] body {
 [data-theme="light"] [data-course-color="true"] h3 {
     color: #ffffff !important;
 }
+[data-theme="light"] [data-course-color="true"] input[data-course-date-input="true"] {
+    background-color: transparent !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color-scheme: dark;
+}
+[data-theme="light"] [data-course-color="true"] input[data-course-date-input="true"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.9;
+}
 [data-theme="light"] [data-course-color="true"][class*="bg-sky-400"],
 [data-theme="light"] [data-course-color="true"] [class*="bg-sky-400"] { background-color: rgb(35,117,154) !important; }
 [data-theme="light"] [data-course-color="true"][class*="bg-sky-500"],
