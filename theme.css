@@ -536,7 +536,7 @@ html[data-theme="light"] body {
     text-shadow: 0 1px 2px rgba(0,0,0,0.48);
 }
 [data-theme="light"] [data-schedule-hour-line="true"] > div {
-    background-color: #D3D3D3 !important;
+    background-color: #E6E6E6 !important;
     width: 1px;
 }
 [data-theme="light"] [data-schedule-half-hour-line="true"] > div {
