@@ -189,7 +189,7 @@ const getEventBookingWindow = (
     event: ScheduleEvent,
     syllabusDetails: SyllabusItemDetail[]
 ): { start: number, end: number } => {
-    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber);
+    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
     if (syllabusItem) {
         const start = event.startTime - (syllabusItem.preFlightTime || 0);
         const end = event.startTime + event.duration + (syllabusItem.postFlightTime || 0);
@@ -202,7 +202,7 @@ const getEventBookingWindowForAlgo = (
     event: Omit<ScheduleEvent, 'date'> | { startTime: number, flightNumber: string, duration: number },
     syllabusDetails: SyllabusItemDetail[]
 ): { start: number, end: number } => {
-    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber);
+    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
     if (syllabusItem) {
         const start = event.startTime - syllabusItem.preFlightTime;
         const end = event.startTime + event.duration + syllabusItem.postFlightTime;
@@ -232,7 +232,7 @@ const getEventDayNightClassification = (
         return 'Day';
     }
     
-    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber);
+    const syllabusItem = syllabusDetails.find(s => s.id === event.flightNumber || s.code === event.flightNumber);
     if (syllabusItem && syllabusItem.dayNight) {
         return syllabusItem.dayNight;
     }
@@ -2212,7 +2212,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     if (placed) break;
                     for (const space of searchSpaces) {
                         if (placed) break;
-                        for (let time = space.start; time <= space.end - syllabusItem.duration; time += timeIncrement) {
+                        const earliestEventStart = isNightPass
+                            ? space.start + (syllabusItem.preFlightTime || 0)
+                            : space.start;
+                        const latestEventStart = isNightPass
+                            ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0)
+                            : space.end - syllabusItem.duration;
+
+                        for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
                             const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
                             if (result && typeof result === 'object' && 'id' in result) {
                                 generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
@@ -2405,7 +2412,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     );
 
                     if (firstNightEvent) {
-                        const firstSyllabus = syllabusDetails.find(s => s.id === firstNightEvent.flightNumber);
+                        const firstSyllabus = syllabusDetails.find(s => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
                         const secondSyllabus = syllabusItemForCheck;
                         
                         // This is the special crew turnaround time
@@ -2677,8 +2684,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
                     const firstEvent = sortedIpEvents[0];
                     const lastEvent = sortedIpEvents[sortedIpEvents.length - 1];
-                    const firstEventSyllabus = syllabusDetails.find(s => s.id === firstEvent.flightNumber);
-                    const lastEventSyllabus = syllabusDetails.find(s => s.id === lastEvent.flightNumber);
+                    const firstEventSyllabus = syllabusDetails.find(s => s.id === firstEvent.flightNumber || s.code === firstEvent.flightNumber);
+                    const lastEventSyllabus = syllabusDetails.find(s => s.id === lastEvent.flightNumber || s.code === lastEvent.flightNumber);
                     const dutyStartTime = firstEvent.startTime - (firstEventSyllabus?.preFlightTime || 0);
                     const dutyEndTime = lastEvent.startTime + lastEvent.duration + (lastEventSyllabus?.postFlightTime || 0);
                     if ((dutyEndTime - dutyStartTime) > maxCrewDutyPeriod) { _dRej.crewDutyPeriod++; continue; }
@@ -2833,7 +2840,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         const hasCommonCrew = currentCrew.some(p => p && existingCrew.includes(p));
                         
                         if (hasCommonCrew) {
-                            const existingSyllabus = syllabusDetails.find(s => s.id === e.flightNumber);
+                            const existingSyllabus = syllabusDetails.find(s => s.id === e.flightNumber || s.code === e.flightNumber);
                             turnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
                         } else {
                             turnaround = flightTurnaround;
@@ -2864,7 +2871,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (type === 'flight') {
             const isBnf = syllabusItem.code.startsWith('BNF');
             const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
-            if (startTime < (isBnf ? commenceNightFlying : flyingStartTime) || startTime + syllabusItem.duration > endTimeBoundary) {
+            const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
+            const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+            const startTimeBoundary = isBnf ? commenceNightFlying : flyingStartTime;
+            const violatesWindow = isBnf
+                ? bookingStart < startTimeBoundary || bookingEnd > endTimeBoundary
+                : startTime < startTimeBoundary || startTime + syllabusItem.duration > endTimeBoundary;
+            if (violatesWindow) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
                 return null;
             }
