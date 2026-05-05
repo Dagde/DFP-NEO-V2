@@ -49,12 +49,8 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         return `${year}-${month}-${day}`;
     };
        const combinedHistory = React.useMemo(() => {
-           // FIX: Add 'as const' to create a discriminated union for type-safe property access.
-              // Filter out LMP Score placeholder records - only show records with a date OR an instructor
-              const lmpItems = lmpScores
-                  .filter(score => (score.date && score.date.trim() !== '') || (score.instructor && score.instructor.trim() !== ''))
-                  .map(score => ({ ...score, type: 'LMP Score' as const }));
-           
+           const normalizeEvent = (value?: string) => (value || '').trim().replace(/\*/g, '').toUpperCase();
+
            // Filter out placeholder/empty PT-051 records - only show records with actual assessment data OR date+instructor
               // NOTE: isCompleted alone is NOT sufficient - historical seed records have isCompleted=true with no actual data
               // Events like mass briefs, CUT, TUT have no grade but DO have date+instructor - these should be shown
@@ -87,6 +83,18 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
               });
 
            const pt051Items = finalAssessments.map(assessment => ({ ...assessment, type: 'PT-051' as const }));
+
+           const pt051EventKeys = new Set(finalAssessments.map(assessment => normalizeEvent(assessment.flightNumber)));
+
+           // Score records are progression/completion markers. If a real PT-051 exists for
+           // the same event, hide the Score row so it cannot appear as a second assessment.
+           const lmpItems = lmpScores
+               .filter(score => {
+                   const hasDateOrInstructor = (score.date && score.date.trim() !== '') || (score.instructor && score.instructor.trim() !== '');
+                   if (!hasDateOrInstructor) return false;
+                   return !pt051EventKeys.has(normalizeEvent(score.event));
+               })
+               .map(score => ({ ...score, type: 'LMP Score' as const }));
            
            console.log('=== Building combinedHistory ===');
            console.log('LMP Scores:', lmpScores.length, lmpScores);
