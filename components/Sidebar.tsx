@@ -240,7 +240,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           </div>
 
           {/* Footer */}
-          <div className="p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center">
+          <div data-sidebar-user-footer="true" className="p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center">
             <span className="text-[10px] text-gray-500 font-light">
               {currentUserRank} {currentUserName.split(',')[0]}
             </span>

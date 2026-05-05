@@ -980,6 +980,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 <div data-schedule-corner="true" className="sticky top-0 left-0 z-40 bg-gray-800 border-r border-b border-gray-700 p-1 neo-build-header-cell">
                     <div className="flex items-center gap-1 h-full">
                         <div
+                            data-schedule-date-selector="true"
                             className={`relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer hover:bg-gray-600 transition-colors ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}
                             style={{height: "100%", width: "100%"}}
                             onClick={() => setShowDatePicker(prev => !prev)}
@@ -990,16 +991,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     event.stopPropagation();
                                     onDateChange(-1);
                                 }}
+                                data-schedule-date-arrow="true"
                                 className="text-gray-400 hover:text-white transition-colors p-0.5"
                             >
                                 ←
                             </button>
-                            <span className="text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap">{formattedDisplayDate}</span>
+                            <span data-schedule-date-text="true" className="text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap">{formattedDisplayDate}</span>
                             <button
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     onDateChange(1);
                                 }}
+                                data-schedule-date-arrow="true"
                                 className="text-gray-400 hover:text-white transition-colors p-0.5"
                             >
                                 →

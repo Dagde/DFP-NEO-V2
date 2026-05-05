@@ -116,7 +116,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </nav>
 
       {/* User Info Section - Bottom */}
-      <div className="flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center">
+      <div data-sidebar-user-footer="true" className="flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center">
         <span className="text-[9px] text-gray-300 font-semibold">{currentUserRank}</span>
         <span className="text-[9px] text-gray-300">{userSurname}</span>
         <span className="text-[9px] text-gray-300">{currentUserLocation || 'N/A'}</span>

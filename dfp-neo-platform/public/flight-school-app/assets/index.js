@@ -3201,7 +3201,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: formatCourseName(courseName) })
           ] }, courseName)) }) })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-gray-500 font-light", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { "data-sidebar-user-footer": "true", className: "p-2 border-t border-gray-700 flex-shrink-0 flex justify-center items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] text-gray-500 font-light", children: [
           currentUserRank,
           " ",
           currentUserName.split(",")[0]
@@ -3430,7 +3430,7 @@ const RightSidebar = ({
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-sidebar-user-footer": "true", className: "flex-shrink-0 border-t border-gray-700 p-4 flex flex-col items-center justify-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300 font-semibold", children: currentUserRank }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: userSurname }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[9px] text-gray-300", children: currentUserLocation || "N/A" }),
@@ -5916,6 +5916,7 @@ const ScheduleView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
+              "data-schedule-date-selector": "true",
               className: `relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer hover:bg-gray-600 transition-colors ${isNeoBuild ? "neo-build-date-indicator" : ""}`,
               style: { height: "100%", width: "100%" },
               onClick: () => setShowDatePicker((prev) => !prev),
@@ -5928,11 +5929,12 @@ const ScheduleView = ({
                       event.stopPropagation();
                       onDateChange(-1);
                     },
+                    "data-schedule-date-arrow": "true",
                     className: "text-gray-400 hover:text-white transition-colors p-0.5",
                     children: "←"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -5940,6 +5942,7 @@ const ScheduleView = ({
                       event.stopPropagation();
                       onDateChange(1);
                     },
+                    "data-schedule-date-arrow": "true",
                     className: "text-gray-400 hover:text-white transition-colors p-0.5",
                     children: "→"
                   }
