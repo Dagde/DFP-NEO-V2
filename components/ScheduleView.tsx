@@ -981,7 +981,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                     <div className="flex items-center gap-1 h-full">
                         <div
                             data-schedule-date-selector="true"
-                            className={`relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer hover:bg-gray-600 transition-colors ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}
+                            className={`relative bg-gray-700 rounded-md flex items-center justify-center px-3 gap-2 cursor-pointer ${isNeoBuild ? 'neo-build-date-indicator' : ''}`}
                             style={{height: "100%", width: "100%"}}
                             onClick={() => setShowDatePicker(prev => !prev)}
                             title="Open date picker"
