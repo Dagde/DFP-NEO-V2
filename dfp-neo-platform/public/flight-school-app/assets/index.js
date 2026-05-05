@@ -8513,7 +8513,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const combinedHistory = React.useMemo(() => {
-    const normalizeEvent = (value) => (value || "").trim().replace(/\*/g, "").toUpperCase();
+    const lmpItems = lmpScores.filter((score) => score.date && score.date.trim() !== "" || score.instructor && score.instructor.trim() !== "").map((score) => ({ ...score, type: "LMP Score" }));
     const completedAssessments = assessments2.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
       const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
@@ -8538,12 +8538,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
       return mostRecentKeys.has(assessment.id);
     });
     const pt051Items = finalAssessments.map((assessment) => ({ ...assessment, type: "PT-051" }));
-    const pt051EventKeys = new Set(finalAssessments.map((assessment) => normalizeEvent(assessment.flightNumber)));
-    const lmpItems = lmpScores.filter((score) => {
-      const hasDateOrInstructor = score.date && score.date.trim() !== "" || score.instructor && score.instructor.trim() !== "";
-      if (!hasDateOrInstructor) return false;
-      return !pt051EventKeys.has(normalizeEvent(score.event));
-    }).map((score) => ({ ...score, type: "LMP Score" }));
     console.log("=== Building combinedHistory ===");
     console.log("LMP Scores:", lmpScores.length, lmpScores);
     console.log("All PT-051 Assessments:", assessments2.length, assessments2);
@@ -45081,7 +45075,6 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const [dcoResult, setDcoResult] = reactExports.useState(initialAssessment?.dcoResult || "");
   const previousPerformance = reactExports.useMemo(() => {
     const history = [];
-    const normalizeEvent = (value) => (value || "").trim().replace(/\*/g, "").toUpperCase();
     const isFlightOrFtd = (eventName) => {
       const detail = syllabusDetails.find((d) => d.id === eventName || d.code === eventName);
       if (detail) {
@@ -45095,24 +45088,13 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
       }
       return false;
     };
-    const realAssessmentEvents = new Set(
-      pt051Assessments.filter((a) => {
-        const isThisTrainee = a.traineeFullName === trainee.fullName;
-        const isNotCurrentEvent = a.eventId !== event.id;
-        const hasRealAssessmentData = a.overallGrade !== null && a.overallGrade !== void 0 || a.overallResult !== null && a.overallResult !== void 0 || a.scores && a.scores.some((score) => score.grade !== null && score.grade !== void 0) || Boolean(a.date && a.instructorName);
-        return isThisTrainee && isNotCurrentEvent && hasRealAssessmentData;
-      }).map((a) => normalizeEvent(a.flightNumber))
-    );
     lmpScores.forEach((s) => {
-      if (realAssessmentEvents.has(normalizeEvent(s.event))) return;
-      const timestamp = new Date(s.date).getTime();
-      if (Number.isNaN(timestamp)) return;
       if (isFlightOrFtd(s.event)) {
         history.push({
           name: s.event,
           score: s.score,
           date: s.date,
-          timestamp
+          timestamp: new Date(s.date).getTime()
         });
       }
     });
@@ -76747,6 +76729,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                         console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                         setScores((prev) => {
                           const existing = prev.get(assessment.traineeFullName) || [];
+                          const alreadyHas = existing.some((s) => s.event === eventId);
+                          if (alreadyHas) return prev;
                           const newScore = {
                             event: eventId,
                             score: overallScore,
@@ -76755,11 +76739,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                             notes: "",
                             details: []
                           };
-                          const existingIndex = existing.findIndex((s) => s.event === eventId);
-                          const nextScores = existingIndex >= 0 ? existing.map((score, index) => index === existingIndex ? newScore : score) : [...existing, newScore];
                           const updated = new Map(prev);
-                          updated.set(assessment.traineeFullName, nextScores);
-                          console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: synced ${eventId}`);
+                          updated.set(assessment.traineeFullName, [...existing, newScore]);
+                          console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
                           return updated;
                         });
                       } else {

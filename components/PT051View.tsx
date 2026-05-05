@@ -297,7 +297,6 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     
     const previousPerformance = useMemo(() => {
         const history: { name: string; score: number | string; date: string; timestamp: number }[] = [];
-        const normalizeEvent = (value?: string) => (value || '').trim().replace(/\*/g, '').toUpperCase();
         const isFlightOrFtd = (eventName: string) => {
             const detail = syllabusDetails.find(d => d.id === eventName || d.code === eventName);
             if (detail) {
@@ -311,30 +310,13 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             }
             return false;
         };
-        const realAssessmentEvents = new Set(
-            pt051Assessments
-                .filter(a => {
-                    const isThisTrainee = a.traineeFullName === trainee.fullName;
-                    const isNotCurrentEvent = a.eventId !== event.id;
-                    const hasRealAssessmentData =
-                        a.overallGrade !== null && a.overallGrade !== undefined ||
-                        a.overallResult !== null && a.overallResult !== undefined ||
-                        (a.scores && a.scores.some(score => score.grade !== null && score.grade !== undefined)) ||
-                        Boolean(a.date && a.instructorName);
-                    return isThisTrainee && isNotCurrentEvent && hasRealAssessmentData;
-                })
-                .map(a => normalizeEvent(a.flightNumber))
-        );
         lmpScores.forEach(s => {
-             if (realAssessmentEvents.has(normalizeEvent(s.event))) return;
-             const timestamp = new Date(s.date).getTime();
-             if (Number.isNaN(timestamp)) return;
              if (isFlightOrFtd(s.event)) {
                  history.push({
                      name: s.event,
                      score: s.score,
                      date: s.date,
-                     timestamp
+                     timestamp: new Date(s.date).getTime()
                  });
              }
         });

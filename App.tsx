@@ -14847,6 +14847,8 @@ updates.forEach(update => {
                                             // scheduling immediately reflect the completed event.
                                             setScores(prev => {
                                                 const existing = prev.get(assessment.traineeFullName) || [];
+                                                const alreadyHas = existing.some(s => s.event === eventId);
+                                                if (alreadyHas) return prev;
                                                 const newScore: Score = {
                                                     event: eventId,
                                                     score: overallScore as 0 | 1 | 2 | 3 | 4 | 5,
@@ -14855,13 +14857,9 @@ updates.forEach(update => {
                                                     notes: '',
                                                     details: [],
                                                 };
-                                                const existingIndex = existing.findIndex(s => s.event === eventId);
-                                                const nextScores = existingIndex >= 0
-                                                    ? existing.map((score, index) => index === existingIndex ? newScore : score)
-                                                    : [...existing, newScore];
                                                 const updated = new Map(prev);
-                                                updated.set(assessment.traineeFullName, nextScores);
-                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: synced ${eventId}`);
+                                                updated.set(assessment.traineeFullName, [...existing, newScore]);
+                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
                                                 return updated;
                                             });
                                         } else {
