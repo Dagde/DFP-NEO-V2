@@ -45067,7 +45067,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     }
     return parsed;
   });
-  const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade || null);
+  const [overallGrade, setOverallGrade] = reactExports.useState(initialAssessment?.overallGrade ?? null);
   const [overallResult, setOverallResult] = reactExports.useState(initialAssessment?.overallResult || null);
   const [groundSchoolAssessment, setGroundSchoolAssessment] = reactExports.useState(
     initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: void 0 }

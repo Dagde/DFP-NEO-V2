@@ -288,7 +288,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         return parsed;
     });
     
-    const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade || null);
+    const [overallGrade, setOverallGrade] = useState<Pt051OverallGrade | null>(initialAssessment?.overallGrade ?? null);
     const [overallResult, setOverallResult] = useState<'P' | 'F' | null>(initialAssessment?.overallResult || null);
     const [groundSchoolAssessment, setGroundSchoolAssessment] = useState(
         initialAssessment?.groundSchoolAssessment || { isAssessment: false, result: undefined }

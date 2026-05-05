@@ -8238,6 +8238,12 @@ function mapRowToAssessment(row) {
   // comments is the structured "QFI: ...\nWeather: ..." string
   // overallComments is extracted from it for backward compatibility
   const overallComments = extractOverallComment(row.comments);
+  const rawOverallGrade = row.overallGrade;
+  const overallGrade = rawOverallGrade === null || rawOverallGrade === undefined || rawOverallGrade === 'No Grade'
+    ? (rawOverallGrade || null)
+    : Number.isNaN(Number(rawOverallGrade))
+      ? rawOverallGrade
+      : Number(rawOverallGrade);
 
   return {
     id:                  row.eventId,           // app uses eventId as the key identifier
@@ -8247,7 +8253,7 @@ function mapRowToAssessment(row) {
     flightNumber:        row.flightNumber,
     date:                row.date,
     instructorName:      row.instructorName,
-    overallGrade:        row.overallGrade,
+    overallGrade:        overallGrade,
     overallResult:       row.overallResult || null,
     dcoResult:           row.dcoResult || '',
     overallComments:     overallComments,
