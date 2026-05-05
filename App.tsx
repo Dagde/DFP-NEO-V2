@@ -2415,16 +2415,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         const firstSyllabus = syllabusDetails.find(s => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
                         const secondSyllabus = syllabusItemForCheck;
                         
-                        // This is the special crew turnaround time
-                        const crewTurnaround = (firstSyllabus?.postFlightTime || 0) + (secondSyllabus.preFlightTime || 0);
-                        
-                        // The earliest the INSTRUCTOR is available is after their first debrief
+                        // Night wave two must satisfy BOTH the LMP brief/debrief window
+                        // and the configured flight turnaround from Scheduling Rules.
                         const earliestBriefStartTimeForInstructor = firstNightEvent.startTime + firstNightEvent.duration + (firstSyllabus?.postFlightTime || 0);
+                        const earliestEventStartByTurnaround = firstNightEvent.startTime + firstNightEvent.duration + flightTurnaround;
                         
                         // The proposed start time is for the flight itself. We need to check the brief starts after the required debrief ends.
                         const proposedBriefStartTime = startTime - (syllabusItemForCheck.preFlightTime || 0);
 
-                        if (proposedBriefStartTime < earliestBriefStartTimeForInstructor) {
+                        if (proposedBriefStartTime < earliestBriefStartTimeForInstructor || startTime < earliestEventStartByTurnaround) {
                             return null; // Instructor is not available yet due to crew turnaround
                         }
                     }
@@ -2841,7 +2840,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         
                         if (hasCommonCrew) {
                             const existingSyllabus = syllabusDetails.find(s => s.id === e.flightNumber || s.code === e.flightNumber);
-                            turnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
+                            const lmpCrewTurnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
+                            turnaround = Math.max(flightTurnaround, lmpCrewTurnaround);
                         } else {
                             turnaround = flightTurnaround;
                         }

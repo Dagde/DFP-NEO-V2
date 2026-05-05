@@ -67129,11 +67129,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           );
           if (firstNightEvent) {
             const firstSyllabus = syllabusDetails.find((s) => s.id === firstNightEvent.flightNumber || s.code === firstNightEvent.flightNumber);
-            const secondSyllabus = syllabusItemForCheck;
-            (firstSyllabus?.postFlightTime || 0) + (secondSyllabus.preFlightTime || 0);
             const earliestBriefStartTimeForInstructor = firstNightEvent.startTime + firstNightEvent.duration + (firstSyllabus?.postFlightTime || 0);
+            const earliestEventStartByTurnaround = firstNightEvent.startTime + firstNightEvent.duration + flightTurnaround;
             const proposedBriefStartTime = startTime - (syllabusItemForCheck.preFlightTime || 0);
-            if (proposedBriefStartTime < earliestBriefStartTimeForInstructor) {
+            if (proposedBriefStartTime < earliestBriefStartTimeForInstructor || startTime < earliestEventStartByTurnaround) {
               return null;
             }
           }
@@ -67436,7 +67435,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             const hasCommonCrew = currentCrew.some((p) => p && existingCrew.includes(p));
             if (hasCommonCrew) {
               const existingSyllabus = syllabusDetails.find((s) => s.id === e.flightNumber || s.code === e.flightNumber);
-              turnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
+              const lmpCrewTurnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
+              turnaround = Math.max(flightTurnaround, lmpCrewTurnaround);
             } else {
               turnaround = flightTurnaround;
             }
