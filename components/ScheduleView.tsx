@@ -992,18 +992,18 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                     onDateChange(-1);
                                 }}
                                 data-schedule-date-arrow="true"
-                                className="text-gray-400 hover:text-white transition-colors p-0.5"
+                                className="p-0.5"
                             >
                                 ←
                             </button>
-                            <span data-schedule-date-text="true" className="text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap">{formattedDisplayDate}</span>
+                            <span data-schedule-date-text="true" className="text-xs font-bold tracking-wider whitespace-nowrap">{formattedDisplayDate}</span>
                             <button
                                 onClick={(event) => {
                                     event.stopPropagation();
                                     onDateChange(1);
                                 }}
                                 data-schedule-date-arrow="true"
-                                className="text-gray-400 hover:text-white transition-colors p-0.5"
+                                className="p-0.5"
                             >
                                 →
                             </button>

@@ -5930,11 +5930,11 @@ const ScheduleView = ({
                       onDateChange(-1);
                     },
                     "data-schedule-date-arrow": "true",
-                    className: "text-gray-400 hover:text-white transition-colors p-0.5",
+                    className: "p-0.5",
                     children: "←"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs text-gray-300 font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "data-schedule-date-text": "true", className: "text-xs font-bold tracking-wider whitespace-nowrap", children: formattedDisplayDate }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
                   {
@@ -5943,7 +5943,7 @@ const ScheduleView = ({
                       onDateChange(1);
                     },
                     "data-schedule-date-arrow": "true",
-                    className: "text-gray-400 hover:text-white transition-colors p-0.5",
+                    className: "p-0.5",
                     children: "→"
                   }
                 ),
