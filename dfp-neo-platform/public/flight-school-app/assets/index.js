@@ -4700,7 +4700,8 @@ const AircraftAvailabilityOverlay = ({
   onAvailabilityChange,
   onUserChange,
   initialAvailability = 15,
-  apiBase: apiBase2
+  apiBase: apiBase2,
+  showLiveAvailabilityLine
 }) => {
   const [currentAvailable, setCurrentAvailable] = reactExports.useState(initialAvailability);
   const [snapshots, setSnapshots] = reactExports.useState([]);
@@ -4965,7 +4966,7 @@ const AircraftAvailabilityOverlay = ({
   };
   const localDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const todayStr = localDateStr(now);
-  const isToday = dateString ? dateString === todayStr : localDateStr(currentDate) === todayStr;
+  const isToday = showLiveAvailabilityLine ?? (dateString ? dateString === todayStr : localDateStr(currentDate) === todayStr);
   const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
@@ -5307,6 +5308,12 @@ const ScheduleView = ({
       timeZone: "UTC"
     });
   }, [date]);
+  const showLiveAvailabilityLine = reactExports.useMemo(() => {
+    const browserToday = /* @__PURE__ */ new Date();
+    const browserTodayStr = `${browserToday.getFullYear()}-${String(browserToday.getMonth() + 1).padStart(2, "0")}-${String(browserToday.getDate()).padStart(2, "0")}`;
+    const appTodayStr = `${currentTime.getUTCFullYear()}-${String(currentTime.getUTCMonth() + 1).padStart(2, "0")}-${String(currentTime.getUTCDate()).padStart(2, "0")}`;
+    return date === browserTodayStr && date === appTodayStr;
+  }, [date, currentTime]);
   reactExports.useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
@@ -6047,7 +6054,8 @@ const ScheduleView = ({
                   pixelsPerHour: PIXELS_PER_HOUR$5 * zoomLevel,
                   startHour: START_HOUR$5,
                   onAvailabilityChange,
-                  onUserChange: onUserAvailabilityChange
+                  onUserChange: onUserAvailabilityChange,
+                  showLiveAvailabilityLine
                 }
               ),
               renderEvents(),

@@ -23,6 +23,9 @@ interface AircraftAvailabilityOverlayProps {
     initialAvailability?: number;
     // apiBase: for DB fetch on first load of a date with no localStorage data
     apiBase?: string;
+    // Explicitly controls the solid live availability line. Historical dates
+    // should render only the dotted trace.
+    showLiveAvailabilityLine?: boolean;
 }
 
 const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = ({
@@ -39,6 +42,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     onUserChange,
     initialAvailability = 15,
     apiBase,
+    showLiveAvailabilityLine,
 }) => {
     const [currentAvailable, setCurrentAvailable] = useState<number>(initialAvailability);
     const [snapshots, setSnapshots] = useState<AircraftAvailabilitySnapshot[]>([]);
@@ -331,7 +335,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     // (currentDate may be created from a YYYY-MM-DD string which is parsed as UTC midnight)
     const localDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const todayStr = localDateStr(now);
-    const isToday = dateString ? (dateString === todayStr) : (localDateStr(currentDate) === todayStr);
+    const isToday = showLiveAvailabilityLine ?? (dateString ? (dateString === todayStr) : (localDateStr(currentDate) === todayStr));
     const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
 
     return (
