@@ -4966,7 +4966,7 @@ const AircraftAvailabilityOverlay = ({
   const localDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const todayStr = localDateStr(now);
   const isToday = dateString ? dateString === todayStr : localDateStr(currentDate) === todayStr;
-  const solidStartX = isToday ? Math.min(currentTimeX, endOfDayX - 1) : 0;
+  const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
     {
@@ -4975,7 +4975,7 @@ const AircraftAvailabilityOverlay = ({
       style: { zIndex: 5, pointerEvents: "none" },
       children: [
         renderHistoricalLines(),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+        isToday && /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "line",
             {

@@ -324,14 +324,15 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
         return lines;
     };
 
-    // Solid line: starts at current time for today, X=0 for other dates
+    // Solid line is the live/current availability marker. It should only appear
+    // on the current day; past days are represented by the dotted history trace.
     // Use dateString prop if provided (canonical YYYY-MM-DD from App.tsx, timezone-correct).
     // Fallback: use local date string comparison to avoid UTC/local timezone mismatch
     // (currentDate may be created from a YYYY-MM-DD string which is parsed as UTC midnight)
     const localDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const todayStr = localDateStr(now);
     const isToday = dateString ? (dateString === todayStr) : (localDateStr(currentDate) === todayStr);
-    const solidStartX = isToday ? Math.min(currentTimeX, endOfDayX - 1) : 0;
+    const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
 
     return (
         <>
@@ -341,7 +342,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 style={{ zIndex: 5, pointerEvents: 'none' }}
             >
                 {renderHistoricalLines()}
-                <g>
+                {isToday && <g>
                     <line
                         x1={solidStartX} y1={displayY}
                         x2={endOfDayX}   y2={displayY}
@@ -356,7 +357,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                         style={{ pointerEvents: 'auto', cursor: 'ns-resize' }}
                         onMouseDown={handleLineMouseDown}
                     />
-                </g>
+                </g>}
             </svg>
         </>
     );
