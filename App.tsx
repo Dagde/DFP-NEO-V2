@@ -4125,6 +4125,11 @@ const App: React.FC = () => {
         freezeStateRef.current = freezeState;
     }, [freezeState]);
 
+    React.useEffect(() => {
+        const appTitle = localStorage.getItem('dfp_app_title');
+        document.title = appTitle || 'Flight School Scheduler - v2024-12-08-2';
+    }, []);
+
     // Wrap String.prototype.split to catch errors
     React.useEffect(() => {
       const originalSplit = String.prototype.split;

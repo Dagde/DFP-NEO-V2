@@ -64,6 +64,8 @@
       const email = urlParams.get('email');
       const role = urlParams.get('role');
       const isActive = urlParams.get('isActive');
+      const appEdition = urlParams.get('appEdition');
+      const appTitle = urlParams.get('appTitle');
 
       console.log('[SSO] URL params - userId:', userId, 'username:', username);
 
@@ -96,6 +98,17 @@
         if (token) {
           localStorage.setItem('dfp_session_token', token);
           localStorage.setItem('dfp_session_expires', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+        }
+
+        if (appEdition) {
+          localStorage.setItem('dfp_app_edition', appEdition);
+        } else {
+          localStorage.removeItem('dfp_app_edition');
+        }
+        if (appTitle) {
+          localStorage.setItem('dfp_app_title', appTitle);
+        } else {
+          localStorage.removeItem('dfp_app_title');
         }
 
         console.log('[SSO] Session stored, redirecting to app');

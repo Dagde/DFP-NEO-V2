@@ -68264,6 +68264,10 @@ const App = () => {
     freezeStateRef.current = freezeState;
   }, [freezeState]);
   React.useEffect(() => {
+    const appTitle = localStorage.getItem("dfp_app_title");
+    document.title = appTitle || "Flight School Scheduler - v2024-12-08-2";
+  }, []);
+  React.useEffect(() => {
     const originalSplit = String.prototype.split;
     String.prototype.split = function(...args) {
       if (this === void 0 || this === null) {
