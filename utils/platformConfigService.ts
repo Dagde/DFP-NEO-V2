@@ -31,6 +31,9 @@ export interface PlatformResourcePool {
     aircraft?: number;
     ftd?: number;
     cpt?: number;
+    ground?: number;
+    standby?: number;
+    applyToV2Runtime?: boolean;
     [key: string]: any;
   };
 }
@@ -108,4 +111,18 @@ export const getLocationResourcePool = (
   ));
 
   return pools[0] || null;
+};
+
+export const isResourcePoolRuntimeEnabled = (
+  pool: PlatformResourcePool | null,
+): boolean => pool?.settings?.applyToV2Runtime === true;
+
+export const getResourcePoolCount = (
+  pool: PlatformResourcePool | null,
+  key: 'aircraft' | 'ftd' | 'cpt' | 'ground' | 'standby',
+  fallback: number,
+): number => {
+  if (!isResourcePoolRuntimeEnabled(pool)) return fallback;
+  const value = Number(pool?.settings?.[key]);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
 };

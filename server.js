@@ -4844,9 +4844,12 @@ async function seedCommercialConfigIfEmpty(db) {
       VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, 'PC-21', $2, $3, 'Shared', 'ACTIVE', $4::jsonb, $5::timestamp, $5::timestamp)
       ON CONFLICT ("code") DO NOTHING
     `, locationCode, `${locationCode}-PC21-POOL`, `${locationName} PC-21 Resource Pool`, JSON.stringify({
+      applyToV2Runtime: false,
       aircraft: Number(settings.availableAircraftCount ?? 24),
       ftd: Number(settings.availableFtdCount ?? 5),
       cpt: Number(settings.availableCptCount ?? 5),
+      standby: 4,
+      ground: 6,
     }), now);
   }
 

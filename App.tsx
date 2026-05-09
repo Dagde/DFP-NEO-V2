@@ -11,7 +11,13 @@ import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
-import { getLocationCodesForCurrentRuntime, getLocationResourcePool, loadPlatformConfigFromDB, PlatformConfig } from './utils/platformConfigService';
+import {
+    getLocationCodesForCurrentRuntime,
+    getLocationResourcePool,
+    getResourcePoolCount,
+    loadPlatformConfigFromDB,
+    PlatformConfig,
+} from './utils/platformConfigService';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -4440,6 +4446,7 @@ const App: React.FC = () => {
                 pool: activePlatformResourcePool.code,
                 poolType: activePlatformResourcePool.poolType,
                 aircraftType: activePlatformResourcePool.aircraftTypeCode,
+                appliesToV2Runtime: activePlatformResourcePool.settings?.applyToV2Runtime === true,
                 settings: activePlatformResourcePool.settings,
             });
         } else {
@@ -5540,6 +5547,11 @@ const App: React.FC = () => {
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
     const [availableFtdCount, setAvailableFtdCount] = useState(school === 'ESL' ? 5 : 4);
     const [availableCptCount, setAvailableCptCount] = useState(4);
+    const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, 'aircraft', 24);
+    const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, 'ftd', availableFtdCount);
+    const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, 'cpt', availableCptCount);
+    const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, 'standby', 4);
+    const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, 'ground', 6);
     const [flyingStartTime, setFlyingStartTime] = useState(8.0); // 08:00
     const [flyingEndTime, setFlyingEndTime] = useState(17.0); // 17:00
     const [ftdStartTime, setFtdStartTime] = useState(8.0); // 08:00
@@ -6441,8 +6453,10 @@ const App: React.FC = () => {
     const onDiscardRef = useRef<() => void>(() => {});
     
     const buildResources = useMemo(() => {
-        // PC-21 count is fixed at 24
-        const pc21Count = 24;
+        // Stage 3: resource rows may come from Platform Configuration only when
+        // the selected location pool explicitly opts in. Otherwise V2 behaviour
+        // remains unchanged.
+        const pc21Count = configuredAirframeCount;
         
         // Check for deployment events that overlap with the current date
         let deploymentCount = 0;
@@ -6494,7 +6508,7 @@ const App: React.FC = () => {
         });
         
         // Calculate dynamic STBY line count based on actual STBY events
-        let stbyLineCount = 4; // Minimum 4 STBY lines
+        let stbyLineCount = configuredStandbyCount; // Minimum configured STBY lines
         
         // For next day build views, check how many STBY lines are actually used
         if (['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'BuildAnalysis'].includes(activeView)) {
@@ -6509,7 +6523,7 @@ const App: React.FC = () => {
                     return match ? parseInt(match[1]) : 0;
                 }));
                 
-                stbyLineCount = Math.max(4, maxStbyLine); // At least 4, or more if needed
+                stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine); // At least configured minimum, or more if needed
             }
         } else {
             // For published schedules, check the events for that date
@@ -6524,7 +6538,7 @@ const App: React.FC = () => {
                     return match ? parseInt(match[1]) : 0;
                 }));
                 
-                stbyLineCount = Math.max(4, maxStbyLine);
+                stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine);
             }
         }
         
@@ -6533,14 +6547,24 @@ const App: React.FC = () => {
             'Duty Sup',
             'TWR DI',
             ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
-            ...Array.from({ length: availableFtdCount }, (_, i) => `FTD ${i + 1}`),
-            ...Array.from({ length: availableCptCount }, (_, i) => `CPT ${i + 1}`),
-            ...Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`),
+            ...Array.from({ length: configuredFtdCount }, (_, i) => `FTD ${i + 1}`),
+            ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
+            ...Array.from({ length: configuredGroundCount }, (_, i) => `Ground ${i + 1}`),
         ];
         
         console.log('Built all resources:', allResources, 'STBY lines:', stbyLineCount);
         return allResources;
-    }, [availableFtdCount, availableCptCount, availableAircraftCount, date, activeView, publishedSchedules, nextDayBuildEvents]);
+    }, [
+        configuredAirframeCount,
+        configuredFtdCount,
+        configuredCptCount,
+        configuredStandbyCount,
+        configuredGroundCount,
+        date,
+        activeView,
+        publishedSchedules,
+        nextDayBuildEvents,
+    ]);
     
     // Filter resources to only show those with events (for schedule views)
     const getFilteredResources = useCallback((events: ScheduleEvent[], allResources: string[]) => {
@@ -13193,10 +13217,10 @@ updates.forEach(update => {
                            instructors={instructorsData.map(i => i.name)}
                            traineesData={traineesData}
                            timezoneOffset={timezoneOffset}
-                           airframeCount={24}
-                           standbyCount={4}
-                           ftdCount={availableFtdCount}
-                           cptCount={availableCptCount}
+                           airframeCount={configuredAirframeCount}
+                           standbyCount={configuredStandbyCount}
+                           ftdCount={configuredFtdCount}
+                           cptCount={configuredCptCount}
                            onUpdateEvent={handleScheduleUpdate}
                            onSelectEvent={handleOpenModal}
                            onReorderResources={() => {}}
@@ -13247,7 +13271,7 @@ updates.forEach(update => {
                                await postAvailabilityEvent(
                                    count,
                                    'change',
-                                   undefined,
+                                   configuredAirframeCount,
                                    `Aircraft availability updated via overlay: ${count}`
                                );
                                console.log(`[AV] ✅ DB event posted for user drag: ${count}`);
@@ -13888,10 +13912,10 @@ updates.forEach(update => {
                             resources={buildResources}
                             instructors={instructorsData.map(i => i.name)}
                             traineesData={traineesData}
-                            airframeCount={24}
-                            standbyCount={4}
-                            ftdCount={availableFtdCount}
-                            cptCount={availableCptCount}
+                            airframeCount={configuredAirframeCount}
+                            standbyCount={configuredStandbyCount}
+                            ftdCount={configuredFtdCount}
+                            cptCount={configuredCptCount}
                             onUpdateEvent={handleNextDayScheduleUpdate}
                             onSelectEvent={(e) => handleOpenModal({...e, date: buildDfpDate}, {})}
                             onReorderResources={() => {}}
@@ -14777,7 +14801,7 @@ updates.forEach(update => {
                           cancellationCodes={cancellationCodes}
                        dayFlyingStart={`${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round((flyingStartTime % 1) * 60).toString().padStart(2, "0")}`}
                        dayFlyingEnd={`${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round((flyingEndTime % 1) * 60).toString().padStart(2, "0")}`}
-                       totalAircraft={24}
+                       totalAircraft={configuredAirframeCount}
                        currentAircraftAvailable={availableAircraftCount}
                        settingsLoaded={settingsLoaded}
                        organisationSettings={organisationSettings}

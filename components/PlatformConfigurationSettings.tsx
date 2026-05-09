@@ -116,10 +116,27 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           aircraftTypeCode: prev.aircraftTypes[0]?.code || 'PC-21',
           poolType: 'Dedicated',
           status: 'ACTIVE',
-          settings: {},
+          settings: {
+            applyToV2Runtime: false,
+            aircraft: 24,
+            ftd: 5,
+            cpt: 4,
+            standby: 4,
+            ground: 6,
+          },
         },
       ],
     }));
+  };
+
+  const updateResourcePoolSettings = (index: number, changes: Record<string, any>) => {
+    const currentSettings = config.resourcePools[index]?.settings || {};
+    updateRow('resourcePools', index, {
+      settings: {
+        ...currentSettings,
+        ...changes,
+      },
+    });
   };
 
   const save = async () => {
@@ -159,7 +176,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div>
             <h3 className="text-lg font-bold text-cyan-100">Platform Configuration</h3>
             <p className="mt-1 text-sm text-cyan-100/70">
-              Stage-one commercial operating model. Existing V2 scheduling still runs from current settings while this foundation is populated and validated.
+              Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default.
             </p>
           </div>
           <button
@@ -252,6 +269,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
                 <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEdit} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
                 <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEdit} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
+                <ToggleField
+                  label="Apply to V2 runtime"
+                  checked={pool.settings?.applyToV2Runtime === true}
+                  disabled={!canEdit}
+                  onChange={(checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <NumberField label="Aircraft" value={pool.settings?.aircraft ?? 24} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                  <NumberField label="FTD" value={pool.settings?.ftd ?? 5} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                  <NumberField label="CPT" value={pool.settings?.cpt ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                  <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
+                  <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
+                </div>
               </div>
             ))}
           </div>
@@ -349,6 +379,19 @@ const NumberField = ({ label, value, disabled, onChange }: { label: string; valu
   <label>
     <span className={labelClass}>{label}</span>
     <input className={fieldClass} type="number" value={value ?? 0} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+  </label>
+);
+
+const ToggleField = ({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled: boolean; onChange: (checked: boolean) => void }) => (
+  <label className="flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2">
+    <span className="text-sm font-semibold text-gray-200">{label}</span>
+    <input
+      type="checkbox"
+      className="h-5 w-5 rounded border-gray-500 accent-cyan-500"
+      checked={checked}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.checked)}
+    />
   </label>
 );
 

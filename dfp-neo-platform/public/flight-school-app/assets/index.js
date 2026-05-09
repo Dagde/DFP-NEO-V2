@@ -1625,6 +1625,12 @@ const getLocationResourcePool = (config, locationCode) => {
   const pools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE" && pool.locationCode === locationCode && pool.poolType === "Shared");
   return pools[0] || null;
 };
+const isResourcePoolRuntimeEnabled = (pool) => pool?.settings?.applyToV2Runtime === true;
+const getResourcePoolCount = (pool, key, fallback) => {
+  if (!isResourcePoolRuntimeEnabled(pool)) return fallback;
+  const value = Number(pool?.settings?.[key]);
+  return Number.isFinite(value) && value >= 0 ? value : fallback;
+};
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
   const existing = pendingAudits.get(key);
@@ -56529,10 +56535,26 @@ const PlatformConfigurationSettings = ({
           aircraftTypeCode: prev.aircraftTypes[0]?.code || "PC-21",
           poolType: "Dedicated",
           status: "ACTIVE",
-          settings: {}
+          settings: {
+            applyToV2Runtime: false,
+            aircraft: 24,
+            ftd: 5,
+            cpt: 4,
+            standby: 4,
+            ground: 6
+          }
         }
       ]
     }));
+  };
+  const updateResourcePoolSettings = (index, changes) => {
+    const currentSettings = config.resourcePools[index]?.settings || {};
+    updateRow("resourcePools", index, {
+      settings: {
+        ...currentSettings,
+        ...changes
+      }
+    });
   };
   const save = async () => {
     if (!canEdit) return;
@@ -56563,7 +56585,7 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-cyan-100", children: "Platform Configuration" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Stage-one commercial operating model. Existing V2 scheduling still runs from current settings while this foundation is populated and validated." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
@@ -56633,7 +56655,23 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            ToggleField,
+            {
+              label: "Apply to V2 runtime",
+              checked: pool.settings?.applyToV2Runtime === true,
+              disabled: !canEdit,
+              onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "FTD", value: pool.settings?.ftd ?? 5, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "CPT", value: pool.settings?.cpt ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+          ] })
         ] }, pool.id || pool.code || index)) })
       ] })
     ] }),
@@ -56702,6 +56740,19 @@ const Field = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRunti
 const NumberField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "number", value: value ?? 0, disabled, onChange: (event) => onChange(Number(event.target.value)) })
+] });
+const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      type: "checkbox",
+      className: "h-5 w-5 rounded border-gray-500 accent-cyan-500",
+      checked,
+      disabled,
+      onChange: (event) => onChange(event.target.checked)
+    }
+  )
 ] });
 const SelectField = ({ label, value, disabled, options, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
@@ -68783,6 +68834,7 @@ const App = () => {
         pool: activePlatformResourcePool.code,
         poolType: activePlatformResourcePool.poolType,
         aircraftType: activePlatformResourcePool.aircraftTypeCode,
+        appliesToV2Runtime: activePlatformResourcePool.settings?.applyToV2Runtime === true,
         settings: activePlatformResourcePool.settings
       });
     } else {
@@ -69602,6 +69654,11 @@ const App = () => {
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
+  const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24);
+  const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount);
+  const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount);
+  const configuredStandbyCount = getResourcePoolCount(activePlatformResourcePool, "standby", 4);
+  const configuredGroundCount = getResourcePoolCount(activePlatformResourcePool, "ground", 6);
   const [flyingStartTime, setFlyingStartTime] = reactExports.useState(8);
   const [flyingEndTime, setFlyingEndTime] = reactExports.useState(17);
   const [ftdStartTime, setFtdStartTime] = reactExports.useState(8);
@@ -69844,7 +69901,7 @@ const App = () => {
 ${"=".repeat(60)}`);
     console.log(`[AV] 📤 postAvailabilityEvent START ${requestId}`);
     const apiBase2 = getApiBaseUrl();
-    const totalAircraftCount = availableAircraftCount;
+    const totalAircraftCount = totalAircraftOverride ?? availableAircraftCount;
     const windowStart = formatWindowTime(flyingStartTime);
     const windowEnd = formatWindowTime(flyingEndTime);
     const today = /* @__PURE__ */ new Date();
@@ -70388,7 +70445,7 @@ ${"=".repeat(60)}`);
   const onDiscardRef = reactExports.useRef(() => {
   });
   const buildResources = reactExports.useMemo(() => {
-    const pc21Count = 24;
+    const pc21Count = configuredAirframeCount;
     let deploymentCount = 0;
     console.log("buildResources - Current view:", activeView, "Current date:", date);
     if (activeView === "Program Schedule" || activeView === "DailyFlyingProgram" || activeView === "InstructorSchedule" || activeView === "TraineeSchedule") {
@@ -70425,7 +70482,7 @@ ${"=".repeat(60)}`);
       }
       return `PC-21 ${i + 1}`;
     });
-    let stbyLineCount = 4;
+    let stbyLineCount = configuredStandbyCount;
     if (["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "BuildAnalysis"].includes(activeView)) {
       const stbyEvents = nextDayBuildEvents.filter(
         (e) => e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")
@@ -70435,7 +70492,7 @@ ${"=".repeat(60)}`);
           const match = e.resourceId.match(/STBY (\d+)/);
           return match ? parseInt(match[1]) : 0;
         }));
-        stbyLineCount = Math.max(4, maxStbyLine);
+        stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine);
       }
     } else {
       const eventsForDate2 = publishedSchedules[date] || [];
@@ -70447,7 +70504,7 @@ ${"=".repeat(60)}`);
           const match = e.resourceId.match(/STBY (\d+)/);
           return match ? parseInt(match[1]) : 0;
         }));
-        stbyLineCount = Math.max(4, maxStbyLine);
+        stbyLineCount = Math.max(configuredStandbyCount, maxStbyLine);
       }
     }
     const allResources = [
@@ -70455,13 +70512,23 @@ ${"=".repeat(60)}`);
       "Duty Sup",
       "TWR DI",
       ...Array.from({ length: stbyLineCount }, (_, i) => `STBY ${i + 1}`),
-      ...Array.from({ length: availableFtdCount }, (_, i) => `FTD ${i + 1}`),
-      ...Array.from({ length: availableCptCount }, (_, i) => `CPT ${i + 1}`),
-      ...Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`)
+      ...Array.from({ length: configuredFtdCount }, (_, i) => `FTD ${i + 1}`),
+      ...Array.from({ length: configuredCptCount }, (_, i) => `CPT ${i + 1}`),
+      ...Array.from({ length: configuredGroundCount }, (_, i) => `Ground ${i + 1}`)
     ];
     console.log("Built all resources:", allResources, "STBY lines:", stbyLineCount);
     return allResources;
-  }, [availableFtdCount, availableCptCount, availableAircraftCount, date, activeView, publishedSchedules, nextDayBuildEvents]);
+  }, [
+    configuredAirframeCount,
+    configuredFtdCount,
+    configuredCptCount,
+    configuredStandbyCount,
+    configuredGroundCount,
+    date,
+    activeView,
+    publishedSchedules,
+    nextDayBuildEvents
+  ]);
   reactExports.useCallback((events2, allResources) => {
     if (!events2 || events2.length === 0) {
       console.log("No events, returning empty resources");
@@ -75518,10 +75585,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             instructors: instructorsData.map((i) => i.name),
             traineesData,
             timezoneOffset,
-            airframeCount: 24,
-            standbyCount: 4,
-            ftdCount: availableFtdCount,
-            cptCount: availableCptCount,
+            airframeCount: configuredAirframeCount,
+            standbyCount: configuredStandbyCount,
+            ftdCount: configuredFtdCount,
+            cptCount: configuredCptCount,
             onUpdateEvent: handleScheduleUpdate,
             onSelectEvent: handleOpenModal,
             onReorderResources: () => {
@@ -75568,7 +75635,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               await postAvailabilityEvent(
                 count,
                 "change",
-                void 0,
+                configuredAirframeCount,
                 `Aircraft availability updated via overlay: ${count}`
               );
               console.log(`[AV] ✅ DB event posted for user drag: ${count}`);
@@ -76149,10 +76216,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             resources: buildResources,
             instructors: instructorsData.map((i) => i.name),
             traineesData,
-            airframeCount: 24,
-            standbyCount: 4,
-            ftdCount: availableFtdCount,
-            cptCount: availableCptCount,
+            airframeCount: configuredAirframeCount,
+            standbyCount: configuredStandbyCount,
+            ftdCount: configuredFtdCount,
+            cptCount: configuredCptCount,
             onUpdateEvent: handleNextDayScheduleUpdate,
             onSelectEvent: (e) => handleOpenModal({ ...e, date: buildDfpDate }, {}),
             onReorderResources: () => {
@@ -77005,7 +77072,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             cancellationCodes,
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
-            totalAircraft: 24,
+            totalAircraft: configuredAirframeCount,
             currentAircraftAvailable: availableAircraftCount,
             settingsLoaded,
             organisationSettings,
