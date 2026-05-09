@@ -505,22 +505,58 @@ app.post('/api/platform-config', async (req, res) => {
         access.unitCode || '',
         access.moduleCode || '',
       ].join('|');
-      await db.$executeRawUnsafe(`
-        INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
-        VALUES (COALESCE($1, gen_random_uuid()::text), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::timestamp, $14::timestamp)
-        ON CONFLICT ("scopeKey") DO UPDATE SET
-          "username" = $3,
-          "displayName" = $4,
-          "organisationCode" = $5,
-          "locationCode" = $6,
-          "unitCode" = $7,
-          "moduleCode" = $8,
-          "role" = $10,
-          "accessLevel" = $11,
-          "status" = $12,
-          "settings" = $13::jsonb,
-          "updatedAt" = $14::timestamp
-      `, access.id || null, access.userId, access.username || null, access.displayName || null, access.organisationCode || 'DEFAULT', access.locationCode || null, access.unitCode || null, access.moduleCode || null, scopeKey, access.role || 'Viewer', access.accessLevel || 'Read', access.status || 'ACTIVE', toJson(access.settings), now);
+      const accessValues = [
+        access.userId,
+        access.username || null,
+        access.displayName || null,
+        access.organisationCode || 'DEFAULT',
+        access.locationCode || null,
+        access.unitCode || null,
+        access.moduleCode || null,
+        scopeKey,
+        access.role || 'Viewer',
+        access.accessLevel || 'Read',
+        access.status || 'ACTIVE',
+        toJson(access.settings),
+        now,
+      ];
+
+      if (access.id) {
+        await db.$executeRawUnsafe(`
+          UPDATE "CommercialUserAccess" SET
+            "userId" = $2,
+            "username" = $3,
+            "displayName" = $4,
+            "organisationCode" = $5,
+            "locationCode" = $6,
+            "unitCode" = $7,
+            "moduleCode" = $8,
+            "scopeKey" = $9,
+            "role" = $10,
+            "accessLevel" = $11,
+            "status" = $12,
+            "settings" = $13::jsonb,
+            "updatedAt" = $14::timestamp
+          WHERE "id" = $1
+        `, access.id, ...accessValues);
+      } else {
+        await db.$executeRawUnsafe(`
+          INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
+          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12::jsonb, $13::timestamp, $13::timestamp)
+          ON CONFLICT ("scopeKey") DO UPDATE SET
+            "username" = $2,
+            "displayName" = $3,
+            "organisationCode" = $4,
+            "locationCode" = $5,
+            "unitCode" = $6,
+            "moduleCode" = $7,
+            "role" = $9,
+            "accessLevel" = $10,
+            "status" = $11,
+            "settings" = $12::jsonb,
+            "updatedAt" = $13::timestamp
+        `, ...accessValues);
+      }
     }
 
     res.json({ success: true });
