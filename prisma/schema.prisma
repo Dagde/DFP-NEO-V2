@@ -454,6 +454,128 @@ model FlightLogEntry {
   @@index([scheduleEventId, personRole])
 }
 
+model CommercialOrganisation {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  status    String   @default("ACTIVE")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CommercialLocation {
+  id               String   @id @default(cuid())
+  organisationCode String
+  code             String   @unique
+  name             String
+  timezoneOffset   Int      @default(10)
+  trainingAreas    String[] @default([])
+  status           String   @default("ACTIVE")
+  settings         Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organisationCode])
+  @@index([status])
+}
+
+model CommercialUnit {
+  id               String   @id @default(cuid())
+  organisationCode String
+  locationCode     String
+  code             String   @unique
+  name             String
+  unitType         String   @default("Training")
+  status           String   @default("ACTIVE")
+  settings         Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organisationCode])
+  @@index([locationCode])
+  @@index([unitType])
+  @@index([status])
+}
+
+model CommercialAircraftType {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  category  String   @default("Training")
+  status    String   @default("ACTIVE")
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+}
+
+model CommercialResourcePool {
+  id               String   @id @default(cuid())
+  organisationCode String
+  locationCode     String?
+  unitCode         String?
+  aircraftTypeCode String?
+  code             String   @unique
+  name             String
+  poolType         String   @default("Dedicated")
+  status           String   @default("ACTIVE")
+  settings         Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organisationCode])
+  @@index([locationCode])
+  @@index([unitCode])
+  @@index([aircraftTypeCode])
+  @@index([poolType])
+}
+
+model CommercialModule {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CommercialUnitModule {
+  id        String   @id @default(cuid())
+  unitCode  String
+  moduleCode String
+  isEnabled Boolean  @default(true)
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([unitCode, moduleCode])
+  @@index([unitCode])
+  @@index([moduleCode])
+}
+
+model CommercialSchedulingRuleSet {
+  id               String   @id @default(cuid())
+  organisationCode String
+  unitCode         String?
+  aircraftTypeCode String?
+  name             String
+  scope            String   @default("Unit")
+  rules            Json     @default("{}")
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([organisationCode])
+  @@index([unitCode])
+  @@index([aircraftTypeCode])
+  @@index([scope])
+  @@index([isActive])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

@@ -74,6 +74,8 @@ async function getPrisma() {
     await ensureTraineePerformanceTable(prisma);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(prisma);
+    // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
+    await ensureCommercialConfigTables(prisma);
     // Ensure CourseSettings and CourseAcademicProgress tables exist
     await ensureCourseSettingsTables(prisma);
     // Ensure Course.lmpType column exists (migration for existing DBs)
@@ -314,6 +316,183 @@ app.post('/api/settings', async (req, res) => {
   } catch (error) {
     console.error('[Settings] POST error:', error);
     res.status(500).json({ error: 'Failed to save settings', details: error.message });
+  }
+});
+
+// ============================================================
+// COMMERCIAL PLATFORM CONFIGURATION
+// Stage-one configurable operating model. Existing V2 runtime
+// behavior is still read from current settings/tables; these
+// tables create the admin-editable foundation for commercial use.
+// ============================================================
+
+app.get('/api/platform-config', async (req, res) => {
+  try {
+    const db = await getPrisma();
+
+    const [
+      organisations,
+      locations,
+      units,
+      aircraftTypes,
+      resourcePools,
+      modules,
+      unitModules,
+      schedulingRuleSets,
+    ] = await Promise.all([
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialOrganisation" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialLocation" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialUnit" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialAircraftType" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialResourcePool" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialModule" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialUnitModule" ORDER BY "unitCode", "moduleCode"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialSchedulingRuleSet" ORDER BY "name"`),
+    ]);
+
+    res.json({
+      organisations,
+      locations,
+      units,
+      aircraftTypes,
+      resourcePools,
+      modules,
+      unitModules,
+      schedulingRuleSets,
+    });
+  } catch (error) {
+    console.error('❌ GET /api/platform-config error:', error);
+    res.status(500).json({ error: 'Failed to load platform configuration', details: error.message });
+  }
+});
+
+app.post('/api/platform-config', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const {
+      organisations = [],
+      locations = [],
+      units = [],
+      aircraftTypes = [],
+      resourcePools = [],
+      unitModules = [],
+      schedulingRuleSets = [],
+    } = req.body || {};
+
+    const now = new Date().toISOString();
+    const toJson = (value) => JSON.stringify(value || {});
+    const toArray = (value) => Array.isArray(value) ? value : [];
+
+    for (const org of organisations) {
+      if (!org.code || !org.name) continue;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialOrganisation" ("id", "code", "name", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4::jsonb, $5::timestamp, $5::timestamp)
+        ON CONFLICT ("code") DO UPDATE SET
+          "name" = $2,
+          "status" = $3,
+          "settings" = $4::jsonb,
+          "updatedAt" = $5::timestamp
+      `, org.code, org.name, org.status || 'ACTIVE', toJson(org.settings), now);
+    }
+
+    for (const location of locations) {
+      if (!location.code || !location.name) continue;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7::jsonb, $8::timestamp, $8::timestamp)
+        ON CONFLICT ("code") DO UPDATE SET
+          "organisationCode" = $1,
+          "name" = $3,
+          "timezoneOffset" = $4,
+          "trainingAreas" = $5,
+          "status" = $6,
+          "settings" = $7::jsonb,
+          "updatedAt" = $8::timestamp
+      `, location.organisationCode || 'DEFAULT', location.code, location.name, Number(location.timezoneOffset ?? 10), toArray(location.trainingAreas), location.status || 'ACTIVE', toJson(location.settings), now);
+    }
+
+    for (const unit of units) {
+      if (!unit.code || !unit.name) continue;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUnit" ("id", "organisationCode", "locationCode", "code", "name", "unitType", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7::jsonb, $8::timestamp, $8::timestamp)
+        ON CONFLICT ("code") DO UPDATE SET
+          "organisationCode" = $1,
+          "locationCode" = $2,
+          "name" = $4,
+          "unitType" = $5,
+          "status" = $6,
+          "settings" = $7::jsonb,
+          "updatedAt" = $8::timestamp
+      `, unit.organisationCode || 'DEFAULT', unit.locationCode || 'ESL', unit.code, unit.name, unit.unitType || 'Training', unit.status || 'ACTIVE', toJson(unit.settings), now);
+    }
+
+    for (const aircraftType of aircraftTypes) {
+      if (!aircraftType.code || !aircraftType.name) continue;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5::jsonb, $6::timestamp, $6::timestamp)
+        ON CONFLICT ("code") DO UPDATE SET
+          "name" = $2,
+          "category" = $3,
+          "status" = $4,
+          "settings" = $5::jsonb,
+          "updatedAt" = $6::timestamp
+      `, aircraftType.code, aircraftType.name, aircraftType.category || 'Training', aircraftType.status || 'ACTIVE', toJson(aircraftType.settings), now);
+    }
+
+    for (const pool of resourcePools) {
+      if (!pool.code || !pool.name) continue;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::timestamp, $10::timestamp)
+        ON CONFLICT ("code") DO UPDATE SET
+          "organisationCode" = $1,
+          "locationCode" = $2,
+          "unitCode" = $3,
+          "aircraftTypeCode" = $4,
+          "name" = $6,
+          "poolType" = $7,
+          "status" = $8,
+          "settings" = $9::jsonb,
+          "updatedAt" = $10::timestamp
+      `, pool.organisationCode || 'DEFAULT', pool.locationCode || null, pool.unitCode || null, pool.aircraftTypeCode || null, pool.code, pool.name, pool.poolType || 'Dedicated', pool.status || 'ACTIVE', toJson(pool.settings), now);
+    }
+
+    for (const unitModule of unitModules) {
+      if (!unitModule.unitCode || !unitModule.moduleCode) continue;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUnitModule" ("id", "unitCode", "moduleCode", "isEnabled", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, $4::jsonb, $5::timestamp, $5::timestamp)
+        ON CONFLICT ("unitCode", "moduleCode") DO UPDATE SET
+          "isEnabled" = $3,
+          "settings" = $4::jsonb,
+          "updatedAt" = $5::timestamp
+      `, unitModule.unitCode, unitModule.moduleCode, Boolean(unitModule.isEnabled), toJson(unitModule.settings), now);
+    }
+
+    for (const ruleSet of schedulingRuleSets) {
+      const name = ruleSet.name || 'Default Scheduling Rules';
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialSchedulingRuleSet" ("id", "organisationCode", "unitCode", "aircraftTypeCode", "name", "scope", "rules", "isActive", "createdAt", "updatedAt")
+        VALUES (COALESCE($1, gen_random_uuid()::text), $2, $3, $4, $5, $6, $7::jsonb, $8, $9::timestamp, $9::timestamp)
+        ON CONFLICT ("id") DO UPDATE SET
+          "organisationCode" = $2,
+          "unitCode" = $3,
+          "aircraftTypeCode" = $4,
+          "name" = $5,
+          "scope" = $6,
+          "rules" = $7::jsonb,
+          "isActive" = $8,
+          "updatedAt" = $9::timestamp
+      `, ruleSet.id || null, ruleSet.organisationCode || 'DEFAULT', ruleSet.unitCode || null, ruleSet.aircraftTypeCode || null, name, ruleSet.scope || 'Unit', toJson(ruleSet.rules), ruleSet.isActive !== false, now);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ POST /api/platform-config error:', error);
+    res.status(500).json({ error: 'Failed to save platform configuration', details: error.message });
   }
 });
 
@@ -4459,6 +4638,262 @@ async function ensureAppSettingsTable(db) {
     console.log('✅ AppSettings table ready');
   } catch (err) {
     console.error('❌ Failed to ensure AppSettings table:', err.message);
+  }
+}
+
+async function ensureCommercialConfigTables(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialOrganisation" (
+        "id" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialOrganisation_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialOrganisation_code_key" ON "CommercialOrganisation"("code");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialLocation" (
+        "id" TEXT NOT NULL,
+        "organisationCode" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "timezoneOffset" INTEGER NOT NULL DEFAULT 10,
+        "trainingAreas" TEXT[] NOT NULL DEFAULT '{}',
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialLocation_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialLocation_code_key" ON "CommercialLocation"("code");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialLocation_organisationCode_idx" ON "CommercialLocation"("organisationCode");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialUnit" (
+        "id" TEXT NOT NULL,
+        "organisationCode" TEXT NOT NULL,
+        "locationCode" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "unitType" TEXT NOT NULL DEFAULT 'Training',
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialUnit_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialUnit_code_key" ON "CommercialUnit"("code");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUnit_locationCode_idx" ON "CommercialUnit"("locationCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUnit_unitType_idx" ON "CommercialUnit"("unitType");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialAircraftType" (
+        "id" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "category" TEXT NOT NULL DEFAULT 'Training',
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialAircraftType_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialAircraftType_code_key" ON "CommercialAircraftType"("code");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialResourcePool" (
+        "id" TEXT NOT NULL,
+        "organisationCode" TEXT NOT NULL,
+        "locationCode" TEXT,
+        "unitCode" TEXT,
+        "aircraftTypeCode" TEXT,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "poolType" TEXT NOT NULL DEFAULT 'Dedicated',
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialResourcePool_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialResourcePool_code_key" ON "CommercialResourcePool"("code");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialResourcePool_unitCode_idx" ON "CommercialResourcePool"("unitCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialResourcePool_locationCode_idx" ON "CommercialResourcePool"("locationCode");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialModule" (
+        "id" TEXT NOT NULL,
+        "code" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "description" TEXT,
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialModule_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialModule_code_key" ON "CommercialModule"("code");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialUnitModule" (
+        "id" TEXT NOT NULL,
+        "unitCode" TEXT NOT NULL,
+        "moduleCode" TEXT NOT NULL,
+        "isEnabled" BOOLEAN NOT NULL DEFAULT true,
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialUnitModule_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialUnitModule_unitCode_moduleCode_key" ON "CommercialUnitModule"("unitCode", "moduleCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUnitModule_unitCode_idx" ON "CommercialUnitModule"("unitCode");`);
+
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialSchedulingRuleSet" (
+        "id" TEXT NOT NULL,
+        "organisationCode" TEXT NOT NULL,
+        "unitCode" TEXT,
+        "aircraftTypeCode" TEXT,
+        "name" TEXT NOT NULL,
+        "scope" TEXT NOT NULL DEFAULT 'Unit',
+        "rules" JSONB NOT NULL DEFAULT '{}',
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialSchedulingRuleSet_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialSchedulingRuleSet_unitCode_idx" ON "CommercialSchedulingRuleSet"("unitCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialSchedulingRuleSet_aircraftTypeCode_idx" ON "CommercialSchedulingRuleSet"("aircraftTypeCode");`);
+
+    await seedCommercialConfigIfEmpty(db);
+    console.log('✅ Commercial platform configuration tables ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure commercial platform configuration tables:', err.message);
+  }
+}
+
+async function seedCommercialConfigIfEmpty(db) {
+  const existing = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialOrganisation"`);
+  if (existing?.[0]?.count > 0) return;
+
+  const settingsRows = await db.$queryRawUnsafe(`SELECT data FROM "AppSettings" WHERE "orgId" = 'default' LIMIT 1`);
+  const settings = settingsRows?.[0]?.data || {};
+  const now = new Date().toISOString();
+  const locationNames = Array.isArray(settings.locations) && settings.locations.length > 0 ? settings.locations : ['East Sale'];
+  const abbreviations = settings.locationAbbreviations || {};
+  const units = Array.isArray(settings.units) && settings.units.length > 0 ? settings.units : ['Training Unit'];
+  const unitLocations = settings.unitLocations || {};
+  const locationOpAreas = settings.locationOpAreas || {};
+  const timezoneOffset = Number(settings.timezoneOffset ?? 10);
+
+  const locationCodeFor = (name) => {
+    const explicit = abbreviations[name];
+    if (explicit) return String(explicit).toUpperCase();
+    return String(name || 'LOC').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'LOC';
+  };
+  const unitCodeFor = (name) => String(name || 'UNIT').replace(/[^A-Za-z0-9]/g, '').slice(0, 12).toUpperCase() || 'UNIT';
+
+  await db.$executeRawUnsafe(`
+    INSERT INTO "CommercialOrganisation" ("id", "code", "name", "status", "settings", "createdAt", "updatedAt")
+    VALUES (gen_random_uuid()::text, 'DEFAULT', 'Default Organisation', 'ACTIVE', $1::jsonb, $2::timestamp, $2::timestamp)
+    ON CONFLICT ("code") DO NOTHING
+  `, JSON.stringify({ source: 'V2 stage-one seed' }), now);
+
+  for (const locationName of locationNames) {
+    const code = locationCodeFor(locationName);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CommercialLocation" ("id", "organisationCode", "code", "name", "timezoneOffset", "trainingAreas", "status", "settings", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, $4, 'ACTIVE', '{}'::jsonb, $5::timestamp, $5::timestamp)
+      ON CONFLICT ("code") DO NOTHING
+    `, code, locationName, timezoneOffset, Array.isArray(locationOpAreas[locationName]) ? locationOpAreas[locationName] : [], now);
+  }
+
+  for (const unitName of units) {
+    const mappedLocationName = unitLocations[unitName] || locationNames[0];
+    const locationCode = locationCodeFor(mappedLocationName);
+    const unitCode = unitCodeFor(unitName);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CommercialUnit" ("id", "organisationCode", "locationCode", "code", "name", "unitType", "status", "settings", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, $2, $3, 'Training', 'ACTIVE', $4::jsonb, $5::timestamp, $5::timestamp)
+      ON CONFLICT ("code") DO NOTHING
+    `, locationCode, unitCode, unitName, JSON.stringify({ sourceUnitName: unitName }), now);
+  }
+
+  await db.$executeRawUnsafe(`
+    INSERT INTO "CommercialAircraftType" ("id", "code", "name", "category", "status", "settings", "createdAt", "updatedAt")
+    VALUES (gen_random_uuid()::text, 'PC-21', 'PC-21', 'Training', 'ACTIVE', $1::jsonb, $2::timestamp, $2::timestamp)
+    ON CONFLICT ("code") DO NOTHING
+  `, JSON.stringify({ source: 'Current V2 default aircraft type' }), now);
+
+  for (const locationName of locationNames) {
+    const locationCode = locationCodeFor(locationName);
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CommercialResourcePool" ("id", "organisationCode", "locationCode", "unitCode", "aircraftTypeCode", "code", "name", "poolType", "status", "settings", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, NULL, 'PC-21', $2, $3, 'Shared', 'ACTIVE', $4::jsonb, $5::timestamp, $5::timestamp)
+      ON CONFLICT ("code") DO NOTHING
+    `, locationCode, `${locationCode}-PC21-POOL`, `${locationName} PC-21 Resource Pool`, JSON.stringify({
+      aircraft: Number(settings.availableAircraftCount ?? 24),
+      ftd: Number(settings.availableFtdCount ?? 5),
+      cpt: Number(settings.availableCptCount ?? 5),
+    }), now);
+  }
+
+  const modules = [
+    ['DFP', 'Daily Flying Program', 'Core schedule, authorisation and publication workflow'],
+    ['TRAINING', 'Training', 'Courses, trainees, syllabus progression and PT-051 records'],
+    ['NEO_BUILD', 'NEO Build', 'Automated training build algorithm'],
+    ['RESOURCE_SCHEDULING', 'Resource Scheduling', 'Aircraft, simulator, CPT and ground resource allocation'],
+    ['REPORTING', 'Reporting & Analytics', 'Operational reports, history, audit and analytics'],
+  ];
+  for (const [code, name, description] of modules) {
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CommercialModule" ("id", "code", "name", "description", "status", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, $1, $2, $3, 'ACTIVE', $4::timestamp, $4::timestamp)
+      ON CONFLICT ("code") DO UPDATE SET "name" = $2, "description" = $3, "updatedAt" = $4::timestamp
+    `, code, name, description, now);
+  }
+
+  const seededUnits = await db.$queryRawUnsafe(`SELECT "code" FROM "CommercialUnit"`);
+  for (const unit of seededUnits) {
+    for (const [moduleCode] of modules) {
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUnitModule" ("id", "unitCode", "moduleCode", "isEnabled", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, true, '{}'::jsonb, $3::timestamp, $3::timestamp)
+        ON CONFLICT ("unitCode", "moduleCode") DO NOTHING
+      `, unit.code, moduleCode, now);
+    }
+
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CommercialSchedulingRuleSet" ("id", "organisationCode", "unitCode", "aircraftTypeCode", "name", "scope", "rules", "isActive", "createdAt", "updatedAt")
+      VALUES (gen_random_uuid()::text, 'DEFAULT', $1, 'PC-21', $2, 'Unit', $3::jsonb, true, $4::timestamp, $4::timestamp)
+    `, unit.code, `${unit.code} Default Scheduling Rules`, JSON.stringify({
+      preferredDutyPeriod: settings.preferredDutyPeriod ?? 10,
+      maxCrewDutyPeriod: settings.maxCrewDutyPeriod ?? 12,
+      maxDispatchPerHour: settings.maxDispatchPerHour ?? 4,
+      flightTurnaround: settings.flightTurnaround ?? 0.5,
+      ftdTurnaround: settings.ftdTurnaround ?? 0.25,
+      cptTurnaround: settings.cptTurnaround ?? 0.25,
+      eventLimits: settings.eventLimits || {},
+      flyingWindows: {
+        flyingStartTime: settings.flyingStartTime,
+        flyingEndTime: settings.flyingEndTime,
+        allowNightFlying: settings.allowNightFlying,
+        commenceNightFlying: settings.commenceNightFlying,
+        ceaseNightFlying: settings.ceaseNightFlying,
+      },
+    }), now);
   }
 }
 

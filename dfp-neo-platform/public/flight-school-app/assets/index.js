@@ -1399,7 +1399,7 @@ const ORG_ID = "default";
 let saveDebounceTimer = null;
 let pendingSettings = null;
 let isSaving = false;
-const getApiBase$1 = () => {
+const getApiBase$2 = () => {
   const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
   const currentOrigin = window.location.origin;
   if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) {
@@ -1409,7 +1409,7 @@ const getApiBase$1 = () => {
 };
 const loadSettingsFromDB = async () => {
   try {
-    const apiBase2 = getApiBase$1();
+    const apiBase2 = getApiBase$2();
     const url = `${apiBase2}/settings?orgId=${ORG_ID}`;
     console.log("[Settings] 🔍 Loading settings from DB — URL:", url);
     const res = await fetch(url, {
@@ -1442,7 +1442,7 @@ const saveSettingsNow = async (settings, userId) => {
   }
   isSaving = true;
   try {
-    const apiBase2 = getApiBase$1();
+    const apiBase2 = getApiBase$2();
     const url = `${apiBase2}/settings`;
     const payload = {
       orgId: ORG_ID,
@@ -1560,7 +1560,7 @@ const buildSettingsSnapshot = (state) => {
 };
 const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId) => {
   try {
-    const apiBase2 = getApiBase$1();
+    const apiBase2 = getApiBase$2();
     const url = `${apiBase2}/currencies`;
     const res = await fetch(url, {
       method: "POST",
@@ -14001,7 +14001,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     )
   ] });
 };
-const getApiBase = () => {
+const getApiBase$1 = () => {
   if (typeof window !== "undefined") {
     const port = window.location.port;
     if (port === "5173" || port === "3001" || port === "3002") {
@@ -14013,7 +14013,7 @@ const getApiBase = () => {
 const loadUserPreferences = async (userId) => {
   if (!userId) return {};
   try {
-    const apiBase2 = getApiBase();
+    const apiBase2 = getApiBase$1();
     const res = await fetch(`${apiBase2}/user-preferences?userId=${encodeURIComponent(userId)}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
@@ -14033,7 +14033,7 @@ const loadUserPreferences = async (userId) => {
 const saveUserPreference = async (userId, key, value) => {
   if (!userId || !key) return false;
   try {
-    const apiBase2 = getApiBase();
+    const apiBase2 = getApiBase$1();
     const res = await fetch(`${apiBase2}/user-preferences`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -56396,6 +56396,275 @@ const AppearanceSettings = () => {
     ] })
   ] });
 };
+const emptyConfig = {
+  organisations: [],
+  locations: [],
+  units: [],
+  aircraftTypes: [],
+  resourcePools: [],
+  modules: [],
+  unitModules: [],
+  schedulingRuleSets: []
+};
+const getApiBase = () => {
+  const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
+  const currentOrigin = window.location.origin;
+  if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) return "/api";
+  return `${railwayBackend}/api`;
+};
+const fieldClass = "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
+const labelClass = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400";
+const PlatformConfigurationSettings = ({
+  currentUserPermission,
+  onShowSuccess
+}) => {
+  const [config, setConfig] = reactExports.useState(emptyConfig);
+  const [loading, setLoading] = reactExports.useState(true);
+  const [saving, setSaving] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState("");
+  const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch(`${getApiBase()}/platform-config`);
+        if (!res.ok) throw new Error(`Load failed (${res.status})`);
+        const data = await res.json();
+        if (!cancelled) setConfig({ ...emptyConfig, ...data });
+      } catch (err) {
+        if (!cancelled) setError(err?.message || "Failed to load platform configuration");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const enabledModuleCount = reactExports.useMemo(
+    () => config.unitModules.filter((item) => item.isEnabled !== false).length,
+    [config.unitModules]
+  );
+  const updateRow = (collection, index, changes) => {
+    setConfig((prev) => ({
+      ...prev,
+      [collection]: prev[collection].map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
+    }));
+  };
+  const addUnit = () => {
+    const defaultLocation = config.locations[0]?.code || "ESL";
+    setConfig((prev) => ({
+      ...prev,
+      units: [
+        ...prev.units,
+        {
+          code: `UNIT-${prev.units.length + 1}`,
+          name: "New Unit",
+          organisationCode: prev.organisations[0]?.code || "DEFAULT",
+          locationCode: defaultLocation,
+          unitType: "Training",
+          status: "ACTIVE",
+          settings: {}
+        }
+      ]
+    }));
+  };
+  const addResourcePool = () => {
+    const defaultLocation = config.locations[0]?.code || "ESL";
+    setConfig((prev) => ({
+      ...prev,
+      resourcePools: [
+        ...prev.resourcePools,
+        {
+          code: `POOL-${prev.resourcePools.length + 1}`,
+          name: "New Resource Pool",
+          organisationCode: prev.organisations[0]?.code || "DEFAULT",
+          locationCode: defaultLocation,
+          unitCode: "",
+          aircraftTypeCode: prev.aircraftTypes[0]?.code || "PC-21",
+          poolType: "Dedicated",
+          status: "ACTIVE",
+          settings: {}
+        }
+      ]
+    }));
+  };
+  const save = async () => {
+    if (!canEdit) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`${getApiBase()}/platform-config`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config)
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(body || `Save failed (${res.status})`);
+      }
+      onShowSuccess("Platform configuration saved");
+    } catch (err) {
+      setError(err?.message || "Failed to save platform configuration");
+    } finally {
+      setSaving(false);
+    }
+  };
+  if (loading) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-cyan-100", children: "Platform Configuration" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Stage-one commercial operating model. Existing V2 scheduling still runs from current settings while this foundation is populated and validated." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: save,
+            disabled: !canEdit || saving,
+            className: "ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+            children: saving ? "Saving..." : "Save"
+          }
+        )
+      ] }),
+      !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
+      error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Organisations", value: config.organisations.length }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Locations", value: config.locations.length }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Units", value: config.units.length }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Organisation & Locations", subtitle: "The top of the hierarchy: customer, base, timezone, and training areas." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Code", value: org.code, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { code: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Organisation Name", value: org.name, disabled: !canEdit, onChange: (value) => updateRow("organisations", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: org.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("organisations", index, { status: value }) })
+        ] }, org.id || org.code || index)),
+        config.locations.map((location, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Location Code", value: location.code, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { code: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Location Name", value: location.name, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "UTC Offset", value: location.timezoneOffset ?? 10, disabled: !canEdit, onChange: (value) => updateRow("locations", index, { timezoneOffset: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Training Areas", value: (location.trainingAreas || []).join(", "), disabled: !canEdit, onChange: (value) => updateRow("locations", index, { trainingAreas: value.split(",").map((item) => item.trim()).filter(Boolean) }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: location.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("locations", index, { status: value }) })
+        ] }, location.id || location.code || index))
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Units",
+          subtitle: "Unit is the centre of configuration: type, location, enabled modules and future UI behaviour.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUnit, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Unit" }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.units.map((unit, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Code", value: unit.code, disabled: !canEdit, onChange: (value) => updateRow("units", index, { code: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Unit Name", value: unit.name, disabled: !canEdit, onChange: (value) => updateRow("units", index, { name: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: unit.locationCode || "", disabled: !canEdit, options: config.locations.map((location) => location.code), onChange: (value) => updateRow("units", index, { locationCode: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit Type", value: unit.unitType || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "HQ", "Operational"], onChange: (value) => updateRow("units", index, { unitType: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) })
+      ] }, unit.id || unit.code || index)) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) })
+        ] }, aircraft.id || aircraft.code || index)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.resourcePools.map((pool, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) })
+        ] }, pool.id || pool.code || index)) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Unit Modules", subtitle: "Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: "Unit" }),
+          config.modules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-3 py-2", children: module.name }, module.code))
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: config.units.map((unit) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2 font-semibold text-white", children: unit.name }),
+          config.modules.map((module) => {
+            const unitModuleIndex = config.unitModules.findIndex((item) => item.unitCode === unit.code && item.moduleCode === module.code);
+            const unitModule = config.unitModules[unitModuleIndex];
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                checked: unitModule?.isEnabled !== false,
+                disabled: !canEdit,
+                onChange: (event) => {
+                  if (unitModuleIndex >= 0) {
+                    updateRow("unitModules", unitModuleIndex, { isEnabled: event.target.checked });
+                    return;
+                  }
+                  setConfig((prev) => ({
+                    ...prev,
+                    unitModules: [...prev.unitModules, { unitCode: unit.code, moduleCode: module.code, isEnabled: event.target.checked, settings: {} }]
+                  }));
+                },
+                className: "h-5 w-5 rounded border-gray-500 accent-cyan-500"
+              }
+            ) }, module.code);
+          })
+        ] }, unit.code)) })
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEdit, options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEdit, options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
+      ] }, ruleSet.id || index)) })
+    ] })
+  ] });
+};
+const Metric = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-4", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-gray-500", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: value })
+] });
+const SectionHeader = ({ title, subtitle, action }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3 border-b border-gray-700 px-4 py-3", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-bold text-white", children: title }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: subtitle })
+  ] }),
+  action && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "ml-auto", children: action })
+] });
+const Field = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
+] });
+const NumberField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "number", value: value ?? 0, disabled, onChange: (event) => onChange(Number(event.target.value)) })
+] });
+const SelectField = ({ label, value, disabled, options, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || "None" }, option)) })
+] });
 const apiBase = () => window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
 const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
   const [status, setStatus] = reactExports.useState("idle");
@@ -56867,6 +57136,7 @@ const sectionLabels = {
   "location": "Location",
   "units": "Units",
   "organisation": "Organisation",
+  "platform-configuration": "Platform Configuration",
   "appearance": "App Appearance",
   "emergency": "Emergency"
 };
@@ -56985,6 +57255,10 @@ const sectionIcons = {
     /* @__PURE__ */ jsxRuntimeExports.jsx("line", { x1: "12", y1: "17", x2: "12", y2: "21" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01" })
   ] }),
+  "platform-configuration": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M4 5h16v4H4zM4 15h16v4H4z" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M8 9v6M16 9v6M12 3v18" })
+  ] }),
   "appearance": /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round", strokeLinejoin: "round", className: "w-full h-full", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { cx: "12", cy: "12", r: "4" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" }),
@@ -57017,6 +57291,7 @@ const sectionDescriptions = {
   "location": "Manage base locations",
   "units": "Configure unit settings",
   "organisation": "Fleet sharing and multi-unit configuration",
+  "platform-configuration": "Commercial hierarchy, modules, resource pools and rule sets",
   "appearance": "Choose dark or light display theme",
   "emergency": "System freeze and emergency controls"
 };
@@ -57051,6 +57326,7 @@ const sectionColors = {
   "location": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "units": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "organisation": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
+  "platform-configuration": "from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400",
   "appearance": "from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400",
   // EMERGENCY - red icons
   "emergency": "from-red-500/20 to-red-600/10 border-red-500/30 text-red-400"
@@ -57059,9 +57335,9 @@ const sectionGroups = [
   {
     label: "System Setup",
     shortLabel: "Setup",
-    description: "Organisation structure, locations, units, timezone, display preferences and emergency control.",
+    description: "Commercial hierarchy, locations, units, resource pools, timezone, display preferences and emergency control.",
     accent: "cyan",
-    sections: ["organisation", "locale-settings", "appearance", "emergency"]
+    sections: ["platform-configuration", "organisation", "locale-settings", "appearance", "emergency"]
   },
   {
     label: "People & Access",
@@ -57769,7 +58045,7 @@ const SettingsViewWithMenu = (props) => {
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "duty-turnaround" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "business-rules" })
         ] }),
-        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
+        activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && activeSection !== "platform-configuration" && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
           UserListSection,
           {
@@ -57830,6 +58106,13 @@ const SettingsViewWithMenu = (props) => {
             savedSettings: props.organisationSettings,
             onSettingsChange: props.onUpdateOrganisationSettings,
             settingsLoaded: props.settingsLoaded
+          }
+        ),
+        activeSection === "platform-configuration" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          PlatformConfigurationSettings,
+          {
+            currentUserPermission: props.currentUserPermission,
+            onShowSuccess: props.onShowSuccess
           }
         ),
         activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),
@@ -60613,8 +60896,8 @@ const EditCourseFlyout = ({
     onSave({ startDate, gradDate, location, unit, lmpType, academicLmpType });
     onClose();
   };
-  const fieldClass = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm";
-  const labelClass = "block text-sm font-medium text-gray-400 mb-1";
+  const fieldClass2 = "w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm";
+  const labelClass2 = "block text-sm font-medium text-gray-400 mb-1";
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "div",
     {
@@ -60635,19 +60918,19 @@ const EditCourseFlyout = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5 max-h-[75vh] overflow-y-auto", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass, children: "Course" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: labelClass2, children: "Course" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 bg-gray-700/50 border border-gray-600/50 rounded-md text-white font-semibold text-sm tracking-wide", children: courseName })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-location", className: labelClass, children: "Location" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-location", className: labelClass2, children: "Location" }),
                   locations.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "select",
                     {
                       id: "edit-location",
                       value: location,
                       onChange: (e) => setLocation(e.target.value),
-                      className: fieldClass,
+                      className: fieldClass2,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Location —" }),
                         locations.map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc))
@@ -60661,19 +60944,19 @@ const EditCourseFlyout = ({
                       value: location,
                       onChange: (e) => setLocation(e.target.value),
                       placeholder: "e.g., East Sale",
-                      className: fieldClass
+                      className: fieldClass2
                     }
                   )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-unit", className: labelClass, children: "Unit" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "edit-unit", className: labelClass2, children: "Unit" }),
                   units.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     "select",
                     {
                       id: "edit-unit",
                       value: unit,
                       onChange: (e) => setUnit(e.target.value),
-                      className: fieldClass,
+                      className: fieldClass2,
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— Select Unit —" }),
                         units.map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u))
@@ -60687,13 +60970,13 @@ const EditCourseFlyout = ({
                       value: unit,
                       onChange: (e) => setUnit(e.target.value),
                       placeholder: "e.g., 1FTS",
-                      className: fieldClass
+                      className: fieldClass2
                     }
                   )
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-lmp-type", className: labelClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-lmp-type", className: labelClass2, children: [
                   "Course / LMP Type",
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: "— determines which syllabus events populate each trainee's Individual LMP" })
                 ] }),
@@ -60703,14 +60986,14 @@ const EditCourseFlyout = ({
                     id: "edit-lmp-type",
                     value: lmpType,
                     onChange: (e) => setLmpType(e.target.value),
-                    className: fieldClass,
+                    className: fieldClass2,
                     children: COURSE_MASTER_LMPS.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
                   }
                 ),
                 lmpType && LMP_DESCRIPTIONS[lmpType] && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-sky-400/70 italic", children: LMP_DESCRIPTIONS[lmpType] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-academic-lmp-type", className: labelClass, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-academic-lmp-type", className: labelClass2, children: [
                   "Academic LMP Type",
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-1 text-xs text-gray-500 font-normal", children: [
                     "— determines which ",
@@ -60724,7 +61007,7 @@ const EditCourseFlyout = ({
                     id: "edit-academic-lmp-type",
                     value: academicLmpType,
                     onChange: (e) => setAcademicLmpType(e.target.value),
-                    className: fieldClass,
+                    className: fieldClass2,
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— None (Academic LMP tab hidden) —" }),
                       academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
@@ -60739,7 +61022,7 @@ const EditCourseFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-start-date", className: labelClass, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-start-date", className: labelClass2, children: [
                     "Start Date ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
                   ] }),
@@ -60751,12 +61034,12 @@ const EditCourseFlyout = ({
                       value: startDate,
                       onChange: (e) => setStartDate(e.target.value),
                       style: { colorScheme: "dark" },
-                      className: fieldClass
+                      className: fieldClass2
                     }
                   )
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-grad-date", className: labelClass, children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "edit-grad-date", className: labelClass2, children: [
                     "Graduation Date ",
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "*" })
                   ] }),
@@ -60768,7 +61051,7 @@ const EditCourseFlyout = ({
                       value: gradDate,
                       onChange: (e) => setGradDate(e.target.value),
                       style: { colorScheme: "dark" },
-                      className: fieldClass
+                      className: fieldClass2
                     }
                   )
                 ] })

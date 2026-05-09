@@ -11,6 +11,7 @@ import DataSourcesSettings from "./DataSourcesSettings";
 import AuditButton from './AuditButton';
 import OrganisationSettings from './OrganisationSettings';
 import AppearanceSettings from './AppearanceSettings';
+import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import { HistoricalDataSeeder } from './HistoricalDataSeeder';
 import PeopleProfilePage from './PeopleProfilePage';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
@@ -131,6 +132,7 @@ type SettingsSection =
     | 'location'
     | 'units'
     | 'organisation'
+    | 'platform-configuration'
     | 'appearance'
     | 'emergency';
 
@@ -161,6 +163,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'location': 'Location',
     'units': 'Units',
     'organisation': 'Organisation',
+    'platform-configuration': 'Platform Configuration',
     'appearance': 'App Appearance',
     'emergency': 'Emergency',
 };
@@ -189,6 +192,7 @@ const allSections: SettingsSection[] = [
     'location',
     'units',
     'organisation',
+    'platform-configuration',
     'appearance',
     'emergency',
 ];
@@ -363,6 +367,12 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/>
     </svg>
   ),
+  'platform-configuration': (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+      <path d="M4 5h16v4H4zM4 15h16v4H4z"/>
+      <path d="M8 9v6M16 9v6M12 3v18"/>
+    </svg>
+  ),
   'appearance': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <circle cx="12" cy="12" r="4"/>
@@ -409,6 +419,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
+  'platform-configuration': 'Commercial hierarchy, modules, resource pools and rule sets',
   'appearance': 'Choose dark or light display theme',
   'emergency': 'System freeze and emergency controls',
 };
@@ -451,6 +462,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'location':          'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-configuration': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
   // EMERGENCY - red icons
   'emergency':         'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
@@ -467,9 +479,9 @@ const sectionGroups: {
   {
     label: 'System Setup',
     shortLabel: 'Setup',
-    description: 'Organisation structure, locations, units, timezone, display preferences and emergency control.',
+    description: 'Commercial hierarchy, locations, units, resource pools, timezone, display preferences and emergency control.',
     accent: 'cyan',
-    sections: ['organisation', 'locale-settings', 'appearance', 'emergency'],
+    sections: ['platform-configuration', 'organisation', 'locale-settings', 'appearance', 'emergency'],
   },
   {
     label: 'People & Access',
@@ -1325,6 +1337,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'trainee-mockdata' &&
                      activeSection !== 'data-sources' &&
                      activeSection !== 'organisation' &&
+                     activeSection !== 'platform-configuration' &&
                      activeSection !== 'appearance' &&
                      activeSection !== 'people-profile' && (
                         <SettingsView {...props} hideHeader={true} activeSection={activeSection as SettingsSection} />
@@ -1386,6 +1399,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             savedSettings={props.organisationSettings}
                             onSettingsChange={props.onUpdateOrganisationSettings}
                             settingsLoaded={props.settingsLoaded}
+                        />
+                    )}
+                    {activeSection === 'platform-configuration' && (
+                        <PlatformConfigurationSettings
+                            currentUserPermission={props.currentUserPermission}
+                            onShowSuccess={props.onShowSuccess}
                         />
                     )}
                     {activeSection === 'appearance' && (
