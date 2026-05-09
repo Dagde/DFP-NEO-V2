@@ -4911,17 +4911,17 @@ const AircraftAvailabilityOverlay = ({
   const now = /* @__PURE__ */ new Date();
   const currentTimeX = getXPosition(now);
   const sortedSnaps = sortSnapshots(snapshots);
-  const renderHistoricalLines = () => {
+  const renderHistoricalLines = (historyEndX2) => {
     if (sortedSnaps.length === 0) return null;
     const lines = [];
     for (let i = 0; i < sortedSnaps.length; i++) {
       const snap2 = sortedSnaps[i];
       const startX = i === 0 ? 0 : Math.max(0, getXPosition(snap2.timestamp));
-      const rawEndX = i < sortedSnaps.length - 1 ? getXPosition(sortedSnaps[i + 1].timestamp) : Math.min(currentTimeX, endOfDayX);
+      const rawEndX = i < sortedSnaps.length - 1 ? getXPosition(sortedSnaps[i + 1].timestamp) : historyEndX2;
       const endX = Math.max(startX, rawEndX);
       const y = getYPosition(snap2.available);
-      if (startX >= currentTimeX) continue;
-      const clampedEndX = Math.min(endX, currentTimeX);
+      if (startX >= historyEndX2) continue;
+      const clampedEndX = Math.min(endX, historyEndX2);
       if (clampedEndX <= startX) continue;
       lines.push(
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -4942,7 +4942,7 @@ const AircraftAvailabilityOverlay = ({
       if (i > 0 && sortedSnaps[i - 1].available !== snap2.available) {
         const prevY = getYPosition(sortedSnaps[i - 1].available);
         const vertX = Math.max(0, getXPosition(snap2.timestamp));
-        if (vertX < currentTimeX) {
+        if (vertX < historyEndX2) {
           lines.push(
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "line",
@@ -4968,6 +4968,7 @@ const AircraftAvailabilityOverlay = ({
   const todayStr = localDateStr(now);
   const isToday = showLiveAvailabilityLine ?? (dateString ? dateString === todayStr : localDateStr(currentDate) === todayStr);
   const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
+  const historyEndX = isToday ? Math.min(currentTimeX, endOfDayX) : endOfDayX;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
     {
@@ -4975,7 +4976,7 @@ const AircraftAvailabilityOverlay = ({
       className: "absolute top-0 left-0 w-full h-full",
       style: { zIndex: 5, pointerEvents: "none" },
       children: [
-        renderHistoricalLines(),
+        renderHistoricalLines(historyEndX),
         isToday && /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "line",

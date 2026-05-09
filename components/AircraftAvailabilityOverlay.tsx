@@ -284,7 +284,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
 
     const sortedSnaps = sortSnapshots(snapshots);
 
-    const renderHistoricalLines = () => {
+    const renderHistoricalLines = (historyEndX: number) => {
         if (sortedSnaps.length === 0) return null;
         const lines: React.ReactNode[] = [];
 
@@ -293,12 +293,12 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             const startX = i === 0 ? 0 : Math.max(0, getXPosition(snap.timestamp));
             const rawEndX = i < sortedSnaps.length - 1
                 ? getXPosition(sortedSnaps[i + 1].timestamp)
-                : Math.min(currentTimeX, endOfDayX);
+                : historyEndX;
             const endX = Math.max(startX, rawEndX);
 
             const y = getYPosition(snap.available);
-            if (startX >= currentTimeX) continue;
-            const clampedEndX = Math.min(endX, currentTimeX);
+            if (startX >= historyEndX) continue;
+            const clampedEndX = Math.min(endX, historyEndX);
             if (clampedEndX <= startX) continue;
 
             lines.push(
@@ -313,7 +313,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
             if (i > 0 && sortedSnaps[i - 1].available !== snap.available) {
                 const prevY = getYPosition(sortedSnaps[i - 1].available);
                 const vertX = Math.max(0, getXPosition(snap.timestamp));
-                if (vertX < currentTimeX) {
+                if (vertX < historyEndX) {
                     lines.push(
                         <line key={`v-${i}`}
                             x1={vertX} y1={prevY} x2={vertX} y2={y}
@@ -337,6 +337,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     const todayStr = localDateStr(now);
     const isToday = showLiveAvailabilityLine ?? (dateString ? (dateString === todayStr) : (localDateStr(currentDate) === todayStr));
     const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
+    const historyEndX = isToday ? Math.min(currentTimeX, endOfDayX) : endOfDayX;
 
     return (
         <>
@@ -345,7 +346,7 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 className="absolute top-0 left-0 w-full h-full"
                 style={{ zIndex: 5, pointerEvents: 'none' }}
             >
-                {renderHistoricalLines()}
+                {renderHistoricalLines(historyEndX)}
                 {isToday && <g>
                     <line
                         x1={solidStartX} y1={displayY}
