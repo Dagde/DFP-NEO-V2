@@ -4532,7 +4532,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
 const getCategory = (res) => {
   if (!res || typeof res !== "string") return "Other";
   if (res.startsWith("PC-21") || res.startsWith("Deployed")) return "PC-21";
-  if (res.startsWith("STBY")) return "STBY";
+  if (res.startsWith("STBY") || res.startsWith("BNF-STBY")) return "STBY";
   if (res === "Duty Sup") return "Duty Sup";
   if (res === "TWR DI") return "TWR DI";
   if (res.startsWith("FTD")) return "FTD";
@@ -4559,36 +4559,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
     onReorder(reorderedResources);
     setDraggedIndex(null);
   };
-  const displayResources = [];
-  for (let i = 1; i <= 24; i++) {
-    displayResources.push(`PC-21 ${i}`);
-  }
-  displayResources.push("Duty Sup");
-  displayResources.push("TWR DI");
-  let stbyLineCount = 4;
-  if (events.length > 0) {
-    const stbyEvents = events.filter(
-      (event) => event?.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"))
-    );
-    const uniqueStbyLines = new Set(stbyEvents.map((e) => e.resourceId));
-    stbyLineCount = Math.max(uniqueStbyLines.size, 4);
-  }
-  for (let i = 0; i < stbyLineCount; i++) {
-    displayResources.push("STBY");
-  }
-  for (let i = 0; i < 5; i++) {
-    displayResources.push("FTD");
-  }
-  for (let i = 0; i < 4; i++) {
-    displayResources.push("CPT");
-  }
-  if (events.length > 0) {
-    const groundEvents = events.filter(
-      (event) => event?.resourceId && event.resourceId.startsWith("Ground")
-    );
-    const uniqueGroundLines = new Set(groundEvents.map((e) => e.resourceId));
-    uniqueGroundLines.forEach(() => displayResources.push("Ground"));
-  }
+  const displayResources = resources;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-36 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: displayResources.map((resource, index) => {
     let resourceText = resource;
     let textColorClass = "text-gray-400";
@@ -4605,16 +4576,16 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
     } else if (resource.startsWith("PC-21")) {
       textColorClass = "text-gray-400";
       isDraggable = true;
-    } else if (resource === "STBY") {
+    } else if (resource.startsWith("STBY") || resource.startsWith("BNF-STBY")) {
       textColorClass = "text-gray-400";
       isDraggable = false;
-    } else if (resource === "FTD") {
+    } else if (resource.startsWith("FTD")) {
       textColorClass = "text-indigo-300";
       isDraggable = true;
-    } else if (resource === "CPT") {
+    } else if (resource.startsWith("CPT")) {
       textColorClass = "text-cyan-300";
       isDraggable = false;
-    } else if (resource === "Ground") {
+    } else if (resource.startsWith("Ground")) {
       textColorClass = "text-gray-400";
       isDraggable = false;
     }
@@ -4639,7 +4610,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: resource.match(/\d+$/)?.[0] || "" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "PC-21" })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: resourceText }) })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: resourceText.replace(/\s+\d+$/, "") }) })
       },
       `${resource}-${index}`
     );
@@ -5014,8 +4985,12 @@ const AircraftAvailabilityOverlay = ({
   };
   const localDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const todayStr = localDateStr(now);
-  const isToday = showLiveAvailabilityLine ?? (dateString ? dateString === todayStr : localDateStr(currentDate) === todayStr);
-  const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
+  const selectedDateStr = dateString ?? localDateStr(currentDate);
+  const isFutureDate = selectedDateStr > todayStr;
+  const isToday = showLiveAvailabilityLine ?? selectedDateStr === todayStr;
+  const showSolidLine = isToday || isFutureDate;
+  const showHistoryTrace = !isFutureDate;
+  const solidStartX = isFutureDate ? 0 : Math.min(currentTimeX, endOfDayX - 1);
   const historyEndX = isToday ? Math.min(currentTimeX, endOfDayX) : endOfDayX;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "svg",
@@ -5024,8 +4999,8 @@ const AircraftAvailabilityOverlay = ({
       className: "absolute top-0 left-0 w-full h-full",
       style: { zIndex: 5, pointerEvents: "none" },
       children: [
-        renderHistoricalLines(historyEndX),
-        isToday && /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+        showHistoryTrace && renderHistoricalLines(historyEndX),
+        showSolidLine && /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "line",
             {
@@ -69398,9 +69373,10 @@ const App = () => {
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   const dateKey = getDailySnapshotDate(snap2.date);
+                  const baselineKey = `${school}:${dateKey}`;
                   const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
-                  if (baselineEvts.length > 0 && !merged[dateKey]) {
-                    merged[dateKey] = JSON.parse(JSON.stringify(baselineEvts));
+                  if (baselineEvts.length > 0 && !merged[baselineKey]) {
+                    merged[baselineKey] = JSON.parse(JSON.stringify(baselineEvts));
                   }
                 });
                 return merged;
@@ -69504,7 +69480,7 @@ const App = () => {
       if (!res.ok) {
         if (replace) {
           setPublishedSchedules((prev) => ({ ...prev, [targetDate]: [] }));
-          setBaselineSchedules((prev) => ({ ...prev, [targetDate]: [] }));
+          setBaselineSchedules((prev) => ({ ...prev, [`${snapshotSchool}:${targetDate}`]: [] }));
         }
         return;
       }
@@ -69520,8 +69496,9 @@ const App = () => {
         });
         const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
         setBaselineSchedules((prev) => {
-          if (!replace && prev[targetDate]) return prev;
-          return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
+          const baselineKey = `${snapshotSchool}:${targetDate}`;
+          if (!replace && prev[baselineKey]) return prev;
+          return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
         });
         console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate} (${snapshotSchool}), ${events2.length} events`);
       }
@@ -70438,6 +70415,7 @@ ${"=".repeat(60)}`);
     coursePercentages
   ]);
   const [baselineSchedules, setBaselineSchedules] = reactExports.useState({});
+  const activeBaselineKey = `${school}:${date}`;
   const [alertsDataByDate, setAlertsDataByDate] = reactExports.useState({});
   const isDirtyRef = reactExports.useRef(() => false);
   const onSaveRef = reactExports.useRef(() => {
@@ -70752,14 +70730,15 @@ ${"=".repeat(60)}`);
   }, [buildDfpDate, nextDayBuildEvents, publishedSchedules]);
   reactExports.useEffect(() => {
     const dateStr = date;
+    const baselineKey = `${school}:${dateStr}`;
     const eventsForCurrentDate = publishedSchedules[dateStr] || [];
-    if (eventsForCurrentDate.length > 0 && !baselineSchedules[dateStr]) {
+    if (eventsForCurrentDate.length > 0 && !baselineSchedules[baselineKey]) {
       setBaselineSchedules((prev) => ({
         ...prev,
-        [dateStr]: JSON.parse(JSON.stringify(eventsForCurrentDate))
+        [baselineKey]: JSON.parse(JSON.stringify(eventsForCurrentDate))
       }));
     }
-  }, [publishedSchedules, date, baselineSchedules]);
+  }, [publishedSchedules, date, school, baselineSchedules]);
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     const callsignPrefix = school === "ESL" ? "ROLR" : "VIPR";
@@ -73622,7 +73601,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }));
     setBaselineSchedules((prev) => ({
       ...prev,
-      [targetDate]: JSON.parse(JSON.stringify(finalEvents))
+      [`${school}:${targetDate}`]: JSON.parse(JSON.stringify(finalEvents))
     }));
     setTimeout(() => {
       setPublishedSchedules((currentSchedules) => {
@@ -73680,7 +73659,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }, 500);
     setBaselineSchedules((prev) => ({
       ...prev,
-      [buildDfpDate]: JSON.parse(JSON.stringify(newEventsForDate))
+      [`${school}:${buildDfpDate}`]: JSON.parse(JSON.stringify(newEventsForDate))
     }));
     logAudit(
       "Next Day Build",
@@ -75608,7 +75587,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             selectedEventIds,
             setSelectedEventIds,
             detectConflictsForEvent,
-            baselineEvents: baselineSchedules[date],
+            baselineEvents: baselineSchedules[activeBaselineKey],
             alertsData: alertsDataByDate[date] || {},
             isOracleMode,
             oraclePreviewEvent,
@@ -77931,14 +77910,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           onCancelEvent: handleCancelEvent,
           onRestoreEvent: handleRestoreEvent,
           isPauseViewMode: showPausePanel && ["NextDayBuild", "Priorities", "ProgramData"].includes(activeView),
-          isChanged: selectedEvent ? !!(baselineSchedules[date]?.length > 0 && (() => {
-            const baseline = baselineSchedules[date]?.find((b) => b.id === selectedEvent.id);
-            if (!baseline) return !!baselineSchedules[date]?.length;
+          isChanged: selectedEvent ? !!(baselineSchedules[activeBaselineKey]?.length > 0 && (() => {
+            const baseline = baselineSchedules[activeBaselineKey]?.find((b) => b.id === selectedEvent.id);
+            if (!baseline) return !!baselineSchedules[activeBaselineKey]?.length;
             const epsilon = 1e-3;
             return Math.abs(selectedEvent.startTime - baseline.startTime) > epsilon || Math.abs(selectedEvent.duration - baseline.duration) > epsilon || selectedEvent.resourceId !== baseline.resourceId;
           })()) : false,
           alertData: selectedEvent ? alertsDataByDate[date]?.[selectedEvent.id] || null : null,
-          baselineEvent: selectedEvent ? baselineSchedules[date]?.find((b) => b.id === selectedEvent.id) || null : null,
+          baselineEvent: selectedEvent ? baselineSchedules[activeBaselineKey]?.find((b) => b.id === selectedEvent.id) || null : null,
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule"

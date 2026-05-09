@@ -335,8 +335,12 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
     // (currentDate may be created from a YYYY-MM-DD string which is parsed as UTC midnight)
     const localDateStr = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const todayStr = localDateStr(now);
-    const isToday = showLiveAvailabilityLine ?? (dateString ? (dateString === todayStr) : (localDateStr(currentDate) === todayStr));
-    const solidStartX = Math.min(currentTimeX, endOfDayX - 1);
+    const selectedDateStr = dateString ?? localDateStr(currentDate);
+    const isFutureDate = selectedDateStr > todayStr;
+    const isToday = showLiveAvailabilityLine ?? (selectedDateStr === todayStr);
+    const showSolidLine = isToday || isFutureDate;
+    const showHistoryTrace = !isFutureDate;
+    const solidStartX = isFutureDate ? 0 : Math.min(currentTimeX, endOfDayX - 1);
     const historyEndX = isToday ? Math.min(currentTimeX, endOfDayX) : endOfDayX;
 
     return (
@@ -346,8 +350,8 @@ const AircraftAvailabilityOverlay: React.FC<AircraftAvailabilityOverlayProps> = 
                 className="absolute top-0 left-0 w-full h-full"
                 style={{ zIndex: 5, pointerEvents: 'none' }}
             >
-                {renderHistoricalLines(historyEndX)}
-                {isToday && <g>
+                {showHistoryTrace && renderHistoricalLines(historyEndX)}
+                {showSolidLine && <g>
                     <line
                         x1={solidStartX} y1={displayY}
                         x2={endOfDayX}   y2={displayY}

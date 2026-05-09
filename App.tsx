@@ -5214,12 +5214,13 @@ const App: React.FC = () => {
                                 const merged = { ...prev };
                                 snapshots.forEach(snap => {
                                     const dateKey = getDailySnapshotDate(snap.date);
+                                    const baselineKey = `${school}:${dateKey}`;
                                     // Use stored baselineEvents if available, otherwise fall back to scheduleEvents
                                     const baselineEvts: ScheduleEvent[] = Array.isArray(snap.baselineEvents) && snap.baselineEvents.length > 0
                                         ? snap.baselineEvents
                                         : (Array.isArray(snap.scheduleEvents) ? snap.scheduleEvents : []);
-                                    if (baselineEvts.length > 0 && !merged[dateKey]) {
-                                        merged[dateKey] = JSON.parse(JSON.stringify(baselineEvts));
+                                    if (baselineEvts.length > 0 && !merged[baselineKey]) {
+                                        merged[baselineKey] = JSON.parse(JSON.stringify(baselineEvts));
                                     }
                                 });
                                 return merged;
@@ -5345,7 +5346,7 @@ const App: React.FC = () => {
             if (!res.ok) {
                 if (replace) {
                     setPublishedSchedules(prev => ({ ...prev, [targetDate]: [] }));
-                    setBaselineSchedules(prev => ({ ...prev, [targetDate]: [] }));
+                    setBaselineSchedules(prev => ({ ...prev, [`${snapshotSchool}:${targetDate}`]: [] }));
                 }
                 return; // 404 = no snapshot for that date/location, that's fine
             }
@@ -5365,8 +5366,9 @@ const App: React.FC = () => {
                     ? snap.baselineEvents
                     : events;
                 setBaselineSchedules(prev => {
-                    if (!replace && prev[targetDate]) return prev; // don't overwrite existing baseline
-                    return { ...prev, [targetDate]: JSON.parse(JSON.stringify(baselineEvts)) };
+                    const baselineKey = `${snapshotSchool}:${targetDate}`;
+                    if (!replace && prev[baselineKey]) return prev; // don't overwrite existing baseline
+                    return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
                 });
                 console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate} (${snapshotSchool}), ${events.length} events`);
             }
@@ -6444,6 +6446,7 @@ const App: React.FC = () => {
 
     // Baseline schedule state
     const [baselineSchedules, setBaselineSchedules] = useState<Record<string, ScheduleEvent[]>>({});
+    const activeBaselineKey = `${school}:${date}`;
 
     // Alerts data state: { [date]: { [eventId]: alertEntry } }
     const [alertsDataByDate, setAlertsDataByDate] = useState<Record<string, Record<string, any>>>({});
@@ -6896,15 +6899,16 @@ const App: React.FC = () => {
         // This enables change bar detection for moved events
         // Uses publishedSchedules (not events) as that's what ScheduleView renders from
         const dateStr = date;
+        const baselineKey = `${school}:${dateStr}`;
         const eventsForCurrentDate = publishedSchedules[dateStr] || [];
 
-        if (eventsForCurrentDate.length > 0 && !baselineSchedules[dateStr]) {
+        if (eventsForCurrentDate.length > 0 && !baselineSchedules[baselineKey]) {
             setBaselineSchedules(prev => ({
                 ...prev,
-                [dateStr]: JSON.parse(JSON.stringify(eventsForCurrentDate))
+                [baselineKey]: JSON.parse(JSON.stringify(eventsForCurrentDate))
             }));
         }
-    }, [publishedSchedules, date, baselineSchedules]);
+    }, [publishedSchedules, date, school, baselineSchedules]);
 
     const personnelData = useMemo(() => {
         const data = new Map<string, { callsignPrefix: string; callsignNumber: number }>();
@@ -10686,7 +10690,7 @@ const App: React.FC = () => {
         // 2. Snapshot as new baseline (for change-detection highlighting)
         setBaselineSchedules((prev) => ({
             ...prev,
-            [targetDate]: JSON.parse(JSON.stringify(finalEvents)),
+            [`${school}:${targetDate}`]: JSON.parse(JSON.stringify(finalEvents)),
         }));
 
         // 3. Sync PT-051s with the updated schedule (delayed to let state settle)
@@ -10757,7 +10761,7 @@ const App: React.FC = () => {
         setBaselineSchedules((prev) => ({
             ...prev,
            
-            [buildDfpDate]: JSON.parse(JSON.stringify(newEventsForDate))
+            [`${school}:${buildDfpDate}`]: JSON.parse(JSON.stringify(newEventsForDate))
         }));
            
            // Log the publish action to audit trail
@@ -13239,7 +13243,7 @@ updates.forEach(update => {
                            selectedEventIds={selectedEventIds}
                            setSelectedEventIds={setSelectedEventIds}
                            detectConflictsForEvent={detectConflictsForEvent}
-                           baselineEvents={baselineSchedules[date]}
+                           baselineEvents={baselineSchedules[activeBaselineKey]}
                            alertsData={alertsDataByDate[date] || {}}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
@@ -15774,16 +15778,16 @@ updates.forEach(update => {
                     onCancelEvent={handleCancelEvent}
                     onRestoreEvent={handleRestoreEvent}
                     isPauseViewMode={showPausePanel && ['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView)}
-                    isChanged={selectedEvent ? !!(baselineSchedules[date]?.length > 0 && (() => {
-                        const baseline = baselineSchedules[date]?.find(b => b.id === selectedEvent.id);
-                        if (!baseline) return !!baselineSchedules[date]?.length;
+                    isChanged={selectedEvent ? !!(baselineSchedules[activeBaselineKey]?.length > 0 && (() => {
+                        const baseline = baselineSchedules[activeBaselineKey]?.find(b => b.id === selectedEvent.id);
+                        if (!baseline) return !!baselineSchedules[activeBaselineKey]?.length;
                         const epsilon = 0.001;
                         return Math.abs(selectedEvent.startTime - baseline.startTime) > epsilon ||
                                Math.abs(selectedEvent.duration - baseline.duration) > epsilon ||
                                selectedEvent.resourceId !== baseline.resourceId;
                     })()) : false}
                     alertData={selectedEvent ? (alertsDataByDate[date]?.[selectedEvent.id] || null) : null}
-                    baselineEvent={selectedEvent ? (baselineSchedules[date]?.find(b => b.id === selectedEvent.id) || null) : null}
+                    baselineEvent={selectedEvent ? (baselineSchedules[activeBaselineKey]?.find(b => b.id === selectedEvent.id) || null) : null}
                     onSendAlert={handleSendAlert}
                     onClearAlert={handleClearAlert}
                     canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}

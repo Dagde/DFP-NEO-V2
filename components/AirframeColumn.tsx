@@ -15,7 +15,7 @@ interface AirframeColumnProps {
 const getCategory = (res: string) => {
     if (!res || typeof res !== 'string') return 'Other';
     if (res.startsWith('PC-21') || res.startsWith('Deployed')) return 'PC-21';
-    if (res.startsWith('STBY')) return 'STBY';
+    if (res.startsWith('STBY') || res.startsWith('BNF-STBY')) return 'STBY';
     if (res === 'Duty Sup') return 'Duty Sup';
     if (res === 'TWR DI') return 'TWR DI';
     if (res.startsWith('FTD')) return 'FTD';
@@ -49,52 +49,10 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
     setDraggedIndex(null);
   };
 
-  // Build the resource list with fixed sections
-  const displayResources: string[] = [];
-  
-  // 1. Always add PC-21 1-24 (FIXED - 24 lines)
-  for (let i = 1; i <= 24; i++) {
-    displayResources.push(`PC-21 ${i}`);
-  }
-  
-  // 2. Always add Duty Sup (FIXED - 1 line)
-  displayResources.push('Duty Sup');
-     
-     // 2.5. Always add TWR DI (FIXED - 1 line)
-     displayResources.push('TWR DI');
-  
-  // 3. Add STBY lines with minimum of 4 lines (VARIABLE with minimum 4)
-  let stbyLineCount = 4; // Always show minimum of 4 STBY lines
-  if (events.length > 0) {
-    const stbyEvents = events.filter(event => 
-      event?.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'))
-    );
-    const uniqueStbyLines = new Set(stbyEvents.map(e => e.resourceId));
-    stbyLineCount = Math.max(uniqueStbyLines.size, 4); // Minimum 4 lines
-  }
-  
-  for (let i = 0; i < stbyLineCount; i++) {
-    displayResources.push('STBY');
-  }
-  
-  // 4. Always add 5 FTD lines (FIXED - 5 lines, regardless of availability or events)
-  for (let i = 0; i < 5; i++) {
-    displayResources.push('FTD');
-  }
-  
-  // 5. Always add 4 CPT lines (FIXED - 4 lines, regardless of availability or events)
-  for (let i = 0; i < 4; i++) {
-    displayResources.push('CPT');
-  }
-  
-  // 6. Add Ground lines based on actual Ground events (VARIABLE)
-  if (events.length > 0) {
-    const groundEvents = events.filter(event => 
-      event?.resourceId && event.resourceId.startsWith('Ground')
-    );
-    const uniqueGroundLines = new Set(groundEvents.map(e => e.resourceId));
-    uniqueGroundLines.forEach(() => displayResources.push('Ground'));
-  }
+  // The resource column must render exactly the same rows as the schedule grid.
+  // Resource counts are now configurable through Platform Configuration, so
+  // hard-coded row construction here will desynchronise the left column.
+  const displayResources: string[] = resources;
 
   return (
     <div className="w-36 bg-gray-800 flex-shrink-0 h-full">
@@ -118,16 +76,16 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
             } else if (resource.startsWith('PC-21')) {
                 textColorClass = 'text-gray-400';
                 isDraggable = true;
-            } else if (resource === 'STBY') {
+            } else if (resource.startsWith('STBY') || resource.startsWith('BNF-STBY')) {
                 textColorClass = 'text-gray-400';
                 isDraggable = false;
-            } else if (resource === 'FTD') {
+            } else if (resource.startsWith('FTD')) {
                 textColorClass = 'text-indigo-300';
                 isDraggable = true;
-            } else if (resource === 'CPT') {
+            } else if (resource.startsWith('CPT')) {
                 textColorClass = 'text-cyan-300';
                 isDraggable = false;
-            } else if (resource === 'Ground') {
+            } else if (resource.startsWith('Ground')) {
                 textColorClass = 'text-gray-400';
                 isDraggable = false;
             }
@@ -167,7 +125,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                   </div>
               ) : (
                   <div className="w-full text-center">
-                      <span>{resourceText}</span>
+                      <span>{resourceText.replace(/\s+\d+$/, '')}</span>
                   </div>
               )}
             </li>
