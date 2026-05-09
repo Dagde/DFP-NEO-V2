@@ -1591,6 +1591,8 @@ const emptyPlatformConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  userAccess: [],
+  platformUsers: [],
   schedulingRuleSets: []
 };
 const getApiBase$2 = () => {
@@ -56427,6 +56429,8 @@ const emptyConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  userAccess: [],
+  platformUsers: [],
   schedulingRuleSets: []
 };
 const getApiBase = () => {
@@ -56518,6 +56522,30 @@ const PlatformConfigurationSettings = ({
             standby: 4,
             ground: 6
           }
+        }
+      ]
+    }));
+  };
+  const addUserAccess = () => {
+    const defaultUser = config.platformUsers[0];
+    const userId = defaultUser?.userId || defaultUser?.username || "";
+    const displayName = defaultUser ? `${defaultUser.firstName || ""} ${defaultUser.lastName || ""}`.trim() || defaultUser.username || userId : "";
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: [
+        ...prev.userAccess,
+        {
+          userId,
+          username: defaultUser?.username || "",
+          displayName,
+          organisationCode: prev.organisations[0]?.code || "DEFAULT",
+          locationCode: prev.locations[0]?.code || "",
+          unitCode: "",
+          moduleCode: "",
+          role: "Viewer",
+          accessLevel: "Read",
+          status: "ACTIVE",
+          settings: {}
         }
       ]
     }));
@@ -56684,6 +56712,46 @@ const PlatformConfigurationSettings = ({
           })
         ] }, unit.code)) })
       ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "User Access Context",
+          subtitle: "Defines which organisation, location, unit and module each user is allowed to see or administer. Stage four records the rules; enforcement remains staged.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Access" }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.userAccess.map((access, index) => {
+        const userOptions = config.platformUsers.map((user) => user.userId || user.username).filter(Boolean);
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectField,
+            {
+              label: "User",
+              value: access.userId || "",
+              disabled: !canEdit,
+              options: userOptions,
+              onChange: (value) => {
+                const selectedUser = config.platformUsers.find((user) => (user.userId || user.username) === value);
+                updateRow("userAccess", index, {
+                  userId: value,
+                  username: selectedUser?.username || access.username || "",
+                  displayName: selectedUser ? `${selectedUser.firstName || ""} ${selectedUser.lastName || ""}`.trim() || selectedUser.username || value : access.displayName
+                });
+              }
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Display Name", value: access.displayName || access.username || access.userId || "", disabled: !canEdit, onChange: (value) => updateRow("userAccess", index, { displayName: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Module", value: access.moduleCode || "", disabled: !canEdit, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: access.role || "Viewer", disabled: !canEdit, options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEdit, options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
+        ] }, access.id || `${access.userId}-${index}`);
+      }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),

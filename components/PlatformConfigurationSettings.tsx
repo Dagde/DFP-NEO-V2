@@ -8,6 +8,8 @@ type PlatformConfig = {
   resourcePools: any[];
   modules: any[];
   unitModules: any[];
+  userAccess: any[];
+  platformUsers: any[];
   schedulingRuleSets: any[];
 };
 
@@ -19,6 +21,8 @@ const emptyConfig: PlatformConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  userAccess: [],
+  platformUsers: [],
   schedulingRuleSets: [],
 };
 
@@ -124,6 +128,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             standby: 4,
             ground: 6,
           },
+        },
+      ],
+    }));
+  };
+
+  const addUserAccess = () => {
+    const defaultUser = config.platformUsers[0];
+    const userId = defaultUser?.userId || defaultUser?.username || '';
+    const displayName = defaultUser
+      ? `${defaultUser.firstName || ''} ${defaultUser.lastName || ''}`.trim() || defaultUser.username || userId
+      : '';
+
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: [
+        ...prev.userAccess,
+        {
+          userId,
+          username: defaultUser?.username || '',
+          displayName,
+          organisationCode: prev.organisations[0]?.code || 'DEFAULT',
+          locationCode: prev.locations[0]?.code || '',
+          unitCode: '',
+          moduleCode: '',
+          role: 'Viewer',
+          accessLevel: 'Read',
+          status: 'ACTIVE',
+          settings: {},
         },
       ],
     }));
@@ -330,6 +362,47 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-gray-700 bg-gray-800">
+        <SectionHeader
+          title="User Access Context"
+          subtitle="Defines which organisation, location, unit and module each user is allowed to see or administer. Stage four records the rules; enforcement remains staged."
+          action={canEdit ? <button type="button" onClick={addUserAccess} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Access</button> : null}
+        />
+        <div className="space-y-3 p-4">
+          {config.userAccess.map((access, index) => {
+            const userOptions = config.platformUsers.map((user) => user.userId || user.username).filter(Boolean);
+            return (
+              <div key={access.id || `${access.userId}-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-4">
+                <SelectField
+                  label="User"
+                  value={access.userId || ''}
+                  disabled={!canEdit}
+                  options={userOptions}
+                  onChange={(value) => {
+                    const selectedUser = config.platformUsers.find((user) => (user.userId || user.username) === value);
+                    updateRow('userAccess', index, {
+                      userId: value,
+                      username: selectedUser?.username || access.username || '',
+                      displayName: selectedUser
+                        ? `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() || selectedUser.username || value
+                        : access.displayName,
+                    });
+                  }}
+                />
+                <Field label="Display Name" value={access.displayName || access.username || access.userId || ''} disabled={!canEdit} onChange={(value) => updateRow('userAccess', index, { displayName: value })} />
+                <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
+                <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} />
+                <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} />
+                <SelectField label="Module" value={access.moduleCode || ''} disabled={!canEdit} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} />
+                <SelectField label="Role" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
+                <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
+                <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
+              </div>
+            );
+          })}
         </div>
       </section>
 

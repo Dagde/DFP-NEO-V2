@@ -557,6 +557,31 @@ model CommercialUnitModule {
   @@index([moduleCode])
 }
 
+model CommercialUserAccess {
+  id               String   @id @default(cuid())
+  userId           String
+  username         String?
+  displayName      String?
+  organisationCode String   @default("DEFAULT")
+  locationCode     String?
+  unitCode         String?
+  moduleCode       String?
+  scopeKey         String   @unique
+  role             String   @default("Viewer")
+  accessLevel      String   @default("Read")
+  status           String   @default("ACTIVE")
+  settings         Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([organisationCode])
+  @@index([locationCode])
+  @@index([unitCode])
+  @@index([moduleCode])
+  @@index([status])
+}
+
 model CommercialSchedulingRuleSet {
   id               String   @id @default(cuid())
   organisationCode String

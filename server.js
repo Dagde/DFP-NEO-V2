@@ -339,6 +339,8 @@ app.get('/api/platform-config', async (req, res) => {
       modules,
       unitModules,
       schedulingRuleSets,
+      userAccess,
+      platformUsers,
     ] = await Promise.all([
       db.$queryRawUnsafe(`SELECT * FROM "CommercialOrganisation" ORDER BY "name"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialLocation" ORDER BY "name"`),
@@ -348,6 +350,8 @@ app.get('/api/platform-config', async (req, res) => {
       db.$queryRawUnsafe(`SELECT * FROM "CommercialModule" ORDER BY "name"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialUnitModule" ORDER BY "unitCode", "moduleCode"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialSchedulingRuleSet" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialUserAccess" ORDER BY "displayName", "userId", "locationCode", "unitCode", "moduleCode"`),
+      db.$queryRawUnsafe(`SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive" FROM "User" ORDER BY "lastName", "firstName", username`),
     ]);
 
     res.json({
@@ -359,6 +363,8 @@ app.get('/api/platform-config', async (req, res) => {
       modules,
       unitModules,
       schedulingRuleSets,
+      userAccess,
+      platformUsers,
     });
   } catch (error) {
     console.error('❌ GET /api/platform-config error:', error);
@@ -377,6 +383,7 @@ app.post('/api/platform-config', async (req, res) => {
       resourcePools = [],
       unitModules = [],
       schedulingRuleSets = [],
+      userAccess = [],
     } = req.body || {};
 
     const now = new Date().toISOString();
@@ -487,6 +494,33 @@ app.post('/api/platform-config', async (req, res) => {
           "isActive" = $8,
           "updatedAt" = $9::timestamp
       `, ruleSet.id || null, ruleSet.organisationCode || 'DEFAULT', ruleSet.unitCode || null, ruleSet.aircraftTypeCode || null, name, ruleSet.scope || 'Unit', toJson(ruleSet.rules), ruleSet.isActive !== false, now);
+    }
+
+    for (const access of userAccess) {
+      if (!access.userId) continue;
+      const scopeKey = [
+        access.userId,
+        access.organisationCode || 'DEFAULT',
+        access.locationCode || '',
+        access.unitCode || '',
+        access.moduleCode || '',
+      ].join('|');
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
+        VALUES (COALESCE($1, gen_random_uuid()::text), $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::timestamp, $14::timestamp)
+        ON CONFLICT ("scopeKey") DO UPDATE SET
+          "username" = $3,
+          "displayName" = $4,
+          "organisationCode" = $5,
+          "locationCode" = $6,
+          "unitCode" = $7,
+          "moduleCode" = $8,
+          "role" = $10,
+          "accessLevel" = $11,
+          "status" = $12,
+          "settings" = $13::jsonb,
+          "updatedAt" = $14::timestamp
+      `, access.id || null, access.userId, access.username || null, access.displayName || null, access.organisationCode || 'DEFAULT', access.locationCode || null, access.unitCode || null, access.moduleCode || null, scopeKey, access.role || 'Viewer', access.accessLevel || 'Read', access.status || 'ACTIVE', toJson(access.settings), now);
     }
 
     res.json({ success: true });
@@ -4760,6 +4794,35 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUnitModule_unitCode_idx" ON "CommercialUnitModule"("unitCode");`);
 
     await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialUserAccess" (
+        "id" TEXT NOT NULL,
+        "userId" TEXT NOT NULL,
+        "username" TEXT,
+        "displayName" TEXT,
+        "organisationCode" TEXT NOT NULL DEFAULT 'DEFAULT',
+        "locationCode" TEXT,
+        "unitCode" TEXT,
+        "moduleCode" TEXT,
+        "scopeKey" TEXT NOT NULL,
+        "role" TEXT NOT NULL DEFAULT 'Viewer',
+        "accessLevel" TEXT NOT NULL DEFAULT 'Read',
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "settings" JSONB NOT NULL DEFAULT '{}',
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialUserAccess_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialUserAccess" ADD COLUMN IF NOT EXISTS "scopeKey" TEXT;`);
+    await db.$executeRawUnsafe(`UPDATE "CommercialUserAccess" SET "scopeKey" = "userId" || '|' || "organisationCode" || '|' || COALESCE("locationCode", '') || '|' || COALESCE("unitCode", '') || '|' || COALESCE("moduleCode", '') WHERE "scopeKey" IS NULL OR "scopeKey" = '';`);
+    await db.$executeRawUnsafe(`ALTER TABLE "CommercialUserAccess" ALTER COLUMN "scopeKey" SET NOT NULL;`);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialUserAccess_scopeKey_key" ON "CommercialUserAccess"("scopeKey");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUserAccess_userId_idx" ON "CommercialUserAccess"("userId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUserAccess_locationCode_idx" ON "CommercialUserAccess"("locationCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUserAccess_unitCode_idx" ON "CommercialUserAccess"("unitCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUserAccess_moduleCode_idx" ON "CommercialUserAccess"("moduleCode");`);
+
+    await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "CommercialSchedulingRuleSet" (
         "id" TEXT NOT NULL,
         "organisationCode" TEXT NOT NULL,
@@ -4778,9 +4841,35 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialSchedulingRuleSet_aircraftTypeCode_idx" ON "CommercialSchedulingRuleSet"("aircraftTypeCode");`);
 
     await seedCommercialConfigIfEmpty(db);
+    await seedCommercialUserAccessIfEmpty(db);
     console.log('✅ Commercial platform configuration tables ready');
   } catch (err) {
     console.error('❌ Failed to ensure commercial platform configuration tables:', err.message);
+  }
+}
+
+async function seedCommercialUserAccessIfEmpty(db) {
+  const existing = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialUserAccess"`);
+  if (existing?.[0]?.count > 0) return;
+
+  const now = new Date().toISOString();
+  const users = await db.$queryRawUnsafe(`SELECT id, "userId", username, "firstName", "lastName", role FROM "User" WHERE "isActive" = true`);
+  const locations = await db.$queryRawUnsafe(`SELECT "code" FROM "CommercialLocation" WHERE "status" = 'ACTIVE'`);
+
+  for (const user of users) {
+    const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId;
+    const elevated = ['SUPER_ADMIN', 'ADMIN'].includes(String(user.role || '').toUpperCase());
+    const accessRole = elevated ? 'Platform Admin' : 'Viewer';
+    const accessLevel = elevated ? 'Admin' : 'Read';
+
+    for (const location of locations) {
+      const scopeKey = `${user.userId}|DEFAULT|${location.code}||`;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, 'DEFAULT', $4, NULL, NULL, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
+        ON CONFLICT ("scopeKey") DO NOTHING
+      `, user.userId, user.username, displayName, location.code, scopeKey, accessRole, accessLevel, now);
+    }
   }
 }
 
@@ -4897,6 +4986,22 @@ async function seedCommercialConfigIfEmpty(db) {
         ceaseNightFlying: settings.ceaseNightFlying,
       },
     }), now);
+  }
+
+  const users = await db.$queryRawUnsafe(`SELECT id, "userId", username, "firstName", "lastName", role FROM "User" WHERE "isActive" = true`);
+  const seededLocations = await db.$queryRawUnsafe(`SELECT "code" FROM "CommercialLocation" WHERE "status" = 'ACTIVE'`);
+  for (const user of users) {
+    const displayName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId;
+    const accessRole = ['SUPER_ADMIN', 'ADMIN'].includes(String(user.role || '').toUpperCase()) ? 'Platform Admin' : 'Viewer';
+    const accessLevel = ['SUPER_ADMIN', 'ADMIN'].includes(String(user.role || '').toUpperCase()) ? 'Admin' : 'Read';
+    for (const location of seededLocations) {
+      const scopeKey = `${user.userId}|DEFAULT|${location.code}||`;
+      await db.$executeRawUnsafe(`
+        INSERT INTO "CommercialUserAccess" ("id", "userId", "username", "displayName", "organisationCode", "locationCode", "unitCode", "moduleCode", "scopeKey", "role", "accessLevel", "status", "settings", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid()::text, $1, $2, $3, 'DEFAULT', $4, NULL, NULL, $5, $6, $7, 'ACTIVE', '{}'::jsonb, $8::timestamp, $8::timestamp)
+        ON CONFLICT ("scopeKey") DO NOTHING
+      `, user.userId, user.username, displayName, location.code, scopeKey, accessRole, accessLevel, now);
+    }
   }
 }
 

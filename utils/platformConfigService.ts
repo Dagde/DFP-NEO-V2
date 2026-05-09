@@ -46,6 +46,8 @@ export interface PlatformConfig {
   resourcePools: PlatformResourcePool[];
   modules: any[];
   unitModules: any[];
+  userAccess: any[];
+  platformUsers: any[];
   schedulingRuleSets: any[];
 }
 
@@ -57,6 +59,8 @@ const emptyPlatformConfig: PlatformConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  userAccess: [],
+  platformUsers: [],
   schedulingRuleSets: [],
 };
 
