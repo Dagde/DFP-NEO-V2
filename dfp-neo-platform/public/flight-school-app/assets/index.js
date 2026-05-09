@@ -1399,7 +1399,7 @@ const ORG_ID = "default";
 let saveDebounceTimer = null;
 let pendingSettings = null;
 let isSaving = false;
-const getApiBase$2 = () => {
+const getApiBase$3 = () => {
   const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
   const currentOrigin = window.location.origin;
   if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) {
@@ -1409,7 +1409,7 @@ const getApiBase$2 = () => {
 };
 const loadSettingsFromDB = async () => {
   try {
-    const apiBase2 = getApiBase$2();
+    const apiBase2 = getApiBase$3();
     const url = `${apiBase2}/settings?orgId=${ORG_ID}`;
     console.log("[Settings] 🔍 Loading settings from DB — URL:", url);
     const res = await fetch(url, {
@@ -1442,7 +1442,7 @@ const saveSettingsNow = async (settings, userId) => {
   }
   isSaving = true;
   try {
-    const apiBase2 = getApiBase$2();
+    const apiBase2 = getApiBase$3();
     const url = `${apiBase2}/settings`;
     const payload = {
       orgId: ORG_ID,
@@ -1560,7 +1560,7 @@ const buildSettingsSnapshot = (state) => {
 };
 const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId) => {
   try {
-    const apiBase2 = getApiBase$2();
+    const apiBase2 = getApiBase$3();
     const url = `${apiBase2}/currencies`;
     const res = await fetch(url, {
       method: "POST",
@@ -1582,6 +1582,48 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
     console.error("[Currencies] Error saving:", error);
     return false;
   }
+};
+const emptyPlatformConfig = {
+  organisations: [],
+  locations: [],
+  units: [],
+  aircraftTypes: [],
+  resourcePools: [],
+  modules: [],
+  unitModules: [],
+  schedulingRuleSets: []
+};
+const getApiBase$2 = () => {
+  const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
+  const currentOrigin = window.location.origin;
+  if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) return "/api";
+  return `${railwayBackend}/api`;
+};
+const loadPlatformConfigFromDB = async () => {
+  try {
+    const res = await fetch(`${getApiBase$2()}/platform-config`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" }
+    });
+    if (!res.ok) {
+      console.warn("[PlatformConfig] Failed to load:", res.status);
+      return null;
+    }
+    const data = await res.json();
+    return { ...emptyPlatformConfig, ...data };
+  } catch (error) {
+    console.error("[PlatformConfig] Error loading platform configuration:", error);
+    return null;
+  }
+};
+const getLocationCodesForCurrentRuntime = (config, supportedCodes = ["ESL", "PEA"]) => {
+  const supported = new Set(supportedCodes);
+  const configuredCodes = (config?.locations || []).filter((location) => location.status !== "INACTIVE").map((location) => location.code).filter((code) => supported.has(code));
+  return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
+};
+const getLocationResourcePool = (config, locationCode) => {
+  const pools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE" && pool.locationCode === locationCode && pool.poolType === "Shared");
+  return pools[0] || null;
 };
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
@@ -68691,6 +68733,8 @@ const App = () => {
     return { staff: false, trainee: false, staffDb: true, traineeDb: true };
   });
   const [school, setSchool] = reactExports.useState("ESL");
+  const [platformConfig, setPlatformConfig] = reactExports.useState(null);
+  const [platformConfigLoaded, setPlatformConfigLoaded] = reactExports.useState(false);
   const [allInstructorsData, setInstructorsData] = reactExports.useState([]);
   const [archivedInstructorsData, setArchivedInstructorsData] = reactExports.useState([]);
   const [allTraineesData, setTraineesData] = reactExports.useState([]);
@@ -68703,6 +68747,48 @@ const App = () => {
   reactExports.useEffect(() => {
     allTraineesDataRef.current = allTraineesData;
   }, [allTraineesData]);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const loadPlatformConfig = async () => {
+      const config = await loadPlatformConfigFromDB();
+      if (cancelled) return;
+      setPlatformConfig(config);
+      setPlatformConfigLoaded(true);
+      if (config) {
+        console.log("[PlatformConfig] Loaded stage-two read context:", {
+          locations: config.locations.length,
+          units: config.units.length,
+          resourcePools: config.resourcePools.length
+        });
+      }
+    };
+    loadPlatformConfig();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const selectableLocationCodes = reactExports.useMemo(
+    () => getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]),
+    [platformConfig]
+  );
+  const activePlatformResourcePool = reactExports.useMemo(
+    () => getLocationResourcePool(platformConfig, school),
+    [platformConfig, school]
+  );
+  reactExports.useEffect(() => {
+    if (!platformConfigLoaded) return;
+    if (activePlatformResourcePool) {
+      console.log("[PlatformConfig] Active location resource context:", {
+        school,
+        pool: activePlatformResourcePool.code,
+        poolType: activePlatformResourcePool.poolType,
+        aircraftType: activePlatformResourcePool.aircraftTypeCode,
+        settings: activePlatformResourcePool.settings
+      });
+    } else {
+      console.log("[PlatformConfig] No platform resource pool found for active location; V2 settings remain authoritative.", { school });
+    }
+  }, [activePlatformResourcePool, platformConfigLoaded, school]);
   const instructorsData = reactExports.useMemo(() => {
     const { staff: mockOn, staffDb: dbOn } = dataSourceSettings;
     const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
@@ -77502,7 +77588,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onAddGroundEvent: () => setShowAddGroundEvent(true),
             showValidation,
             setShowValidation,
-            locations: ["ESL", "PEA"],
+            locations: selectableLocationCodes,
             activeLocation: school,
             onLocationChange: (loc) => changeSchool(loc),
             isMagnifierEnabled,

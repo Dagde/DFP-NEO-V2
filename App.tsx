@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
+import { getLocationCodesForCurrentRuntime, getLocationResourcePool, loadPlatformConfigFromDB, PlatformConfig } from './utils/platformConfigService';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -4387,6 +4388,8 @@ const App: React.FC = () => {
 
     // Data state
     const [school, setSchool] = useState<'ESL' | 'PEA'>('ESL');
+    const [platformConfig, setPlatformConfig] = useState<PlatformConfig | null>(null);
+    const [platformConfigLoaded, setPlatformConfigLoaded] = useState(false);
     const [allInstructorsData, setInstructorsData] = useState<Instructor[]>([]);
 
 
@@ -4399,6 +4402,50 @@ const App: React.FC = () => {
     const allTraineesDataRef    = useRef<Trainee[]>([]);
     useEffect(() => { allInstructorsDataRef.current = allInstructorsData; }, [allInstructorsData]);
     useEffect(() => { allTraineesDataRef.current    = allTraineesData;    }, [allTraineesData]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const loadPlatformConfig = async () => {
+            const config = await loadPlatformConfigFromDB();
+            if (cancelled) return;
+            setPlatformConfig(config);
+            setPlatformConfigLoaded(true);
+            if (config) {
+                console.log('[PlatformConfig] Loaded stage-two read context:', {
+                    locations: config.locations.length,
+                    units: config.units.length,
+                    resourcePools: config.resourcePools.length,
+                });
+            }
+        };
+        loadPlatformConfig();
+        return () => { cancelled = true; };
+    }, []);
+
+    const selectableLocationCodes = useMemo(
+        () => getLocationCodesForCurrentRuntime(platformConfig, ['ESL', 'PEA']),
+        [platformConfig],
+    );
+
+    const activePlatformResourcePool = useMemo(
+        () => getLocationResourcePool(platformConfig, school),
+        [platformConfig, school],
+    );
+
+    useEffect(() => {
+        if (!platformConfigLoaded) return;
+        if (activePlatformResourcePool) {
+            console.log('[PlatformConfig] Active location resource context:', {
+                school,
+                pool: activePlatformResourcePool.code,
+                poolType: activePlatformResourcePool.poolType,
+                aircraftType: activePlatformResourcePool.aircraftTypeCode,
+                settings: activePlatformResourcePool.settings,
+            });
+        } else {
+            console.log('[PlatformConfig] No platform resource pool found for active location; V2 settings remain authoritative.', { school });
+        }
+    }, [activePlatformResourcePool, platformConfigLoaded, school]);
 
     // Filtered instructors/trainees based on dataSourceSettings — updates immediately when toggled
     // Handles all 4 combinations of staff (MockData) and staffDb (Database) toggles
@@ -15409,7 +15456,7 @@ updates.forEach(update => {
                     onAddGroundEvent={() => setShowAddGroundEvent(true)}
                     showValidation={showValidation}
                     setShowValidation={setShowValidation}
-                    locations={['ESL', 'PEA']}
+                    locations={selectableLocationCodes}
                     activeLocation={school}
                     onLocationChange={(loc) => changeSchool(loc as 'ESL' | 'PEA')}
                     isMagnifierEnabled={isMagnifierEnabled}
