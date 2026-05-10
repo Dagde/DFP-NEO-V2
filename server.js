@@ -3526,6 +3526,171 @@ app.post('/api/auth/verify-password', async (req, res) => {
   }
 });
 
+// POST /api/auth/direct-login - Browser app login used by the V2 React client
+app.post('/api/auth/direct-login', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const { userId: loginUserId, password } = req.body || {};
+
+    if (!loginUserId || !password) {
+      return res.status(400).json({
+        error: 'Missing credentials',
+        message: 'User ID and password are required',
+      });
+    }
+
+    const users = await db.$queryRawUnsafe(
+      `SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive", password
+       FROM "User"
+       WHERE "userId" = $1 OR username = $1
+       LIMIT 1`,
+      loginUserId
+    );
+
+    if (!users || users.length === 0 || !users[0].password) {
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        message: 'Invalid User ID or password',
+      });
+    }
+
+    const user = users[0];
+    if (!user.isActive) {
+      return res.status(403).json({
+        error: 'Account inactive',
+        message: 'Your account has been deactivated',
+      });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        message: 'Invalid User ID or password',
+      });
+    }
+
+    const crypto = require('crypto');
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    await db.$executeRawUnsafe(
+      `INSERT INTO "Session" ("id", "sessionToken", "userId", "expires")
+       VALUES (gen_random_uuid()::text, $1, $2, $3::timestamp)`,
+      sessionToken,
+      user.id,
+      expires.toISOString()
+    );
+
+    await db.$executeRawUnsafe(
+      `UPDATE "User" SET "lastLogin" = $1::timestamp, "updatedAt" = $1::timestamp WHERE id = $2`,
+      new Date().toISOString(),
+      user.id
+    );
+
+    try {
+      await db.$executeRawUnsafe(
+        `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", "ipAddress", "userAgent", "createdAt")
+         VALUES (gen_random_uuid()::text, $1, 'LOGIN', 'User', $1, $2, $3, NOW())`,
+        user.id,
+        req.headers['x-forwarded-for'] || req.ip || 'unknown',
+        req.headers['user-agent'] || 'unknown'
+      );
+    } catch (auditError) {
+      console.warn('⚠️ Direct login audit log failed:', auditError.message);
+    }
+
+    return res.json({
+      sessionToken,
+      expires: expires.toISOString(),
+      mustChangePassword: false,
+      user: {
+        id: user.id,
+        userId: user.userId,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || user.userId,
+        mustChangePassword: false,
+        permissionsRoleId: '',
+      },
+    });
+  } catch (error) {
+    console.error('❌ POST /api/auth/direct-login error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'An error occurred during login' });
+  }
+});
+
+// GET /api/auth/direct-session - Browser app session restore
+app.get('/api/auth/direct-session', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (!sessionToken) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'No token provided' });
+    }
+
+    const db = await getPrisma();
+    const sessions = await db.$queryRawUnsafe(
+      `SELECT s."sessionToken", s.expires, u.id, u."userId", u.username, u.email, u."firstName", u."lastName", u.role, u."isActive"
+       FROM "Session" s
+       JOIN "User" u ON u.id = s."userId"
+       WHERE s."sessionToken" = $1
+       LIMIT 1`,
+      sessionToken
+    );
+
+    if (!sessions || sessions.length === 0) {
+      return res.status(401).json({ error: 'Invalid token', message: 'Session not found' });
+    }
+
+    const session = sessions[0];
+    if (new Date(session.expires).getTime() <= Date.now()) {
+      await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
+      return res.status(401).json({ error: 'Token expired', message: 'Session has expired' });
+    }
+
+    return res.json({
+      user: {
+        id: session.id,
+        userId: session.userId,
+        username: session.username,
+        firstName: session.firstName,
+        lastName: session.lastName,
+        email: session.email,
+        role: session.role,
+        isActive: session.isActive,
+        displayName: `${session.firstName || ''} ${session.lastName || ''}`.trim() || session.username || session.userId,
+        mustChangePassword: false,
+        permissionsRoleId: '',
+      },
+    });
+  } catch (error) {
+    console.error('❌ GET /api/auth/direct-session error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to get session' });
+  }
+});
+
+// POST /api/auth/direct-logout - Browser app logout
+app.post('/api/auth/direct-logout', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    if (sessionToken) {
+      const db = await getPrisma();
+      await db.$executeRawUnsafe(`DELETE FROM "Session" WHERE "sessionToken" = $1`, sessionToken);
+    }
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('❌ POST /api/auth/direct-logout error:', error);
+    res.status(500).json({ error: 'Internal server error', message: 'Failed to logout' });
+  }
+});
+
 
 
   // ============================================================
