@@ -14,7 +14,10 @@ import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSetting
 import {
     getLocationCodesForCurrentRuntime,
     getLocationResourcePool,
+    getPlatformAccessContext,
+    getPlatformModuleForView,
     getResourcePoolCount,
+    hasPlatformModuleAccess,
     loadPlatformConfigFromDB,
     PlatformConfig,
 } from './utils/platformConfigService';
@@ -4428,7 +4431,7 @@ const App: React.FC = () => {
         return () => { cancelled = true; };
     }, []);
 
-    const selectableLocationCodes = useMemo(
+    const baseSelectableLocationCodes = useMemo(
         () => getLocationCodesForCurrentRuntime(platformConfig, ['ESL', 'PEA']),
         [platformConfig],
     );
@@ -4664,6 +4667,7 @@ const App: React.FC = () => {
             role: user.role,
             militaryRank: 'FLTLT',
             userId: user.userId,
+            username: user.username,
         });
         // Set correct user for audit logging
         fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
@@ -4690,7 +4694,28 @@ const App: React.FC = () => {
     const currentUser = instructorsData.find(inst => inst.name === currentUserName) || instructorsData[0];
 
     // Session user info (populated from auth)
-    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string} | null>(null);
+    const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
+    const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
+        authUser?.userId,
+        authUser?.username,
+        authUser?.displayName,
+        sessionUser?.userId,
+        sessionUser?.username,
+        currentUserName,
+    ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
+
+    const selectableLocationCodes = useMemo(
+        () => platformAccessContext.accessibleLocations,
+        [platformAccessContext],
+    );
+
+    useEffect(() => {
+        if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
+        if (!selectableLocationCodes.includes(school)) {
+            changeSchool(selectableLocationCodes[0] as 'ESL' | 'PEA');
+            setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
+        }
+    }, [platformConfigLoaded, selectableLocationCodes, school]);
 //     useEffect(() => {
 //         const fetchCurrentUser = async () => {
 //            console.log('🔍 [SESSION DEBUG] useEffect hook running');
@@ -7530,7 +7555,21 @@ const App: React.FC = () => {
         onDiscardRef.current = onDiscard;
     }, []);
 
+    const canAccessView = useCallback((view: string): boolean => {
+        if (view === 'MyDashboard') return true;
+        if (view === 'Settings') {
+            return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
+        }
+        const moduleCode = getPlatformModuleForView(view);
+        if (!moduleCode) return true;
+        return hasPlatformModuleAccess(platformAccessContext, school, moduleCode);
+    }, [platformAccessContext, school]);
+
     const navigateToView = (view: string) => {
+        if (!canAccessView(view)) {
+            setShowInfoNotification('Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.');
+            return;
+        }
         const today = getLocalDateString();
         const isDashboard = view === 'MyDashboard' || view === 'SupervisorDashboard';
         if (isDashboard && date !== today) {
@@ -7556,6 +7595,15 @@ const App: React.FC = () => {
             navigateToView(view);
         }
     };
+
+    useEffect(() => {
+        if (!platformConfigLoaded) return;
+        if (canAccessView(activeView)) return;
+        const fallbackView = canAccessView('Program Schedule') ? 'Program Schedule' : 'MyDashboard';
+        setPreviousView(activeView);
+        setActiveView(fallbackView);
+        setShowInfoNotification('Your access for this location or module has changed. The app moved you to an allowed page.');
+    }, [activeView, canAccessView, platformConfigLoaded]);
     
     const onNavigateToSyllabus = (id: string) => {
         setInitialSyllabusId(id);
@@ -15473,6 +15521,7 @@ updates.forEach(update => {
                 onUserChange={handleUserChange}
                 school={school}
                 allTraineesData={allTraineesData}
+                canAccessView={canAccessView}
             />
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
@@ -15610,6 +15659,7 @@ updates.forEach(update => {
                 currentUserName={currentUserName}
                 currentUserLocation={school}
                 currentUserUnit={currentUser?.unit || '1FTS'}
+                canAccessView={canAccessView}
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 

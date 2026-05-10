@@ -1623,6 +1623,91 @@ const getLocationCodesForCurrentRuntime = (config, supportedCodes = ["ESL", "PEA
   const configuredCodes = (config?.locations || []).filter((location) => location.status !== "INACTIVE").map((location) => location.code).filter((code) => supported.has(code));
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
+const normaliseAccessValue = (value) => String(value || "").trim().toLowerCase();
+const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ESL", "PEA"]) => {
+  const activeRows = (config?.userAccess || []).filter((row) => row.status !== "INACTIVE");
+  const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
+  if (!config || activeRows.length === 0) {
+    return {
+      rows: [],
+      isConfigured: false,
+      isPlatformAdmin: true,
+      accessibleLocations: configuredLocations
+    };
+  }
+  const identifiers = new Set(
+    userIdentifiers.map(normaliseAccessValue).filter(Boolean)
+  );
+  const rows = activeRows.filter((row) => {
+    const rowIdentifiers = [
+      row.userId,
+      row.username,
+      row.displayName
+    ].map(normaliseAccessValue).filter(Boolean);
+    return rowIdentifiers.some((identifier) => identifiers.has(identifier));
+  });
+  if (rows.length === 0) {
+    return {
+      rows: [],
+      isConfigured: false,
+      isPlatformAdmin: true,
+      accessibleLocations: configuredLocations
+    };
+  }
+  const isPlatformAdmin = rows.some((row) => normaliseAccessValue(row.role) === "platform admin");
+  const rowLocations = rows.map((row) => row.locationCode || "").filter(Boolean);
+  const accessibleLocations = isPlatformAdmin || rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocations.includes(code));
+  return {
+    rows,
+    isConfigured: true,
+    isPlatformAdmin,
+    accessibleLocations: accessibleLocations.length > 0 ? accessibleLocations : configuredLocations
+  };
+};
+const hasPlatformModuleAccess = (accessContext, locationCode, moduleCode) => {
+  if (!accessContext.isConfigured || accessContext.isPlatformAdmin) return true;
+  const targetModule = normaliseAccessValue(moduleCode);
+  const targetLocation = normaliseAccessValue(locationCode);
+  return accessContext.rows.some((row) => {
+    const rowLocation = normaliseAccessValue(row.locationCode);
+    const rowModule = normaliseAccessValue(row.moduleCode);
+    const rowAccess = normaliseAccessValue(row.accessLevel);
+    const hasLocationAccess = !rowLocation || rowLocation === targetLocation;
+    const hasModuleAccess = !rowModule || rowModule === targetModule;
+    const isEnabled = rowAccess !== "none" && row.status !== "INACTIVE";
+    return hasLocationAccess && hasModuleAccess && isEnabled;
+  });
+};
+const getPlatformModuleForView = (view2) => {
+  const viewToModule = {
+    "Program Schedule": "DFP",
+    "InstructorSchedule": "DFP",
+    "TraineeSchedule": "DFP",
+    "SupervisorDashboard": "DFP",
+    "PostFlight": "DFP",
+    "Staff": "TRAINING",
+    "Instructors": "TRAINING",
+    "Trainee": "TRAINING",
+    "Trainees": "TRAINING",
+    "CourseRoster": "TRAINING",
+    "Syllabus": "TRAINING",
+    "CourseProgress": "TRAINING",
+    "TrainingRecords": "TRAINING",
+    "TraineeLMP": "TRAINING",
+    "PT051": "TRAINING",
+    "Currency": "TRAINING",
+    "CurrencyBuilder": "TRAINING",
+    "NextDayBuild": "NEO_BUILD",
+    "Priorities": "NEO_BUILD",
+    "ProgramData": "NEO_BUILD",
+    "BuildAnalysis": "NEO_BUILD",
+    "NextDayInstructorSchedule": "NEO_BUILD",
+    "NextDayTraineeSchedule": "NEO_BUILD",
+    "BuildIntelligence": "NEO_BUILD",
+    "Settings": "DFP"
+  };
+  return viewToModule[view2] || null;
+};
 const getLocationResourcePool = (config, locationCode) => {
   const pools = (config?.resourcePools || []).filter((pool) => pool.status !== "INACTIVE" && pool.locationCode === locationCode && pool.poolType === "Shared");
   return pools[0] || null;
@@ -3087,7 +3172,7 @@ const formatCourseName = (name) => {
   }
   return name.replace(/^CSE\s*/i, "ADF").replace(" ", "");
 };
-const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData }) => {
+const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = reactExports.useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = reactExports.useState(false);
   const [showUserSelector, setShowUserSelector] = reactExports.useState(false);
@@ -3164,12 +3249,17 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   const allCourses = filteredCourses;
   const dashboardViews = ["MyDashboard", "SupervisorDashboard"];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
+  const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const accessButtonClass = (view2) => canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  const navigateIfAllowed = (view2) => {
+    if (canOpen(view2)) onNavigate(view2);
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onNavigate("MyDashboard"),
+          onClick: () => navigateIfAllowed("MyDashboard"),
           className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "MyDashboard" ? "active" : ""}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
             "My",
@@ -3182,56 +3272,63 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("Program Schedule"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("Program Schedule"),
+            disabled: !canOpen("Program Schedule"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Program Schedule" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Program Schedule")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { color: activeView === "Program Schedule" && !isAnyDashboardActive ? "#ffffff" : "#22c55e" }, children: "DFP" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("Staff"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("Staff"),
+            disabled: !canOpen("Staff"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Staff" ? "active" : ""} ${accessButtonClass("Staff")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Staff" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("Trainee"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("Trainee"),
+            disabled: !canOpen("Trainee"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Trainee" ? "active" : ""} ${accessButtonClass("Trainee")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Trainee" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("Syllabus"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("Syllabus"),
+            disabled: !canOpen("Syllabus"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Syllabus" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("Syllabus")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Syllabus" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("CourseProgress"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("CourseProgress"),
+            disabled: !canOpen("CourseProgress"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "CourseProgress" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("CourseProgress")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Course Progress" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("TrainingRecords"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("TrainingRecords"),
+            disabled: !canOpen("TrainingRecords"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "TrainingRecords" && !isAnyDashboardActive ? "active" : ""} ${accessButtonClass("TrainingRecords")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Training Records" })
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => onNavigate("Settings"),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""}`,
+            onClick: () => navigateIfAllowed("Settings"),
+            disabled: !canOpen("Settings"),
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Settings" ? "active" : ""} ${accessButtonClass("Settings")}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Settings" })
           }
         )
@@ -3400,9 +3497,15 @@ const RightSidebar = ({
   currentUserRank,
   currentUserName,
   currentUserLocation,
-  currentUserUnit
+  currentUserUnit,
+  canAccessView
 }) => {
   const { isFrozen } = useSystemFreeze();
+  const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const accessButtonClass = (view2) => canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  const navigateIfAllowed = (view2) => {
+    if (canOpen(view2)) onNavigate(view2);
+  };
   const userSurname = currentUserName.split(",")[0];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative", children: [
     isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
@@ -3410,9 +3513,9 @@ const RightSidebar = ({
       "button",
       {
         onClick: () => isSupervisor && onNavigate("SupervisorDashboard"),
-        disabled: !isSupervisor,
+        disabled: !isSupervisor || !canOpen("SupervisorDashboard"),
         title: !isSupervisor ? "Access denied: Requires Flying Supervisor role." : "View Supervisor Dashboard",
-        className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor ? "opacity-50 cursor-not-allowed" : ""}`,
+        className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor || !canOpen("SupervisorDashboard") ? "opacity-50 cursor-not-allowed" : ""}`,
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
           "Duty",
           /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -3425,15 +3528,17 @@ const RightSidebar = ({
         "button",
         {
           onClick: onBuildDfpClick,
-          className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
+          disabled: !canOpen("NextDayBuild"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass("NextDayBuild")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO Build" })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onNavigate("NextDayBuild"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayBuild" ? "active" : ""}`,
+          onClick: () => navigateIfAllowed("NextDayBuild"),
+          disabled: !canOpen("NextDayBuild"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayBuild" ? "active" : ""} ${accessButtonClass("NextDayBuild")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Program Schedule" })
         }
       )
@@ -3442,16 +3547,18 @@ const RightSidebar = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onNavigate("NextDayInstructorSchedule"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayInstructorSchedule" ? "active" : ""}`,
+          onClick: () => navigateIfAllowed("NextDayInstructorSchedule"),
+          disabled: !canOpen("NextDayInstructorSchedule"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayInstructorSchedule" ? "active" : ""} ${accessButtonClass("NextDayInstructorSchedule")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Staff Schedule" })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onNavigate("NextDayTraineeSchedule"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayTraineeSchedule" ? "active" : ""}`,
+          onClick: () => navigateIfAllowed("NextDayTraineeSchedule"),
+          disabled: !canOpen("NextDayTraineeSchedule"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayTraineeSchedule" ? "active" : ""} ${accessButtonClass("NextDayTraineeSchedule")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Trainee Schedule" })
         }
       ),
@@ -3459,23 +3566,26 @@ const RightSidebar = ({
         "button",
         {
           onClick: onPublish,
-          className: "w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md",
+          disabled: !canOpen("NextDayBuild"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass("NextDayBuild")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#22c55e" }, children: "Publish" })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onNavigate("Priorities"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Priorities" ? "active" : ""}`,
+          onClick: () => navigateIfAllowed("Priorities"),
+          disabled: !canOpen("Priorities"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "Priorities" ? "active" : ""} ${accessButtonClass("Priorities")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Priorities" })
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
-          onClick: () => onNavigate("BuildIntelligence"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "BuildIntelligence" ? "active" : ""}`,
+          onClick: () => navigateIfAllowed("BuildIntelligence"),
+          disabled: !canOpen("BuildIntelligence"),
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "BuildIntelligence" ? "active" : ""} ${accessButtonClass("BuildIntelligence")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Build Intelligence" })
         }
       )
@@ -68861,7 +68971,7 @@ const App = () => {
       cancelled = true;
     };
   }, []);
-  const selectableLocationCodes = reactExports.useMemo(
+  const baseSelectableLocationCodes = reactExports.useMemo(
     () => getLocationCodesForCurrentRuntime(platformConfig, ["ESL", "PEA"]),
     [platformConfig]
   );
@@ -69053,7 +69163,8 @@ const App = () => {
       lastName: user.lastName,
       role: user.role,
       militaryRank: "FLTLT",
-      userId: user.userId
+      userId: user.userId,
+      username: user.username
     });
     fetchAndSetAuditUser(user.firstName, user.lastName, user.displayName);
     if (user.mustChangePassword) {
@@ -69075,6 +69186,25 @@ const App = () => {
   const [currentUserName, setCurrentUserName] = reactExports.useState("Bloggs, Joe");
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
+  const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
+    authUser?.userId,
+    authUser?.username,
+    authUser?.displayName,
+    sessionUser?.userId,
+    sessionUser?.username,
+    currentUserName
+  ], baseSelectableLocationCodes), [authUser, sessionUser, currentUserName, platformConfig, baseSelectableLocationCodes]);
+  const selectableLocationCodes = reactExports.useMemo(
+    () => platformAccessContext.accessibleLocations,
+    [platformAccessContext]
+  );
+  reactExports.useEffect(() => {
+    if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
+    if (!selectableLocationCodes.includes(school)) {
+      changeSchool(selectableLocationCodes[0]);
+      setShowInfoNotification(`Access context changed. Location switched to ${selectableLocationCodes[0]}.`);
+    }
+  }, [platformConfigLoaded, selectableLocationCodes, school]);
   const [currentUserId, setCurrentUserId] = reactExports.useState(currentUser2?.idNumber || 1);
   reactExports.useEffect(() => {
     if (!authUser && currentUser2) {
@@ -71220,7 +71350,20 @@ ${"=".repeat(60)}`);
     onSaveRef.current = onSave;
     onDiscardRef.current = onDiscard;
   }, []);
+  const canAccessView = reactExports.useCallback((view2) => {
+    if (view2 === "MyDashboard") return true;
+    if (view2 === "Settings") {
+      return !platformAccessContext.isConfigured || platformAccessContext.isPlatformAdmin;
+    }
+    const moduleCode = getPlatformModuleForView(view2);
+    if (!moduleCode) return true;
+    return hasPlatformModuleAccess(platformAccessContext, school, moduleCode);
+  }, [platformAccessContext, school]);
   const navigateToView = (view2) => {
+    if (!canAccessView(view2)) {
+      setShowInfoNotification("Access denied for this location or module. Ask a Platform Admin to adjust your access in Settings.");
+      return;
+    }
     const today = getLocalDateString();
     const isDashboard = view2 === "MyDashboard" || view2 === "SupervisorDashboard";
     if (isDashboard && date !== today) {
@@ -71244,6 +71387,14 @@ ${"=".repeat(60)}`);
       navigateToView(view2);
     }
   };
+  reactExports.useEffect(() => {
+    if (!platformConfigLoaded) return;
+    if (canAccessView(activeView)) return;
+    const fallbackView = canAccessView("Program Schedule") ? "Program Schedule" : "MyDashboard";
+    setPreviousView(activeView);
+    setActiveView(fallbackView);
+    setShowInfoNotification("Your access for this location or module has changed. The app moved you to an allowed page.");
+  }, [activeView, canAccessView, platformConfigLoaded]);
   const onNavigateToSyllabus = (id) => {
     setInitialSyllabusId(id);
     setSyllabusBackTarget(activeView);
@@ -77688,7 +77839,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           })),
           onUserChange: handleUserChange,
           school,
-          allTraineesData
+          allTraineesData,
+          canAccessView
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col overflow-hidden", children: [
@@ -77826,7 +77978,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currentUserRank: sessionUser?.militaryRank || sessionUser?.role || currentUser2?.rank || "FLTLT",
           currentUserName,
           currentUserLocation: school,
-          currentUserUnit: currentUser2?.unit || "1FTS"
+          currentUserUnit: currentUser2?.unit || "1FTS",
+          canAccessView
         }
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx(Magnifier, { isEnabled: isMagnifierEnabled }),

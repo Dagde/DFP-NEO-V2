@@ -51,6 +51,28 @@ export interface PlatformConfig {
   schedulingRuleSets: any[];
 }
 
+export interface PlatformAccessRow {
+  id?: string;
+  userId?: string | null;
+  username?: string | null;
+  displayName?: string | null;
+  organisationCode?: string | null;
+  locationCode?: string | null;
+  unitCode?: string | null;
+  moduleCode?: string | null;
+  role?: string | null;
+  accessLevel?: string | null;
+  status?: string | null;
+  settings?: Record<string, any>;
+}
+
+export interface PlatformAccessContext {
+  rows: PlatformAccessRow[];
+  isConfigured: boolean;
+  isPlatformAdmin: boolean;
+  accessibleLocations: string[];
+}
+
 const emptyPlatformConfig: PlatformConfig = {
   organisations: [],
   locations: [],
@@ -102,6 +124,119 @@ export const getLocationCodesForCurrentRuntime = (
     .filter((code) => supported.has(code));
 
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
+};
+
+const normaliseAccessValue = (value: unknown): string => String(value || '').trim().toLowerCase();
+
+export const getPlatformAccessContext = (
+  config: PlatformConfig | null,
+  userIdentifiers: Array<string | null | undefined>,
+  supportedCodes: string[] = ['ESL', 'PEA'],
+): PlatformAccessContext => {
+  const activeRows = ((config?.userAccess || []) as PlatformAccessRow[])
+    .filter((row) => row.status !== 'INACTIVE');
+  const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
+
+  if (!config || activeRows.length === 0) {
+    return {
+      rows: [],
+      isConfigured: false,
+      isPlatformAdmin: true,
+      accessibleLocations: configuredLocations,
+    };
+  }
+
+  const identifiers = new Set(
+    userIdentifiers
+      .map(normaliseAccessValue)
+      .filter(Boolean),
+  );
+
+  const rows = activeRows.filter((row) => {
+    const rowIdentifiers = [
+      row.userId,
+      row.username,
+      row.displayName,
+    ].map(normaliseAccessValue).filter(Boolean);
+    return rowIdentifiers.some((identifier) => identifiers.has(identifier));
+  });
+
+  if (rows.length === 0) {
+    return {
+      rows: [],
+      isConfigured: false,
+      isPlatformAdmin: true,
+      accessibleLocations: configuredLocations,
+    };
+  }
+
+  const isPlatformAdmin = rows.some((row) => (
+    normaliseAccessValue(row.role) === 'platform admin'
+  ));
+
+  const rowLocations = rows
+    .map((row) => row.locationCode || '')
+    .filter(Boolean);
+  const accessibleLocations = isPlatformAdmin || rowLocations.length === 0
+    ? configuredLocations
+    : configuredLocations.filter((code) => rowLocations.includes(code));
+
+  return {
+    rows,
+    isConfigured: true,
+    isPlatformAdmin,
+    accessibleLocations: accessibleLocations.length > 0 ? accessibleLocations : configuredLocations,
+  };
+};
+
+export const hasPlatformModuleAccess = (
+  accessContext: PlatformAccessContext,
+  locationCode: string,
+  moduleCode: string,
+): boolean => {
+  if (!accessContext.isConfigured || accessContext.isPlatformAdmin) return true;
+  const targetModule = normaliseAccessValue(moduleCode);
+  const targetLocation = normaliseAccessValue(locationCode);
+  return accessContext.rows.some((row) => {
+    const rowLocation = normaliseAccessValue(row.locationCode);
+    const rowModule = normaliseAccessValue(row.moduleCode);
+    const rowAccess = normaliseAccessValue(row.accessLevel);
+    const hasLocationAccess = !rowLocation || rowLocation === targetLocation;
+    const hasModuleAccess = !rowModule || rowModule === targetModule;
+    const isEnabled = rowAccess !== 'none' && row.status !== 'INACTIVE';
+    return hasLocationAccess && hasModuleAccess && isEnabled;
+  });
+};
+
+export const getPlatformModuleForView = (view: string): string | null => {
+  const viewToModule: Record<string, string> = {
+    'Program Schedule': 'DFP',
+    'InstructorSchedule': 'DFP',
+    'TraineeSchedule': 'DFP',
+    'SupervisorDashboard': 'DFP',
+    'PostFlight': 'DFP',
+    'Staff': 'TRAINING',
+    'Instructors': 'TRAINING',
+    'Trainee': 'TRAINING',
+    'Trainees': 'TRAINING',
+    'CourseRoster': 'TRAINING',
+    'Syllabus': 'TRAINING',
+    'CourseProgress': 'TRAINING',
+    'TrainingRecords': 'TRAINING',
+    'TraineeLMP': 'TRAINING',
+    'PT051': 'TRAINING',
+    'Currency': 'TRAINING',
+    'CurrencyBuilder': 'TRAINING',
+    'NextDayBuild': 'NEO_BUILD',
+    'Priorities': 'NEO_BUILD',
+    'ProgramData': 'NEO_BUILD',
+    'BuildAnalysis': 'NEO_BUILD',
+    'NextDayInstructorSchedule': 'NEO_BUILD',
+    'NextDayTraineeSchedule': 'NEO_BUILD',
+    'BuildIntelligence': 'NEO_BUILD',
+    'Settings': 'DFP',
+  };
+  return viewToModule[view] || null;
 };
 
 export const getLocationResourcePool = (

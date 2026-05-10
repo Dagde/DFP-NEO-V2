@@ -18,6 +18,7 @@ interface SidebarProps {
     onUserChange: (userName: string) => void;
     school?: string;
     allTraineesData?: any[];
+    canAccessView?: (view: string) => boolean;
 }
 
 const formatCourseName = (name: string): string => {
@@ -27,10 +28,10 @@ const formatCourseName = (name: string): string => {
   return name.replace(/^CSE\s*/i, 'ADF').replace(' ', '');
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveCourse, onNextDayBuildClick, onBuildDfpClick, isSupervisor, onPublish, currentUserName, currentUserRank, instructorsList, onUserChange, school, allTraineesData, canAccessView }) => {
   const [showAddCourseFlyout, setShowAddCourseFlyout] = useState(false);
   const [showRemoveCourseFlyout, setShowRemoveCourseFlyout] = useState(false);
-  
+
   // User selector state
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,9 +39,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
   const [showPinModal, setShowPinModal] = useState(false);
   const [enteredPin, setEnteredPin] = useState('');
   const [pinError, setPinError] = useState('');
-  
-  
-  
+
+
+
   const handleSaveCourse = (data: NewCourseData) => {
     onAddCourse(data);
     setShowAddCourseFlyout(false);
@@ -114,15 +115,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
     if (!school || !allTraineesData) {
       return Object.entries(courseColors);
     }
-    
+
     // Map school to location name
     const locationMap: Record<string, string> = {
       'ESL': 'East Sale',
       'PEA': 'Pearce'
     };
-    
+
     const targetLocation = locationMap[school] || school;
-    
+
     // Find all courses that have trainees at this location
     const coursesAtLocation = new Set<string>();
     allTraineesData.forEach(trainee => {
@@ -130,9 +131,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         coursesAtLocation.add(trainee.course);
       }
     });
-    
+
     // Filter courseColors to only include courses at this location
-    return Object.entries(courseColors).filter(([courseName]) => 
+    return Object.entries(courseColors).filter(([courseName]) =>
       coursesAtLocation.has(courseName)
     );
   }, [school, allTraineesData, courseColors]);
@@ -141,6 +142,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
 
   const dashboardViews = ['MyDashboard', 'SupervisorDashboard'];
   const isAnyDashboardActive = dashboardViews.includes(activeView);
+  const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
+  const accessButtonClass = (view: string) => canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  const navigateIfAllowed = (view: string) => {
+    if (canOpen(view)) onNavigate(view);
+  };
 
 
   return (
@@ -149,67 +155,74 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
         {/* My Home Button - Top Level */}
         <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-2">
           <button
-            onClick={() => onNavigate('MyDashboard')}
+            onClick={() => navigateIfAllowed('MyDashboard')}
             className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'MyDashboard' ? 'active' : ''}`}
           >
             <span className="leading-tight">My<br/>Home</span>
           </button>
         </div>
-        
+
         {/* Scrollable Main Navigation - Centre Aligned */}
         <nav className="flex-1 overflow-y-auto px-2 pt-[27px] space-y-[1px] flex flex-col items-center">
           {/* DFP Button */}
-          <button 
-            onClick={() => onNavigate('Program Schedule')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('Program Schedule')}
+            disabled={!canOpen('Program Schedule')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Program Schedule' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Program Schedule')}`}
           >
             <span style={{color: activeView === 'Program Schedule' && !isAnyDashboardActive ? '#ffffff' : '#22c55e'}}>DFP</span>
           </button>
-          
+
           {/* Staff Button */}
-          <button 
-            onClick={() => onNavigate('Staff')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('Staff')}
+            disabled={!canOpen('Staff')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Staff' ? 'active' : ''} ${accessButtonClass('Staff')}`}
           >
             <span>Staff</span>
           </button>
 
           {/* Trainee Button */}
-          <button 
-            onClick={() => onNavigate('Trainee')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('Trainee')}
+            disabled={!canOpen('Trainee')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Trainee' ? 'active' : ''} ${accessButtonClass('Trainee')}`}
           >
             <span>Trainee</span>
           </button>
-          
+
           {/* Syllabus - Square Button with Smaller Text */}
-          <button 
-            onClick={() => onNavigate('Syllabus')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('Syllabus')}
+            disabled={!canOpen('Syllabus')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Syllabus' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('Syllabus')}`}
           >
             <span className="text-center leading-tight">Syllabus</span>
           </button>
 
 {/* Course Progress - Square Button with Smaller Text */}
-          <button 
-            onClick={() => onNavigate('CourseProgress')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('CourseProgress')}
+            disabled={!canOpen('CourseProgress')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'CourseProgress' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('CourseProgress')}`}
           >
             <span className="text-center leading-tight">Course Progress</span>
           </button>
 
           {/* Training Records - Square Button with Smaller Text */}
-          <button 
-            onClick={() => onNavigate('TrainingRecords')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('TrainingRecords')}
+            disabled={!canOpen('TrainingRecords')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'TrainingRecords' && !isAnyDashboardActive ? 'active' : ''} ${accessButtonClass('TrainingRecords')}`}
           >
             <span className="text-center leading-tight">Training Records</span>
           </button>
 
           {/* Settings - Square Button */}
-          <button 
-            onClick={() => onNavigate('Settings')} 
-            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''}`}
+          <button
+            onClick={() => navigateIfAllowed('Settings')}
+            disabled={!canOpen('Settings')}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Settings' ? 'active' : ''} ${accessButtonClass('Settings')}`}
           >
             <span className="text-center leading-tight">Settings</span>
           </button>
@@ -227,7 +240,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
               <div className="flex-1 min-w-0">
                 {allCourses.map(([courseName, color]) => (
                   <div key={courseName} className="py-1 flex items-center justify-center">
-                    <span 
+                    <span
                       data-course-color="true"
                       className={`h-3 w-3 rounded-full ${(color || '').startsWith('#') ? '' : color} mr-2 flex-shrink-0`}
                       style={(color || '').startsWith('#') ? { backgroundColor: darkenHexColor(color) } : {}}
@@ -268,7 +281,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onNavigate, courseColors,
           <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700" onClick={e => e.stopPropagation()}>
             <div className="p-6">
               <h2 className="text-xl font-bold text-white mb-4">Confirm User Switch</h2>
-              
+
               <div className="mb-6">
                 <p className="text-gray-300 mb-2">
                   Switch from <span className="font-semibold text-sky-400">{currentUserRank} {currentUserName}</span> to:

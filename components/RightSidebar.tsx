@@ -12,19 +12,21 @@ interface RightSidebarProps {
     currentUserName: string;
     currentUserLocation?: string;
     currentUserUnit?: string;
+    canAccessView?: (view: string) => boolean;
 }
 
-const RightSidebar: React.FC<RightSidebarProps> = ({ 
-    activeView, 
-    onNavigate, 
+const RightSidebar: React.FC<RightSidebarProps> = ({
+    activeView,
+    onNavigate,
     courseColors,
-    onBuildDfpClick, 
-    isSupervisor, 
+    onBuildDfpClick,
+    isSupervisor,
     onPublish,
     currentUserRank,
     currentUserName,
     currentUserLocation,
-    currentUserUnit
+    currentUserUnit,
+    canAccessView
 }) => {
   const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
   const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
@@ -33,6 +35,11 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
   const isAnyDashboardActive = dashboardViews.includes(activeView);
 
   const { isFrozen } = useSystemFreeze();
+  const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
+  const accessButtonClass = (view: string) => canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  const navigateIfAllowed = (view: string) => {
+    if (canOpen(view)) onNavigate(view);
+  };
 
   // Extract surname from currentUserName (format: "Bloggs, Joe")
   const userSurname = currentUserName.split(',')[0];
@@ -49,9 +56,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         <div className="flex justify-center w-full mt-2">
           <button
             onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
-            disabled={!isSupervisor}
+            disabled={!isSupervisor || !canOpen('SupervisorDashboard')}
             title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor || !canOpen('SupervisorDashboard') ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <span className="leading-tight">Duty<br/>Pilot</span>
           </button>
@@ -60,16 +67,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
       {/* NEO Build and Program Schedule Buttons - Aligned with DFP button */}
       <div className="px-2 pt-[39px] space-y-[1px] flex flex-col items-center">
-        <button 
-          onClick={onBuildDfpClick} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+        <button
+          onClick={onBuildDfpClick}
+          disabled={!canOpen('NextDayBuild')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass('NextDayBuild')}`}
         >
           <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO Build</span>
         </button>
 
-        <button 
-          onClick={() => onNavigate('NextDayBuild')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''}`}
+        <button
+          onClick={() => navigateIfAllowed('NextDayBuild')}
+          disabled={!canOpen('NextDayBuild')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayBuild' ? 'active' : ''} ${accessButtonClass('NextDayBuild')}`}
         >
           <span className="text-center leading-tight">Program Schedule</span>
         </button>
@@ -79,37 +88,42 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       <nav className="flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center">
         {/* Next Day Build Buttons */}
 
-        <button 
-          onClick={() => onNavigate('NextDayInstructorSchedule')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''}`}
+        <button
+          onClick={() => navigateIfAllowed('NextDayInstructorSchedule')}
+          disabled={!canOpen('NextDayInstructorSchedule')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayInstructorSchedule' ? 'active' : ''} ${accessButtonClass('NextDayInstructorSchedule')}`}
         >
           <span className="text-center leading-tight">Staff Schedule</span>
         </button>
 
-        <button 
-          onClick={() => onNavigate('NextDayTraineeSchedule')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''}`}
+        <button
+          onClick={() => navigateIfAllowed('NextDayTraineeSchedule')}
+          disabled={!canOpen('NextDayTraineeSchedule')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'NextDayTraineeSchedule' ? 'active' : ''} ${accessButtonClass('NextDayTraineeSchedule')}`}
         >
           <span className="text-center leading-tight">Trainee Schedule</span>
         </button>
 
-        <button 
-          onClick={onPublish} 
-          className="w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md"
+        <button
+          onClick={onPublish}
+          disabled={!canOpen('NextDayBuild')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass('NextDayBuild')}`}
         >
           <span className="text-center leading-tight" style={{color: "#22c55e"}}>Publish</span>
         </button>
 
-        <button 
-          onClick={() => onNavigate('Priorities')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''}`}
+        <button
+          onClick={() => navigateIfAllowed('Priorities')}
+          disabled={!canOpen('Priorities')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'Priorities' ? 'active' : ''} ${accessButtonClass('Priorities')}`}
         >
           <span className="text-center leading-tight">Priorities</span>
         </button>
 
-        <button 
-          onClick={() => onNavigate('BuildIntelligence')} 
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''}`}
+        <button
+          onClick={() => navigateIfAllowed('BuildIntelligence')}
+          disabled={!canOpen('BuildIntelligence')}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === 'BuildIntelligence' ? 'active' : ''} ${accessButtonClass('BuildIntelligence')}`}
         >
           <span className="text-center leading-tight">Build Intelligence</span>
         </button>
