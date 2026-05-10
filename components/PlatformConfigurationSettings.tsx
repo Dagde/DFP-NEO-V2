@@ -49,6 +49,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
 
@@ -61,7 +62,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const res = await fetch(`${getApiBase()}/platform-config`);
         if (!res.ok) throw new Error(`Load failed (${res.status})`);
         const data = await res.json();
-        if (!cancelled) setConfig({ ...emptyConfig, ...data });
+        if (!cancelled) {
+          const nextConfig = { ...emptyConfig, ...data };
+          setConfig(nextConfig);
+          const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
+          setSelectedAccessUserId((current) => current || firstUserId);
+        }
       } catch (err: any) {
         if (!cancelled) setError(err?.message || 'Failed to load platform configuration');
       } finally {
@@ -133,9 +139,26 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
+  const userOptions = useMemo(
+    () => Array.from(new Set(config.platformUsers.map((user) => user.userId || user.username).filter(Boolean))),
+    [config.platformUsers],
+  );
+
+  const selectedAccessUser = useMemo(
+    () => config.platformUsers.find((user) => (user.userId || user.username) === selectedAccessUserId),
+    [config.platformUsers, selectedAccessUserId],
+  );
+
+  const selectedAccessRows = useMemo(
+    () => config.userAccess
+      .map((access, index) => ({ access, index }))
+      .filter(({ access }) => access.userId === selectedAccessUserId),
+    [config.userAccess, selectedAccessUserId],
+  );
+
   const addUserAccess = () => {
-    const defaultUser = config.platformUsers[0];
-    const userId = defaultUser?.userId || defaultUser?.username || '';
+    const defaultUser = selectedAccessUser || config.platformUsers[0];
+    const userId = selectedAccessUserId || defaultUser?.userId || defaultUser?.username || '';
     const displayName = defaultUser
       ? `${defaultUser.firstName || ''} ${defaultUser.lastName || ''}`.trim() || defaultUser.username || userId
       : '';
@@ -159,6 +182,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         },
       ],
     }));
+    if (userId) setSelectedAccessUserId(userId);
   };
 
   const updateResourcePoolSettings = (index: number, changes: Record<string, any>) => {
@@ -368,31 +392,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section className="rounded-lg border border-gray-700 bg-gray-800">
         <SectionHeader
           title="User Access Context"
-          subtitle="Defines which organisation, location, unit and module each user is allowed to see or administer. Stage four records the rules; enforcement remains staged."
-          action={canEdit ? <button type="button" onClick={addUserAccess} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Access</button> : null}
+          subtitle="Select one user, then manage that user's allowed organisations, locations, units and modules as access scopes."
+          action={canEdit ? <button type="button" onClick={addUserAccess} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Scope</button> : null}
         />
         <div className="space-y-3 p-4">
-          {config.userAccess.map((access, index) => {
-            const userOptions = config.platformUsers.map((user) => user.userId || user.username).filter(Boolean);
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
+            <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(160px,auto)]">
+              <SelectField
+                label="User"
+                value={selectedAccessUserId}
+                disabled={!canEdit}
+                options={userOptions}
+                onChange={(value) => setSelectedAccessUserId(value)}
+              />
+              <div>
+                <span className={labelClass}>Display Name</span>
+                <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
+                  {selectedAccessUser
+                    ? `${selectedAccessUser.firstName || ''} ${selectedAccessUser.lastName || ''}`.trim() || selectedAccessUser.username || selectedAccessUser.userId
+                    : 'No user selected'}
+                </div>
+              </div>
+              <div>
+                <span className={labelClass}>Access Scopes</span>
+                <div className="rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100">
+                  {selectedAccessRows.length}
+                </div>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-cyan-100/70">
+              Blank scope fields mean all. For example, Location = ESL and Unit = None grants access to all ESL units.
+            </p>
+          </div>
+
+          {selectedAccessRows.length === 0 && (
+            <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
+              This user has no access scopes. Add a scope before testing this account.
+            </div>
+          )}
+
+          {selectedAccessRows.map(({ access, index }) => {
             return (
               <div key={access.id || `${access.userId}-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-4">
-                <SelectField
-                  label="User"
-                  value={access.userId || ''}
-                  disabled={!canEdit}
-                  options={userOptions}
-                  onChange={(value) => {
-                    const selectedUser = config.platformUsers.find((user) => (user.userId || user.username) === value);
-                    updateRow('userAccess', index, {
-                      userId: value,
-                      username: selectedUser?.username || access.username || '',
-                      displayName: selectedUser
-                        ? `${selectedUser.firstName || ''} ${selectedUser.lastName || ''}`.trim() || selectedUser.username || value
-                        : access.displayName,
-                    });
-                  }}
-                />
-                <Field label="Display Name" value={access.displayName || access.username || access.userId || ''} disabled={!canEdit} onChange={(value) => updateRow('userAccess', index, { displayName: value })} />
                 <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
                 <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} />
                 <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} />
