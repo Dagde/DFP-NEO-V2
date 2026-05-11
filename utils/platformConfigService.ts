@@ -177,7 +177,7 @@ export const getPlatformAccessContext = (
   const rowLocations = rows
     .map((row) => row.locationCode || '')
     .filter(Boolean);
-  const accessibleLocations = isPlatformAdmin || rowLocations.length === 0
+  const accessibleLocations = rowLocations.length === 0
     ? configuredLocations
     : configuredLocations.filter((code) => rowLocations.includes(code));
 
@@ -194,7 +194,7 @@ export const hasPlatformModuleAccess = (
   locationCode: string,
   moduleCode: string,
 ): boolean => {
-  if (!accessContext.isConfigured || accessContext.isPlatformAdmin) return true;
+  if (!accessContext.isConfigured) return true;
   const targetModule = normaliseAccessValue(moduleCode);
   const targetLocation = normaliseAccessValue(locationCode);
   return accessContext.rows.some((row) => {

@@ -1656,7 +1656,7 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
   }
   const isPlatformAdmin = rows.some((row) => normaliseAccessValue(row.role) === "platform admin");
   const rowLocations = rows.map((row) => row.locationCode || "").filter(Boolean);
-  const accessibleLocations = isPlatformAdmin || rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocations.includes(code));
+  const accessibleLocations = rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocations.includes(code));
   return {
     rows,
     isConfigured: true,
@@ -1665,7 +1665,7 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
   };
 };
 const hasPlatformModuleAccess = (accessContext, locationCode, moduleCode) => {
-  if (!accessContext.isConfigured || accessContext.isPlatformAdmin) return true;
+  if (!accessContext.isConfigured) return true;
   const targetModule = normaliseAccessValue(moduleCode);
   const targetLocation = normaliseAccessValue(locationCode);
   return accessContext.rows.some((row) => {
