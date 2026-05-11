@@ -711,15 +711,69 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           )}
 
           {selectedAccessRows.map(({ access, index }) => {
+            const appliesToAllFeatures = !access.moduleCode;
+            const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
             return (
-              <div key={access.id || `${access.userId}-${index}`} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-4">
-                <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
-                <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} />
-                <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} />
-                <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEdit} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Features" />
-                <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
-                <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
-                <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
+              <div key={access.id || `${access.userId}-${index}`} className="rounded border border-gray-700 bg-gray-900 p-3">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <h5 className="text-sm font-bold text-white">Access Scope</h5>
+                  <InfoHint text="This section answers where the selected user's permission profiles apply. Example: Location ESL + Unit 1FTS + all enabled features means the user's selected profiles apply to all 1FTS features at East Sale." />
+                  <span className="ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
+                    {access.locationCode || 'All locations'} / {access.unitCode || 'All units'} / {appliesToAllFeatures ? 'All enabled features' : access.moduleCode}
+                  </span>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
+                  <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
+                  <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
+                </div>
+
+                <div className="mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 p-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    <label className="flex items-start gap-2 text-sm text-cyan-50">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                        checked={appliesToAllFeatures}
+                        disabled={!canEdit}
+                        onChange={(event) => updateRow('userAccess', index, { moduleCode: event.target.checked ? null : (config.modules[0]?.code || '') })}
+                      />
+                      <span>
+                        <span className="block font-bold">Apply to all enabled features for this unit</span>
+                        <span className="mt-1 block text-xs text-cyan-100/70">
+                          Recommended for normal administration. Permission Profiles still control exactly what the user can do.
+                        </span>
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => updateRow('userAccess', index, { settings: { ...(access.settings || {}), showAdvancedFeatureArea: !showAdvancedFeatureArea } })}
+                      className="ml-auto rounded border border-gray-600 bg-gray-800 px-3 py-2 text-xs font-bold text-gray-100 hover:bg-gray-700"
+                    >
+                      {showAdvancedFeatureArea ? 'Hide Advanced Feature Area' : 'Advanced Feature Area'}
+                    </button>
+                  </div>
+
+                  {showAdvancedFeatureArea && (
+                    <div className="mt-3 rounded border border-gray-700 bg-gray-950 p-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Limit This Scope To One Feature Area</h6>
+                        <InfoHint text="Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." />
+                      </div>
+                      <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEdit || appliesToAllFeatures} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
+                      <p className="mt-2 text-xs text-gray-400">
+                        Plain English: leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
+                  <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
+                  <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
+                </div>
               </div>
             );
           })}
@@ -759,6 +813,15 @@ const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: s
     </div>
     {action && <div className="ml-auto">{action}</div>}
   </div>
+);
+
+const InfoHint = ({ text }: { text: string }) => (
+  <span className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/50 bg-cyan-500/10 text-xs font-bold text-cyan-100">
+    i
+    <span className="pointer-events-none absolute left-1/2 top-6 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal leading-relaxed text-gray-100 shadow-xl group-hover:block">
+      {text}
+    </span>
+  </span>
 );
 
 const Field = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (

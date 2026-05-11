@@ -57113,14 +57113,67 @@ const PlatformConfigurationSettings = ({
         ] }),
         selectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
         selectedAccessRows.map(({ access, index }) => {
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEdit, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Features" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEdit, options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEdit, options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
+          const appliesToAllFeatures = !access.moduleCode;
+          const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-900 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Access Scope" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This section answers where the selected user's permission profiles apply. Example: Location ESL + Unit 1FTS + all enabled features means the user's selected profiles apply to all 1FTS features at East Sale." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
+                access.locationCode || "All locations",
+                " / ",
+                access.unitCode || "All units",
+                " / ",
+                appliesToAllFeatures ? "All enabled features" : access.moduleCode
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }), emptyLabel: "All Locations" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }), emptyLabel: "All Units" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-cyan-50", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "checkbox",
+                      className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                      checked: appliesToAllFeatures,
+                      disabled: !canEdit,
+                      onChange: (event) => updateRow("userAccess", index, { moduleCode: event.target.checked ? null : config.modules[0]?.code || "" })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: "Apply to all enabled features for this unit" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Permission Profiles still control exactly what the user can do." })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    onClick: () => updateRow("userAccess", index, { settings: { ...access.settings || {}, showAdvancedFeatureArea: !showAdvancedFeatureArea } }),
+                    className: "ml-auto rounded border border-gray-600 bg-gray-800 px-3 py-2 text-xs font-bold text-gray-100 hover:bg-gray-700",
+                    children: showAdvancedFeatureArea ? "Hide Advanced Feature Area" : "Advanced Feature Area"
+                  }
+                )
+              ] }),
+              showAdvancedFeatureArea && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Limit This Scope To One Feature Area" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEdit || appliesToAllFeatures, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Plain English: leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 grid gap-3 md:grid-cols-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEdit, options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEdit, options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
+            ] })
           ] }, access.id || `${access.userId}-${index}`);
         })
       ] })
@@ -57147,6 +57200,10 @@ const SectionHeader = ({ title, subtitle, action }) => /* @__PURE__ */ jsxRuntim
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: subtitle })
   ] }),
   action && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "ml-auto", children: action })
+] });
+const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/50 bg-cyan-500/10 text-xs font-bold text-cyan-100", children: [
+  "i",
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal leading-relaxed text-gray-100 shadow-xl group-hover:block", children: text })
 ] });
 const Field = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
