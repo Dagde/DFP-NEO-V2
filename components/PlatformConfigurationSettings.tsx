@@ -13,6 +13,109 @@ type PlatformConfig = {
   schedulingRuleSets: any[];
 };
 
+type PermissionProfile = {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+};
+
+const PERMISSION_CATALOG = [
+  {
+    group: 'Daily Flying Program',
+    items: [
+      ['dfp.view', 'View DFP'],
+      ['dfp.editTiles', 'Add, edit and delete tiles'],
+      ['dfp.validation', 'Run validation checks'],
+      ['dfp.publish', 'Publish DFP'],
+      ['dfp.history', 'View historical DFP records'],
+    ],
+  },
+  {
+    group: 'NEO Build',
+    items: [
+      ['neo.run', 'Run NEO Build'],
+      ['neo.priorities', 'Edit build priorities'],
+      ['neo.intelligence', 'View build intelligence'],
+      ['neo.override', 'Override build results'],
+    ],
+  },
+  {
+    group: 'Staff',
+    items: [
+      ['staff.view', 'View staff roster'],
+      ['staff.edit', 'Edit staff details'],
+      ['staff.currency.view', 'View staff currencies'],
+      ['staff.currency.edit', 'Edit staff currencies'],
+    ],
+  },
+  {
+    group: 'Trainees',
+    items: [
+      ['trainee.roster.view', 'View trainee roster'],
+      ['trainee.profile.own', 'View own trainee profile'],
+      ['trainee.profile.others', 'View other trainee profiles'],
+      ['trainee.pt051.own', 'View own PT-051'],
+      ['trainee.pt051.others', 'View other trainee PT-051'],
+      ['trainee.pt051.edit', 'Edit PT-051'],
+      ['trainee.lmp.own', 'View own individual LMP'],
+      ['trainee.lmp.others', 'View other trainee individual LMP'],
+      ['trainee.remedial.add', 'Add remedial package'],
+    ],
+  },
+  {
+    group: 'Settings & Administration',
+    items: [
+      ['settings.view', 'View settings'],
+      ['settings.schedulingRules.edit', 'Edit scheduling rules'],
+      ['settings.userAccess.edit', 'Edit user permissions'],
+      ['settings.platform.edit', 'Edit platform configuration'],
+      ['settings.superAdmin', 'Super Admin: unrestricted platform access'],
+    ],
+  },
+] as const;
+
+const ALL_PERMISSION_IDS = PERMISSION_CATALOG.flatMap((group) => group.items.map(([id]) => id));
+
+const DEFAULT_PERMISSION_PROFILES: PermissionProfile[] = [
+  {
+    id: 'trainee',
+    name: 'Trainee',
+    description: 'Own-profile training access with restricted access to other trainee performance records.',
+    permissions: ['dfp.view', 'trainee.roster.view', 'trainee.profile.own', 'trainee.pt051.own', 'trainee.lmp.own'],
+  },
+  {
+    id: 'instructor',
+    name: 'Instructor',
+    description: 'Instructor access to DFP, staff roster, trainee profiles, PT-051 and LMP records.',
+    permissions: ['dfp.view', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
+  },
+  {
+    id: 'flying-supervisor',
+    name: 'Flying Supervisor',
+    description: 'Supervisor access for daily flying control, validation, publishing and trainee oversight.',
+    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'dfp.publish', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others', 'trainee.remedial.add'],
+  },
+  {
+    id: 'scheduler',
+    name: 'Scheduler',
+    description: 'Scheduling and build management access.',
+    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'neo.run', 'neo.priorities', 'neo.intelligence', 'neo.override'],
+  },
+  {
+    id: 'unit-admin',
+    name: 'Unit Admin',
+    description: 'Administration of users, settings and records within assigned access scopes.',
+    permissions: ALL_PERMISSION_IDS.filter((id) => id !== 'settings.superAdmin'),
+  },
+  {
+    id: 'super-admin',
+    name: 'Super Admin',
+    description: 'Unrestricted platform administration. Use sparingly.',
+    permissions: ALL_PERMISSION_IDS,
+  },
+];
+
 const emptyConfig: PlatformConfig = {
   organisations: [],
   locations: [],
@@ -50,6 +153,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
 
@@ -139,8 +244,67 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     }));
   };
 
+  const permissionProfiles = useMemo<PermissionProfile[]>(() => {
+    const profiles = config.organisations[0]?.settings?.permissionProfiles;
+    return Array.isArray(profiles) && profiles.length > 0 ? profiles : DEFAULT_PERMISSION_PROFILES;
+  }, [config.organisations]);
+
+  const updatePermissionProfiles = (profiles: PermissionProfile[]) => {
+    setConfig((prev) => {
+      const organisations = prev.organisations.length > 0
+        ? prev.organisations
+        : [{ code: 'DEFAULT', name: 'Default Organisation', status: 'ACTIVE', settings: {} }];
+      return {
+        ...prev,
+        organisations: organisations.map((org, index) => (
+          index === 0
+            ? { ...org, settings: { ...(org.settings || {}), permissionProfiles: profiles } }
+            : org
+        )),
+      };
+    });
+  };
+
+  const updatePermissionProfile = (profileId: string, changes: Partial<PermissionProfile>) => {
+    updatePermissionProfiles(permissionProfiles.map((profile) => (
+      profile.id === profileId ? { ...profile, ...changes } : profile
+    )));
+  };
+
+  const selectedPermissionProfile = useMemo(
+    () => permissionProfiles.find((profile) => profile.id === selectedProfileId) || permissionProfiles[0],
+    [permissionProfiles, selectedProfileId],
+  );
+
+  const addPermissionProfile = () => {
+    const id = `profile-${Date.now()}`;
+    updatePermissionProfiles([
+      ...permissionProfiles,
+      {
+        id,
+        name: 'New Permission Profile',
+        description: 'Describe what this profile allows.',
+        permissions: ['dfp.view'],
+      },
+    ]);
+    setSelectedProfileId(id);
+  };
+
+  const displayUserName = (user: any): string => {
+    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    return fullName || user.displayName || user.username || user.userId || 'Unknown User';
+  };
+
   const userOptions = useMemo(
-    () => Array.from(new Set(config.platformUsers.map((user) => user.userId || user.username).filter(Boolean))),
+    () => config.platformUsers
+      .map((user) => ({
+        id: user.userId || user.username,
+        name: displayUserName(user),
+        username: user.username || user.userId || '',
+        email: user.email || '',
+      }))
+      .filter((user) => user.id)
+      .sort((a, b) => a.name.localeCompare(b.name)),
     [config.platformUsers],
   );
 
@@ -155,6 +319,24 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       .filter(({ access }) => access.userId === selectedAccessUserId),
     [config.userAccess, selectedAccessUserId],
   );
+
+  const selectedUserProfileIds = useMemo(() => {
+    const ids = selectedAccessRows.flatMap(({ access }) => (
+      Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []
+    ));
+    return Array.from(new Set(ids));
+  }, [selectedAccessRows]);
+
+  const setSelectedUserProfileIds = (profileIds: string[]) => {
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: prev.userAccess.map((access) => (
+        access.userId === selectedAccessUserId
+          ? { ...access, settings: { ...(access.settings || {}), permissionProfileIds: profileIds } }
+          : access
+      )),
+    }));
+  };
 
   const addUserAccess = () => {
     const defaultUser = selectedAccessUser || config.platformUsers[0];
@@ -178,7 +360,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           role: 'Viewer',
           accessLevel: 'Read',
           status: 'ACTIVE',
-          settings: {},
+          settings: { permissionProfileIds: selectedUserProfileIds },
         },
       ],
     }));
@@ -391,19 +573,84 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section className="rounded-lg border border-gray-700 bg-gray-800">
         <SectionHeader
+          title="Permission Profiles"
+          subtitle="Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it."
+          action={canEdit ? <button type="button" onClick={addPermissionProfile} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Profile</button> : null}
+        />
+        <div className="grid gap-4 p-4 xl:grid-cols-[340px,1fr]">
+          <div className="space-y-2">
+            {permissionProfiles.map((profile) => (
+              <button
+                key={profile.id}
+                type="button"
+                onClick={() => setSelectedProfileId(profile.id)}
+                className={`w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? 'border-cyan-400 bg-cyan-500/20' : 'border-gray-700 bg-gray-900 hover:bg-gray-950'}`}
+              >
+                <div className="text-sm font-bold text-white">{profile.name}</div>
+                <div className="mt-1 text-xs text-gray-400">{profile.permissions.length} permissions</div>
+              </button>
+            ))}
+          </div>
+          {selectedPermissionProfile && (
+            <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="Profile Name" value={selectedPermissionProfile.name} disabled={!canEdit} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value })} />
+                <Field label="Description" value={selectedPermissionProfile.description} disabled={!canEdit} onChange={(value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value })} />
+              </div>
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                {PERMISSION_CATALOG.map((group) => (
+                  <div key={group.group} className="rounded border border-gray-700 bg-gray-950 p-3">
+                    <h5 className="text-sm font-bold text-cyan-100">{group.group}</h5>
+                    <div className="mt-3 space-y-2">
+                      {group.items.map(([permissionId, label]) => {
+                        const checked = selectedPermissionProfile.permissions.includes(permissionId);
+                        return (
+                          <label key={permissionId} className="flex items-start gap-2 text-sm text-gray-200">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                              checked={checked}
+                              disabled={!canEdit}
+                              onChange={(event) => {
+                                const permissions = event.target.checked
+                                  ? Array.from(new Set([...selectedPermissionProfile.permissions, permissionId]))
+                                  : selectedPermissionProfile.permissions.filter((id) => id !== permissionId);
+                                updatePermissionProfile(selectedPermissionProfile.id, { permissions });
+                              }}
+                            />
+                            <span>{label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-gray-700 bg-gray-800">
+        <SectionHeader
           title="User Access Context"
-          subtitle="Select one user, then manage that user's allowed organisations, locations, units and modules as access scopes."
+          subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
           action={canEdit ? <button type="button" onClick={addUserAccess} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Scope</button> : null}
         />
         <div className="space-y-3 p-4">
           <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
             <div className="grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(160px,auto)]">
-              <SelectField
+              <UserSearchSelect
                 label="User"
                 value={selectedAccessUserId}
                 disabled={!canEdit}
-                options={userOptions}
-                onChange={(value) => setSelectedAccessUserId(value)}
+                users={userOptions}
+                search={userSearch}
+                onSearchChange={setUserSearch}
+                onChange={(value) => {
+                  setSelectedAccessUserId(value);
+                  setUserSearch('');
+                }}
               />
               <div>
                 <span className={labelClass}>Display Name</span>
@@ -421,8 +668,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
             <p className="mt-3 text-xs text-cyan-100/70">
-              Blank scope fields mean all. For example, Location = ESL and Unit = None grants access to all ESL units.
+              Profiles define what the user can do. Scope fields define where those profiles apply.
             </p>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-3">
+              <h5 className="text-sm font-bold text-white">Assigned Permission Profiles</h5>
+              <p className="mt-1 text-xs text-gray-400">Tick each profile this user should receive. The same profiles apply across this user's active access scopes.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {permissionProfiles.map((profile) => {
+                const checked = selectedUserProfileIds.includes(profile.id);
+                return (
+                  <label key={profile.id} className="flex items-start gap-2 rounded border border-gray-700 bg-gray-950 p-3 text-sm text-gray-200">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                      checked={checked}
+                      disabled={!canEdit || selectedAccessRows.length === 0}
+                      onChange={(event) => {
+                        const profileIds = event.target.checked
+                          ? Array.from(new Set([...selectedUserProfileIds, profile.id]))
+                          : selectedUserProfileIds.filter((id) => id !== profile.id);
+                        setSelectedUserProfileIds(profileIds);
+                      }}
+                    />
+                    <span>
+                      <span className="block font-semibold text-white">{profile.name}</span>
+                      <span className="mt-1 block text-xs text-gray-400">{profile.description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           {selectedAccessRows.length === 0 && (
@@ -437,8 +716,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
                 <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} />
                 <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} />
-                <SelectField label="Module" value={access.moduleCode || ''} disabled={!canEdit} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} />
-                <SelectField label="Role" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
+                <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEdit} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Features" />
+                <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
                 <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
                 <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
               </div>
@@ -509,13 +788,71 @@ const ToggleField = ({ label, checked, disabled, onChange }: { label: string; ch
   </label>
 );
 
-const SelectField = ({ label, value, disabled, options, onChange }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void }) => (
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = 'None' }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void; emptyLabel?: string }) => (
   <label>
     <span className={labelClass}>{label}</span>
     <select className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
-      {options.map((option) => <option key={option} value={option}>{option || 'None'}</option>)}
+      {options.map((option) => <option key={option} value={option}>{option || emptyLabel}</option>)}
     </select>
   </label>
 );
+
+const UserSearchSelect = ({
+  label,
+  value,
+  disabled,
+  users,
+  search,
+  onSearchChange,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  users: Array<{ id: string; name: string; username: string; email: string }>;
+  search: string;
+  onSearchChange: (value: string) => void;
+  onChange: (value: string) => void;
+}) => {
+  const selectedUser = users.find((user) => user.id === value);
+  const query = search.trim().toLowerCase();
+  const filteredUsers = users
+    .filter((user) => {
+      if (!query) return true;
+      return [user.name, user.username, user.email].some((field) => field.toLowerCase().includes(query));
+    })
+    .slice(0, 30);
+
+  return (
+    <label>
+      <span className={labelClass}>{label}</span>
+      <input
+        className={fieldClass}
+        value={search || selectedUser?.name || ''}
+        disabled={disabled}
+        placeholder="Type a user's name..."
+        onChange={(event) => onSearchChange(event.target.value)}
+        onFocus={() => onSearchChange(search || '')}
+      />
+      <select
+        className={`${fieldClass} mt-2`}
+        value={value || ''}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {filteredUsers.map((user) => (
+          <option key={user.id} value={user.id}>
+            {user.name}{user.username ? ` (${user.username})` : ''}
+          </option>
+        ))}
+      </select>
+      {filteredUsers.length === 0 && (
+        <div className="mt-2 rounded border border-yellow-700/50 bg-yellow-950/40 px-3 py-2 text-xs text-yellow-100">
+          No users match that name.
+        </div>
+      )}
+    </label>
+  );
+};
 
 export default PlatformConfigurationSettings;

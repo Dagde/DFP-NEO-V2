@@ -56531,6 +56531,99 @@ const AppearanceSettings = () => {
     ] })
   ] });
 };
+const PERMISSION_CATALOG = [
+  {
+    group: "Daily Flying Program",
+    items: [
+      ["dfp.view", "View DFP"],
+      ["dfp.editTiles", "Add, edit and delete tiles"],
+      ["dfp.validation", "Run validation checks"],
+      ["dfp.publish", "Publish DFP"],
+      ["dfp.history", "View historical DFP records"]
+    ]
+  },
+  {
+    group: "NEO Build",
+    items: [
+      ["neo.run", "Run NEO Build"],
+      ["neo.priorities", "Edit build priorities"],
+      ["neo.intelligence", "View build intelligence"],
+      ["neo.override", "Override build results"]
+    ]
+  },
+  {
+    group: "Staff",
+    items: [
+      ["staff.view", "View staff roster"],
+      ["staff.edit", "Edit staff details"],
+      ["staff.currency.view", "View staff currencies"],
+      ["staff.currency.edit", "Edit staff currencies"]
+    ]
+  },
+  {
+    group: "Trainees",
+    items: [
+      ["trainee.roster.view", "View trainee roster"],
+      ["trainee.profile.own", "View own trainee profile"],
+      ["trainee.profile.others", "View other trainee profiles"],
+      ["trainee.pt051.own", "View own PT-051"],
+      ["trainee.pt051.others", "View other trainee PT-051"],
+      ["trainee.pt051.edit", "Edit PT-051"],
+      ["trainee.lmp.own", "View own individual LMP"],
+      ["trainee.lmp.others", "View other trainee individual LMP"],
+      ["trainee.remedial.add", "Add remedial package"]
+    ]
+  },
+  {
+    group: "Settings & Administration",
+    items: [
+      ["settings.view", "View settings"],
+      ["settings.schedulingRules.edit", "Edit scheduling rules"],
+      ["settings.userAccess.edit", "Edit user permissions"],
+      ["settings.platform.edit", "Edit platform configuration"],
+      ["settings.superAdmin", "Super Admin: unrestricted platform access"]
+    ]
+  }
+];
+const ALL_PERMISSION_IDS = PERMISSION_CATALOG.flatMap((group) => group.items.map(([id]) => id));
+const DEFAULT_PERMISSION_PROFILES = [
+  {
+    id: "trainee",
+    name: "Trainee",
+    description: "Own-profile training access with restricted access to other trainee performance records.",
+    permissions: ["dfp.view", "trainee.roster.view", "trainee.profile.own", "trainee.pt051.own", "trainee.lmp.own"]
+  },
+  {
+    id: "instructor",
+    name: "Instructor",
+    description: "Instructor access to DFP, staff roster, trainee profiles, PT-051 and LMP records.",
+    permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"]
+  },
+  {
+    id: "flying-supervisor",
+    name: "Flying Supervisor",
+    description: "Supervisor access for daily flying control, validation, publishing and trainee oversight.",
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "dfp.publish", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others", "trainee.remedial.add"]
+  },
+  {
+    id: "scheduler",
+    name: "Scheduler",
+    description: "Scheduling and build management access.",
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override"]
+  },
+  {
+    id: "unit-admin",
+    name: "Unit Admin",
+    description: "Administration of users, settings and records within assigned access scopes.",
+    permissions: ALL_PERMISSION_IDS.filter((id) => id !== "settings.superAdmin")
+  },
+  {
+    id: "super-admin",
+    name: "Super Admin",
+    description: "Unrestricted platform administration. Use sparingly.",
+    permissions: ALL_PERMISSION_IDS
+  }
+];
 const emptyConfig = {
   organisations: [],
   locations: [],
@@ -56560,6 +56653,8 @@ const PlatformConfigurationSettings = ({
   const [saving, setSaving] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
+  const [userSearch, setUserSearch] = reactExports.useState("");
+  const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   reactExports.useEffect(() => {
     let cancelled = false;
@@ -56642,8 +56737,50 @@ const PlatformConfigurationSettings = ({
       ]
     }));
   };
+  const permissionProfiles = reactExports.useMemo(() => {
+    const profiles = config.organisations[0]?.settings?.permissionProfiles;
+    return Array.isArray(profiles) && profiles.length > 0 ? profiles : DEFAULT_PERMISSION_PROFILES;
+  }, [config.organisations]);
+  const updatePermissionProfiles = (profiles) => {
+    setConfig((prev) => {
+      const organisations = prev.organisations.length > 0 ? prev.organisations : [{ code: "DEFAULT", name: "Default Organisation", status: "ACTIVE", settings: {} }];
+      return {
+        ...prev,
+        organisations: organisations.map((org, index) => index === 0 ? { ...org, settings: { ...org.settings || {}, permissionProfiles: profiles } } : org)
+      };
+    });
+  };
+  const updatePermissionProfile = (profileId, changes) => {
+    updatePermissionProfiles(permissionProfiles.map((profile) => profile.id === profileId ? { ...profile, ...changes } : profile));
+  };
+  const selectedPermissionProfile = reactExports.useMemo(
+    () => permissionProfiles.find((profile) => profile.id === selectedProfileId) || permissionProfiles[0],
+    [permissionProfiles, selectedProfileId]
+  );
+  const addPermissionProfile = () => {
+    const id = `profile-${Date.now()}`;
+    updatePermissionProfiles([
+      ...permissionProfiles,
+      {
+        id,
+        name: "New Permission Profile",
+        description: "Describe what this profile allows.",
+        permissions: ["dfp.view"]
+      }
+    ]);
+    setSelectedProfileId(id);
+  };
+  const displayUserName = (user) => {
+    const fullName = `${user.firstName || ""} ${user.lastName || ""}`.trim();
+    return fullName || user.displayName || user.username || user.userId || "Unknown User";
+  };
   const userOptions = reactExports.useMemo(
-    () => Array.from(new Set(config.platformUsers.map((user) => user.userId || user.username).filter(Boolean))),
+    () => config.platformUsers.map((user) => ({
+      id: user.userId || user.username,
+      name: displayUserName(user),
+      username: user.username || user.userId || "",
+      email: user.email || ""
+    })).filter((user) => user.id).sort((a, b) => a.name.localeCompare(b.name)),
     [config.platformUsers]
   );
   const selectedAccessUser = reactExports.useMemo(
@@ -56654,6 +56791,16 @@ const PlatformConfigurationSettings = ({
     () => config.userAccess.map((access, index) => ({ access, index })).filter(({ access }) => access.userId === selectedAccessUserId),
     [config.userAccess, selectedAccessUserId]
   );
+  const selectedUserProfileIds = reactExports.useMemo(() => {
+    const ids = selectedAccessRows.flatMap(({ access }) => Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []);
+    return Array.from(new Set(ids));
+  }, [selectedAccessRows]);
+  const setSelectedUserProfileIds = (profileIds) => {
+    setConfig((prev) => ({
+      ...prev,
+      userAccess: prev.userAccess.map((access) => access.userId === selectedAccessUserId ? { ...access, settings: { ...access.settings || {}, permissionProfileIds: profileIds } } : access)
+    }));
+  };
   const addUserAccess = () => {
     const defaultUser = selectedAccessUser || config.platformUsers[0];
     const userId = selectedAccessUserId || defaultUser?.userId || defaultUser?.username || "";
@@ -56673,7 +56820,7 @@ const PlatformConfigurationSettings = ({
           role: "Viewer",
           accessLevel: "Read",
           status: "ACTIVE",
-          settings: {}
+          settings: { permissionProfileIds: selectedUserProfileIds }
         }
       ]
     }));
@@ -56846,8 +56993,64 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
+          title: "Permission Profiles",
+          subtitle: "Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addPermissionProfile, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Profile" }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 xl:grid-cols-[340px,1fr]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: permissionProfiles.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            type: "button",
+            onClick: () => setSelectedProfileId(profile.id),
+            className: `w-full rounded border px-4 py-3 text-left ${selectedPermissionProfile?.id === profile.id ? "border-cyan-400 bg-cyan-500/20" : "border-gray-700 bg-gray-900 hover:bg-gray-950"}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-bold text-white", children: profile.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
+                profile.permissions.length,
+                " permissions"
+              ] })
+            ]
+          },
+          profile.id
+        )) }),
+        selectedPermissionProfile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Profile Name", value: selectedPermissionProfile.name, disabled: !canEdit, onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Description", value: selectedPermissionProfile.description, disabled: !canEdit, onChange: (value) => updatePermissionProfile(selectedPermissionProfile.id, { description: value }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 grid gap-4 lg:grid-cols-2", children: PERMISSION_CATALOG.map((group) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-gray-700 bg-gray-950 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: group.group }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 space-y-2", children: group.items.map(([permissionId, label]) => {
+              const checked = selectedPermissionProfile.permissions.includes(permissionId);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-gray-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                    checked,
+                    disabled: !canEdit,
+                    onChange: (event) => {
+                      const permissions = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedPermissionProfile.permissions, permissionId])) : selectedPermissionProfile.permissions.filter((id) => id !== permissionId);
+                      updatePermissionProfile(selectedPermissionProfile.id, { permissions });
+                    }
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label })
+              ] }, permissionId);
+            }) })
+          ] }, group.group)) })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
           title: "User Access Context",
-          subtitle: "Select one user, then manage that user's allowed organisations, locations, units and modules as access scopes.",
+          subtitle: "Search by user name, assign permission profiles, then define where those profiles apply.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addUserAccess, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Scope" }) : null
         }
       ),
@@ -56855,13 +57058,18 @@ const PlatformConfigurationSettings = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-[minmax(260px,1fr)_minmax(220px,1fr)_minmax(160px,auto)]", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              SelectField,
+              UserSearchSelect,
               {
                 label: "User",
                 value: selectedAccessUserId,
                 disabled: !canEdit,
-                options: userOptions,
-                onChange: (value) => setSelectedAccessUserId(value)
+                users: userOptions,
+                search: userSearch,
+                onSearchChange: setUserSearch,
+                onChange: (value) => {
+                  setSelectedAccessUserId(value);
+                  setUserSearch("");
+                }
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -56873,7 +57081,35 @@ const PlatformConfigurationSettings = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/20 bg-gray-950 px-3 py-2 text-sm font-semibold text-cyan-100", children: selectedAccessRows.length })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Blank scope fields mean all. For example, Location = ESL and Unit = None grants access to all ESL units." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-3 text-xs text-cyan-100/70", children: "Profiles define what the user can do. Scope fields define where those profiles apply." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Assigned Permission Profiles" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Tick each profile this user should receive. The same profiles apply across this user's active access scopes." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: permissionProfiles.map((profile) => {
+            const checked = selectedUserProfileIds.includes(profile.id);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-950 p-3 text-sm text-gray-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                  checked,
+                  disabled: !canEdit || selectedAccessRows.length === 0,
+                  onChange: (event) => {
+                    const profileIds = event.target.checked ? Array.from(/* @__PURE__ */ new Set([...selectedUserProfileIds, profile.id])) : selectedUserProfileIds.filter((id) => id !== profile.id);
+                    setSelectedUserProfileIds(profileIds);
+                  }
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold text-white", children: profile.name }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-400", children: profile.description })
+              ] })
+            ] }, profile.id);
+          }) })
         ] }),
         selectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
         selectedAccessRows.map(({ access, index }) => {
@@ -56881,8 +57117,8 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: access.organisationCode || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("userAccess", index, { organisationCode: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: access.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("userAccess", index, { locationCode: value || null }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: access.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("userAccess", index, { unitCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Module", value: access.moduleCode || "", disabled: !canEdit, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Role", value: access.role || "Viewer", disabled: !canEdit, options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEdit, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Features" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Administration Level", value: access.role || "Viewer", disabled: !canEdit, options: ["Viewer", "Scheduler", "Supervisor", "Unit Admin", "Platform Admin", "Super Admin"], onChange: (value) => updateRow("userAccess", index, { role: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Access", value: access.accessLevel || "Read", disabled: !canEdit, options: ["Read", "Write", "Admin"], onChange: (value) => updateRow("userAccess", index, { accessLevel: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: access.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("userAccess", index, { status: value }) })
           ] }, access.id || `${access.userId}-${index}`);
@@ -56933,10 +57169,54 @@ const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ 
     }
   )
 ] });
-const SelectField = ({ label, value, disabled, options, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || "None" }, option)) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || emptyLabel }, option)) })
 ] });
+const UserSearchSelect = ({
+  label,
+  value,
+  disabled,
+  users,
+  search,
+  onSearchChange,
+  onChange
+}) => {
+  const selectedUser = users.find((user) => user.id === value);
+  const query = search.trim().toLowerCase();
+  const filteredUsers = users.filter((user) => {
+    if (!query) return true;
+    return [user.name, user.username, user.email].some((field) => field.toLowerCase().includes(query));
+  }).slice(0, 30);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        className: fieldClass,
+        value: search || selectedUser?.name || "",
+        disabled,
+        placeholder: "Type a user's name...",
+        onChange: (event) => onSearchChange(event.target.value),
+        onFocus: () => onSearchChange(search || "")
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "select",
+      {
+        className: `${fieldClass} mt-2`,
+        value: value || "",
+        disabled,
+        onChange: (event) => onChange(event.target.value),
+        children: filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: user.id, children: [
+          user.name,
+          user.username ? ` (${user.username})` : ""
+        ] }, user.id))
+      }
+    ),
+    filteredUsers.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-yellow-700/50 bg-yellow-950/40 px-3 py-2 text-xs text-yellow-100", children: "No users match that name." })
+  ] });
+};
 const apiBase = () => window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
 const HistoricalDataSeeder = ({ onClose, onDataSeeded }) => {
   const [status, setStatus] = reactExports.useState("idle");
