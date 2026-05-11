@@ -877,7 +877,7 @@ const UserSearchSelect = ({
   onSearchChange: (value: string) => void;
   onChange: (value: string) => void;
 }) => {
-  const selectedUser = users.find((user) => user.id === value);
+  const [isOpen, setIsOpen] = useState(false);
   const query = search.trim().toLowerCase();
   const filteredUsers = users
     .filter((user) => {
@@ -887,31 +887,47 @@ const UserSearchSelect = ({
     .slice(0, 30);
 
   return (
-    <label>
+    <label className="relative block">
       <span className={labelClass}>{label}</span>
       <input
         className={fieldClass}
-        value={search || selectedUser?.name || ''}
+        value={search}
         disabled={disabled}
-        placeholder="Type a user's name..."
-        onChange={(event) => onSearchChange(event.target.value)}
-        onFocus={() => onSearchChange(search || '')}
+        placeholder="Search by name..."
+        autoComplete="off"
+        onChange={(event) => {
+          onSearchChange(event.target.value);
+          setIsOpen(true);
+        }}
+        onFocus={() => setIsOpen(true)}
+        onBlur={() => window.setTimeout(() => setIsOpen(false), 120)}
       />
-      <select
-        className={`${fieldClass} mt-2`}
-        value={value || ''}
-        disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {filteredUsers.map((user) => (
-          <option key={user.id} value={user.id}>
-            {user.name}{user.username ? ` (${user.username})` : ''}
-          </option>
-        ))}
-      </select>
-      {filteredUsers.length === 0 && (
-        <div className="mt-2 rounded border border-yellow-700/50 bg-yellow-950/40 px-3 py-2 text-xs text-yellow-100">
-          No users match that name.
+      {isOpen && !disabled && (
+        <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl">
+          {filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <button
+                key={user.id}
+                type="button"
+                className={`block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${
+                  user.id === value ? 'bg-cyan-500/15 text-cyan-100' : 'text-gray-100'
+                }`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(user.id);
+                  onSearchChange('');
+                  setIsOpen(false);
+                }}
+              >
+                <span className="block font-semibold">{user.name}</span>
+                {user.username && <span className="block text-xs text-gray-400">{user.username}</span>}
+              </button>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-xs text-yellow-100">
+              No users match that name.
+            </div>
+          )}
         </div>
       )}
     </label>

@@ -57239,39 +57239,48 @@ const UserSearchSelect = ({
   onSearchChange,
   onChange
 }) => {
-  const selectedUser = users.find((user) => user.id === value);
+  const [isOpen, setIsOpen] = reactExports.useState(false);
   const query = search.trim().toLowerCase();
   const filteredUsers = users.filter((user) => {
     if (!query) return true;
     return [user.name, user.username, user.email].some((field) => field.toLowerCase().includes(query));
   }).slice(0, 30);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "relative block", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "input",
       {
         className: fieldClass,
-        value: search || selectedUser?.name || "",
+        value: search,
         disabled,
-        placeholder: "Type a user's name...",
-        onChange: (event) => onSearchChange(event.target.value),
-        onFocus: () => onSearchChange(search || "")
+        placeholder: "Search by name...",
+        autoComplete: "off",
+        onChange: (event) => {
+          onSearchChange(event.target.value);
+          setIsOpen(true);
+        },
+        onFocus: () => setIsOpen(true),
+        onBlur: () => window.setTimeout(() => setIsOpen(false), 120)
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
+    isOpen && !disabled && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded border border-cyan-500/30 bg-gray-950 shadow-xl", children: filteredUsers.length > 0 ? filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "button",
       {
-        className: `${fieldClass} mt-2`,
-        value: value || "",
-        disabled,
-        onChange: (event) => onChange(event.target.value),
-        children: filteredUsers.map((user) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: user.id, children: [
-          user.name,
-          user.username ? ` (${user.username})` : ""
-        ] }, user.id))
-      }
-    ),
-    filteredUsers.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 rounded border border-yellow-700/50 bg-yellow-950/40 px-3 py-2 text-xs text-yellow-100", children: "No users match that name." })
+        type: "button",
+        className: `block w-full px-3 py-2 text-left text-sm hover:bg-cyan-500/20 ${user.id === value ? "bg-cyan-500/15 text-cyan-100" : "text-gray-100"}`,
+        onMouseDown: (event) => event.preventDefault(),
+        onClick: () => {
+          onChange(user.id);
+          onSearchChange("");
+          setIsOpen(false);
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold", children: user.name }),
+          user.username && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs text-gray-400", children: user.username })
+        ]
+      },
+      user.id
+    )) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-3 py-2 text-xs text-yellow-100", children: "No users match that name." }) })
   ] });
 };
 const apiBase = () => window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
