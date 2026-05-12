@@ -1672,10 +1672,12 @@ const hasPlatformModuleAccess = (accessContext, locationCode, moduleCode) => {
     const rowLocation = normaliseAccessValue(row.locationCode);
     const rowModule = normaliseAccessValue(row.moduleCode);
     const rowAccess = normaliseAccessValue(row.accessLevel);
+    const rowRole = normaliseAccessValue(row.role);
     const hasLocationAccess = !rowLocation || rowLocation === targetLocation;
     const hasModuleAccess = !rowModule || rowModule === targetModule;
     const isEnabled = rowAccess !== "none" && row.status !== "INACTIVE";
-    return hasLocationAccess && hasModuleAccess && isEnabled;
+    const isAdminScope = ["platform admin", "super admin"].includes(rowRole);
+    return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess);
   });
 };
 const getPlatformModuleForView = (view2) => {
@@ -57147,7 +57149,7 @@ const PlatformConfigurationSettings = ({
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-bold", children: "Apply to all enabled features for this unit" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Permission Profiles still control exactly what the user can do." })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-cyan-100/70", children: "Recommended for normal administration. Platform Admin and Super Admin scopes can open all feature areas for this location/unit." })
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(

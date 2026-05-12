@@ -742,7 +742,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <span>
                         <span className="block font-bold">Apply to all enabled features for this unit</span>
                         <span className="mt-1 block text-xs text-cyan-100/70">
-                          Recommended for normal administration. Permission Profiles still control exactly what the user can do.
+                          Recommended for normal administration. Platform Admin and Super Admin scopes can open all feature areas for this location/unit.
                         </span>
                       </span>
                     </label>

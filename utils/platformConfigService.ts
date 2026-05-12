@@ -201,10 +201,12 @@ export const hasPlatformModuleAccess = (
     const rowLocation = normaliseAccessValue(row.locationCode);
     const rowModule = normaliseAccessValue(row.moduleCode);
     const rowAccess = normaliseAccessValue(row.accessLevel);
+    const rowRole = normaliseAccessValue(row.role);
     const hasLocationAccess = !rowLocation || rowLocation === targetLocation;
     const hasModuleAccess = !rowModule || rowModule === targetModule;
     const isEnabled = rowAccess !== 'none' && row.status !== 'INACTIVE';
-    return hasLocationAccess && hasModuleAccess && isEnabled;
+    const isAdminScope = ['platform admin', 'super admin'].includes(rowRole);
+    return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess);
   });
 };
 
