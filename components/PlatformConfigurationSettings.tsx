@@ -138,6 +138,7 @@ const getApiBase = (): string => {
 
 const fieldClass = 'w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none';
 const labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400';
+const sectionClass = 'overflow-hidden rounded-xl border border-cyan-500/20 bg-gray-800 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_18px_45px_rgba(0,0,0,0.28)]';
 
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
@@ -151,6 +152,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [applyingChanges, setApplyingChanges] = useState(false);
   const [error, setError] = useState('');
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -381,6 +383,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     if (!canEdit) return;
     setSaving(true);
     setError('');
+    let shouldReload = false;
     try {
       const res = await fetch(`${getApiBase()}/platform-config`, {
         method: 'POST',
@@ -391,11 +394,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         const body = await res.text();
         throw new Error(body || `Save failed (${res.status})`);
       }
-      onShowSuccess('Platform configuration saved');
+      shouldReload = true;
+      setApplyingChanges(true);
+      onShowSuccess('Platform configuration saved. Applying changes...');
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 900);
     } catch (err: any) {
       setError(err?.message || 'Failed to save platform configuration');
     } finally {
-      setSaving(false);
+      if (!shouldReload) setSaving(false);
     }
   };
 
@@ -408,7 +416,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }
 
   return (
-    <div className="space-y-5">
+    <div className="relative space-y-8">
+      {applyingChanges && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm">
+          <div className="rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl">
+            <div className="text-lg font-bold text-cyan-100">One moment while we apply your changes</div>
+            <p className="mt-2 text-sm text-gray-300">The page will refresh automatically so the updated platform settings are active everywhere.</p>
+          </div>
+        </div>
+      )}
       <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
         <div className="flex flex-wrap items-center gap-3">
           <div>
@@ -420,10 +436,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <button
             type="button"
             onClick={save}
-            disabled={!canEdit || saving}
+            disabled={!canEdit || saving || applyingChanges}
             className="ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save'}
+            {applyingChanges ? 'Applying...' : saving ? 'Saving...' : 'Save'}
           </button>
         </div>
         {!canEdit && (
@@ -445,7 +461,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <Metric label="Enabled Modules" value={enabledModuleCount} />
       </div>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader title="Organisation & Locations" subtitle="The top of the hierarchy: customer, base, timezone, and training areas." />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
@@ -467,7 +483,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader
           title="Units"
           subtitle="Unit is the centre of configuration: type, location, enabled modules and future UI behaviour."
@@ -486,7 +502,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
@@ -526,7 +542,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader title="Unit Modules" subtitle="Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." />
         <div className="overflow-x-auto p-4">
           <table className="min-w-full text-left text-sm">
@@ -571,7 +587,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader
           title="Permission Profiles"
           subtitle="Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it."
@@ -631,7 +647,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader
           title="User Access Context"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
@@ -780,7 +796,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-700 bg-gray-800">
+      <section className={sectionClass}>
         <SectionHeader title="Scheduling Rule Sets" subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." />
         <div className="space-y-3 p-4">
           {config.schedulingRuleSets.map((ruleSet, index) => (
@@ -806,7 +822,8 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
 );
 
 const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) => (
-  <div className="flex flex-wrap items-center gap-3 border-b border-gray-700 px-4 py-3">
+  <div className="flex flex-wrap items-center gap-3 border-b border-cyan-500/20 bg-gray-950/70 px-4 py-4">
+    <div className="h-11 w-1.5 rounded-full bg-cyan-400/80 shadow-[0_0_18px_rgba(34,211,238,0.35)]" />
     <div>
       <h4 className="text-base font-bold text-white">{title}</h4>
       <p className="mt-1 text-sm text-gray-400">{subtitle}</p>

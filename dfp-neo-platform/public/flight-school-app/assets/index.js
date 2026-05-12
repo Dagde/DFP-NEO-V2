@@ -56646,6 +56646,7 @@ const getApiBase = () => {
 };
 const fieldClass = "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
 const labelClass = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400";
+const sectionClass = "overflow-hidden rounded-xl border border-cyan-500/20 bg-gray-800 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_18px_45px_rgba(0,0,0,0.28)]";
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess
@@ -56653,6 +56654,7 @@ const PlatformConfigurationSettings = ({
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
   const [saving, setSaving] = reactExports.useState(false);
+  const [applyingChanges, setApplyingChanges] = reactExports.useState(false);
   const [error, setError] = reactExports.useState("");
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
@@ -56841,6 +56843,7 @@ const PlatformConfigurationSettings = ({
     if (!canEdit) return;
     setSaving(true);
     setError("");
+    let shouldReload = false;
     try {
       const res = await fetch(`${getApiBase()}/platform-config`, {
         method: "POST",
@@ -56851,17 +56854,26 @@ const PlatformConfigurationSettings = ({
         const body = await res.text();
         throw new Error(body || `Save failed (${res.status})`);
       }
-      onShowSuccess("Platform configuration saved");
+      shouldReload = true;
+      setApplyingChanges(true);
+      onShowSuccess("Platform configuration saved. Applying changes...");
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 900);
     } catch (err) {
       setError(err?.message || "Failed to save platform configuration");
     } finally {
-      setSaving(false);
+      if (!shouldReload) setSaving(false);
     }
   };
   if (loading) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", children: [
+    applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The page will refresh automatically so the updated platform settings are active everywhere." })
+    ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -56873,9 +56885,9 @@ const PlatformConfigurationSettings = ({
           {
             type: "button",
             onClick: save,
-            disabled: !canEdit || saving,
+            disabled: !canEdit || saving || applyingChanges,
             className: "ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-            children: saving ? "Saving..." : "Save"
+            children: applyingChanges ? "Applying..." : saving ? "Saving..." : "Save"
           }
         )
       ] }),
@@ -56888,7 +56900,7 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Units", value: config.units.length }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Organisation & Locations", subtitle: "The top of the hierarchy: customer, base, timezone, and training areas." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
@@ -56905,7 +56917,7 @@ const PlatformConfigurationSettings = ({
         ] }, location.id || location.code || index))
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -56922,7 +56934,7 @@ const PlatformConfigurationSettings = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) })
       ] }, unit.id || unit.code || index)) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
@@ -56956,7 +56968,7 @@ const PlatformConfigurationSettings = ({
         ] }, pool.id || pool.code || index)) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Unit Modules", subtitle: "Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -56991,7 +57003,7 @@ const PlatformConfigurationSettings = ({
         ] }, unit.code)) })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -57047,7 +57059,7 @@ const PlatformConfigurationSettings = ({
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -57180,7 +57192,7 @@ const PlatformConfigurationSettings = ({
         })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: "rounded-lg border border-gray-700 bg-gray-800", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
@@ -57196,7 +57208,8 @@ const Metric = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-gray-500", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: value })
 ] });
-const SectionHeader = ({ title, subtitle, action }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3 border-b border-gray-700 px-4 py-3", children: [
+const SectionHeader = ({ title, subtitle, action }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3 border-b border-cyan-500/20 bg-gray-950/70 px-4 py-4", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-11 w-1.5 rounded-full bg-cyan-400/80 shadow-[0_0_18px_rgba(34,211,238,0.35)]" }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-bold text-white", children: title }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-400", children: subtitle })
