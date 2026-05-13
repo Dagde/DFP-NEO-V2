@@ -147,6 +147,14 @@ const sectionAccentStyle = {
   backgroundColor: 'rgba(125, 211, 252, 0.72)',
   boxShadow: '0 0 18px rgba(125, 211, 252, 0.28)',
 };
+const ACCESS_SCOPE_TONES = [
+  { border: 'rgba(125, 211, 252, 0.42)', fill: 'rgba(125, 211, 252, 0.10)', applyBorder: 'rgba(186, 230, 253, 0.26)' },
+  { border: 'rgba(196, 181, 253, 0.40)', fill: 'rgba(196, 181, 253, 0.10)', applyBorder: 'rgba(221, 214, 254, 0.24)' },
+  { border: 'rgba(110, 231, 183, 0.38)', fill: 'rgba(110, 231, 183, 0.09)', applyBorder: 'rgba(167, 243, 208, 0.23)' },
+  { border: 'rgba(253, 224, 71, 0.34)', fill: 'rgba(253, 224, 71, 0.08)', applyBorder: 'rgba(254, 240, 138, 0.22)' },
+  { border: 'rgba(253, 186, 116, 0.36)', fill: 'rgba(253, 186, 116, 0.09)', applyBorder: 'rgba(254, 215, 170, 0.23)' },
+  { border: 'rgba(249, 168, 212, 0.34)', fill: 'rgba(249, 168, 212, 0.08)', applyBorder: 'rgba(251, 207, 232, 0.22)' },
+];
 
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
@@ -734,11 +742,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           )}
 
-          {selectedAccessRows.map(({ access, index }) => {
+          {selectedAccessRows.map(({ access, index }, scopePosition) => {
             const appliesToAllFeatures = !access.moduleCode;
             const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
+            const scopeTone = ACCESS_SCOPE_TONES[scopePosition % ACCESS_SCOPE_TONES.length];
             return (
-              <div key={access.id || `${access.userId}-${index}`} className="rounded border border-gray-700 bg-gray-900 p-3">
+              <div
+                key={access.id || `${access.userId}-${index}`}
+                className="rounded border bg-gray-900 p-3"
+                style={{ borderColor: scopeTone.border, boxShadow: `0 0 0 1px ${scopeTone.fill}` }}
+              >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h5 className="text-sm font-bold text-white">Access Scope</h5>
                   <InfoHint text="This section answers where the selected user's permission profiles apply. Example: Location ESL + Unit 1FTS + all enabled features means the user's selected profiles apply to all 1FTS features at East Sale." />
@@ -753,7 +766,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
                 </div>
 
-                <div className="mt-3 rounded border border-cyan-500/20 bg-cyan-500/10 p-3">
+                <div
+                  className="mt-3 rounded border p-3"
+                  style={{ backgroundColor: scopeTone.fill, borderColor: scopeTone.applyBorder }}
+                >
                   <div className="flex flex-wrap items-start gap-3">
                     <label className="flex items-start gap-2 text-sm text-cyan-50">
                       <input
