@@ -55,9 +55,9 @@ const sectionAccentStyle = {
   boxShadow: '0 0 18px rgba(125, 211, 252, 0.28)',
 };
 const ACCESS_SCOPE_TONE = {
-  border: 'rgba(234, 179, 8, 0.58)',
-  fill: 'rgba(234, 179, 8, 0.16)',
-  applyBorder: 'rgba(250, 204, 21, 0.40)',
+  border: 'rgba(34, 211, 238, 0.42)',
+  fill: 'rgba(8, 145, 178, 0.24)',
+  applyBorder: 'rgba(103, 232, 249, 0.62)',
 };
 
 interface PlatformConfigurationSettingsProps {
@@ -669,10 +669,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   </span>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr_0.75fr_0.85fr]">
                   <SelectField label="Organisation" value={access.organisationCode || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('userAccess', index, { organisationCode: value })} />
                   <SelectField label="Location" value={access.locationCode || ''} disabled={!canEdit} options={['', ...config.locations.map((location) => location.code)]} onChange={(value) => updateRow('userAccess', index, { locationCode: value || null })} emptyLabel="All Locations" />
                   <SelectField label="Unit" value={access.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('userAccess', index, { unitCode: value || null })} emptyLabel="All Units" />
+                  <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
+                  <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
+                  <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
                 </div>
 
                 <div
@@ -716,12 +719,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </p>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-3 grid gap-3 md:grid-cols-3">
-                  <SelectField label="Administration Level" value={access.role || 'Viewer'} disabled={!canEdit} options={['Viewer', 'Scheduler', 'Supervisor', 'Unit Admin', 'Platform Admin', 'Super Admin']} onChange={(value) => updateRow('userAccess', index, { role: value })} />
-                  <SelectField label="Access" value={access.accessLevel || 'Read'} disabled={!canEdit} options={['Read', 'Write', 'Admin']} onChange={(value) => updateRow('userAccess', index, { accessLevel: value })} />
-                  <SelectField label="Status" value={access.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('userAccess', index, { status: value })} />
                 </div>
               </div>
             );
