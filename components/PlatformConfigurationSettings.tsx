@@ -148,12 +148,12 @@ const sectionAccentStyle = {
   boxShadow: '0 0 18px rgba(125, 211, 252, 0.28)',
 };
 const ACCESS_SCOPE_TONES = [
-  { border: 'rgba(125, 211, 252, 0.42)', fill: 'rgba(125, 211, 252, 0.10)', applyBorder: 'rgba(186, 230, 253, 0.26)' },
-  { border: 'rgba(196, 181, 253, 0.40)', fill: 'rgba(196, 181, 253, 0.10)', applyBorder: 'rgba(221, 214, 254, 0.24)' },
-  { border: 'rgba(110, 231, 183, 0.38)', fill: 'rgba(110, 231, 183, 0.09)', applyBorder: 'rgba(167, 243, 208, 0.23)' },
-  { border: 'rgba(253, 224, 71, 0.34)', fill: 'rgba(253, 224, 71, 0.08)', applyBorder: 'rgba(254, 240, 138, 0.22)' },
-  { border: 'rgba(253, 186, 116, 0.36)', fill: 'rgba(253, 186, 116, 0.09)', applyBorder: 'rgba(254, 215, 170, 0.23)' },
-  { border: 'rgba(249, 168, 212, 0.34)', fill: 'rgba(249, 168, 212, 0.08)', applyBorder: 'rgba(251, 207, 232, 0.22)' },
+  { border: 'rgba(245, 158, 11, 0.58)', fill: 'rgba(245, 158, 11, 0.13)', applyBorder: 'rgba(251, 191, 36, 0.36)' },
+  { border: 'rgba(168, 85, 247, 0.56)', fill: 'rgba(168, 85, 247, 0.13)', applyBorder: 'rgba(196, 181, 253, 0.34)' },
+  { border: 'rgba(34, 197, 94, 0.52)', fill: 'rgba(34, 197, 94, 0.12)', applyBorder: 'rgba(134, 239, 172, 0.32)' },
+  { border: 'rgba(244, 63, 94, 0.50)', fill: 'rgba(244, 63, 94, 0.11)', applyBorder: 'rgba(251, 113, 133, 0.32)' },
+  { border: 'rgba(99, 102, 241, 0.54)', fill: 'rgba(99, 102, 241, 0.12)', applyBorder: 'rgba(165, 180, 252, 0.32)' },
+  { border: 'rgba(132, 204, 22, 0.48)', fill: 'rgba(132, 204, 22, 0.11)', applyBorder: 'rgba(190, 242, 100, 0.30)' },
 ];
 
 interface PlatformConfigurationSettingsProps {
