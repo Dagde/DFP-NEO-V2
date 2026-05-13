@@ -272,7 +272,6 @@ const legacyRoleToProfileId = (role: unknown): string | null => {
   const normalisedRole = normaliseAccessValue(role);
   if (!normalisedRole) return null;
   if (normalisedRole.includes('super admin')) return 'super-admin';
-  if (normalisedRole.includes('platform admin') || normalisedRole.includes('unit admin')) return 'unit-admin';
   if (normalisedRole.includes('flying supervisor') || normalisedRole.includes('course supervisor')) return 'flying-supervisor';
   if (normalisedRole.includes('scheduler')) return 'scheduler';
   if (normalisedRole.includes('instructor')) return 'instructor';
@@ -303,7 +302,11 @@ const resolvePermissionsForRows = (
     const role = normaliseAccessValue(row.role);
     if (role.includes('super admin')) return ALL_PLATFORM_PERMISSION_IDS;
     if (role.includes('platform admin') || role.includes('unit admin')) {
-      return ALL_PLATFORM_PERMISSION_IDS.filter((id) => id !== 'settings.superAdmin');
+      return [
+        'settings.view',
+        'settings.userAccess.edit',
+        'settings.platform.edit',
+      ];
     }
     return [];
   });
@@ -420,7 +423,7 @@ const hasPermissionForModule = (
   moduleCode: string,
 ): boolean => {
   if (!accessContext.isConfigured) return true;
-  if (accessContext.isPlatformAdmin) return true;
+  if (accessContext.isSuperAdmin) return true;
   const prefixes = MODULE_PERMISSION_PREFIXES[normaliseAccessValue(moduleCode)] || [];
   if (prefixes.length === 0) return true;
   return accessContext.permissions.some((permissionId) => (
