@@ -438,9 +438,10 @@ export const hasPlatformPermission = (
   permissionId: PlatformPermissionId,
 ): boolean => {
   if (!accessContext.isConfigured) return true;
+  if (accessContext.isSuperAdmin) return true;
   const targetPermission = normaliseAccessValue(permissionId);
   return accessContext.permissions.some((permission) => normaliseAccessValue(permission) === targetPermission)
-    || accessContext.permissions.some((permission) => normaliseAccessValue(permission) === 'settings.superadmin');
+    || accessContext.permissions.some((permission) => normaliseAccessValue(permission) === normaliseAccessValue('settings.superAdmin'));
 };
 
 export const hasAnyPlatformPermission = (

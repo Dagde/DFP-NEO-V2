@@ -1855,8 +1855,9 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
 };
 const hasPlatformPermission = (accessContext, permissionId) => {
   if (!accessContext.isConfigured) return true;
+  if (accessContext.isSuperAdmin) return true;
   const targetPermission = normaliseAccessValue(permissionId);
-  return accessContext.permissions.some((permission) => normaliseAccessValue(permission) === targetPermission) || accessContext.permissions.some((permission) => normaliseAccessValue(permission) === "settings.superadmin");
+  return accessContext.permissions.some((permission) => normaliseAccessValue(permission) === targetPermission) || accessContext.permissions.some((permission) => normaliseAccessValue(permission) === normaliseAccessValue("settings.superAdmin"));
 };
 const MODULE_PERMISSION_PREFIXES = {
   dfp: ["dfp."],
@@ -71997,10 +71998,12 @@ ${"=".repeat(60)}`);
         return Array.isArray(settings?.permissionProfileIds) ? settings.permissionProfileIds : [];
       })
     ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
-    return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
+    return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id)) || profileIds.has(normalisePermissionId(profile.name))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
   }, [platformAccessContext, platformConfig, normalisePermissionId]);
   const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
+    if (platformAccessContext.isSuperAdmin) return true;
     if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
+    if (assignedPlatformProfilePermissions.has(normalisePermissionId("settings.superAdmin"))) return true;
     return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
   }, [platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
   const denyPlatformAction = reactExports.useCallback((actionLabel) => {

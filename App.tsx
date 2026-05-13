@@ -7572,14 +7572,19 @@ const App: React.FC = () => {
         ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
 
         return new Set(getPlatformPermissionProfiles(platformConfig)
-            .filter((profile) => profileIds.has(normalisePermissionId(profile.id)))
+            .filter((profile) => (
+                profileIds.has(normalisePermissionId(profile.id))
+                || profileIds.has(normalisePermissionId(profile.name))
+            ))
             .flatMap((profile) => profile.permissions || [])
             .map((permissionId) => normalisePermissionId(permissionId))
             .filter(Boolean));
     }, [platformAccessContext, platformConfig, normalisePermissionId]);
 
     const canUsePlatformPermission = useCallback((permissionId: string): boolean => {
+        if (platformAccessContext.isSuperAdmin) return true;
         if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
+        if (assignedPlatformProfilePermissions.has(normalisePermissionId('settings.superAdmin'))) return true;
         return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
     }, [platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
 
