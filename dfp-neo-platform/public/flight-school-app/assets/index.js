@@ -56913,6 +56913,7 @@ const PlatformConfigurationSettings = ({
   const [selectedAccessUserId, setSelectedAccessUserId] = reactExports.useState("");
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
+  const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   reactExports.useEffect(() => {
     let cancelled = false;
@@ -57384,7 +57385,8 @@ const PlatformConfigurationSettings = ({
         selectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
         selectedAccessRows.map(({ access, index }) => {
           const appliesToAllFeatures = !access.moduleCode;
-          const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
+          const scopeKey = access.id || `${access.userId}-${index}`;
+          const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
@@ -57441,7 +57443,10 @@ const PlatformConfigurationSettings = ({
                           "button",
                           {
                             type: "button",
-                            onClick: () => updateRow("userAccess", index, { settings: { ...access.settings || {}, showAdvancedFeatureArea: !showAdvancedFeatureArea } }),
+                            onClick: () => setAdvancedFeatureAreaOpenByScope((prev) => ({
+                              ...prev,
+                              [scopeKey]: !showAdvancedFeatureArea
+                            })),
                             className: "ml-auto rounded border border-gray-600 bg-gray-800 px-3 py-2 text-xs font-bold text-gray-100 hover:bg-gray-700",
                             children: showAdvancedFeatureArea ? "Hide Advanced Feature Area" : "Advanced Feature Area"
                           }
@@ -57460,7 +57465,7 @@ const PlatformConfigurationSettings = ({
                 )
               ]
             },
-            access.id || `${access.userId}-${index}`
+            scopeKey
           );
         })
       ] })

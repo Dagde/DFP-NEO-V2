@@ -77,6 +77,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedAccessUserId, setSelectedAccessUserId] = useState('');
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
+  const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
 
@@ -650,10 +651,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
           {selectedAccessRows.map(({ access, index }) => {
             const appliesToAllFeatures = !access.moduleCode;
-            const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
+            const scopeKey = access.id || `${access.userId}-${index}`;
+            const showAdvancedFeatureArea = advancedFeatureAreaOpenByScope[scopeKey] === true;
             return (
               <div
-                key={access.id || `${access.userId}-${index}`}
+                key={scopeKey}
                 className="rounded border p-3"
                 style={{
                   backgroundColor: ACCESS_SCOPE_TONE.fill,
@@ -700,7 +702,10 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     </label>
                     <button
                       type="button"
-                      onClick={() => updateRow('userAccess', index, { settings: { ...(access.settings || {}), showAdvancedFeatureArea: !showAdvancedFeatureArea } })}
+                      onClick={() => setAdvancedFeatureAreaOpenByScope((prev) => ({
+                        ...prev,
+                        [scopeKey]: !showAdvancedFeatureArea,
+                      }))}
                       className="ml-auto rounded border border-gray-600 bg-gray-800 px-3 py-2 text-xs font-bold text-gray-100 hover:bg-gray-700"
                     >
                       {showAdvancedFeatureArea ? 'Hide Advanced Feature Area' : 'Advanced Feature Area'}
