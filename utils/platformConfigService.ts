@@ -249,12 +249,49 @@ export const getLocationCodesForCurrentRuntime = (
 
 const normaliseAccessValue = (value: unknown): string => String(value || '').trim().toLowerCase();
 
+const parseSettingsObject = (settings: unknown): Record<string, any> => {
+  if (!settings) return {};
+  if (typeof settings === 'object' && !Array.isArray(settings)) return settings as Record<string, any>;
+  if (typeof settings === 'string') {
+    try {
+      const parsed = JSON.parse(settings);
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+};
+
+const normaliseAccessRow = (row: PlatformAccessRow): PlatformAccessRow => ({
+  ...row,
+  settings: parseSettingsObject(row.settings),
+});
+
 export const getPlatformPermissionProfiles = (
   config: PlatformConfig | null,
 ): PlatformPermissionProfile[] => {
-  const profileConfig = config?.organisations?.[0]?.settings?.permissionProfiles;
-  return Array.isArray(profileConfig) && profileConfig.length > 0
+  const profileConfig = parseSettingsObject(config?.organisations?.[0]?.settings)?.permissionProfiles;
+  const normalisedProfiles = Array.isArray(profileConfig)
     ? profileConfig
+        .map((profile): PlatformPermissionProfile | null => {
+          const id = String(profile?.id || '').trim();
+          if (!id) return null;
+          const permissions = Array.isArray(profile?.permissions)
+            ? uniqueValues(profile.permissions.map((permission: unknown) => String(permission || '').trim()).filter(Boolean))
+            : [];
+          return {
+            id,
+            name: String(profile?.name || id).trim(),
+            description: String(profile?.description || '').trim(),
+            permissions,
+          };
+        })
+        .filter((profile): profile is PlatformPermissionProfile => Boolean(profile))
+    : [];
+
+  return normalisedProfiles.length > 0
+    ? normalisedProfiles
     : DEFAULT_PLATFORM_PERMISSION_PROFILES;
 };
 
@@ -262,8 +299,8 @@ const uniqueValues = <T,>(values: T[]): T[] => Array.from(new Set(values));
 
 const getExplicitPermissionProfileIds = (rows: PlatformAccessRow[]): string[] => uniqueValues(
   rows.flatMap((row) => (
-    Array.isArray(row.settings?.permissionProfileIds)
-      ? row.settings.permissionProfileIds.map((id: unknown) => String(id || '')).filter(Boolean)
+    Array.isArray(parseSettingsObject(row.settings).permissionProfileIds)
+      ? parseSettingsObject(row.settings).permissionProfileIds.map((id: unknown) => String(id || '').trim()).filter(Boolean)
       : []
   )),
 );
@@ -294,9 +331,10 @@ const resolvePermissionsForRows = (
     ? explicitProfileIds
     : getRoleFallbackProfileIds(rows);
   const profiles = getPlatformPermissionProfiles(config);
+  const profileIdSet = new Set(profileIds.map(normaliseAccessValue));
   const profilePermissions = profiles
-    .filter((profile) => profileIds.includes(profile.id))
-    .flatMap((profile) => profile.permissions);
+    .filter((profile) => profileIdSet.has(normaliseAccessValue(profile.id)))
+    .flatMap((profile) => profile.permissions.map((permission) => String(permission || '').trim()).filter(Boolean));
 
   const rolePermissions = rows.flatMap((row) => {
     const role = normaliseAccessValue(row.role);
@@ -332,7 +370,8 @@ export const getPlatformAccessContext = (
   supportedCodes: string[] = ['ESL', 'PEA'],
 ): PlatformAccessContext => {
   const activeRows = ((config?.userAccess || []) as PlatformAccessRow[])
-    .filter((row) => row.status !== 'INACTIVE');
+    .map(normaliseAccessRow)
+    .filter((row) => normaliseAccessValue(row.status) !== 'inactive');
   const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
 
   if (!config || activeRows.length === 0) {
@@ -399,7 +438,9 @@ export const hasPlatformPermission = (
   permissionId: PlatformPermissionId,
 ): boolean => {
   if (!accessContext.isConfigured) return true;
-  return accessContext.permissions.includes(permissionId) || accessContext.permissions.includes('settings.superAdmin');
+  const targetPermission = normaliseAccessValue(permissionId);
+  return accessContext.permissions.some((permission) => normaliseAccessValue(permission) === targetPermission)
+    || accessContext.permissions.some((permission) => normaliseAccessValue(permission) === 'settings.superadmin');
 };
 
 export const hasAnyPlatformPermission = (
@@ -427,7 +468,7 @@ const hasPermissionForModule = (
   const prefixes = MODULE_PERMISSION_PREFIXES[normaliseAccessValue(moduleCode)] || [];
   if (prefixes.length === 0) return true;
   return accessContext.permissions.some((permissionId) => (
-    prefixes.some((prefix) => permissionId.startsWith(prefix))
+    prefixes.some((prefix) => normaliseAccessValue(permissionId).startsWith(prefix))
   ));
 };
 
@@ -446,7 +487,7 @@ export const hasPlatformModuleAccess = (
     const rowRole = normaliseAccessValue(row.role);
     const hasLocationAccess = !rowLocation || rowLocation === targetLocation;
     const hasModuleAccess = !rowModule || rowModule === targetModule;
-    const isEnabled = rowAccess !== 'none' && row.status !== 'INACTIVE';
+    const isEnabled = rowAccess !== 'none' && normaliseAccessValue(row.status) !== 'inactive';
     const isAdminScope = ['platform admin', 'super admin'].includes(rowRole);
     return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess) && hasPermissionForModule(accessContext, targetModule);
   });
