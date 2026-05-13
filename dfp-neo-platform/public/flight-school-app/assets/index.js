@@ -1842,13 +1842,14 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
   }
   const permissionContext = resolvePermissionsForRows(config, rows);
   const rowLocations = rows.map((row) => row.locationCode || "").filter(Boolean);
-  const accessibleLocations = rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocations.includes(code));
+  const rowLocationSet = new Set(rowLocations.map(normaliseAccessValue));
+  const accessibleLocations = rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocationSet.has(normaliseAccessValue(code)));
   return {
     rows,
     isConfigured: true,
     isPlatformAdmin: permissionContext.isPlatformAdmin,
     isSuperAdmin: permissionContext.isSuperAdmin,
-    accessibleLocations: accessibleLocations.length > 0 ? accessibleLocations : configuredLocations,
+    accessibleLocations,
     permissionProfileIds: permissionContext.profileIds,
     permissions: permissionContext.permissions
   };
