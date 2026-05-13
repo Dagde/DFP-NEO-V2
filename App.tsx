@@ -17,6 +17,7 @@ import {
     getPlatformAccessContext,
     getPlatformModuleForView,
     getResourcePoolCount,
+    hasPlatformPermission,
     hasPlatformModuleAccess,
     loadPlatformConfigFromDB,
     PlatformConfig,
@@ -7555,6 +7556,19 @@ const App: React.FC = () => {
         onDiscardRef.current = onDiscard;
     }, []);
 
+    const canUsePlatformPermission = useCallback((permissionId: string): boolean => (
+        hasPlatformPermission(platformAccessContext, permissionId)
+    ), [platformAccessContext]);
+
+    const denyPlatformAction = useCallback((actionLabel: string) => {
+        setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
+    }, []);
+
+    const canEditDfpTiles = canUsePlatformPermission('dfp.editTiles');
+    const canRunValidation = canUsePlatformPermission('dfp.validation');
+    const canPublishDfp = canUsePlatformPermission('dfp.publish');
+    const canRunNeoBuild = canUsePlatformPermission('neo.run');
+
     const canAccessView = useCallback((view: string): boolean => {
         if (view === 'MyDashboard') return true;
         if (view === 'Settings') {
@@ -9874,6 +9888,10 @@ const App: React.FC = () => {
     };
 
     const handleBuildDfp = async () => {
+        if (!canRunNeoBuild) {
+            denyPlatformAction('Run NEO Build is not permitted for your assigned permission profile');
+            return;
+        }
         // System freeze check - prevent NEO Build when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -10093,6 +10111,10 @@ const App: React.FC = () => {
     };
 
     const handlePublish = async () => {
+        if (!canPublishDfp) {
+            denyPlatformAction('Publish DFP is not permitted for your assigned permission profile');
+            return;
+        }
         if(nextDayBuildEvents.length > 0) {
         // System freeze check - prevent publishing when frozen
         const _freezeRaw = localStorage.getItem('systemFreezeState');
@@ -13017,6 +13039,10 @@ updates.forEach(update => {
     }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
 
     const handleToggleOracleMode = useCallback(() => {
+        if (!canRunNeoBuild) {
+            denyPlatformAction('NEO tile assistance is not permitted for your assigned permission profile');
+            return;
+        }
         const isNextDay = ['NextDayBuild', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule', 'Priorities', 'ProgramData'].includes(activeView);
         setOracleContext(isNextDay ? 'nextDayBuild' : 'program');
         
@@ -13027,7 +13053,7 @@ updates.forEach(update => {
             setOraclePreviewEvent(null);
         }
         setIsOracleMode(prev => !prev);
-    }, [isOracleMode, activeView]);
+    }, [isOracleMode, activeView, canRunNeoBuild, denyPlatformAction]);
 
     useEffect(() => {
         if (isOracleMode) {
@@ -15526,13 +15552,29 @@ updates.forEach(update => {
             <div className="flex-1 flex flex-col overflow-hidden">
                 {activeView !== 'PostFlight' && <Header
                     onAddTile={() => {
+                        if (!canEditDfpTiles) {
+                            denyPlatformAction('Add or edit flight tiles is not permitted for your assigned permission profile');
+                            return;
+                        }
                         // Debug alert removed - Add Tile functionality working correctly
                         setIsAddingTile(true);
                         handleOpenModal(null, { type: 'flight' });
                     }}
-                    onAddGroundEvent={() => setShowAddGroundEvent(true)}
+                    onAddGroundEvent={() => {
+                        if (!canEditDfpTiles) {
+                            denyPlatformAction('Add or edit ground tiles is not permitted for your assigned permission profile');
+                            return;
+                        }
+                        setShowAddGroundEvent(true);
+                    }}
                     showValidation={showValidation}
-                    setShowValidation={setShowValidation}
+                    setShowValidation={(show) => {
+                        if (!canRunValidation) {
+                            denyPlatformAction('Run validation checks is not permitted for your assigned permission profile');
+                            return;
+                        }
+                        setShowValidation(show);
+                    }}
                     locations={selectableLocationCodes}
                     activeLocation={school}
                     onLocationChange={(loc) => changeSchool(loc as 'ESL' | 'PEA')}
@@ -15544,10 +15586,17 @@ updates.forEach(update => {
                     onToggleOracleMode={handleToggleOracleMode}
                     showDepartureDensityOverlay={showDepartureDensityOverlay}
                     onToggleDepartureDensityOverlay={() => setShowDepartureDensityOverlay(!showDepartureDensityOverlay)}
+                    canEditDfpTiles={canEditDfpTiles}
+                    canRunValidation={canRunValidation}
+                    canRunNeoBuild={canRunNeoBuild}
                     
                        showAircraftAvailability={showAircraftAvailability}
                        onToggleAircraftAvailability={activeView === 'Program Schedule' ? () => setShowAircraftAvailability(!showAircraftAvailability) : undefined}
                        onPauseFlightOps={activeView === 'Program Schedule' ? () => {
+                           if (!canEditDfpTiles || !canRunNeoBuild) {
+                               denyPlatformAction('Pause Flight Ops requires DFP tile edit and NEO Build permissions');
+                               return;
+                           }
                            // Pause Flight Ops: navigate to NEO Build for the active DFP date,
                            // load the active DFP events as the starting schedule, then open panel.
                            const pauseDate = date; // active DFP date
@@ -15660,6 +15709,8 @@ updates.forEach(update => {
                 currentUserLocation={school}
                 currentUserUnit={currentUser?.unit || '1FTS'}
                 canAccessView={canAccessView}
+                canRunNeoBuild={canRunNeoBuild}
+                canPublishDfp={canPublishDfp}
             />
             {isMagnifierEnabled && <Magnifier isEnabled={isMagnifierEnabled} />}
 

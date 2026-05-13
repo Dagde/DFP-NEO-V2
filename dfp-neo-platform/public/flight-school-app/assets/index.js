@@ -1821,6 +1821,10 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
     permissions: permissionContext.permissions
   };
 };
+const hasPlatformPermission = (accessContext, permissionId) => {
+  if (!accessContext.isConfigured) return true;
+  return accessContext.permissions.includes(permissionId) || accessContext.permissions.includes("settings.superAdmin");
+};
 const MODULE_PERMISSION_PREFIXES = {
   dfp: ["dfp."],
   neo_build: ["neo."],
@@ -3671,11 +3675,16 @@ const RightSidebar = ({
   currentUserName,
   currentUserLocation,
   currentUserUnit,
-  canAccessView
+  canAccessView,
+  canRunNeoBuild = true,
+  canPublishDfp = true
 }) => {
   const { isFrozen } = useSystemFreeze();
   const canOpen = (view2) => canAccessView ? canAccessView(view2) : true;
+  const canBuild = canRunNeoBuild && canOpen("NextDayBuild");
+  const canPublish = canPublishDfp && canOpen("NextDayBuild");
   const accessButtonClass = (view2) => canOpen(view2) ? "" : "opacity-45 cursor-not-allowed";
+  const actionButtonClass = (allowed) => allowed ? "" : "opacity-45 cursor-not-allowed grayscale";
   const navigateIfAllowed = (view2) => {
     if (canOpen(view2)) onNavigate(view2);
   };
@@ -3701,8 +3710,9 @@ const RightSidebar = ({
         "button",
         {
           onClick: onBuildDfpClick,
-          disabled: !canOpen("NextDayBuild"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass("NextDayBuild")}`,
+          disabled: !canBuild,
+          title: canBuild ? "Run NEO Build" : "Access denied: NEO Build permission required",
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO Build" })
         }
       ),
@@ -3739,8 +3749,9 @@ const RightSidebar = ({
         "button",
         {
           onClick: onPublish,
-          disabled: !canOpen("NextDayBuild"),
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass("NextDayBuild")}`,
+          disabled: !canPublish,
+          title: canPublish ? "Publish DFP" : "Access denied: Publish DFP permission required",
+          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#22c55e" }, children: "Publish" })
         }
       ),
@@ -3790,6 +3801,9 @@ const Header = ({
   onPauseFlightOps,
   showDepartureDensityOverlay,
   onToggleDepartureDensityOverlay,
+  canEditDfpTiles = true,
+  canRunValidation = true,
+  canRunNeoBuild = true,
   authUser,
   onLogout,
   onShowAdminPanel,
@@ -3800,6 +3814,7 @@ const Header = ({
   const userButtonRef = reactExports.useRef(null);
   const dropdownMenuRef = reactExports.useRef(null);
   const isSuperAdmin = authUser?.role === "SUPER_ADMIN" || authUser?.role === "ADMIN";
+  const disabledActionClass = "opacity-45 cursor-not-allowed grayscale";
   reactExports.useEffect(() => {
     const handleClickOutside = (event) => {
       if (userButtonRef.current && userButtonRef.current.contains(event.target)) {
@@ -3865,8 +3880,9 @@ const Header = ({
           "button",
           {
             onClick: () => setShowValidation(!showValidation),
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? "active" : ""}`,
-            title: "Toggle validation",
+            disabled: !canRunValidation,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? "active" : ""} ${!canRunValidation ? disabledActionClass : ""}`,
+            title: canRunValidation ? "Toggle validation" : "Access denied: validation permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Validation",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -3904,8 +3920,9 @@ const Header = ({
           "button",
           {
             onClick: onPauseFlightOps,
-            className: "w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-            title: "Pause Flight Ops",
+            disabled: !canEditDfpTiles || !canRunNeoBuild,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles || !canRunNeoBuild ? disabledActionClass : ""}`,
+            title: canEditDfpTiles && canRunNeoBuild ? "Pause Flight Ops" : "Access denied: DFP edit and NEO Build permissions required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Pause",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -3917,8 +3934,9 @@ const Header = ({
           "button",
           {
             onClick: onAddGroundEvent,
-            className: "w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-            title: "Add Ground Tile",
+            disabled: !canEditDfpTiles,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles ? disabledActionClass : ""}`,
+            title: canEditDfpTiles ? "Add Ground Tile" : "Access denied: DFP tile edit permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Add Ground",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -3930,8 +3948,9 @@ const Header = ({
           "button",
           {
             onClick: onAddTile,
-            className: "w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md",
-            title: "Add Flight Tile",
+            disabled: !canEditDfpTiles,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles ? disabledActionClass : ""}`,
+            title: canEditDfpTiles ? "Add Flight Tile" : "Access denied: DFP tile edit permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", children: [
               "Add Flight",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
@@ -3943,8 +3962,9 @@ const Header = ({
           "button",
           {
             onClick: onToggleOracleMode,
-            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? "active" : ""}`,
-            title: "NEO - Tile",
+            disabled: !canRunNeoBuild,
+            className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? "active" : ""} ${!canRunNeoBuild ? disabledActionClass : ""}`,
+            title: canRunNeoBuild ? "NEO - Tile" : "Access denied: NEO Build permission required",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode ? "animate-pulse-neo-text" : ""}`, style: { color: "#fb923c" }, children: "NEO - Tile" })
           }
         ),
@@ -71864,6 +71884,14 @@ ${"=".repeat(60)}`);
     onSaveRef.current = onSave;
     onDiscardRef.current = onDiscard;
   }, []);
+  const canUsePlatformPermission = reactExports.useCallback((permissionId) => hasPlatformPermission(platformAccessContext, permissionId), [platformAccessContext]);
+  const denyPlatformAction = reactExports.useCallback((actionLabel) => {
+    setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
+  }, []);
+  const canEditDfpTiles = canUsePlatformPermission("dfp.editTiles");
+  const canRunValidation = canUsePlatformPermission("dfp.validation");
+  const canPublishDfp = canUsePlatformPermission("dfp.publish");
+  const canRunNeoBuild = canUsePlatformPermission("neo.run");
   const canAccessView = reactExports.useCallback((view2) => {
     if (view2 === "MyDashboard") return true;
     if (view2 === "Settings") {
@@ -73682,6 +73710,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }, 3e3);
   };
   const handleBuildDfp = async () => {
+    if (!canRunNeoBuild) {
+      denyPlatformAction("Run NEO Build is not permitted for your assigned permission profile");
+      return;
+    }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -73854,6 +73886,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     }, 500);
   };
   const handlePublish = async () => {
+    if (!canPublishDfp) {
+      denyPlatformAction("Publish DFP is not permitted for your assigned permission profile");
+      return;
+    }
     if (nextDayBuildEvents.length > 0) {
       const _freezeRaw = localStorage.getItem("systemFreezeState");
       if (_freezeRaw) {
@@ -76093,6 +76129,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setOracleAnalysis({ instructors: instructorsAnalysis, trainees: traineesAnalysis });
   }, [allInstructorsData, allTraineesData, eventsForDate, date, nextDayBuildEvents, buildDfpDate, oracleContext, traineeLMPs, scores, syllabusDetails]);
   const handleToggleOracleMode = reactExports.useCallback(() => {
+    if (!canRunNeoBuild) {
+      denyPlatformAction("NEO tile assistance is not permitted for your assigned permission profile");
+      return;
+    }
     const isNextDay = ["NextDayBuild", "NextDayInstructorSchedule", "NextDayTraineeSchedule", "Priorities", "ProgramData"].includes(activeView);
     setOracleContext(isNextDay ? "nextDayBuild" : "program");
     if (!isOracleMode) ;
@@ -76101,7 +76141,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       setOraclePreviewEvent(null);
     }
     setIsOracleMode((prev) => !prev);
-  }, [isOracleMode, activeView]);
+  }, [isOracleMode, activeView, canRunNeoBuild, denyPlatformAction]);
   reactExports.useEffect(() => {
     if (isOracleMode) {
       runOracleAnalysis();
@@ -78362,12 +78402,28 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           Header,
           {
             onAddTile: () => {
+              if (!canEditDfpTiles) {
+                denyPlatformAction("Add or edit flight tiles is not permitted for your assigned permission profile");
+                return;
+              }
               setIsAddingTile(true);
               handleOpenModal(null, { type: "flight" });
             },
-            onAddGroundEvent: () => setShowAddGroundEvent(true),
+            onAddGroundEvent: () => {
+              if (!canEditDfpTiles) {
+                denyPlatformAction("Add or edit ground tiles is not permitted for your assigned permission profile");
+                return;
+              }
+              setShowAddGroundEvent(true);
+            },
             showValidation,
-            setShowValidation,
+            setShowValidation: (show) => {
+              if (!canRunValidation) {
+                denyPlatformAction("Run validation checks is not permitted for your assigned permission profile");
+                return;
+              }
+              setShowValidation(show);
+            },
             locations: selectableLocationCodes,
             activeLocation: school,
             onLocationChange: (loc) => changeSchool(loc),
@@ -78379,9 +78435,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onToggleOracleMode: handleToggleOracleMode,
             showDepartureDensityOverlay,
             onToggleDepartureDensityOverlay: () => setShowDepartureDensityOverlay(!showDepartureDensityOverlay),
+            canEditDfpTiles,
+            canRunValidation,
+            canRunNeoBuild,
             showAircraftAvailability,
             onToggleAircraftAvailability: activeView === "Program Schedule" ? () => setShowAircraftAvailability(!showAircraftAvailability) : void 0,
             onPauseFlightOps: activeView === "Program Schedule" ? () => {
+              if (!canEditDfpTiles || !canRunNeoBuild) {
+                denyPlatformAction("Pause Flight Ops requires DFP tile edit and NEO Build permissions");
+                return;
+              }
               const pauseDate = date;
               setBuildDfpDate(pauseDate);
               const activeDfpEventsForPause = (publishedSchedules[pauseDate] || []).map(
@@ -78493,7 +78556,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           currentUserName,
           currentUserLocation: school,
           currentUserUnit: currentUser2?.unit || "1FTS",
-          canAccessView
+          canAccessView,
+          canRunNeoBuild,
+          canPublishDfp
         }
       ),
       isMagnifierEnabled && /* @__PURE__ */ jsxRuntimeExports.jsx(Magnifier, { isEnabled: isMagnifierEnabled }),

@@ -22,6 +22,9 @@ interface HeaderProps {
     onPauseFlightOps?: () => void;
     showDepartureDensityOverlay: boolean;
     onToggleDepartureDensityOverlay: () => void;
+    canEditDfpTiles?: boolean;
+    canRunValidation?: boolean;
+    canRunNeoBuild?: boolean;
     // Auth props
     authUser?: { userId: string; displayName: string; role: string; firstName: string | null; lastName: string | null } | null;
     onLogout?: () => void;
@@ -48,6 +51,9 @@ const Header: React.FC<HeaderProps> = ({
     onPauseFlightOps,
     showDepartureDensityOverlay, 
     onToggleDepartureDensityOverlay,
+    canEditDfpTiles = true,
+    canRunValidation = true,
+    canRunNeoBuild = true,
     authUser,
     onLogout,
     onShowAdminPanel,
@@ -58,6 +64,7 @@ const Header: React.FC<HeaderProps> = ({
     const userButtonRef = useRef<HTMLDivElement>(null);
     const dropdownMenuRef = useRef<HTMLDivElement>(null);
     const isSuperAdmin = authUser?.role === 'SUPER_ADMIN' || authUser?.role === 'ADMIN';
+    const disabledActionClass = 'opacity-45 cursor-not-allowed grayscale';
 
     // Close user menu when clicking outside - must check BOTH the trigger and the portal dropdown
     useEffect(() => {
@@ -151,8 +158,9 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 4. Validation Check Button */}
                         <button
                           onClick={() => setShowValidation(!showValidation)}
-                          className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''}`}
-                          title="Toggle validation"
+                          disabled={!canRunValidation}
+                          className={`w-[75px] h-[55px] flex items-center justify-center text-[11px] font-semibold btn-aluminium-brushed rounded-md ${showValidation ? 'active' : ''} ${!canRunValidation ? disabledActionClass : ''}`}
+                          title={canRunValidation ? 'Toggle validation' : 'Access denied: validation permission required'}
                         >
                             <span className="text-center leading-tight">Validation<br/>Check</span>
                         </button>
@@ -181,8 +189,9 @@ const Header: React.FC<HeaderProps> = ({
                         {onPauseFlightOps && (
                             <button
                                 onClick={onPauseFlightOps}
-                                className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
-                                title="Pause Flight Ops"
+                                disabled={!canEditDfpTiles || !canRunNeoBuild}
+                                className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${(!canEditDfpTiles || !canRunNeoBuild) ? disabledActionClass : ''}`}
+                                title={(canEditDfpTiles && canRunNeoBuild) ? 'Pause Flight Ops' : 'Access denied: DFP edit and NEO Build permissions required'}
                             >
                                 <span className="text-center leading-tight">Pause<br/>Flight Ops</span>
                             </button>
@@ -191,8 +200,9 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 8. Add Ground Tile Button */}
                         <button 
                             onClick={onAddGroundEvent}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
-                            title="Add Ground Tile"
+                            disabled={!canEditDfpTiles}
+                            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles ? disabledActionClass : ''}`}
+                            title={canEditDfpTiles ? 'Add Ground Tile' : 'Access denied: DFP tile edit permission required'}
                         >
                             <span className="text-center leading-tight">Add Ground<br/>Tile</span>
                         </button>
@@ -200,8 +210,9 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 8. Add Flight Tile Button */}
                         <button 
                             onClick={onAddTile}
-                            className="w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md"
-                            title="Add Flight Tile"
+                            disabled={!canEditDfpTiles}
+                            className={`w-[75px] h-[55px] flex items-center justify-center text-[10px] font-semibold btn-aluminium-brushed rounded-md ${!canEditDfpTiles ? disabledActionClass : ''}`}
+                            title={canEditDfpTiles ? 'Add Flight Tile' : 'Access denied: DFP tile edit permission required'}
                         >
                             <span className="text-center leading-tight">Add Flight<br/>Tile</span>
                         </button>
@@ -209,8 +220,9 @@ const Header: React.FC<HeaderProps> = ({
                         {/* 9. NEO - Tile Button */}
                         <button
                             onClick={onToggleOracleMode}
-                            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''}`}
-                            title="NEO - Tile"
+                            disabled={!canRunNeoBuild}
+                            className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${isOracleMode ? 'active' : ''} ${!canRunNeoBuild ? disabledActionClass : ''}`}
+                            title={canRunNeoBuild ? 'NEO - Tile' : 'Access denied: NEO Build permission required'}
                         >
                             <span className={`text-center leading-tight ${isOracleMode ? 'animate-pulse-neo-text' : ''}`} style={{color: "#fb923c"}}>NEO - Tile</span>
                         </button>

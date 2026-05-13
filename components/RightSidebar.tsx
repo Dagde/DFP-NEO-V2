@@ -13,6 +13,8 @@ interface RightSidebarProps {
     currentUserLocation?: string;
     currentUserUnit?: string;
     canAccessView?: (view: string) => boolean;
+    canRunNeoBuild?: boolean;
+    canPublishDfp?: boolean;
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = ({
@@ -26,7 +28,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
     currentUserName,
     currentUserLocation,
     currentUserUnit,
-    canAccessView
+    canAccessView,
+    canRunNeoBuild = true,
+    canPublishDfp = true
 }) => {
   const nextDayBuildSubViews = ['NextDayBuild', 'Priorities', 'ProgramData', 'BuildAnalysis', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'];
   const isNextDayBuildSectionActive = nextDayBuildSubViews.includes(activeView);
@@ -36,7 +40,10 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
   const { isFrozen } = useSystemFreeze();
   const canOpen = (view: string) => canAccessView ? canAccessView(view) : true;
+  const canBuild = canRunNeoBuild && canOpen('NextDayBuild');
+  const canPublish = canPublishDfp && canOpen('NextDayBuild');
   const accessButtonClass = (view: string) => canOpen(view) ? '' : 'opacity-45 cursor-not-allowed';
+  const actionButtonClass = (allowed: boolean) => allowed ? '' : 'opacity-45 cursor-not-allowed grayscale';
   const navigateIfAllowed = (view: string) => {
     if (canOpen(view)) onNavigate(view);
   };
@@ -69,8 +76,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       <div className="px-2 pt-[39px] space-y-[1px] flex flex-col items-center">
         <button
           onClick={onBuildDfpClick}
-          disabled={!canOpen('NextDayBuild')}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass('NextDayBuild')}`}
+          disabled={!canBuild}
+          title={canBuild ? 'Run NEO Build' : 'Access denied: NEO Build permission required'}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`}
         >
           <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO Build</span>
         </button>
@@ -106,8 +114,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
 
         <button
           onClick={onPublish}
-          disabled={!canOpen('NextDayBuild')}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${accessButtonClass('NextDayBuild')}`}
+          disabled={!canPublish}
+          title={canPublish ? 'Publish DFP' : 'Access denied: Publish DFP permission required'}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canPublish)}`}
         >
           <span className="text-center leading-tight" style={{color: "#22c55e"}}>Publish</span>
         </button>
