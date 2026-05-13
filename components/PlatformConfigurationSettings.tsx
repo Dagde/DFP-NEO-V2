@@ -243,7 +243,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   );
 
   const selectedUserProfileIds = useMemo(() => {
-    const ids = selectedAccessRows.flatMap(({ access }) => (
+    const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || '').toUpperCase() !== 'INACTIVE');
+    const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
+    const ids = sourceRows.flatMap(({ access }) => (
       Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []
     ));
     return Array.from(new Set(ids));

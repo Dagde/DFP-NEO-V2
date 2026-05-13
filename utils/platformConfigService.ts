@@ -347,11 +347,7 @@ const resolvePermissionsForRows = (
     const role = normaliseAccessValue(row.role);
     if (role.includes('super admin')) return ALL_PLATFORM_PERMISSION_IDS;
     if (role.includes('platform admin') || role.includes('unit admin')) {
-      return [
-        'settings.view',
-        'settings.userAccess.edit',
-        'settings.platform.edit',
-      ];
+      return ALL_PLATFORM_PERMISSION_IDS.filter((permissionId) => permissionId !== 'settings.superAdmin');
     }
     return [];
   });

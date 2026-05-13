@@ -1783,11 +1783,7 @@ const resolvePermissionsForRows = (config, rows) => {
     const role = normaliseAccessValue(row.role);
     if (role.includes("super admin")) return ALL_PLATFORM_PERMISSION_IDS;
     if (role.includes("platform admin") || role.includes("unit admin")) {
-      return [
-        "settings.view",
-        "settings.userAccess.edit",
-        "settings.platform.edit"
-      ];
+      return ALL_PLATFORM_PERMISSION_IDS.filter((permissionId) => permissionId !== "settings.superAdmin");
     }
     return [];
   });
@@ -57054,7 +57050,9 @@ const PlatformConfigurationSettings = ({
     [config.userAccess, selectedAccessUserId]
   );
   const selectedUserProfileIds = reactExports.useMemo(() => {
-    const ids = selectedAccessRows.flatMap(({ access }) => Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []);
+    const activeRows = selectedAccessRows.filter(({ access }) => String(access.status || "").toUpperCase() !== "INACTIVE");
+    const sourceRows = activeRows.length > 0 ? activeRows : selectedAccessRows;
+    const ids = sourceRows.flatMap(({ access }) => Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds : []);
     return Array.from(new Set(ids));
   }, [selectedAccessRows]);
   const setSelectedUserProfileIds = (profileIds) => {
@@ -70240,17 +70238,22 @@ const App = () => {
     });
   }, [syllabusDetails, allTraineesData]);
   reactExports.useEffect(() => {
+    let cancelled = false;
+    const requestedSchool = school;
     const loadHistoricalData = async () => {
       try {
         const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
         try {
-          const snapRes = await fetch(`${apiBase2}/daily-snapshot?school=${school}`);
+          const snapRes = await fetch(`${apiBase2}/daily-snapshot?school=${requestedSchool}`);
+          if (cancelled) return;
           if (snapRes.ok) {
             const snapData = await snapRes.json();
+            if (cancelled) return;
             const snapshots = snapData.snapshots || [];
             if (snapshots.length > 0) {
               console.log(`[Snapshot] ✅ Loaded ${snapshots.length} daily snapshots`);
               setPublishedSchedules((prev) => {
+                if (cancelled) return prev;
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   const dateKey = getDailySnapshotDate(snap2.date);
@@ -70263,10 +70266,11 @@ const App = () => {
                 return merged;
               });
               setBaselineSchedules((prev) => {
+                if (cancelled) return prev;
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   const dateKey = getDailySnapshotDate(snap2.date);
-                  const baselineKey = `${school}:${dateKey}`;
+                  const baselineKey = `${requestedSchool}:${dateKey}`;
                   const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
                   if (baselineEvts.length > 0 && !merged[baselineKey]) {
                     merged[baselineKey] = JSON.parse(JSON.stringify(baselineEvts));
@@ -70279,6 +70283,7 @@ const App = () => {
                 const assessments2 = mostRecent.pt051Assessments;
                 console.log(`[Snapshot] ✅ Loaded ${Object.keys(assessments2).length} PT-051 assessments from latest snapshot`);
                 setPt051Assessments((prev) => {
+                  if (cancelled) return prev;
                   const merged = new Map(prev);
                   Object.entries(assessments2).forEach(([key, assessment]) => {
                     if (!merged.has(key)) {
@@ -70289,6 +70294,7 @@ const App = () => {
                 });
               }
               setAlertsDataByDate((prev) => {
+                if (cancelled) return prev;
                 const merged = { ...prev };
                 snapshots.forEach((snap2) => {
                   if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
@@ -70303,13 +70309,16 @@ const App = () => {
           console.warn("[Snapshot] Could not load daily snapshots:", snapErr);
         }
         const res = await fetch(`${apiBase2}/historical-data`);
+        if (cancelled) return;
         if (!res.ok) return;
         const data = await res.json();
-        if (school === "ESL" && data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
+        if (cancelled) return;
+        if (requestedSchool === "ESL" && data.publishedSchedules && Object.keys(data.publishedSchedules).length > 0) {
           const seedSchedules = data.publishedSchedules;
           const eventCount = Object.values(seedSchedules).flat().length;
           console.log(`[Historical] ✅ Loaded ${eventCount} events across ${Object.keys(seedSchedules).length} dates (legacy/seed)`);
           setPublishedSchedules((prev) => {
+            if (cancelled) return prev;
             const merged = { ...prev };
             Object.entries(seedSchedules).forEach(([dateKey, seedEvents]) => {
               const existingNonSeed = (merged[dateKey] || []).filter((e) => !e.isHistoricalSeed);
@@ -70324,6 +70333,7 @@ const App = () => {
           const assessments2 = data.pt051Assessments;
           console.log(`[Historical] ✅ Loaded ${Object.keys(assessments2).length} PT-051 assessments (legacy)`);
           setPt051Assessments((prev) => {
+            if (cancelled) return prev;
             const merged = new Map(prev);
             Object.entries(assessments2).forEach(([key, assessment]) => {
               if (!merged.has(key)) {
@@ -70341,6 +70351,9 @@ const App = () => {
       }
     };
     loadHistoricalData();
+    return () => {
+      cancelled = true;
+    };
   }, [school]);
   reactExports.useEffect(() => {
     const loadSnapshotDates = async () => {
