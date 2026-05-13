@@ -821,16 +821,40 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
   </div>
 );
 
-const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) => (
-  <div className="flex flex-wrap items-center gap-3 border-b border-cyan-500/20 bg-gray-950/70 px-4 py-4">
-    <div className="h-11 w-1.5 rounded-full bg-cyan-400/80 shadow-[0_0_18px_rgba(34,211,238,0.35)]" />
-    <div>
-      <h4 className="text-base font-bold text-white">{title}</h4>
-      <p className="mt-1 text-sm text-gray-400">{subtitle}</p>
+const SECTION_TONES = [
+  { fill: 'rgba(30, 64, 89, 0.62)', border: 'rgba(96, 165, 250, 0.26)', accent: 'rgba(125, 211, 252, 0.78)' },
+  { fill: 'rgba(66, 56, 92, 0.58)', border: 'rgba(167, 139, 250, 0.24)', accent: 'rgba(196, 181, 253, 0.76)' },
+  { fill: 'rgba(72, 68, 34, 0.58)', border: 'rgba(250, 204, 21, 0.22)', accent: 'rgba(253, 224, 71, 0.74)' },
+  { fill: 'rgba(34, 72, 63, 0.58)', border: 'rgba(52, 211, 153, 0.22)', accent: 'rgba(110, 231, 183, 0.74)' },
+  { fill: 'rgba(73, 47, 71, 0.56)', border: 'rgba(244, 114, 182, 0.20)', accent: 'rgba(249, 168, 212, 0.70)' },
+  { fill: 'rgba(73, 55, 43, 0.58)', border: 'rgba(251, 146, 60, 0.22)', accent: 'rgba(253, 186, 116, 0.74)' },
+  { fill: 'rgba(50, 67, 82, 0.58)', border: 'rgba(148, 163, 184, 0.25)', accent: 'rgba(203, 213, 225, 0.74)' },
+];
+
+const getSectionTone = (title: string) => {
+  const total = Array.from(title).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return SECTION_TONES[total % SECTION_TONES.length];
+};
+
+const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) => {
+  const tone = getSectionTone(title);
+  return (
+    <div
+      className="flex flex-wrap items-center gap-3 border-b px-4 py-4"
+      style={{ backgroundColor: tone.fill, borderColor: tone.border }}
+    >
+      <div
+        className="h-11 w-1.5 rounded-full"
+        style={{ backgroundColor: tone.accent, boxShadow: `0 0 18px ${tone.accent}` }}
+      />
+      <div>
+        <h4 className="text-base font-bold text-white">{title}</h4>
+        <p className="mt-1 text-sm text-gray-300">{subtitle}</p>
+      </div>
+      {action && <div className="ml-auto">{action}</div>}
     </div>
-    {action && <div className="ml-auto">{action}</div>}
-  </div>
-);
+  );
+};
 
 const InfoHint = ({ text }: { text: string }) => (
   <span className="group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/50 bg-cyan-500/10 text-xs font-bold text-cyan-100">
