@@ -2249,6 +2249,12 @@ const AuditFlyout = ({
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
   };
+  const formatChangedField = (field) => {
+    const label = field.label || field.field || "Field";
+    const beforeValue = field.displayBefore ?? summariseValue(field.before);
+    const afterValue = field.displayAfter ?? summariseValue(field.after);
+    return `${label}: ${beforeValue} -> ${afterValue}`;
+  };
   const mapDatabaseAction = (action) => {
     if (action.includes("ADDED") || action === "CREATE") return "Add";
     if (action.includes("DELETE") || action.includes("REMOVED")) return "Delete";
@@ -2258,12 +2264,13 @@ const AuditFlyout = ({
   const mapDatabaseAuditLog = (entry) => {
     const changes = entry.changes || {};
     const changedFields = Array.isArray(changes.changedFields) ? changes.changedFields : [];
-    const changesText = changes.summary || changedFields.map((field) => `${field.field}: ${summariseValue(field.before)} -> ${summariseValue(field.after)}`).join("; ");
+    const hasFriendlyFields = changedFields.some((field) => field.label || field.displayBefore !== void 0 || field.displayAfter !== void 0);
+    const changesText = changedFields.length && hasFriendlyFields ? changedFields.map(formatChangedField).join("; ") : changes.summary || "";
     return {
       id: `db-${entry.id}`,
       user: entry.userName || "Unknown User",
       action: mapDatabaseAction(entry.action || ""),
-      description: changes.label ? `${entry.entityType}: ${changes.label}` : `${entry.entityType || "Record"} ${entry.action || "updated"}`,
+      description: changes.description || (changes.label ? `${entry.entityType}: ${changes.label}` : `${entry.entityType || "Record"} ${entry.action || "updated"}`),
       changes: changesText || "",
       timestamp: new Date(entry.createdAt),
       page: changes.source || entry.entityType || "Database Audit"

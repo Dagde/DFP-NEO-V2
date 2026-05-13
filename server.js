@@ -597,6 +597,131 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
   },
 ];
 
+const PLATFORM_PERMISSION_PROFILE_LABELS = {
+  trainee: 'Trainee',
+  instructor: 'Instructor',
+  'flying-supervisor': 'Flying Supervisor',
+  scheduler: 'Scheduler',
+  'unit-admin': 'Unit Admin',
+  'super-admin': 'Super Admin',
+};
+
+const PLATFORM_PERMISSION_LABELS = {
+  'dfp.view': 'View DFP',
+  'dfp.editTiles': 'Add, edit and delete tiles',
+  'dfp.validation': 'Run validation checks',
+  'dfp.publish': 'Publish DFP',
+  'dfp.history': 'View historical DFP records',
+  'neo.run': 'Run NEO Build',
+  'neo.priorities': 'Edit build priorities',
+  'neo.intelligence': 'View build intelligence',
+  'neo.override': 'Override build results',
+  'staff.view': 'View staff roster',
+  'staff.edit': 'Edit staff details',
+  'staff.currency.view': 'View staff currencies',
+  'staff.currency.edit': 'Edit staff currencies',
+  'trainee.roster.view': 'View trainee roster',
+  'trainee.profile.own': 'View own trainee profile',
+  'trainee.profile.others': 'View other trainee profiles',
+  'trainee.pt051.own': 'View own PT-051',
+  'trainee.pt051.others': 'View other trainee PT-051',
+  'trainee.pt051.edit': 'Edit PT-051',
+  'trainee.lmp.own': 'View own individual LMP',
+  'trainee.lmp.others': 'View other trainee individual LMP',
+  'trainee.remedial.add': 'Add remedial package',
+  'reporting.view': 'View reports and analytics',
+  'reporting.export': 'Export reports and records',
+  'settings.view': 'View settings',
+  'settings.schedulingRules.edit': 'Edit scheduling rules',
+  'settings.userAccess.edit': 'Edit user permissions',
+  'settings.platform.edit': 'Edit platform configuration',
+  'settings.superAdmin': 'Super Admin: unrestricted platform access',
+};
+
+const PLATFORM_FIELD_LABELS = {
+  CommercialOrganisation: {
+    code: 'Organisation code',
+    name: 'Organisation name',
+    status: 'Organisation status',
+    'settings.permissionProfiles': 'Permission profile definitions',
+  },
+  CommercialLocation: {
+    organisationCode: 'Organisation',
+    code: 'Location code',
+    name: 'Location name',
+    timezoneOffset: 'UTC offset',
+    trainingAreas: 'Training areas',
+    status: 'Location status',
+  },
+  CommercialUnit: {
+    organisationCode: 'Organisation',
+    locationCode: 'Location',
+    code: 'Unit code',
+    name: 'Unit name',
+    unitType: 'Unit type',
+    status: 'Unit status',
+  },
+  CommercialAircraftType: {
+    code: 'Aircraft type code',
+    name: 'Aircraft type name',
+    category: 'Aircraft category',
+    status: 'Aircraft type status',
+  },
+  CommercialResourcePool: {
+    organisationCode: 'Organisation',
+    locationCode: 'Location',
+    unitCode: 'Unit',
+    aircraftTypeCode: 'Aircraft type',
+    code: 'Resource pool code',
+    name: 'Resource pool name',
+    poolType: 'Resource pool type',
+    status: 'Resource pool status',
+    'settings.aircraft': 'Aircraft rows',
+    'settings.ftd': 'FTD rows',
+    'settings.cpt': 'CPT rows',
+    'settings.standby': 'STBY rows',
+    'settings.ground': 'Ground rows',
+    'settings.applyToV2Runtime': 'Apply resource pool to V2 DFP',
+  },
+  CommercialUnitModule: {
+    unitCode: 'Unit',
+    moduleCode: 'Module',
+    isEnabled: 'Module enabled',
+  },
+  CommercialSchedulingRuleSet: {
+    organisationCode: 'Organisation',
+    unitCode: 'Unit',
+    aircraftTypeCode: 'Aircraft type',
+    name: 'Rule set name',
+    scope: 'Rule set scope',
+    isActive: 'Rule set active',
+  },
+  CommercialUserAccess: {
+    userId: 'User ID',
+    username: 'Username',
+    displayName: 'Display name',
+    organisationCode: 'Organisation',
+    locationCode: 'Location',
+    unitCode: 'Unit',
+    moduleCode: 'Feature area',
+    role: 'Administration level',
+    accessLevel: 'Access',
+    status: 'Access scope status',
+    'settings.permissionProfileIds': 'Permission profiles',
+  },
+};
+
+const PLATFORM_ENTITY_LABELS = {
+  CommercialOrganisation: 'organisation',
+  CommercialLocation: 'location',
+  CommercialUnit: 'unit',
+  CommercialAircraftType: 'aircraft type',
+  CommercialResourcePool: 'resource pool',
+  CommercialUnitModule: 'unit module',
+  CommercialSchedulingRuleSet: 'scheduling rule set',
+  CommercialUserAccess: 'access scope',
+};
+
 const normaliseAuditValue = (value) => {
   if (value === undefined) return null;
   if (value instanceof Date) return value.toISOString();
@@ -611,6 +736,205 @@ const normaliseAuditValue = (value) => {
 };
 
 const auditValueString = (value) => JSON.stringify(normaliseAuditValue(value));
+
+const auditArrayString = (value) => JSON.stringify((Array.isArray(value) ? value : []).map(String).sort());
+
+const toTitleCase = (value) => String(value || '')
+  .replace(/([a-z])([A-Z])/g, '$1 $2')
+  .replace(/[._-]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const getAuditFieldLabel = (entityType, field) => {
+  if (field?.startsWith('settings.permissionProfiles.')) {
+    return field.split('.').slice(-1)[0] || 'Permission profile setting';
+  }
+  return PLATFORM_FIELD_LABELS[entityType]?.[field]
+    || PLATFORM_FIELD_LABELS[entityType]?.[field?.replace(/\.\d+\./g, '.')]
+    || toTitleCase(field);
+};
+
+const formatPermissionProfileList = (value) => {
+  const ids = Array.isArray(value) ? value : [];
+  if (ids.length === 0) return 'No permission profiles';
+  return ids
+    .map((id) => PLATFORM_PERMISSION_PROFILE_LABELS[id] || id)
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ');
+};
+
+const formatPermissionList = (value) => {
+  const ids = Array.isArray(value) ? value : [];
+  if (ids.length === 0) return 'No permissions';
+  return ids
+    .map((id) => PLATFORM_PERMISSION_LABELS[id] || id)
+    .sort((a, b) => a.localeCompare(b))
+    .join(', ');
+};
+
+const formatAuditValue = (entityType, field, value) => {
+  if (value === undefined || value === null || value === '') {
+    if (entityType === 'CommercialUserAccess') {
+      if (field === 'locationCode') return 'All locations';
+      if (field === 'unitCode') return 'All units';
+      if (field === 'moduleCode') return 'All enabled features';
+    }
+    return 'blank';
+  }
+
+  if (field === 'settings.permissionProfileIds') return formatPermissionProfileList(value);
+  if (field?.includes('.permissions.') && typeof value === 'boolean') return value ? 'Allowed' : 'Not allowed';
+  if (field?.endsWith('.permissions')) return formatPermissionList(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.length ? value.join(', ') : 'blank';
+  if (value && typeof value === 'object') return JSON.stringify(normaliseAuditValue(value));
+  return String(value);
+};
+
+const makeAuditChangedField = (entityType, field, before, after, labelOverride = null) => ({
+  field,
+  label: labelOverride || getAuditFieldLabel(entityType, field),
+  before: normaliseAuditValue(before),
+  after: normaliseAuditValue(after),
+  displayBefore: formatAuditValue(entityType, field, before),
+  displayAfter: formatAuditValue(entityType, field, after),
+});
+
+const pushGenericSettingsDiffs = (entityType, beforeValue, afterValue, path, output) => {
+  const beforeNormalised = normaliseAuditValue(beforeValue);
+  const afterNormalised = normaliseAuditValue(afterValue);
+
+  if (auditValueString(beforeNormalised) === auditValueString(afterNormalised)) return;
+
+  const beforeIsObject = beforeNormalised && typeof beforeNormalised === 'object' && !Array.isArray(beforeNormalised);
+  const afterIsObject = afterNormalised && typeof afterNormalised === 'object' && !Array.isArray(afterNormalised);
+
+  if (beforeIsObject || afterIsObject) {
+    const keys = new Set([
+      ...Object.keys(beforeIsObject ? beforeNormalised : {}),
+      ...Object.keys(afterIsObject ? afterNormalised : {}),
+    ]);
+    for (const key of [...keys].sort()) {
+      pushGenericSettingsDiffs(
+        entityType,
+        beforeIsObject ? beforeNormalised[key] : undefined,
+        afterIsObject ? afterNormalised[key] : undefined,
+        `${path}.${key}`,
+        output
+      );
+    }
+    return;
+  }
+
+  output.push(makeAuditChangedField(entityType, path, beforeNormalised, afterNormalised));
+};
+
+const describePermissionProfileChanges = (beforeProfiles, afterProfiles) => {
+  const changedFields = [];
+  const beforeMap = new Map((Array.isArray(beforeProfiles) ? beforeProfiles : []).map((profile) => [profile.id, profile]));
+  const afterMap = new Map((Array.isArray(afterProfiles) ? afterProfiles : []).map((profile) => [profile.id, profile]));
+  const profileIds = new Set([...beforeMap.keys(), ...afterMap.keys()]);
+
+  for (const profileId of [...profileIds].sort()) {
+    const beforeProfile = beforeMap.get(profileId) || {};
+    const afterProfile = afterMap.get(profileId) || {};
+    const profileName = afterProfile.name || beforeProfile.name || PLATFORM_PERMISSION_PROFILE_LABELS[profileId] || profileId;
+
+    if ((beforeProfile.name || '') !== (afterProfile.name || '')) {
+      changedFields.push(makeAuditChangedField(
+        'CommercialOrganisation',
+        `settings.permissionProfiles.${profileId}.name`,
+        beforeProfile.name || '',
+        afterProfile.name || '',
+        `${profileName}: profile name`
+      ));
+    }
+
+    if ((beforeProfile.description || '') !== (afterProfile.description || '')) {
+      changedFields.push(makeAuditChangedField(
+        'CommercialOrganisation',
+        `settings.permissionProfiles.${profileId}.description`,
+        beforeProfile.description || '',
+        afterProfile.description || '',
+        `${profileName}: description`
+      ));
+    }
+
+    const beforePermissions = Array.isArray(beforeProfile.permissions) ? beforeProfile.permissions : [];
+    const afterPermissions = Array.isArray(afterProfile.permissions) ? afterProfile.permissions : [];
+    if (auditArrayString(beforePermissions) !== auditArrayString(afterPermissions)) {
+      const permissionIds = new Set([...beforePermissions, ...afterPermissions]);
+      for (const permissionId of [...permissionIds].sort()) {
+        const beforeHasPermission = beforePermissions.includes(permissionId);
+        const afterHasPermission = afterPermissions.includes(permissionId);
+        if (beforeHasPermission === afterHasPermission) continue;
+        changedFields.push(makeAuditChangedField(
+          'CommercialOrganisation',
+          `settings.permissionProfiles.${profileId}.permissions.${permissionId}`,
+          beforeHasPermission,
+          afterHasPermission,
+          `${profileName}: ${PLATFORM_PERMISSION_LABELS[permissionId] || permissionId}`
+        ));
+      }
+    }
+  }
+
+  return changedFields;
+};
+
+const describeSettingsChanges = (entityType, beforeSettings, afterSettings) => {
+  const changedFields = [];
+  const beforeSafe = beforeSettings && typeof beforeSettings === 'object' ? beforeSettings : {};
+  const afterSafe = afterSettings && typeof afterSettings === 'object' ? afterSettings : {};
+
+  if (entityType === 'CommercialUserAccess') {
+    const beforeProfiles = Array.isArray(beforeSafe.permissionProfileIds) ? beforeSafe.permissionProfileIds : [];
+    const afterProfiles = Array.isArray(afterSafe.permissionProfileIds) ? afterSafe.permissionProfileIds : [];
+    if (auditArrayString(beforeProfiles) !== auditArrayString(afterProfiles)) {
+      changedFields.push(makeAuditChangedField(
+        entityType,
+        'settings.permissionProfileIds',
+        beforeProfiles,
+        afterProfiles
+      ));
+    }
+  }
+
+  if (entityType === 'CommercialOrganisation') {
+    changedFields.push(...describePermissionProfileChanges(
+      beforeSafe.permissionProfiles,
+      afterSafe.permissionProfiles
+    ));
+  }
+
+  const handledKeys = new Set();
+  if (entityType === 'CommercialUserAccess') handledKeys.add('permissionProfileIds');
+  if (entityType === 'CommercialOrganisation') handledKeys.add('permissionProfiles');
+
+  const keys = new Set([...Object.keys(beforeSafe), ...Object.keys(afterSafe)]);
+  for (const key of [...keys].sort()) {
+    if (handledKeys.has(key)) continue;
+    pushGenericSettingsDiffs(
+      entityType,
+      beforeSafe[key],
+      afterSafe[key],
+      `settings.${key}`,
+      changedFields
+    );
+  }
+
+  return changedFields;
+};
+
+const summariseAuditChangedFields = (changedFields) => {
+  if (!changedFields.length) return 'No field-level changes recorded';
+  return changedFields.map((field) => {
+    const beforeText = field.displayBefore ?? formatAuditValue('', field.field, field.before);
+    const afterText = field.displayAfter ?? formatAuditValue('', field.field, field.after);
+    return `${field.label || field.field}: ${beforeText} -> ${afterText}`;
+  }).join('; ');
+};
 
 const getRequestIp = (req) => {
   const forwardedFor = req.headers['x-forwarded-for'];
@@ -702,11 +1026,11 @@ function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
         const beforeValue = beforeRow ? beforeRow[field] : null;
         const afterValue = afterRow[field] ?? null;
         if (auditValueString(beforeValue) !== auditValueString(afterValue)) {
-          changedFields.push({
-            field,
-            before: normaliseAuditValue(beforeValue),
-            after: normaliseAuditValue(afterValue),
-          });
+          if (field === 'settings') {
+            changedFields.push(...describeSettingsChanges(table.entityType, beforeValue, afterValue));
+          } else {
+            changedFields.push(makeAuditChangedField(table.entityType, field, beforeValue, afterValue));
+          }
         }
       }
 
@@ -714,6 +1038,8 @@ function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
 
       const action = beforeRow ? 'PLATFORM_CONFIG_UPDATED' : 'PLATFORM_CONFIG_ADDED';
       const label = table.label(afterRow);
+      const entityLabel = PLATFORM_ENTITY_LABELS[table.entityType] || 'record';
+      const changeSummary = summariseAuditChangedFields(changedFields);
       const context = {
         organisationCode: afterRow.organisationCode || null,
         locationCode: afterRow.locationCode || null,
@@ -729,7 +1055,8 @@ function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
           source: 'Platform Configuration',
           label,
           context,
-          summary: `${label}: ${changedFields.map((item) => item.field).join(', ')}`,
+          description: `${beforeRow ? 'Updated' : 'Added'} ${entityLabel} ${label}: ${changeSummary}`,
+          summary: changeSummary,
           changedFields,
         },
       });
