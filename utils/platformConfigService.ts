@@ -194,6 +194,13 @@ export interface PlatformAccessContext {
   permissions: PlatformPermissionId[];
 }
 
+export interface PlatformDataScope {
+  organisationCodes: string[];
+  locationCode: string;
+  unitCodes: string[];
+  allUnits: boolean;
+}
+
 const emptyPlatformConfig: PlatformConfig = {
   organisations: [],
   locations: [],
@@ -492,6 +499,49 @@ export const hasPlatformModuleAccess = (
     const isAdminScope = ['platform admin', 'super admin'].includes(rowRole);
     return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess) && hasPermissionForModule(accessContext, targetModule);
   });
+};
+
+export const getPlatformDataScopeForLocation = (
+  accessContext: PlatformAccessContext,
+  locationCode: string,
+): PlatformDataScope => {
+  const targetLocation = String(locationCode || '').trim();
+  const activeRows = (accessContext.rows || [])
+    .map(normaliseAccessRow)
+    .filter((row) => normaliseAccessValue(row.status) !== 'inactive');
+
+  const matchingRows = activeRows.filter((row) => {
+    const rowLocation = String(row.locationCode || '').trim();
+    return !rowLocation || normaliseAccessValue(rowLocation) === normaliseAccessValue(targetLocation);
+  });
+
+  const relevantRows = matchingRows.length > 0 ? matchingRows : activeRows;
+  const unitCodes = uniqueValues(
+    relevantRows
+      .map((row) => String(row.unitCode || '').trim())
+      .filter(Boolean),
+  );
+  const hasAllUnitScope = relevantRows.length === 0
+    || relevantRows.some((row) => !String(row.unitCode || '').trim());
+
+  return {
+    organisationCodes: uniqueValues(
+      relevantRows
+        .map((row) => String(row.organisationCode || '').trim())
+        .filter(Boolean),
+    ),
+    locationCode: targetLocation,
+    unitCodes: hasAllUnitScope ? [] : unitCodes,
+    allUnits: hasAllUnitScope,
+  };
+};
+
+export const buildPlatformDataScopeQuery = (scope: PlatformDataScope): string => {
+  const params = new URLSearchParams();
+  if (scope.locationCode) params.set('location', scope.locationCode);
+  if (scope.organisationCodes.length === 1) params.set('organisation', scope.organisationCodes[0]);
+  if (!scope.allUnits && scope.unitCodes.length > 0) params.set('units', scope.unitCodes.join(','));
+  return params.toString();
 };
 
 export const getPlatformModuleForView = (view: string): string | null => {

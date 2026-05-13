@@ -91,6 +91,122 @@ async function getPrisma() {
   return prisma;
 }
 
+const LOCATION_NAME_BY_CODE = {
+  ESL: 'East Sale',
+  PEA: 'Pearce',
+  AMB: 'Amberley',
+  EDI: 'Edinburgh',
+  TIN: 'Tindal',
+  WLM: 'Williamtown',
+};
+
+const LOCATION_CODE_BY_NAME = Object.fromEntries(
+  Object.entries(LOCATION_NAME_BY_CODE).map(([code, name]) => [name.toLowerCase(), code])
+);
+
+function uniqueStrings(values) {
+  return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
+}
+
+function parseScopeValues(...values) {
+  return uniqueStrings(values.flatMap((value) => {
+    if (Array.isArray(value)) return value.flatMap((item) => String(item || '').split(','));
+    if (value === undefined || value === null) return [];
+    return String(value).split(',');
+  }));
+}
+
+function normaliseLocationCode(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const upper = raw.toUpperCase();
+  if (LOCATION_NAME_BY_CODE[upper]) return upper;
+  return LOCATION_CODE_BY_NAME[raw.toLowerCase()] || upper;
+}
+
+function expandLocationValues(values) {
+  const expanded = [];
+  values.forEach((value) => {
+    const raw = String(value || '').trim();
+    const code = normaliseLocationCode(raw);
+    if (raw) expanded.push(raw);
+    if (code) expanded.push(code);
+    if (LOCATION_NAME_BY_CODE[code]) expanded.push(LOCATION_NAME_BY_CODE[code]);
+  });
+  return uniqueStrings(expanded);
+}
+
+function sqlStringList(values) {
+  return uniqueStrings(values)
+    .map((value) => `'${String(value).replace(/'/g, "''")}'`)
+    .join(', ');
+}
+
+function hasScopeQuery(req) {
+  return Boolean(req.query?.organisation || req.query?.organisations || req.query?.location || req.query?.locations || req.query?.unit || req.query?.units);
+}
+
+async function getUnitCodesForLocationScope(db, locationValues) {
+  const locationCodes = uniqueStrings(locationValues.map(normaliseLocationCode));
+  if (locationCodes.length === 0) return [];
+  const codeSql = sqlStringList(locationCodes);
+  if (!codeSql) return [];
+  try {
+    const rows = await db.$queryRawUnsafe(`
+      SELECT "code"
+      FROM "CommercialUnit"
+      WHERE COALESCE("status", 'ACTIVE') <> 'INACTIVE'
+        AND "locationCode" IN (${codeSql})
+    `);
+    return uniqueStrings((rows || []).map((row) => row.code));
+  } catch (error) {
+    console.warn('[DataScope] Could not resolve units for location scope:', error.message);
+    return [];
+  }
+}
+
+async function buildScopedEntityWhere(req, db, fieldNames = { location: 'location', unit: 'unit' }) {
+  const locationValues = parseScopeValues(req.query.location, req.query.locations);
+  const unitValues = parseScopeValues(req.query.unit, req.query.units);
+  const expandedLocationValues = expandLocationValues(locationValues);
+  const unitsAtLocation = await getUnitCodesForLocationScope(db, locationValues);
+
+  const conditions = [];
+  const locationOr = [];
+  if (expandedLocationValues.length > 0) {
+    locationOr.push({ [fieldNames.location]: { in: expandedLocationValues } });
+  }
+  if (unitsAtLocation.length > 0) {
+    locationOr.push({ [fieldNames.unit]: { in: unitsAtLocation } });
+  }
+  if (locationOr.length > 0) {
+    conditions.push({ OR: locationOr });
+  }
+  if (unitValues.length > 0) {
+    conditions.push({ [fieldNames.unit]: { in: unitValues } });
+  }
+
+  return conditions.length > 0 ? { AND: conditions } : {};
+}
+
+function mergeScopedWhere(where, scopedWhere) {
+  if (!scopedWhere?.AND?.length) return where;
+  return {
+    ...where,
+    AND: [...(Array.isArray(where.AND) ? where.AND : []), ...scopedWhere.AND],
+  };
+}
+
+async function getScopedCourseCodes(db, req) {
+  if (!hasScopeQuery(req)) return [];
+  const scopedWhere = await buildScopedEntityWhere(req, db);
+  const courses = await db.course.findMany({
+    where: scopedWhere,
+    select: { code: true, name: true },
+  });
+  return uniqueStrings(courses.flatMap((course) => [course.code, course.name]));
+}
+
 // Create SyllabusItem and SyllabusHistory tables if they don't exist
 async function ensureSyllabusTablesExist(db) {
   try {
@@ -764,7 +880,9 @@ app.post('/api/currencies', async (req, res) => {
 app.get('/api/courses', async (req, res) => {
   try {
     const db = await getPrisma();
+    const scopedWhere = await buildScopedEntityWhere(req, db);
     const courses = await db.course.findMany({
+      where: scopedWhere,
       orderBy: { startDate: 'asc' },
     });
     
@@ -883,9 +1001,11 @@ app.get('/api/personnel', async (req, res) => {
         { rank: { contains: search, mode: 'insensitive' } },
       ];
     }
+    const scopedWhere = await buildScopedEntityWhere(req, db);
+    const finalWhere = mergeScopedWhere(where, scopedWhere);
 
     const personnel = await db.personnel.findMany({
-      where,
+      where: finalWhere,
       orderBy: { name: 'asc' },
     });
 
@@ -1678,9 +1798,11 @@ app.get('/api/trainees', async (req, res) => {
         { rank: { contains: search, mode: 'insensitive' } },
       ];
     }
+    const scopedWhere = await buildScopedEntityWhere(req, db);
+    const finalWhere = mergeScopedWhere(where, scopedWhere);
 
     const trainees = await db.trainee.findMany({
-      where,
+      where: finalWhere,
       orderBy: { name: 'asc' },
     });
 
@@ -2542,21 +2664,24 @@ app.get('/api/scores', async (req, res) => {
     const { traineeId, traineeFullName } = req.query;
 
     const where = {};
+    const scopedTraineeWhere = await buildScopedEntityWhere(req, db);
     if (traineeId) {
       where.traineeId = traineeId;
     } else if (traineeFullName) {
-      const trainee = await db.trainee.findFirst({ where: { fullName: traineeFullName } });
+      const trainee = await db.trainee.findFirst({ where: mergeScopedWhere({ fullName: traineeFullName }, scopedTraineeWhere) });
       if (trainee) {
         where.traineeId = trainee.id;
       } else {
         return res.json({ scores: [], count: 0 });
       }
+    } else if (scopedTraineeWhere.AND?.length) {
+      where.trainee = { is: scopedTraineeWhere };
     }
 
     const scores = await db.score.findMany({
       where,
       include: {
-        trainee: { select: { id: true, fullName: true, course: true } }
+        trainee: { select: { id: true, fullName: true, course: true, location: true, unit: true } }
       },
       orderBy: [{ trainee: { fullName: 'asc' } }, { date: 'asc' }]
     });
@@ -8693,6 +8818,15 @@ app.get('/api/trainee-performance', async (req, res) => {
       conditions.push(`"course" = $${paramIdx++}::text`);
       params.push(course);
     }
+    if (hasScopeQuery(req)) {
+      const scopedCourseCodes = await getScopedCourseCodes(db, req);
+      if (scopedCourseCodes.length === 0) {
+        return res.json([]);
+      }
+      const placeholders = scopedCourseCodes.map(() => `$${paramIdx++}::text`);
+      conditions.push(`"course" IN (${placeholders.join(', ')})`);
+      params.push(...scopedCourseCodes);
+    }
     if (isCompleted !== undefined) {
       conditions.push(`"isCompleted" = $${paramIdx++}::boolean`);
       params.push(isCompleted === 'true');
@@ -8729,12 +8863,24 @@ app.get('/api/trainee-performance', async (req, res) => {
 app.get('/api/trainee-performance/stats', async (req, res) => {
   try {
     const db = await getPrisma();
+    const params = [];
+    let whereClause = '';
+    if (hasScopeQuery(req)) {
+      const scopedCourseCodes = await getScopedCourseCodes(db, req);
+      if (scopedCourseCodes.length === 0) {
+        return res.json({ courses: [], total: 0 });
+      }
+      const placeholders = scopedCourseCodes.map((_, index) => `$${index + 1}::text`);
+      whereClause = `WHERE course IN (${placeholders.join(', ')})`;
+      params.push(...scopedCourseCodes);
+    }
     const rows = await db.$queryRawUnsafe(`
       SELECT course, COUNT(*) as count, SUM(CASE WHEN "isCompleted" THEN 1 ELSE 0 END) as completed
       FROM "TraineePerformance"
+      ${whereClause}
       GROUP BY course
       ORDER BY course
-    `);
+    `, ...params);
     const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
     res.json({ courses: rows, total });
   } catch (error) {

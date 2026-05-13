@@ -12,6 +12,8 @@ import { initDB, seedDefaultTemplates } from './utils/db';
 import { setCurrentUser, logAudit } from './utils/auditLogger';
 import { loadSettingsFromDB, saveSettingsToDB, buildSettingsSnapshot, AppSettingsData, saveCurrenciesToDB, loadCurrenciesFromDB } from './utils/settingsService';
 import {
+    buildPlatformDataScopeQuery,
+    getPlatformDataScopeForLocation,
     getLocationCodesForCurrentRuntime,
     getLocationResourcePool,
     getPlatformAccessContext,
@@ -4711,6 +4713,23 @@ const App: React.FC = () => {
         () => platformAccessContext.accessibleLocations,
         [platformAccessContext],
     );
+
+    const platformDataScopeQuery = useMemo(() => {
+        const scope = getPlatformDataScopeForLocation(platformAccessContext, school);
+        return buildPlatformDataScopeQuery(scope);
+    }, [platformAccessContext, school]);
+
+    const scopedApiPath = useCallback((path: string, extraParams?: Record<string, string | number | boolean | undefined | null>) => {
+        const params = new URLSearchParams(platformDataScopeQuery);
+        Object.entries(extraParams || {}).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                params.set(key, String(value));
+            }
+        });
+        const query = params.toString();
+        const joiner = path.includes('?') ? '&' : '?';
+        return query ? `${path}${joiner}${query}` : path;
+    }, [platformDataScopeQuery]);
 
     useEffect(() => {
         if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
@@ -11761,7 +11780,7 @@ updates.forEach(update => {
         
         try {
             // Fetch fresh personnel data
-            const personnelRes = await fetch('/api/personnel', { credentials: 'include' });
+            const personnelRes = await fetch(scopedApiPath('/api/personnel'), { credentials: 'include' });
             if (personnelRes.ok) {
                 const personnelData = await personnelRes.json();
                 const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
@@ -11785,7 +11804,7 @@ updates.forEach(update => {
             }
             
             // Fetch fresh trainees data
-            const traineesRes = await fetch('/api/trainees', { credentials: 'include' });
+            const traineesRes = await fetch(scopedApiPath('/api/trainees'), { credentials: 'include' });
             if (traineesRes.ok) {
                 const traineesData = await traineesRes.json();
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
@@ -11828,7 +11847,7 @@ updates.forEach(update => {
         } catch (error) {
             console.error('❌ Error refreshing database data:', error);
         }
-    }, []);
+    }, [scopedApiPath]);
 
     const handleBulkUpdateTrainees = useCallback(async (updatedTrainees: Trainee[]) => {
         console.log(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);

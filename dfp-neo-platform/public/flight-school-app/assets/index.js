@@ -1889,6 +1889,34 @@ const hasPlatformModuleAccess = (accessContext, locationCode, moduleCode) => {
     return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess) && hasPermissionForModule(accessContext, targetModule);
   });
 };
+const getPlatformDataScopeForLocation = (accessContext, locationCode) => {
+  const targetLocation = String(locationCode || "").trim();
+  const activeRows = (accessContext.rows || []).map(normaliseAccessRow).filter((row) => normaliseAccessValue(row.status) !== "inactive");
+  const matchingRows = activeRows.filter((row) => {
+    const rowLocation = String(row.locationCode || "").trim();
+    return !rowLocation || normaliseAccessValue(rowLocation) === normaliseAccessValue(targetLocation);
+  });
+  const relevantRows = matchingRows.length > 0 ? matchingRows : activeRows;
+  const unitCodes = uniqueValues(
+    relevantRows.map((row) => String(row.unitCode || "").trim()).filter(Boolean)
+  );
+  const hasAllUnitScope = relevantRows.length === 0 || relevantRows.some((row) => !String(row.unitCode || "").trim());
+  return {
+    organisationCodes: uniqueValues(
+      relevantRows.map((row) => String(row.organisationCode || "").trim()).filter(Boolean)
+    ),
+    locationCode: targetLocation,
+    unitCodes: hasAllUnitScope ? [] : unitCodes,
+    allUnits: hasAllUnitScope
+  };
+};
+const buildPlatformDataScopeQuery = (scope) => {
+  const params = new URLSearchParams();
+  if (scope.locationCode) params.set("location", scope.locationCode);
+  if (scope.organisationCodes.length === 1) params.set("organisation", scope.organisationCodes[0]);
+  if (!scope.allUnits && scope.unitCodes.length > 0) params.set("units", scope.unitCodes.join(","));
+  return params.toString();
+};
 const getPlatformModuleForView = (view2) => {
   const viewToModule = {
     "Program Schedule": "DFP",
@@ -69849,6 +69877,21 @@ const App = () => {
     () => platformAccessContext.accessibleLocations,
     [platformAccessContext]
   );
+  const platformDataScopeQuery = reactExports.useMemo(() => {
+    const scope = getPlatformDataScopeForLocation(platformAccessContext, school);
+    return buildPlatformDataScopeQuery(scope);
+  }, [platformAccessContext, school]);
+  const scopedApiPath = reactExports.useCallback((path2, extraParams) => {
+    const params = new URLSearchParams(platformDataScopeQuery);
+    Object.entries(extraParams || {}).forEach(([key, value]) => {
+      if (value !== void 0 && value !== null && String(value).trim() !== "") {
+        params.set(key, String(value));
+      }
+    });
+    const query = params.toString();
+    const joiner = path2.includes("?") ? "&" : "?";
+    return query ? `${path2}${joiner}${query}` : path2;
+  }, [platformDataScopeQuery]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded || selectableLocationCodes.length === 0) return;
     if (!selectableLocationCodes.includes(school)) {
@@ -75285,7 +75328,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const handleDatabaseDataChanged = reactExports.useCallback(async () => {
     console.log("🔄 Refreshing database data after database modification...");
     try {
-      const personnelRes = await fetch("/api/personnel", { credentials: "include" });
+      const personnelRes = await fetch(scopedApiPath("/api/personnel"), { credentials: "include" });
       if (personnelRes.ok) {
         const personnelData2 = await personnelRes.json();
         const dbPersonnel = (personnelData2.personnel || []).map((p) => ({
@@ -75303,7 +75346,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         });
         console.log(`✅ Refreshed ${dbPersonnel.length} personnel from database`);
       }
-      const traineesRes = await fetch("/api/trainees", { credentials: "include" });
+      const traineesRes = await fetch(scopedApiPath("/api/trainees"), { credentials: "include" });
       if (traineesRes.ok) {
         const traineesData2 = await traineesRes.json();
         const dbTrainees = (traineesData2.trainees || []).map((t) => ({
@@ -75346,7 +75389,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     } catch (error) {
       console.error("❌ Error refreshing database data:", error);
     }
-  }, []);
+  }, [scopedApiPath]);
   const handleBulkUpdateTrainees = reactExports.useCallback(async (updatedTrainees) => {
     console.log(`🔵 [handleBulkUpdateTrainees] Called with ${updatedTrainees.length} trainees`);
     console.log(`🔵 [handleBulkUpdateTrainees] Sample trainee:`, JSON.stringify(updatedTrainees[0] || null));
