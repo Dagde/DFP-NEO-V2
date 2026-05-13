@@ -21,6 +21,7 @@ interface TraineeViewProps {
   onNavigateToCurrency: (person: any) => void;
   onViewIndividualLMP: (trainee: any) => void;
   onAddRemedialPackage: (trainee: any) => void;
+  onSelectPt051ForEvent?: (trainee: any, assessment: any) => void;
   locations: string[];
   units: string[];
   selectedPersonForProfile: any;
@@ -39,6 +40,12 @@ interface TraineeViewProps {
   currentUserName?: string;
   pt051Assessments?: Map<string, any>;
   userProfile?: any;
+  canViewTraineeProfile?: (trainee: any) => boolean;
+  canViewTraineePt051?: (trainee: any) => boolean;
+  canEditTraineePt051?: (trainee: any) => boolean;
+  canViewTraineeLmp?: (trainee: any) => boolean;
+  canAddRemedialPackageForTrainee?: (trainee: any) => boolean;
+  onAccessDenied?: (actionLabel: string) => void;
   
   // Props for TraineeScheduleView
   date: string;
@@ -119,6 +126,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onNavigateToCurrency={props.onNavigateToCurrency}
             onViewIndividualLMP={props.onViewIndividualLMP}
             onAddRemedialPackage={props.onAddRemedialPackage}
+            onSelectPt051ForEvent={props.onSelectPt051ForEvent}
             locations={props.locations}
             units={props.units}
             selectedPersonForProfile={props.selectedPersonForProfile}
@@ -136,6 +144,12 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             currentUserName={props.currentUserName}
             pt051Assessments={props.pt051Assessments}
             userProfile={props.userProfile}
+            canViewTraineeProfile={props.canViewTraineeProfile}
+            canViewTraineePt051={props.canViewTraineePt051}
+            canEditTraineePt051={props.canEditTraineePt051}
+            canViewTraineeLmp={props.canViewTraineeLmp}
+            canAddRemedialPackageForTrainee={props.canAddRemedialPackageForTrainee}
+            onAccessDenied={props.onAccessDenied}
           />
         )}
         {activeTab === 'schedule' && (

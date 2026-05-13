@@ -3,7 +3,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement } from '../types';
+import { Trainee, ScheduleEvent, Score, SyllabusItemDetail, Instructor, LogbookExperience , MasterCurrency, CurrencyRequirement, Pt051Assessment } from '../types';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
 import RestoreCourseConfirmation from './RestoreCourseConfirmation';
 import FlightInfoFlyout from './FlightInfoFlyout';
@@ -28,6 +28,7 @@ interface CourseRosterViewProps {
     onNavigateToCurrency: (person: Instructor | Trainee) => void;
     onViewIndividualLMP: (trainee: Trainee) => void;
     onAddRemedialPackage: (trainee: Trainee) => void;
+    onSelectPt051ForEvent?: (trainee: Trainee, assessment: Pt051Assessment) => void;
     locations: string[];
     units: string[];
     selectedPersonForProfile?: Trainee | null;
@@ -98,6 +99,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onNavigateToCurrency,
     onViewIndividualLMP,
     onAddRemedialPackage,
+    onSelectPt051ForEvent,
     locations,
     units,
     selectedPersonForProfile,
@@ -484,6 +486,10 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     canEditPt051={canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canViewIndividualLmp={canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canAddRemedialPackage={canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
+                        isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
+                        assessment
+                    )}
                     onAccessDenied={onAccessDenied}
                 />
             )}

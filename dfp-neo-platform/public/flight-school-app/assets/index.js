@@ -11271,6 +11271,7 @@ const CourseRosterView = ({
   onNavigateToCurrency,
   onViewIndividualLMP,
   onAddRemedialPackage,
+  onSelectPt051ForEvent,
   locations,
   units,
   selectedPersonForProfile,
@@ -11586,6 +11587,10 @@ const CourseRosterView = ({
         canEditPt051: canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canViewIndividualLmp: canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canAddRemedialPackage: canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
+        onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
+          isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
+          assessment
+        ),
         onAccessDenied: onAccessDenied2
       }
     ),
@@ -25380,6 +25385,7 @@ const TraineeView = (props) => {
           onNavigateToCurrency: props.onNavigateToCurrency,
           onViewIndividualLMP: props.onViewIndividualLMP,
           onAddRemedialPackage: props.onAddRemedialPackage,
+          onSelectPt051ForEvent: props.onSelectPt051ForEvent,
           locations: props.locations,
           units: props.units,
           selectedPersonForProfile: props.selectedPersonForProfile,
@@ -25396,7 +25402,13 @@ const TraineeView = (props) => {
           currentUserId: props.currentUserId,
           currentUserName: props.currentUserName,
           pt051Assessments: props.pt051Assessments,
-          userProfile: props.userProfile
+          userProfile: props.userProfile,
+          canViewTraineeProfile: props.canViewTraineeProfile,
+          canViewTraineePt051: props.canViewTraineePt051,
+          canEditTraineePt051: props.canEditTraineePt051,
+          canViewTraineeLmp: props.canViewTraineeLmp,
+          canAddRemedialPackageForTrainee: props.canAddRemedialPackageForTrainee,
+          onAccessDenied: props.onAccessDenied
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -72087,6 +72099,57 @@ ${"=".repeat(60)}`);
       navigateToView(view2);
     }
   };
+  const openPt051FromTraineeProfile = reactExports.useCallback((trainee, assessment) => {
+    if (!canViewTraineePt051(trainee)) {
+      denyPlatformAction("PT-051 record");
+      return;
+    }
+    const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents].find((event) => event.id === assessment.eventId);
+    const eventFromBuild = nextDayBuildEvents.find((event) => event.id === assessment.eventId);
+    let eventForAssessment = eventFromSchedules || null;
+    if (!eventForAssessment && eventFromBuild) {
+      eventForAssessment = { ...eventFromBuild, date: buildDfpDate };
+    }
+    if (!eventForAssessment) {
+      let eventType = "flight";
+      const flightNum = assessment.flightNumber || "";
+      if (flightNum.includes("CPT") || flightNum.includes("Cpt")) {
+        eventType = "cpt";
+      } else if (flightNum.includes("MB") || flightNum.includes("GS") || flightNum.includes("Ground") || flightNum.includes("GROUND")) {
+        eventType = "ground";
+      }
+      eventForAssessment = {
+        id: assessment.eventId,
+        flightNumber: assessment.flightNumber,
+        date: assessment.date,
+        startTime: "08:00",
+        endTime: "09:00",
+        instructor: assessment.instructorName || "Unknown",
+        student: assessment.traineeFullName,
+        syllabus: assessment.flightNumber,
+        aircraft: "",
+        type: eventType,
+        status: "Scheduled",
+        notes: "",
+        crew: []
+      };
+    }
+    setSelectedTraineeForHateSheet(trainee);
+    setEventForPt051(eventForAssessment);
+    logAudit(
+      "Performance History",
+      "View",
+      `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
+    );
+    handleNavigation("PT051");
+  }, [
+    buildDfpDate,
+    canViewTraineePt051,
+    denyPlatformAction,
+    eventsForDate,
+    highestPriorityEvents,
+    nextDayBuildEvents
+  ]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
     if (canAccessView(activeView)) return;
@@ -76790,6 +76853,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToCurrency: handleNavigateToCurrency,
             onViewIndividualLMP: handleViewTraineeLMP,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
+            onSelectPt051ForEvent: openPt051FromTraineeProfile,
             canViewTraineeProfile,
             canViewTraineePt051,
             canEditTraineePt051,
@@ -76927,6 +76991,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToCurrency: handleNavigateToCurrency,
             onViewIndividualLMP: handleViewTraineeLMP,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
+            onSelectPt051ForEvent: openPt051FromTraineeProfile,
             canViewTraineeProfile,
             canViewTraineePt051,
             canEditTraineePt051,

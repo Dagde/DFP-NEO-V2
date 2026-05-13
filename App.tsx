@@ -7693,6 +7693,69 @@ const App: React.FC = () => {
         }
     };
 
+    const openPt051FromTraineeProfile = useCallback((trainee: Trainee, assessment: Pt051Assessment) => {
+        if (!canViewTraineePt051(trainee)) {
+            denyPlatformAction('PT-051 record');
+            return;
+        }
+
+        const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents].find((event: ScheduleEvent) => event.id === assessment.eventId);
+        const eventFromBuild = nextDayBuildEvents.find((event: ScheduleEvent) => event.id === assessment.eventId);
+
+        let eventForAssessment: ScheduleEvent | null = eventFromSchedules || null;
+        if (!eventForAssessment && eventFromBuild) {
+            eventForAssessment = { ...eventFromBuild, date: buildDfpDate };
+        }
+
+        if (!eventForAssessment) {
+            let eventType: 'flight' | 'ground' | 'cpt' = 'flight';
+            const flightNum = assessment.flightNumber || '';
+
+            if (flightNum.includes('CPT') || flightNum.includes('Cpt')) {
+                eventType = 'cpt';
+            } else if (
+                flightNum.includes('MB') ||
+                flightNum.includes('GS') ||
+                flightNum.includes('Ground') ||
+                flightNum.includes('GROUND')
+            ) {
+                eventType = 'ground';
+            }
+
+            eventForAssessment = {
+                id: assessment.eventId,
+                flightNumber: assessment.flightNumber,
+                date: assessment.date,
+                startTime: '08:00',
+                endTime: '09:00',
+                instructor: assessment.instructorName || 'Unknown',
+                student: assessment.traineeFullName,
+                syllabus: assessment.flightNumber,
+                aircraft: '',
+                type: eventType,
+                status: 'Scheduled',
+                notes: '',
+                crew: []
+            };
+        }
+
+        setSelectedTraineeForHateSheet(trainee);
+        setEventForPt051(eventForAssessment);
+        logAudit(
+            'Performance History',
+            'View',
+            `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`
+        );
+        handleNavigation('PT051');
+    }, [
+        buildDfpDate,
+        canViewTraineePt051,
+        denyPlatformAction,
+        eventsForDate,
+        highestPriorityEvents,
+        nextDayBuildEvents
+    ]);
+
     useEffect(() => {
         if (!platformConfigLoaded) return;
         if (canAccessView(activeView)) return;
@@ -13693,6 +13756,7 @@ updates.forEach(update => {
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onViewIndividualLMP={handleViewTraineeLMP}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
+                            onSelectPt051ForEvent={openPt051FromTraineeProfile}
                             canViewTraineeProfile={canViewTraineeProfile}
                             canViewTraineePt051={canViewTraineePt051}
                             canEditTraineePt051={canEditTraineePt051}
@@ -13839,6 +13903,7 @@ updates.forEach(update => {
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onViewIndividualLMP={handleViewTraineeLMP}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
+                            onSelectPt051ForEvent={openPt051FromTraineeProfile}
                             canViewTraineeProfile={canViewTraineeProfile}
                             canViewTraineePt051={canViewTraineePt051}
                             canEditTraineePt051={canEditTraineePt051}
