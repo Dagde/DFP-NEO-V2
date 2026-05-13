@@ -442,6 +442,347 @@ app.post('/api/settings', async (req, res) => {
 // tables create the admin-editable foundation for commercial use.
 // ============================================================
 
+const PLATFORM_CONFIG_AUDIT_TABLES = [
+  {
+    collection: 'organisations',
+    entityType: 'CommercialOrganisation',
+    fields: ['code', 'name', 'status', 'settings'],
+    isValid: (row) => Boolean(row.code && row.name),
+    normalise: (row) => ({
+      id: row.id || null,
+      code: row.code || '',
+      name: row.name || '',
+      status: row.status || 'ACTIVE',
+      settings: row.settings || {},
+    }),
+    keys: (row) => [row.id, row.code].filter(Boolean),
+    label: (row) => row.name || row.code,
+  },
+  {
+    collection: 'locations',
+    entityType: 'CommercialLocation',
+    fields: ['organisationCode', 'code', 'name', 'timezoneOffset', 'trainingAreas', 'status', 'settings'],
+    isValid: (row) => Boolean(row.code && row.name),
+    normalise: (row) => ({
+      id: row.id || null,
+      organisationCode: row.organisationCode || 'DEFAULT',
+      code: row.code || '',
+      name: row.name || '',
+      timezoneOffset: Number(row.timezoneOffset ?? 10),
+      trainingAreas: Array.isArray(row.trainingAreas) ? row.trainingAreas : [],
+      status: row.status || 'ACTIVE',
+      settings: row.settings || {},
+    }),
+    keys: (row) => [row.id, row.code].filter(Boolean),
+    label: (row) => row.name || row.code,
+  },
+  {
+    collection: 'units',
+    entityType: 'CommercialUnit',
+    fields: ['organisationCode', 'locationCode', 'code', 'name', 'unitType', 'status', 'settings'],
+    isValid: (row) => Boolean(row.code && row.name),
+    normalise: (row) => ({
+      id: row.id || null,
+      organisationCode: row.organisationCode || 'DEFAULT',
+      locationCode: row.locationCode || 'ESL',
+      code: row.code || '',
+      name: row.name || '',
+      unitType: row.unitType || 'Training',
+      status: row.status || 'ACTIVE',
+      settings: row.settings || {},
+    }),
+    keys: (row) => [row.id, row.code].filter(Boolean),
+    label: (row) => row.name || row.code,
+  },
+  {
+    collection: 'aircraftTypes',
+    entityType: 'CommercialAircraftType',
+    fields: ['code', 'name', 'category', 'status', 'settings'],
+    isValid: (row) => Boolean(row.code && row.name),
+    normalise: (row) => ({
+      id: row.id || null,
+      code: row.code || '',
+      name: row.name || '',
+      category: row.category || 'Training',
+      status: row.status || 'ACTIVE',
+      settings: row.settings || {},
+    }),
+    keys: (row) => [row.id, row.code].filter(Boolean),
+    label: (row) => row.name || row.code,
+  },
+  {
+    collection: 'resourcePools',
+    entityType: 'CommercialResourcePool',
+    fields: ['organisationCode', 'locationCode', 'unitCode', 'aircraftTypeCode', 'code', 'name', 'poolType', 'status', 'settings'],
+    isValid: (row) => Boolean(row.code && row.name),
+    normalise: (row) => ({
+      id: row.id || null,
+      organisationCode: row.organisationCode || 'DEFAULT',
+      locationCode: row.locationCode || null,
+      unitCode: row.unitCode || null,
+      aircraftTypeCode: row.aircraftTypeCode || null,
+      code: row.code || '',
+      name: row.name || '',
+      poolType: row.poolType || 'Dedicated',
+      status: row.status || 'ACTIVE',
+      settings: row.settings || {},
+    }),
+    keys: (row) => [row.id, row.code].filter(Boolean),
+    label: (row) => row.name || row.code,
+  },
+  {
+    collection: 'unitModules',
+    entityType: 'CommercialUnitModule',
+    fields: ['unitCode', 'moduleCode', 'isEnabled', 'settings'],
+    isValid: (row) => Boolean(row.unitCode && row.moduleCode),
+    normalise: (row) => ({
+      id: row.id || null,
+      unitCode: row.unitCode || '',
+      moduleCode: row.moduleCode || '',
+      isEnabled: row.isEnabled !== false,
+      settings: row.settings || {},
+    }),
+    keys: (row) => [row.id, [row.unitCode, row.moduleCode].join('|')].filter(Boolean),
+    label: (row) => `${row.unitCode || 'Unit'} / ${row.moduleCode || 'Module'}`,
+  },
+  {
+    collection: 'schedulingRuleSets',
+    entityType: 'CommercialSchedulingRuleSet',
+    fields: ['organisationCode', 'unitCode', 'aircraftTypeCode', 'name', 'scope', 'rules', 'isActive'],
+    isValid: () => true,
+    normalise: (row) => ({
+      id: row.id || null,
+      organisationCode: row.organisationCode || 'DEFAULT',
+      unitCode: row.unitCode || null,
+      aircraftTypeCode: row.aircraftTypeCode || null,
+      name: row.name || 'Default Scheduling Rules',
+      scope: row.scope || 'Unit',
+      rules: row.rules || {},
+      isActive: row.isActive !== false,
+    }),
+    keys: (row) => [row.id, [row.organisationCode, row.unitCode || '', row.aircraftTypeCode || '', row.name].join('|')].filter(Boolean),
+    label: (row) => row.name || 'Scheduling Rules',
+  },
+  {
+    collection: 'userAccess',
+    entityType: 'CommercialUserAccess',
+    fields: ['userId', 'username', 'displayName', 'organisationCode', 'locationCode', 'unitCode', 'moduleCode', 'role', 'accessLevel', 'status', 'settings'],
+    isValid: (row) => Boolean(row.userId),
+    normalise: (row) => {
+      const scopeKey = [
+        row.userId,
+        row.organisationCode || 'DEFAULT',
+        row.locationCode || '',
+        row.unitCode || '',
+        row.moduleCode || '',
+      ].join('|');
+      return {
+        id: row.id || null,
+        userId: row.userId || '',
+        username: row.username || null,
+        displayName: row.displayName || null,
+        organisationCode: row.organisationCode || 'DEFAULT',
+        locationCode: row.locationCode || null,
+        unitCode: row.unitCode || null,
+        moduleCode: row.moduleCode || null,
+        scopeKey: row.scopeKey || scopeKey,
+        role: row.role || 'Viewer',
+        accessLevel: row.accessLevel || 'Read',
+        status: row.status || 'ACTIVE',
+        settings: row.settings || {},
+      };
+    },
+    keys: (row) => [row.id, row.scopeKey].filter(Boolean),
+    label: (row) => `${row.displayName || row.username || row.userId} / ${row.locationCode || 'All locations'} / ${row.unitCode || 'All units'}`,
+  },
+];
+
+const normaliseAuditValue = (value) => {
+  if (value === undefined) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(normaliseAuditValue);
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce((next, key) => {
+      next[key] = normaliseAuditValue(value[key]);
+      return next;
+    }, {});
+  }
+  return value;
+};
+
+const auditValueString = (value) => JSON.stringify(normaliseAuditValue(value));
+
+const getRequestIp = (req) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (Array.isArray(forwardedFor)) return forwardedFor[0] || req.ip || 'unknown';
+  return forwardedFor || req.ip || 'unknown';
+};
+
+async function resolveAuditUser(db, req) {
+  const authHeader = req.headers.authorization || '';
+  const sessionToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+  if (sessionToken) {
+    const sessions = await db.$queryRawUnsafe(
+      `SELECT u.id, u."userId", u.username, u."firstName", u."lastName", u.email, u.role
+       FROM "Session" s
+       JOIN "User" u ON u.id = s."userId"
+       WHERE s."sessionToken" = $1
+         AND s.expires > NOW()
+         AND u."isActive" = true
+       LIMIT 1`,
+      sessionToken
+    );
+    if (sessions && sessions[0]) return sessions[0];
+  }
+
+  const fallbackUsers = await db.$queryRawUnsafe(
+    `SELECT id, "userId", username, "firstName", "lastName", email, role
+     FROM "User"
+     WHERE "isActive" = true
+     ORDER BY
+       CASE WHEN role = 'ADMIN' THEN 0 ELSE 1 END,
+       "createdAt" ASC
+     LIMIT 1`
+  );
+  return fallbackUsers?.[0] || null;
+}
+
+async function loadPlatformConfigAuditSnapshot(db) {
+  const [
+    organisations,
+    locations,
+    units,
+    aircraftTypes,
+    resourcePools,
+    unitModules,
+    schedulingRuleSets,
+    userAccess,
+  ] = await Promise.all([
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialOrganisation"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialLocation"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialUnit"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialAircraftType"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialResourcePool"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialUnitModule"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialSchedulingRuleSet"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialUserAccess"`),
+  ]);
+
+  return {
+    organisations,
+    locations,
+    units,
+    aircraftTypes,
+    resourcePools,
+    unitModules,
+    schedulingRuleSets,
+    userAccess,
+  };
+}
+
+function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
+  const entries = [];
+
+  for (const table of PLATFORM_CONFIG_AUDIT_TABLES) {
+    const beforeMap = new Map();
+    for (const beforeRow of beforeSnapshot[table.collection] || []) {
+      const normalisedBefore = table.normalise(beforeRow);
+      for (const key of table.keys(normalisedBefore)) beforeMap.set(String(key), normalisedBefore);
+    }
+
+    for (const rawAfterRow of afterSnapshot[table.collection] || []) {
+      if (!table.isValid(rawAfterRow)) continue;
+      const afterRow = table.normalise(rawAfterRow);
+      const lookupKeys = table.keys(afterRow).map(String);
+      const beforeRow = lookupKeys.map((key) => beforeMap.get(key)).find(Boolean) || null;
+      const changedFields = [];
+
+      for (const field of table.fields) {
+        const beforeValue = beforeRow ? beforeRow[field] : null;
+        const afterValue = afterRow[field] ?? null;
+        if (auditValueString(beforeValue) !== auditValueString(afterValue)) {
+          changedFields.push({
+            field,
+            before: normaliseAuditValue(beforeValue),
+            after: normaliseAuditValue(afterValue),
+          });
+        }
+      }
+
+      if (changedFields.length === 0) continue;
+
+      const action = beforeRow ? 'PLATFORM_CONFIG_UPDATED' : 'PLATFORM_CONFIG_ADDED';
+      const label = table.label(afterRow);
+      const context = {
+        organisationCode: afterRow.organisationCode || null,
+        locationCode: afterRow.locationCode || null,
+        unitCode: afterRow.unitCode || null,
+        moduleCode: afterRow.moduleCode || null,
+      };
+
+      entries.push({
+        action,
+        entityType: table.entityType,
+        entityId: afterRow.id || beforeRow?.id || lookupKeys[0] || label,
+        changes: {
+          source: 'Platform Configuration',
+          label,
+          context,
+          summary: `${label}: ${changedFields.map((item) => item.field).join(', ')}`,
+          changedFields,
+        },
+      });
+    }
+  }
+
+  return entries;
+}
+
+async function writePlatformConfigAuditEntries(db, req, entries) {
+  if (!entries.length) return { count: 0 };
+
+  const actor = await resolveAuditUser(db, req);
+  if (!actor?.id) {
+    console.warn('⚠️ Platform configuration audit skipped: no active user could be resolved.');
+    return { count: 0, warning: 'No active user could be resolved for audit logging' };
+  }
+
+  const ipAddress = getRequestIp(req);
+  const userAgent = req.headers['user-agent'] || 'unknown';
+  const entriesToWrite = entries.slice(0, 250);
+
+  for (const entry of entriesToWrite) {
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", changes, "ipAddress", "userAgent", "createdAt")
+       VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5::jsonb, $6, $7, NOW())`,
+      actor.id,
+      entry.action,
+      entry.entityType,
+      entry.entityId ? String(entry.entityId) : null,
+      JSON.stringify(entry.changes || {}),
+      ipAddress,
+      userAgent
+    );
+  }
+
+  if (entries.length > entriesToWrite.length) {
+    await db.$executeRawUnsafe(
+      `INSERT INTO "AuditLog" ("id", "userId", action, "entityType", "entityId", changes, "ipAddress", "userAgent", "createdAt")
+       VALUES (gen_random_uuid()::text, $1, 'PLATFORM_CONFIG_AUDIT_TRUNCATED', 'PlatformConfiguration', NULL, $2::jsonb, $3, $4, NOW())`,
+      actor.id,
+      JSON.stringify({
+        source: 'Platform Configuration',
+        summary: `Audit output was limited to ${entriesToWrite.length} of ${entries.length} changed records for this save.`,
+      }),
+      ipAddress,
+      userAgent
+    );
+  }
+
+  return { count: entries.length, written: Math.min(entries.length, entriesToWrite.length) };
+}
+
 app.get('/api/platform-config', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -505,6 +846,7 @@ app.post('/api/platform-config', async (req, res) => {
     const now = new Date().toISOString();
     const toJson = (value) => JSON.stringify(value || {});
     const toArray = (value) => Array.isArray(value) ? value : [];
+    const beforeAuditSnapshot = await loadPlatformConfigAuditSnapshot(db);
 
     for (const org of organisations) {
       if (!org.code || !org.name) continue;
@@ -675,7 +1017,25 @@ app.post('/api/platform-config', async (req, res) => {
       }
     }
 
-    res.json({ success: true });
+    let auditResult = { count: 0 };
+    try {
+      const auditEntries = buildPlatformConfigAuditEntries(beforeAuditSnapshot, {
+        organisations,
+        locations,
+        units,
+        aircraftTypes,
+        resourcePools,
+        unitModules,
+        schedulingRuleSets,
+        userAccess,
+      });
+      auditResult = await writePlatformConfigAuditEntries(db, req, auditEntries);
+    } catch (auditError) {
+      console.warn('⚠️ Platform configuration audit failed after save:', auditError.message);
+      auditResult = { count: 0, warning: auditError.message };
+    }
+
+    res.json({ success: true, audit: auditResult });
   } catch (error) {
     console.error('❌ POST /api/platform-config error:', error);
     res.status(500).json({ error: 'Failed to save platform configuration', details: error.message });
@@ -1509,6 +1869,72 @@ app.get('/api/audit/currency/:personId', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/audit/currency error:', error);
     res.status(500).json({ error: 'Failed to fetch currency audit', details: error.message });
+  }
+});
+
+// GET /api/audit/logs - General durable audit history for admin review
+app.get('/api/audit/logs', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const limit = Math.max(1, Math.min(Number(req.query.limit || 200), 500));
+    const entityType = req.query.entityType ? String(req.query.entityType) : '';
+    const action = req.query.action ? String(req.query.action) : '';
+    const params = [];
+    const where = [];
+
+    if (entityType) {
+      params.push(entityType);
+      where.push(`a."entityType" = $${params.length}`);
+    }
+
+    if (action) {
+      params.push(action);
+      where.push(`a.action = $${params.length}`);
+    }
+
+    params.push(limit);
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const rows = await db.$queryRawUnsafe(
+      `SELECT
+         a.id,
+         a.action,
+         a."entityType",
+         a."entityId",
+         a.changes,
+         a."ipAddress",
+         a."userAgent",
+         a."createdAt",
+         u.username,
+         u."userId",
+         u."firstName",
+         u."lastName"
+       FROM "AuditLog" a
+       LEFT JOIN "User" u ON u.id = a."userId"
+       ${whereSql}
+       ORDER BY a."createdAt" DESC
+       LIMIT $${params.length}`,
+      ...params
+    );
+
+    const auditEntries = rows.map((row) => {
+      const displayName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.username || row.userId || 'Unknown User';
+      return {
+        id: row.id,
+        action: row.action,
+        entityType: row.entityType,
+        entityId: row.entityId,
+        changes: row.changes || {},
+        ipAddress: row.ipAddress || '',
+        userAgent: row.userAgent || '',
+        createdAt: row.createdAt,
+        userName: displayName,
+      };
+    });
+
+    res.json({ auditEntries });
+  } catch (error) {
+    console.error('❌ GET /api/audit/logs error:', error);
+    res.status(500).json({ error: 'Failed to fetch audit logs', details: error.message });
   }
 });
 

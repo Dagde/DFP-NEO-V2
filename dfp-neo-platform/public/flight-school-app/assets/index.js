@@ -1325,7 +1325,7 @@ const setCurrentUser = (user) => {
 const getCurrentUser = () => {
   return currentUser;
 };
-const getAuditLogs = (page2) => {
+const getAuditLogs = (page) => {
   try {
     const logs = localStorage.getItem(AUDIT_STORAGE_KEY);
     if (!logs) return [];
@@ -1333,8 +1333,8 @@ const getAuditLogs = (page2) => {
       ...log,
       timestamp: new Date(log.timestamp)
     }));
-    if (page2) {
-      return allLogs.filter((log) => log.page.startsWith(page2));
+    if (page) {
+      return allLogs.filter((log) => log.page.startsWith(page));
     }
     return allLogs;
   } catch (error) {
@@ -1345,17 +1345,17 @@ const getAuditLogs = (page2) => {
 function logAudit(pageOrParams, action, description, changes) {
   try {
     const logs = getAuditLogs();
-    let page2;
+    let page;
     let auditAction;
     let auditDescription;
     let auditChanges;
     if (typeof pageOrParams === "object") {
-      page2 = pageOrParams.page;
+      page = pageOrParams.page;
       auditAction = pageOrParams.action;
       auditDescription = pageOrParams.description;
       auditChanges = pageOrParams.changes;
     } else {
-      page2 = pageOrParams;
+      page = pageOrParams;
       auditAction = action;
       auditDescription = description;
       auditChanges = changes;
@@ -1367,7 +1367,7 @@ function logAudit(pageOrParams, action, description, changes) {
       description: auditDescription,
       changes: auditChanges,
       timestamp: /* @__PURE__ */ new Date(),
-      page: page2
+      page
     };
     logs.push(newLog);
     const trimmedLogs = logs.slice(-1e3);
@@ -1376,24 +1376,6 @@ function logAudit(pageOrParams, action, description, changes) {
     console.error("Error logging audit entry:", error);
   }
 }
-const exportAuditLogsCSV = (page2) => {
-  const logs = getAuditLogs(page2);
-  const headers = ["Date", "Time", "User", "Action", "Description", "Changes", "Page"];
-  const rows = logs.map((log) => [
-    log.timestamp.toLocaleDateString(),
-    log.timestamp.toLocaleTimeString(),
-    log.user,
-    log.action,
-    log.description,
-    log.changes || "",
-    log.page
-  ]);
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))
-  ].join("\n");
-  return csvContent;
-};
 const SETTINGS_VERSION = "1.0";
 const ORG_ID = "default";
 let saveDebounceTimer = null;
@@ -2255,9 +2237,61 @@ const AuditFlyout = ({
   const [logs, setLogs] = reactExports.useState([]);
   const [sortField, setSortField] = reactExports.useState("timestamp");
   const [sortDirection, setSortDirection] = reactExports.useState("desc");
+  const getApiBase2 = () => {
+    const railwayBackend = "https://dfp-neo-v2-production.up.railway.app";
+    const currentOrigin = window.location.origin;
+    if (currentOrigin === railwayBackend || currentOrigin.includes("railway.app")) return "/api";
+    return `${railwayBackend}/api`;
+  };
+  const summariseValue = (value) => {
+    if (value === null || value === void 0 || value === "") return "blank";
+    if (Array.isArray(value)) return value.join(", ") || "blank";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  };
+  const mapDatabaseAction = (action) => {
+    if (action.includes("ADDED") || action === "CREATE") return "Add";
+    if (action.includes("DELETE") || action.includes("REMOVED")) return "Delete";
+    if (action === "LOGIN") return "Sign";
+    return "Edit";
+  };
+  const mapDatabaseAuditLog = (entry) => {
+    const changes = entry.changes || {};
+    const changedFields = Array.isArray(changes.changedFields) ? changes.changedFields : [];
+    const changesText = changes.summary || changedFields.map((field) => `${field.field}: ${summariseValue(field.before)} -> ${summariseValue(field.after)}`).join("; ");
+    return {
+      id: `db-${entry.id}`,
+      user: entry.userName || "Unknown User",
+      action: mapDatabaseAction(entry.action || ""),
+      description: changes.label ? `${entry.entityType}: ${changes.label}` : `${entry.entityType || "Record"} ${entry.action || "updated"}`,
+      changes: changesText || "",
+      timestamp: new Date(entry.createdAt),
+      page: changes.source || entry.entityType || "Database Audit"
+    };
+  };
   reactExports.useEffect(() => {
-    const pageLogs = getAuditLogs(pageName);
-    setLogs(pageLogs);
+    let cancelled = false;
+    const loadLogs = async () => {
+      const pageLogs = getAuditLogs(pageName);
+      setLogs(pageLogs);
+      try {
+        const sessionToken = localStorage.getItem("dfp_session_token");
+        const res = await fetch(`${getApiBase2()}/audit/logs?limit=300`, {
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : void 0
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const databaseLogs = (data.auditEntries || []).map(mapDatabaseAuditLog);
+        setLogs([...databaseLogs, ...pageLogs]);
+      } catch (error) {
+        console.warn("Failed to load database audit logs:", error);
+      }
+    };
+    loadLogs();
+    return () => {
+      cancelled = true;
+    };
   }, [pageName]);
   const handleSort = (field) => {
     if (sortField === field) {
@@ -2332,12 +2366,26 @@ const AuditFlyout = ({
     printWindow.print();
   };
   const handleExport = () => {
-    const csv = exportAuditLogsCSV(pageName);
+    const headers = ["Date", "Time", "User", "Action", "Description", "Changes", "Page"];
+    const escapeCsv = (value) => `"${String(value || "").replaceAll('"', '""')}"`;
+    const rows = sortedLogs.map((log) => [
+      log.timestamp.toLocaleDateString(),
+      log.timestamp.toLocaleTimeString(),
+      log.user,
+      log.action,
+      log.description,
+      log.changes || "",
+      log.page
+    ]);
+    const csv = [
+      headers.map(escapeCsv).join(","),
+      ...rows.map((row) => row.map(escapeCsv).join(","))
+    ].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `audit-log-${page}-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.csv`;
+    a.download = `audit-log-${pageName}-${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -51520,7 +51568,7 @@ const SettingsView = ({
         description: "Updated scoring matrix phrase bank",
         changes: "Modified scoring criteria and phrases"
       },
-      (page2, action, description, changes) => logAudit({ page: page2, action, description, changes })
+      (page, action, description, changes) => logAudit({ page, action, description, changes })
     );
   };
   const handleUploadClick = () => {
@@ -57102,9 +57150,13 @@ const PlatformConfigurationSettings = ({
     setError("");
     let shouldReload = false;
     try {
+      const sessionToken = localStorage.getItem("dfp_session_token");
       const res = await fetch(`${getApiBase()}/platform-config`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
         body: JSON.stringify(config)
       });
       if (!res.ok) {

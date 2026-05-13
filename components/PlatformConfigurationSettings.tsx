@@ -308,9 +308,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     setError('');
     let shouldReload = false;
     try {
+      const sessionToken = localStorage.getItem('dfp_session_token');
       const res = await fetch(`${getApiBase()}/platform-config`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        },
         body: JSON.stringify(config),
       });
       if (!res.ok) {

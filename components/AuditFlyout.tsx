@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { getAuditLogs, exportAuditLogsCSV } from '../utils/auditLogger';
+import { getAuditLogs } from '../utils/auditLogger';
 import { AuditLog } from '../types/audit';
 
 interface AuditFlyoutProps {
@@ -18,9 +18,71 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   const [sortField, setSortField] = useState<'timestamp' | 'user' | 'action'>('timestamp');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
+  const getApiBase = (): string => {
+    const railwayBackend = 'https://dfp-neo-v2-production.up.railway.app';
+    const currentOrigin = window.location.origin;
+    if (currentOrigin === railwayBackend || currentOrigin.includes('railway.app')) return '/api';
+    return `${railwayBackend}/api`;
+  };
+
+  const summariseValue = (value: any): string => {
+    if (value === null || value === undefined || value === '') return 'blank';
+    if (Array.isArray(value)) return value.join(', ') || 'blank';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  };
+
+  const mapDatabaseAction = (action: string): AuditLog['action'] => {
+    if (action.includes('ADDED') || action === 'CREATE') return 'Add';
+    if (action.includes('DELETE') || action.includes('REMOVED')) return 'Delete';
+    if (action === 'LOGIN') return 'Sign';
+    return 'Edit';
+  };
+
+  const mapDatabaseAuditLog = (entry: any): AuditLog => {
+    const changes = entry.changes || {};
+    const changedFields = Array.isArray(changes.changedFields) ? changes.changedFields : [];
+    const changesText = changes.summary || changedFields.map((field: any) => (
+      `${field.field}: ${summariseValue(field.before)} -> ${summariseValue(field.after)}`
+    )).join('; ');
+
+    return {
+      id: `db-${entry.id}`,
+      user: entry.userName || 'Unknown User',
+      action: mapDatabaseAction(entry.action || ''),
+      description: changes.label
+        ? `${entry.entityType}: ${changes.label}`
+        : `${entry.entityType || 'Record'} ${entry.action || 'updated'}`,
+      changes: changesText || '',
+      timestamp: new Date(entry.createdAt),
+      page: changes.source || entry.entityType || 'Database Audit',
+    };
+  };
+
   useEffect(() => {
-    const pageLogs = getAuditLogs(pageName);
-    setLogs(pageLogs);
+    let cancelled = false;
+
+    const loadLogs = async () => {
+      const pageLogs = getAuditLogs(pageName);
+      setLogs(pageLogs);
+
+      try {
+        const sessionToken = localStorage.getItem('dfp_session_token');
+        const res = await fetch(`${getApiBase()}/audit/logs?limit=300`, {
+          headers: sessionToken ? { Authorization: `Bearer ${sessionToken}` } : undefined,
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const databaseLogs = (data.auditEntries || []).map(mapDatabaseAuditLog);
+        setLogs([...databaseLogs, ...pageLogs]);
+      } catch (error) {
+        console.warn('Failed to load database audit logs:', error);
+      }
+    };
+
+    loadLogs();
+    return () => { cancelled = true; };
   }, [pageName]);
 
   const handleSort = (field: 'timestamp' | 'user' | 'action') => {
@@ -103,12 +165,26 @@ const AuditFlyout: React.FC<AuditFlyoutProps> = ({
   };
 
   const handleExport = () => {
-    const csv = exportAuditLogsCSV(pageName);
+    const headers = ['Date', 'Time', 'User', 'Action', 'Description', 'Changes', 'Page'];
+    const escapeCsv = (value: string) => `"${String(value || '').replaceAll('"', '""')}"`;
+    const rows = sortedLogs.map(log => [
+      log.timestamp.toLocaleDateString(),
+      log.timestamp.toLocaleTimeString(),
+      log.user,
+      log.action,
+      log.description,
+      log.changes || '',
+      log.page
+    ]);
+    const csv = [
+      headers.map(escapeCsv).join(','),
+      ...rows.map(row => row.map(escapeCsv).join(','))
+    ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `audit-log-${page}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `audit-log-${pageName}-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
