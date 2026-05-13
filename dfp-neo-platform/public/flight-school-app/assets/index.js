@@ -56646,7 +56646,15 @@ const getApiBase = () => {
 };
 const fieldClass = "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white focus:border-cyan-400 focus:outline-none";
 const labelClass = "mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-400";
-const sectionClass = "overflow-hidden rounded-xl border border-cyan-500/20 bg-gray-800 shadow-[0_0_0_1px_rgba(255,255,255,0.03),0_18px_45px_rgba(0,0,0,0.28)]";
+const sectionClass = "overflow-hidden rounded-xl border border-sky-500/35 bg-gray-800 shadow-[0_0_0_1px_rgba(125,211,252,0.08),0_18px_45px_rgba(0,0,0,0.28)]";
+const sectionHeaderStyle = {
+  backgroundColor: "rgba(30, 64, 89, 0.62)",
+  borderColor: "rgba(125, 211, 252, 0.28)"
+};
+const sectionAccentStyle = {
+  backgroundColor: "rgba(125, 211, 252, 0.72)",
+  boxShadow: "0 0 18px rgba(125, 211, 252, 0.28)"
+};
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess
@@ -57208,32 +57216,18 @@ const Metric = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-gray-500", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: value })
 ] });
-const SECTION_TONES = [
-  { fill: "rgba(30, 64, 89, 0.62)", border: "rgba(96, 165, 250, 0.26)", accent: "rgba(125, 211, 252, 0.78)" },
-  { fill: "rgba(66, 56, 92, 0.58)", border: "rgba(167, 139, 250, 0.24)", accent: "rgba(196, 181, 253, 0.76)" },
-  { fill: "rgba(72, 68, 34, 0.58)", border: "rgba(250, 204, 21, 0.22)", accent: "rgba(253, 224, 71, 0.74)" },
-  { fill: "rgba(34, 72, 63, 0.58)", border: "rgba(52, 211, 153, 0.22)", accent: "rgba(110, 231, 183, 0.74)" },
-  { fill: "rgba(73, 47, 71, 0.56)", border: "rgba(244, 114, 182, 0.20)", accent: "rgba(249, 168, 212, 0.70)" },
-  { fill: "rgba(73, 55, 43, 0.58)", border: "rgba(251, 146, 60, 0.22)", accent: "rgba(253, 186, 116, 0.74)" },
-  { fill: "rgba(50, 67, 82, 0.58)", border: "rgba(148, 163, 184, 0.25)", accent: "rgba(203, 213, 225, 0.74)" }
-];
-const getSectionTone = (title) => {
-  const total = Array.from(title).reduce((sum, char) => sum + char.charCodeAt(0), 0);
-  return SECTION_TONES[total % SECTION_TONES.length];
-};
 const SectionHeader = ({ title, subtitle, action }) => {
-  const tone = getSectionTone(title);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
       className: "flex flex-wrap items-center gap-3 border-b px-4 py-4",
-      style: { backgroundColor: tone.fill, borderColor: tone.border },
+      style: sectionHeaderStyle,
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
             className: "h-11 w-1.5 rounded-full",
-            style: { backgroundColor: tone.accent, boxShadow: `0 0 18px ${tone.accent}` }
+            style: sectionAccentStyle
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
