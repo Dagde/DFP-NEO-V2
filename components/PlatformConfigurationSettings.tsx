@@ -150,7 +150,6 @@ const sectionAccentStyle = {
 const ACCESS_SCOPE_TONE = {
   border: 'rgba(234, 179, 8, 0.58)',
   fill: 'rgba(234, 179, 8, 0.16)',
-  applyFill: 'rgba(234, 179, 8, 0.24)',
   applyBorder: 'rgba(250, 204, 21, 0.40)',
 };
 
@@ -769,7 +768,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
                 <div
                   className="mt-3 rounded border p-3"
-                  style={{ backgroundColor: ACCESS_SCOPE_TONE.applyFill, borderColor: ACCESS_SCOPE_TONE.applyBorder }}
+                  style={{ backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder }}
                 >
                   <div className="flex flex-wrap items-start gap-3">
                     <label className="flex items-start gap-2 text-sm text-cyan-50">

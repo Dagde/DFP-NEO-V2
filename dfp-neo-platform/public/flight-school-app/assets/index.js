@@ -56658,7 +56658,6 @@ const sectionAccentStyle = {
 const ACCESS_SCOPE_TONE = {
   border: "rgba(234, 179, 8, 0.58)",
   fill: "rgba(234, 179, 8, 0.16)",
-  applyFill: "rgba(234, 179, 8, 0.24)",
   applyBorder: "rgba(250, 204, 21, 0.40)"
 };
 const PlatformConfigurationSettings = ({
@@ -57173,7 +57172,7 @@ const PlatformConfigurationSettings = ({
                   "div",
                   {
                     className: "mt-3 rounded border p-3",
-                    style: { backgroundColor: ACCESS_SCOPE_TONE.applyFill, borderColor: ACCESS_SCOPE_TONE.applyBorder },
+                    style: { backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder },
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-cyan-50", children: [
