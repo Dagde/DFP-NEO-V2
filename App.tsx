@@ -16,6 +16,7 @@ import {
     getLocationResourcePool,
     getPlatformAccessContext,
     getPlatformModuleForView,
+    getPlatformPermissionProfiles,
     getResourcePoolCount,
     hasPlatformPermission,
     hasPlatformModuleAccess,
@@ -4697,6 +4698,7 @@ const App: React.FC = () => {
     // Session user info (populated from auth)
     const [sessionUser, setSessionUser] = useState<{firstName: string | null, lastName: string | null, role: string, militaryRank: string, userId: string, username?: string} | null>(null);
     const platformAccessContext = useMemo(() => getPlatformAccessContext(platformConfig, [
+        authUser?.id,
         authUser?.userId,
         authUser?.username,
         authUser?.displayName,
@@ -7556,9 +7558,30 @@ const App: React.FC = () => {
         onDiscardRef.current = onDiscard;
     }, []);
 
-    const canUsePlatformPermission = useCallback((permissionId: string): boolean => (
-        hasPlatformPermission(platformAccessContext, permissionId)
-    ), [platformAccessContext]);
+    const normalisePermissionId = useCallback((value?: string | null) => (
+        String(value || '').trim().toLowerCase()
+    ), []);
+
+    const assignedPlatformProfilePermissions = useMemo(() => {
+        const profileIds = new Set([
+            ...(platformAccessContext.permissionProfileIds || []),
+            ...platformAccessContext.rows.flatMap((row) => {
+                const settings = row.settings as { permissionProfileIds?: unknown } | null | undefined;
+                return Array.isArray(settings?.permissionProfileIds) ? settings.permissionProfileIds : [];
+            }),
+        ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
+
+        return new Set(getPlatformPermissionProfiles(platformConfig)
+            .filter((profile) => profileIds.has(normalisePermissionId(profile.id)))
+            .flatMap((profile) => profile.permissions || [])
+            .map((permissionId) => normalisePermissionId(permissionId))
+            .filter(Boolean));
+    }, [platformAccessContext, platformConfig, normalisePermissionId]);
+
+    const canUsePlatformPermission = useCallback((permissionId: string): boolean => {
+        if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
+        return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
+    }, [platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
 
     const denyPlatformAction = useCallback((actionLabel: string) => {
         setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
@@ -7613,8 +7636,8 @@ const App: React.FC = () => {
     ), [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
 
     const canViewTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
-        isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051
-    ), [isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
+        canEditPt051Records || (isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051)
+    ), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
 
     const canEditTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
         canEditPt051Records && canViewTraineePt051(trainee)

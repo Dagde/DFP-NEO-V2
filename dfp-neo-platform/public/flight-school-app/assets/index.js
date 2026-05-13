@@ -69824,6 +69824,7 @@ const App = () => {
   const currentUser2 = instructorsData.find((inst) => inst.name === currentUserName) || instructorsData[0];
   const [sessionUser, setSessionUser] = reactExports.useState(null);
   const platformAccessContext = reactExports.useMemo(() => getPlatformAccessContext(platformConfig, [
+    authUser?.id,
     authUser?.userId,
     authUser?.username,
     authUser?.displayName,
@@ -71987,7 +71988,21 @@ ${"=".repeat(60)}`);
     onSaveRef.current = onSave;
     onDiscardRef.current = onDiscard;
   }, []);
-  const canUsePlatformPermission = reactExports.useCallback((permissionId) => hasPlatformPermission(platformAccessContext, permissionId), [platformAccessContext]);
+  const normalisePermissionId = reactExports.useCallback((value) => String(value || "").trim().toLowerCase(), []);
+  const assignedPlatformProfilePermissions = reactExports.useMemo(() => {
+    const profileIds = new Set([
+      ...platformAccessContext.permissionProfileIds || [],
+      ...platformAccessContext.rows.flatMap((row) => {
+        const settings = row.settings;
+        return Array.isArray(settings?.permissionProfileIds) ? settings.permissionProfileIds : [];
+      })
+    ].map((value) => normalisePermissionId(String(value))).filter(Boolean));
+    return new Set(getPlatformPermissionProfiles(platformConfig).filter((profile) => profileIds.has(normalisePermissionId(profile.id))).flatMap((profile) => profile.permissions || []).map((permissionId) => normalisePermissionId(permissionId)).filter(Boolean));
+  }, [platformAccessContext, platformConfig, normalisePermissionId]);
+  const canUsePlatformPermission = reactExports.useCallback((permissionId) => {
+    if (hasPlatformPermission(platformAccessContext, permissionId)) return true;
+    return assignedPlatformProfilePermissions.has(normalisePermissionId(permissionId));
+  }, [platformAccessContext, assignedPlatformProfilePermissions, normalisePermissionId]);
   const denyPlatformAction = reactExports.useCallback((actionLabel) => {
     setShowInfoNotification(`Access denied: ${actionLabel}. Ask a Platform Admin to adjust your permission profile.`);
   }, []);
@@ -72029,7 +72044,7 @@ ${"=".repeat(60)}`);
     return traineeKeys.some((key) => userKeys.includes(key));
   }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
   const canViewTraineeProfile = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles, [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
-  const canViewTraineePt051 = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051, [isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
+  const canViewTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records || (isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051), [canEditPt051Records, isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
   const canEditTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records && canViewTraineePt051(trainee), [canEditPt051Records, canViewTraineePt051]);
   const canViewTraineeLmp = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp, [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
   const canAccessView = reactExports.useCallback((view2) => {
