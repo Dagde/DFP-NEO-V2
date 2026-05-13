@@ -148,9 +148,9 @@ const sectionAccentStyle = {
   boxShadow: '0 0 18px rgba(125, 211, 252, 0.28)',
 };
 const ACCESS_SCOPE_TONE = {
-  border: 'rgba(34, 197, 94, 0.52)',
-  fill: 'rgba(34, 197, 94, 0.12)',
-  applyBorder: 'rgba(134, 239, 172, 0.32)',
+  border: 'rgba(168, 85, 247, 0.46)',
+  fill: 'rgba(168, 85, 247, 0.11)',
+  applyBorder: 'rgba(196, 181, 253, 0.30)',
 };
 
 interface PlatformConfigurationSettingsProps {
