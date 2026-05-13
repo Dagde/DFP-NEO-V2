@@ -8847,7 +8847,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied: onAccessDenied2 }) => {
   const { isFrozen } = useSystemFreeze();
   const [isDragging, setIsDragging] = reactExports.useState(false);
   const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
@@ -8958,6 +8958,11 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     }
   };
   const handleDragStart = (e) => {
+    if (!canEditPt051) {
+      e.preventDefault();
+      onAccessDenied2?.("insert PT-051 assessment");
+      return;
+    }
     console.log("🟢 DRAG STARTED - PT-051 drag initiated");
     console.log("🟢 Drag event details:", e.type, e.currentTarget);
     setIsDragging(true);
@@ -8970,17 +8975,23 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     setHighlightedIndex(null);
   };
   const handleDragOver = reactExports.useCallback((e, index) => {
+    if (!canEditPt051) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     setHighlightedIndex(index);
     console.log("⚡ INSTANT HIGHLIGHT - Row:", index);
-  }, []);
+  }, [canEditPt051]);
   const handleDragLeave = reactExports.useCallback(() => {
     setHighlightedIndex(null);
     console.log("⚡ CLEARED HIGHLIGHT");
   }, []);
   const handleDrop = (e, index) => {
     e.preventDefault();
+    if (!canEditPt051) {
+      onAccessDenied2?.("insert PT-051 assessment");
+      handleDragEnd();
+      return;
+    }
     let targetDate = "";
     let insertIndex = index + 1;
     if (insertIndex === 0) {
@@ -9029,11 +9040,11 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
-            draggable: true,
+            draggable: canEditPt051,
             onDragStart: handleDragStart,
             onDragEnd: handleDragEnd,
-            className: `inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-all duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? "opacity-50 scale-95" : ""}`,
-            title: "Drag and drop to insert PT-051 assessment",
+            className: `inline-flex items-center px-4 py-2 text-white rounded-md transition-all duration-200 ${canEditPt051 ? "bg-green-600 cursor-move hover:bg-green-700 hover:shadow-lg" : "bg-gray-700 cursor-not-allowed opacity-60"} ${isDragging ? "opacity-50 scale-95" : ""}`,
+            title: canEditPt051 ? "Drag and drop to insert PT-051 assessment" : "Your permission profile does not allow PT-051 editing",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 mr-2", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z" }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "+ Insert PT-051" }),
@@ -9184,7 +9195,9 @@ const AcademicLmpTab = ({
   scores,
   syllabusDetails,
   allTraineesData,
-  onOpenPt051ForLesson
+  onOpenPt051ForLesson,
+  canOpenPt051: canOpenPt0512 = true,
+  onAccessDenied: onAccessDenied2
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
   const academicSyllabus = reactExports.useMemo(() => {
@@ -9406,8 +9419,16 @@ const AcademicLmpTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
-            onClick: () => handleOpenPt051(selectedLesson),
-            className: "w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed",
+            onClick: () => {
+              if (!canOpenPt0512) {
+                onAccessDenied2?.("PT-051 from Individual LMP");
+                return;
+              }
+              handleOpenPt051(selectedLesson);
+            },
+            disabled: !canOpenPt0512,
+            title: canOpenPt0512 ? void 0 : "Your permission profile does not allow opening PT-051 records",
+            className: `w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt0512 ? "opacity-50 cursor-not-allowed" : ""}`,
             children: completedLessonCodes.has(selectedLesson.code) ? "View / Edit PT-051" : "Open PT-051"
           }
         ),
@@ -9504,7 +9525,9 @@ const TraineeLmpView = ({
           scores,
           syllabusDetails,
           allTraineesData,
-          onOpenPt051ForLesson
+          onOpenPt051ForLesson,
+          canOpenPt051,
+          onAccessDenied
         }
       ) : (
         /* ── NEO Build LMP Tab (existing) ── */
@@ -9621,7 +9644,12 @@ const TraineeProfileFlyout = ({
   pt051Assessments,
   traineeLMPs,
   userProfile,
-  onSelectPt051ForEvent
+  onSelectPt051ForEvent,
+  canViewPt051 = true,
+  canEditPt051 = true,
+  canViewIndividualLmp = true,
+  canAddRemedialPackage = true,
+  onAccessDenied: onAccessDenied2
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -9917,6 +9945,10 @@ const TraineeProfileFlyout = ({
     );
   };
   const handleHateSheetClick = () => {
+    if (!canViewPt051) {
+      onAccessDenied2?.("PT-051 performance history");
+      return;
+    }
     if (pt051Assessments !== void 0) {
       setActiveTab((prev) => prev === "hatesheet" ? null : "hatesheet");
       setTimeout(() => {
@@ -9928,6 +9960,10 @@ const TraineeProfileFlyout = ({
     }
   };
   const handleIndividualLMPClick = () => {
+    if (!canViewIndividualLmp) {
+      onAccessDenied2?.("Individual LMP");
+      return;
+    }
     if (traineeLMPs !== void 0) {
       setActiveTab((prev) => prev === "lmp" ? null : "lmp");
       setTimeout(() => {
@@ -10298,7 +10334,8 @@ const TraineeProfileFlyout = ({
                 },
                 onBackToRoster: () => setActiveTab(null),
                 onInsertPt051: () => {
-                }
+                },
+                canEditPt051
               }
             ) });
           })(),
@@ -10612,9 +10649,9 @@ const TraineeProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: tabBtnClass("hatesheet"), children: "PT-051" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
+            canViewPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: tabBtnClass("hatesheet"), children: "PT-051" }),
+            canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
+            canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[1px]" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }),
@@ -11220,7 +11257,13 @@ const CourseRosterView = ({
   currentUserId,
   currentUserName,
   pt051Assessments,
-  userProfile
+  userProfile,
+  canViewTraineeProfile = () => true,
+  canViewTraineePt051 = () => true,
+  canEditTraineePt051 = () => true,
+  canViewTraineeLmp = () => true,
+  canAddRemedialPackageForTrainee = () => true,
+  onAccessDenied: onAccessDenied2
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -11236,13 +11279,16 @@ const CourseRosterView = ({
   const [courseToEdit, setCourseToEdit] = reactExports.useState(null);
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
+      if (!canViewTraineeProfile(selectedPersonForProfile)) {
+        onAccessDenied2?.("trainee profile");
+        onProfileOpened?.();
+        return;
+      }
       setSelectedTrainee(selectedPersonForProfile);
       setIsCreatingNew(false);
-      if (onProfileOpened) {
-        onProfileOpened();
-      }
+      onProfileOpened?.();
     }
-  }, [selectedPersonForProfile, onProfileOpened]);
+  }, [selectedPersonForProfile, onProfileOpened, canViewTraineeProfile, onAccessDenied2]);
   const groupedTrainees = reactExports.useMemo(() => {
     const groups = {};
     traineesData.forEach((trainee) => {
@@ -11430,8 +11476,16 @@ const CourseRosterView = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "button",
                     {
-                      onClick: () => setSelectedTrainee(trainee),
-                      className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1`,
+                      onClick: () => {
+                        if (!canViewTraineeProfile(trainee)) {
+                          onAccessDenied2?.("trainee profile");
+                          return;
+                        }
+                        setSelectedTrainee(trainee);
+                      },
+                      disabled: !canViewTraineeProfile(trainee),
+                      title: canViewTraineeProfile(trainee) ? void 0 : "Your permission profile does not allow this trainee profile",
+                      className: `truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? "opacity-50 cursor-not-allowed hover:no-underline" : ""}`,
                       children: trainee.name
                     }
                   )
@@ -11496,7 +11550,12 @@ const CourseRosterView = ({
         currentUserName,
         pt051Assessments,
         traineeLMPs,
-        userProfile
+        userProfile,
+        canViewPt051: canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
+        canEditPt051: canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
+        canViewIndividualLmp: canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
+        canAddRemedialPackage: canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
+        onAccessDenied: onAccessDenied2
       }
     ),
     hoveredTrainee && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -45330,7 +45389,7 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
   ] }) });
 };
 const ai = new GoogleGenAI({ apiKey: "" });
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true }) => {
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
   const [isDirty, setIsDirty] = reactExports.useState(false);
@@ -45685,6 +45744,12 @@ ${commentFields[key]}`).join("\n\n");
     }));
   }, [commentFields]);
   const handleSave = async (isAutoSave = false) => {
+    if (!canEditPt051) {
+      if (!isAutoSave) {
+        await showDarkAlert("Your permission profile allows you to view this PT-051, but not edit or save it.", "Access Denied", "error");
+      }
+      return;
+    }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
@@ -45716,6 +45781,10 @@ ${commentFields[key]}`).join("\n\n");
     onBack();
   };
   const handleDeleteAssessment = async () => {
+    if (!canEditPt051) {
+      await showDarkAlert("Your permission profile does not allow PT-051 deletion.", "Access Denied", "error");
+      return;
+    }
     await confirmDeleteAssessment();
   };
   const confirmDeleteAssessment = async () => {
@@ -45745,13 +45814,14 @@ This action cannot be undone.`;
       isFirstRender.current = false;
       return;
     }
+    if (!canEditPt051) return;
     setIsDirty(true);
     setSaveStatus("Saving...");
     const timerId = setTimeout(() => {
       handleSave(true);
     }, 1e3);
     return () => clearTimeout(timerId);
-  }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
+  }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment, canEditPt051]);
   reactExports.useEffect(() => {
     registerDirtyCheck(
       () => isDirty,
@@ -45838,8 +45908,8 @@ This action cannot be undone.`;
         initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
           console.log("Editing mode enabled for PT-051:", initialAssessment.id);
         }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Save" }),
-        assessment.id && onDeleteAssessment && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : "Your permission profile does not allow PT-051 editing", className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
+        assessment.id && onDeleteAssessment && canEditPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             onClick: handleDeleteAssessment,
@@ -71895,6 +71965,43 @@ ${"=".repeat(60)}`);
   const canRunValidation = canUsePlatformPermission("dfp.validation");
   const canPublishDfp = canUsePlatformPermission("dfp.publish");
   const canRunNeoBuild = canUsePlatformPermission("neo.run");
+  const canViewOwnTraineeProfile = canUsePlatformPermission("trainee.profile.own");
+  const canViewOtherTraineeProfiles = canUsePlatformPermission("trainee.profile.others");
+  const canViewOwnPt051 = canUsePlatformPermission("trainee.pt051.own");
+  const canViewOtherPt051 = canUsePlatformPermission("trainee.pt051.others");
+  const canEditPt051Records = canUsePlatformPermission("trainee.pt051.edit");
+  const canViewOwnLmp = canUsePlatformPermission("trainee.lmp.own");
+  const canViewOtherLmp = canUsePlatformPermission("trainee.lmp.others");
+  const canAddRemedialPackage = canUsePlatformPermission("trainee.remedial.add");
+  const normalizePersonKey = reactExports.useCallback((value) => String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, ""), []);
+  const isOwnTraineeRecord = reactExports.useCallback((trainee) => {
+    if (!trainee) return false;
+    const traineeKeys = [
+      trainee.idNumber,
+      trainee.fullName,
+      trainee.name,
+      trainee.username,
+      trainee.userId
+    ].map(normalizePersonKey).filter(Boolean);
+    const userKeys = [
+      authUser?.id,
+      authUser?.userId,
+      authUser?.username,
+      authUser?.displayName,
+      authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : "",
+      authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : "",
+      sessionUser?.userId,
+      sessionUser?.username,
+      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : "",
+      sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : "",
+      currentUserName
+    ].map(normalizePersonKey).filter(Boolean);
+    return traineeKeys.some((key) => userKeys.includes(key));
+  }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+  const canViewTraineeProfile = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles, [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
+  const canViewTraineePt051 = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051, [isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
+  const canEditTraineePt051 = reactExports.useCallback((trainee) => canEditPt051Records && canViewTraineePt051(trainee), [canEditPt051Records, canViewTraineePt051]);
+  const canViewTraineeLmp = reactExports.useCallback((trainee) => isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp, [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
   const canAccessView = reactExports.useCallback((view2) => {
     if (view2 === "MyDashboard") return true;
     if (view2 === "Settings") {
@@ -71946,6 +72053,10 @@ ${"=".repeat(60)}`);
     handleNavigation("Syllabus");
   };
   const handleViewTraineeLMP = (trainee) => {
+    if (!canViewTraineeLmp(trainee)) {
+      denyPlatformAction("Individual LMP");
+      return;
+    }
     setSelectedTraineeForLMP(trainee);
     handleNavigation("TraineeLMP");
   };
@@ -71954,6 +72065,10 @@ ${"=".repeat(60)}`);
     handleNavigation("Logbook");
   }, []);
   const handleOpenAddRemedialPackage = (trainee) => {
+    if (!canAddRemedialPackage) {
+      denyPlatformAction("Add Remedial Package");
+      return;
+    }
     setSelectedTraineeForRemedial(trainee);
     setShowAddRemedialPackage(true);
   };
@@ -76609,6 +76724,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             archivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
+              if (!canViewTraineePt051(trainee)) {
+                denyPlatformAction("PT-051 performance history");
+                return;
+              }
               setSelectedTraineeForHateSheet(trainee);
               handleNavigation("HateSheet");
             },
@@ -76623,6 +76742,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToCurrency: handleNavigateToCurrency,
             onViewIndividualLMP: handleViewTraineeLMP,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
+            canViewTraineeProfile,
+            canViewTraineePt051,
+            canEditTraineePt051,
+            canViewTraineeLmp,
+            canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
+            onAccessDenied: denyPlatformAction,
             locations,
             units,
             selectedPersonForProfile,
@@ -76736,6 +76861,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             archivedCourses,
             personnelData,
             onNavigateToHateSheet: (trainee) => {
+              if (!canViewTraineePt051(trainee)) {
+                denyPlatformAction("PT-051 performance history");
+                return;
+              }
               setSelectedTraineeForHateSheet(trainee);
               handleNavigation("HateSheet");
             },
@@ -76750,6 +76879,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToCurrency: handleNavigateToCurrency,
             onViewIndividualLMP: handleViewTraineeLMP,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
+            canViewTraineeProfile,
+            canViewTraineePt051,
+            canEditTraineePt051,
+            canViewTraineeLmp,
+            canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
+            onAccessDenied: denyPlatformAction,
             locations,
             units,
             selectedPersonForProfile,
@@ -76841,6 +76976,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         );
       case "HateSheet":
         if (selectedTraineeForHateSheet) {
+          if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow PT-051 records for this trainee." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("CourseRoster"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
+            ] }) });
+          }
           const traineeAssessments = Array.from(pt051Assessments.values()).filter(
             // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
             (a) => a.traineeFullName === selectedTraineeForHateSheet.fullName
@@ -76862,6 +77004,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 handleNavigation("ScoreDetail");
               },
               onSelectPt051: (assessment) => {
+                if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+                  denyPlatformAction("PT-051 record");
+                  return;
+                }
                 console.log("onSelectPt051 called with assessment:", assessment);
                 logAudit("Performance History", "View", `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
                 const event = eventFromSchedules.find((a) => a.id === assessment.eventId);
@@ -76910,6 +77056,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 handleNavigation("CourseRoster");
               },
               onInsertPt051: (insertIndex, targetDate) => {
+                if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                  denyPlatformAction("insert PT-051 assessment");
+                  return;
+                }
                 const newAssessment = {
                   id: v4(),
                   traineeFullName: selectedTraineeForHateSheet.fullName,
@@ -76946,7 +77096,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 logAudit("Performance History", "Insert", `Inserted PT-051 for ${selectedTraineeForHateSheet.fullName} at position ${insertIndex} on ${targetDate}`);
                 setEventForPt051(mockEvent);
                 handleNavigation("PT051");
-              }
+              },
+              canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet),
+              onAccessDenied: denyPlatformAction
             }
           );
         }
@@ -77690,6 +77842,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         );
       case "TraineeLMP":
         if (selectedTraineeForLMP) {
+          if (!canViewTraineeLmp(selectedTraineeForLMP)) {
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow the Individual LMP for this trainee." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("CourseRoster"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
+            ] }) });
+          }
           const traineeScores = scores.get(selectedTraineeForLMP.fullName) || [];
           let individualLMP = traineeLMPs.get(selectedTraineeForLMP.fullName);
           if (!individualLMP && selectedTraineeForLMP.lmpType) {
@@ -77725,6 +77884,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 syllabusDetails,
                 allTraineesData,
                 onOpenPt051ForLesson: (trainee, lessonCode) => {
+                  if (!canViewTraineePt051(trainee)) {
+                    denyPlatformAction("PT-051 from Individual LMP");
+                    return;
+                  }
                   const mockEvent = {
                     id: `academic-${lessonCode}-${trainee.idNumber}-${Date.now()}`,
                     flightNumber: lessonCode,
@@ -77743,7 +77906,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   setSelectedTraineeForHateSheet(trainee);
                   setEventForPt051(mockEvent);
                   handleNavigation("PT051");
-                }
+                },
+                canOpenPt051: canViewTraineePt051(selectedTraineeForLMP),
+                onAccessDenied: denyPlatformAction
               }
             );
           }
@@ -77853,6 +78018,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.log("eventForPt051:", eventForPt051);
         console.log("selectedTraineeForHateSheet:", selectedTraineeForHateSheet);
         if (eventForPt051 && selectedTraineeForHateSheet) {
+          if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow this PT-051 record." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("HateSheet"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
+            ] }) });
+          }
           const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
           console.log("Looking for assessment with key:", assessmentKey);
           console.log("Available assessment keys:", Array.from(pt051Assessments.keys()));
@@ -77888,6 +78060,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 });
               },
               onDeleteAssessment: (assessmentId) => {
+                if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                  denyPlatformAction("delete PT-051 assessment");
+                  return;
+                }
                 console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
                 const assessmentKey2 = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                 console.log("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
@@ -77903,6 +78079,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 setSuccessMessage("PT-051 Assessment Deleted!");
               },
               onSave: (assessment, isAutoSave) => {
+                if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                  if (!isAutoSave) denyPlatformAction("save PT-051 assessment");
+                  return;
+                }
                 const updatedAssessment = {
                   ...assessment,
                   isCompleted: !isAutoSave ? true : assessment.isCompleted
@@ -77968,7 +78148,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               syllabusDetails,
               registerDirtyCheck,
               phraseBank,
-              currentUserPin: currentUser2?.pin || "1111"
+              currentUserPin: currentUser2?.pin || "1111",
+              canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet)
             }
           );
         }
@@ -78626,6 +78807,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onNavigateToSyllabus(id);
           },
           onOpenPt051: (trainee) => {
+            if (!canViewTraineePt051(trainee)) {
+              denyPlatformAction("PT-051 record");
+              return;
+            }
             setEventForPt051(selectedEvent);
             setSelectedTraineeForHateSheet(trainee);
             logAudit("Flight Detail", "View", `Viewed PT-051 for ${trainee.fullName} - Event: ${selectedEvent.flightNumber} (${selectedEvent.date})`);

@@ -7568,6 +7568,61 @@ const App: React.FC = () => {
     const canRunValidation = canUsePlatformPermission('dfp.validation');
     const canPublishDfp = canUsePlatformPermission('dfp.publish');
     const canRunNeoBuild = canUsePlatformPermission('neo.run');
+    const canViewOwnTraineeProfile = canUsePlatformPermission('trainee.profile.own');
+    const canViewOtherTraineeProfiles = canUsePlatformPermission('trainee.profile.others');
+    const canViewOwnPt051 = canUsePlatformPermission('trainee.pt051.own');
+    const canViewOtherPt051 = canUsePlatformPermission('trainee.pt051.others');
+    const canEditPt051Records = canUsePlatformPermission('trainee.pt051.edit');
+    const canViewOwnLmp = canUsePlatformPermission('trainee.lmp.own');
+    const canViewOtherLmp = canUsePlatformPermission('trainee.lmp.others');
+    const canAddRemedialPackage = canUsePlatformPermission('trainee.remedial.add');
+
+    const normalizePersonKey = useCallback((value?: string | number | null) => (
+        String(value ?? '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '')
+    ), []);
+
+    const isOwnTraineeRecord = useCallback((trainee?: Trainee | null): boolean => {
+        if (!trainee) return false;
+        const traineeKeys = [
+            trainee.idNumber,
+            trainee.fullName,
+            trainee.name,
+            (trainee as any).username,
+            (trainee as any).userId,
+        ].map(normalizePersonKey).filter(Boolean);
+        const userKeys = [
+            authUser?.id,
+            authUser?.userId,
+            authUser?.username,
+            authUser?.displayName,
+            authUser?.firstName && authUser?.lastName ? `${authUser.lastName}, ${authUser.firstName}` : '',
+            authUser?.firstName && authUser?.lastName ? `${authUser.firstName} ${authUser.lastName}` : '',
+            sessionUser?.userId,
+            sessionUser?.username,
+            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.lastName}, ${sessionUser.firstName}` : '',
+            sessionUser?.firstName && sessionUser?.lastName ? `${sessionUser.firstName} ${sessionUser.lastName}` : '',
+            currentUserName,
+        ].map(normalizePersonKey).filter(Boolean);
+        return traineeKeys.some(key => userKeys.includes(key));
+    }, [authUser, sessionUser, currentUserName, normalizePersonKey]);
+
+    const canViewTraineeProfile = useCallback((trainee?: Trainee | null): boolean => (
+        isOwnTraineeRecord(trainee) ? canViewOwnTraineeProfile : canViewOtherTraineeProfiles
+    ), [isOwnTraineeRecord, canViewOwnTraineeProfile, canViewOtherTraineeProfiles]);
+
+    const canViewTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
+        isOwnTraineeRecord(trainee) ? canViewOwnPt051 : canViewOtherPt051
+    ), [isOwnTraineeRecord, canViewOwnPt051, canViewOtherPt051]);
+
+    const canEditTraineePt051 = useCallback((trainee?: Trainee | null): boolean => (
+        canEditPt051Records && canViewTraineePt051(trainee)
+    ), [canEditPt051Records, canViewTraineePt051]);
+
+    const canViewTraineeLmp = useCallback((trainee?: Trainee | null): boolean => (
+        isOwnTraineeRecord(trainee) ? canViewOwnLmp : canViewOtherLmp
+    ), [isOwnTraineeRecord, canViewOwnLmp, canViewOtherLmp]);
 
     const canAccessView = useCallback((view: string): boolean => {
         if (view === 'MyDashboard') return true;
@@ -7626,6 +7681,10 @@ const App: React.FC = () => {
     };
 
     const handleViewTraineeLMP = (trainee: Trainee) => {
+        if (!canViewTraineeLmp(trainee)) {
+            denyPlatformAction('Individual LMP');
+            return;
+        }
         setSelectedTraineeForLMP(trainee);
         handleNavigation('TraineeLMP');
     };
@@ -7636,6 +7695,10 @@ const App: React.FC = () => {
     }, []);
 
     const handleOpenAddRemedialPackage = (trainee: Trainee) => {
+        if (!canAddRemedialPackage) {
+            denyPlatformAction('Add Remedial Package');
+            return;
+        }
         setSelectedTraineeForRemedial(trainee);
         setShowAddRemedialPackage(true);
     };
@@ -13585,6 +13648,10 @@ updates.forEach(update => {
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
+                                if (!canViewTraineePt051(trainee)) {
+                                    denyPlatformAction('PT-051 performance history');
+                                    return;
+                                }
                                 setSelectedTraineeForHateSheet(trainee);
                                 handleNavigation('HateSheet');
                             }}
@@ -13598,6 +13665,12 @@ updates.forEach(update => {
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onViewIndividualLMP={handleViewTraineeLMP}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
+                            canViewTraineeProfile={canViewTraineeProfile}
+                            canViewTraineePt051={canViewTraineePt051}
+                            canEditTraineePt051={canEditTraineePt051}
+                            canViewTraineeLmp={canViewTraineeLmp}
+                            canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
+                            onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
@@ -13721,6 +13794,10 @@ updates.forEach(update => {
                             archivedCourses={archivedCourses}
                             personnelData={personnelData}
                             onNavigateToHateSheet={(trainee) => {
+                                if (!canViewTraineePt051(trainee)) {
+                                    denyPlatformAction('PT-051 performance history');
+                                    return;
+                                }
                                 setSelectedTraineeForHateSheet(trainee);
                                 handleNavigation('HateSheet');
                             }}
@@ -13734,6 +13811,12 @@ updates.forEach(update => {
                             onNavigateToCurrency={handleNavigateToCurrency}
                             onViewIndividualLMP={handleViewTraineeLMP}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
+                            canViewTraineeProfile={canViewTraineeProfile}
+                            canViewTraineePt051={canViewTraineePt051}
+                            canEditTraineePt051={canEditTraineePt051}
+                            canViewTraineeLmp={canViewTraineeLmp}
+                            canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
+                            onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
@@ -13844,6 +13927,15 @@ updates.forEach(update => {
                         />;
             case 'HateSheet':
                 if (selectedTraineeForHateSheet) {
+                    if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+                        return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
+                            <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
+                                <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
+                                <p className="text-sm text-gray-300 mb-4">Your permission profile does not allow PT-051 records for this trainee.</p>
+                                <button onClick={() => handleNavigation('CourseRoster')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
+                            </div>
+                        </div>;
+                    }
                     const traineeAssessments = Array.from(pt051Assessments.values()).filter(
                         // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
                         (a: Pt051Assessment) => a.traineeFullName === selectedTraineeForHateSheet.fullName
@@ -13864,6 +13956,10 @@ updates.forEach(update => {
                                     handleNavigation('ScoreDetail');
                                 }}
                                 onSelectPt051={(assessment: Pt051Assessment) => {
+                                    if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+                                        denyPlatformAction('PT-051 record');
+                                        return;
+                                    }
                                     console.log('onSelectPt051 called with assessment:', assessment);
                                     
                                     // Log PT-051 view to audit trail
@@ -13921,6 +14017,10 @@ updates.forEach(update => {
                                     handleNavigation('CourseRoster');
                                 }}
                                 onInsertPt051={(insertIndex: number, targetDate: string) => {
+                                    if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                                        denyPlatformAction('insert PT-051 assessment');
+                                        return;
+                                    }
                                     // Create a new PT-051 assessment
                                     const newAssessment: Pt051Assessment = {
                                         id: uuidv4(),
@@ -13972,6 +14072,8 @@ updates.forEach(update => {
                                     setEventForPt051(mockEvent);
                                     handleNavigation('PT051');
                                 }}
+                                canEditPt051={canEditTraineePt051(selectedTraineeForHateSheet)}
+                                onAccessDenied={denyPlatformAction}
                             />;
                 }
                 return null;
@@ -14735,6 +14837,15 @@ updates.forEach(update => {
                        />;
             case 'TraineeLMP':
                 if (selectedTraineeForLMP) {
+                    if (!canViewTraineeLmp(selectedTraineeForLMP)) {
+                        return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
+                            <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
+                                <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
+                                <p className="text-sm text-gray-300 mb-4">Your permission profile does not allow the Individual LMP for this trainee.</p>
+                                <button onClick={() => handleNavigation('CourseRoster')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
+                            </div>
+                        </div>;
+                    }
                     const traineeScores = scores.get(selectedTraineeForLMP.fullName) || [];
                     let individualLMP = traineeLMPs.get(selectedTraineeForLMP.fullName);
                     
@@ -14781,6 +14892,10 @@ updates.forEach(update => {
                             syllabusDetails={syllabusDetails}
                             allTraineesData={allTraineesData}
                             onOpenPt051ForLesson={(trainee, lessonCode) => {
+                                if (!canViewTraineePt051(trainee)) {
+                                    denyPlatformAction('PT-051 from Individual LMP');
+                                    return;
+                                }
                                 const mockEvent: ScheduleEvent = {
                                     id: `academic-${lessonCode}-${trainee.idNumber}-${Date.now()}`,
                                     flightNumber: lessonCode,
@@ -14800,6 +14915,8 @@ updates.forEach(update => {
                                 setEventForPt051(mockEvent);
                                 handleNavigation('PT051');
                             }}
+                            canOpenPt051={canViewTraineePt051(selectedTraineeForLMP)}
+                            onAccessDenied={denyPlatformAction}
                         />;
                     }
                 }
@@ -14903,6 +15020,15 @@ updates.forEach(update => {
                 console.log('selectedTraineeForHateSheet:', selectedTraineeForHateSheet);
                 
                 if (eventForPt051 && selectedTraineeForHateSheet) {
+                    if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
+                        return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
+                            <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
+                                <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
+                                <p className="text-sm text-gray-300 mb-4">Your permission profile does not allow this PT-051 record.</p>
+                                <button onClick={() => handleNavigation('HateSheet')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
+                            </div>
+                        </div>;
+                    }
                     // Find the PT-051 for this event and trainee combination
                     const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                     console.log('Looking for assessment with key:', assessmentKey);
@@ -14943,6 +15069,10 @@ updates.forEach(update => {
                             });
                         }}
                         onDeleteAssessment={(assessmentId) => {
+                            if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                                denyPlatformAction('delete PT-051 assessment');
+                                return;
+                            }
                             console.log('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
                             // Find and delete the PT-051 assessment
                             const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
@@ -14962,6 +15092,10 @@ updates.forEach(update => {
                             setSuccessMessage('PT-051 Assessment Deleted!');
                         }}
                         onSave={(assessment, isAutoSave) => {
+                            if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
+                                if (!isAutoSave) denyPlatformAction('save PT-051 assessment');
+                                return;
+                            }
                             // Mark assessment as completed when saved (not auto-save)
                             const updatedAssessment = {
                                 ...assessment,
@@ -15045,6 +15179,7 @@ updates.forEach(update => {
                         registerDirtyCheck={registerDirtyCheck}
                         phraseBank={phraseBank} // Pass phraseBank prop
                         currentUserPin={currentUser?.pin || '1111'}
+                        canEditPt051={canEditTraineePt051(selectedTraineeForHateSheet)}
                     />;
                 }
                 console.error('❌ PT051 View Error - Missing context:', {
@@ -15774,6 +15909,10 @@ updates.forEach(update => {
                         onNavigateToSyllabus(id);
                     }}
                     onOpenPt051={(trainee) => {
+                        if (!canViewTraineePt051(trainee)) {
+                            denyPlatformAction('PT-051 record');
+                            return;
+                        }
                         setEventForPt051(selectedEvent);
                         setSelectedTraineeForHateSheet(trainee);
                         

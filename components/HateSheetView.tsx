@@ -31,9 +31,11 @@ interface HateSheetViewProps {
     onSelectPt051: (assessment: Pt051Assessment) => void;
     onBackToRoster: () => void;
     onInsertPt051: (insertIndex: number, targetDate: string) => void;
+    canEditPt051?: boolean;
+    onAccessDenied?: (actionLabel: string) => void;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051 }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied }) => {
     const { isFrozen } = useSystemFreeze();
     // Drag and drop state - simplified to just highlight target row
     const [isDragging, setIsDragging] = useState(false);
@@ -190,6 +192,11 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
     // Drag and drop handlers
     const handleDragStart = (e: React.DragEvent) => {
+        if (!canEditPt051) {
+            e.preventDefault();
+            onAccessDenied?.('insert PT-051 assessment');
+            return;
+        }
         console.log('🟢 DRAG STARTED - PT-051 drag initiated');
         console.log('🟢 Drag event details:', e.type, e.currentTarget);
         setIsDragging(true);
@@ -206,13 +213,14 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
     // Instant drag handler - highlight immediately without delay
     const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+        if (!canEditPt051) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
         
         // Instant highlighting - no delay!
         setHighlightedIndex(index);
         console.log('⚡ INSTANT HIGHLIGHT - Row:', index);
-    }, []);
+    }, [canEditPt051]);
 
     const handleDragLeave = useCallback(() => {
         // Instant clear - no delay!
@@ -222,6 +230,11 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
     const handleDrop = (e: React.DragEvent, index: number) => {
         e.preventDefault();
+        if (!canEditPt051) {
+            onAccessDenied?.('insert PT-051 assessment');
+            handleDragEnd();
+            return;
+        }
         
         // Calculate target date based on the highlighted row
         let targetDate = '';
@@ -246,6 +259,10 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     };
 
     const handleDeletePT051 = async (eventId: string) => {
+        if (!canEditPt051) {
+            onAccessDenied?.('delete PT-051 assessment');
+            return;
+        }
         console.log('🎯 handleDeletePT051 called with eventId:', eventId);
         
         // Find the assessment to delete
@@ -359,11 +376,11 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                     {/* Draggable PT-051 Button */}
                     <div className="mb-4 flex justify-center">
                         <div
-                            draggable
+                            draggable={canEditPt051}
                             onDragStart={handleDragStart}
                             onDragEnd={handleDragEnd}
-                            className={`inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md cursor-move transition-all duration-200 hover:bg-green-700 hover:shadow-lg ${isDragging ? 'opacity-50 scale-95' : ''}`}
-                            title="Drag and drop to insert PT-051 assessment"
+                            className={`inline-flex items-center px-4 py-2 text-white rounded-md transition-all duration-200 ${canEditPt051 ? 'bg-green-600 cursor-move hover:bg-green-700 hover:shadow-lg' : 'bg-gray-700 cursor-not-allowed opacity-60'} ${isDragging ? 'opacity-50 scale-95' : ''}`}
+                            title={canEditPt051 ? 'Drag and drop to insert PT-051 assessment' : 'Your permission profile does not allow PT-051 editing'}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/>

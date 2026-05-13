@@ -13,6 +13,8 @@ interface TraineeLmpViewProps {
   allTraineesData?: Trainee[];
   // Optional: open PT-051 for a specific lesson
   onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
+  canOpenPt051?: boolean;
+  onAccessDenied?: (actionLabel: string) => void;
 }
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
@@ -153,6 +155,8 @@ interface AcademicLmpTabProps {
     syllabusDetails: SyllabusItemDetail[];
     allTraineesData: Trainee[];
     onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
+    canOpenPt051?: boolean;
+    onAccessDenied?: (actionLabel: string) => void;
 }
 
 const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
@@ -161,6 +165,8 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
     syllabusDetails,
     allTraineesData,
     onOpenPt051ForLesson,
+    canOpenPt051 = true,
+    onAccessDenied,
 }) => {
     const [selectedLesson, setSelectedLesson] = useState<SyllabusItemDetail | null>(null);
 
@@ -417,8 +423,16 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
                         {onOpenPt051ForLesson && (
                             <div className="flex items-center gap-3 pt-2">
                                 <button
-                                    onClick={() => handleOpenPt051(selectedLesson)}
-                                    className="w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed"
+                                    onClick={() => {
+                                        if (!canOpenPt051) {
+                                            onAccessDenied?.('PT-051 from Individual LMP');
+                                            return;
+                                        }
+                                        handleOpenPt051(selectedLesson);
+                                    }}
+                                    disabled={!canOpenPt051}
+                                    title={canOpenPt051 ? undefined : 'Your permission profile does not allow opening PT-051 records'}
+                                    className={`w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt051 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
                                     {completedLessonCodes.has(selectedLesson.code) ? 'View / Edit PT-051' : 'Open PT-051'}
                                 </button>
@@ -564,6 +578,8 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         syllabusDetails={syllabusDetails}
                         allTraineesData={allTraineesData}
                         onOpenPt051ForLesson={onOpenPt051ForLesson}
+                        canOpenPt051={canOpenPt051}
+                        onAccessDenied={onAccessDenied}
                     />
                 ) : (
                     /* ── NEO Build LMP Tab (existing) ── */

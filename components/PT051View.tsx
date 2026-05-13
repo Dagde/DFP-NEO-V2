@@ -22,6 +22,7 @@ interface PT051ViewProps {
     registerDirtyCheck: (isDirty: () => boolean, onSave: () => void, onDiscard: () => void) => void;
     phraseBank: PhraseBank;
     currentUserPin: string;
+    canEditPt051?: boolean;
 }
 
 const PT051_STRUCTURE = [
@@ -199,7 +200,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
 // FIX: Moved GoogleGenAI instance creation outside the component to prevent re-initialization on re-renders.
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin }) => {
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true }) => {
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
     const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
@@ -621,6 +622,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     }, [commentFields]);
 
     const handleSave = async (isAutoSave = false) => {
+        if (!canEditPt051) {
+            if (!isAutoSave) {
+                await showDarkAlert('Your permission profile allows you to view this PT-051, but not edit or save it.', 'Access Denied', 'error');
+            }
+            return;
+        }
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
         if (_freezeRaw) {
@@ -659,6 +666,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     const handleDeleteAssessment = async () => {
+        if (!canEditPt051) {
+            await showDarkAlert('Your permission profile does not allow PT-051 deletion.', 'Access Denied', 'error');
+            return;
+        }
         await confirmDeleteAssessment();
     };
 
@@ -687,13 +698,14 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             isFirstRender.current = false;
             return;
         }
+        if (!canEditPt051) return;
         setIsDirty(true);
         setSaveStatus('Saving...');
         const timerId: ReturnType<typeof setTimeout> = setTimeout(() => {
-            handleSave(true); 
+            handleSave(true);
         }, 1000); 
         return () => clearTimeout(timerId);
-    }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment]);
+    }, [assessment, overallGrade, overallResult, dcoResult, groundSchoolAssessment, canEditPt051]);
 
     useEffect(() => {
         registerDirtyCheck(
@@ -777,10 +789,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             Edit
                         </button>
                     )}
-                    <button onClick={handleManualSaveAndExit} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
+                    <button onClick={handleManualSaveAndExit} disabled={!canEditPt051} title={canEditPt051 ? undefined : 'Your permission profile does not allow PT-051 editing'} className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         Save
                     </button>
-                    {assessment.id && onDeleteAssessment && (
+                    {assessment.id && onDeleteAssessment && canEditPt051 && (
                         <button 
                             onClick={handleDeleteAssessment} 
                             className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"

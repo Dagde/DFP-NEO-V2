@@ -47,6 +47,12 @@ interface CourseRosterViewProps {
     currentUserName?: string;
     pt051Assessments?: Map<string, any>;
     userProfile?: any;
+    canViewTraineeProfile?: (trainee: Trainee) => boolean;
+    canViewTraineePt051?: (trainee: Trainee) => boolean;
+    canEditTraineePt051?: (trainee: Trainee) => boolean;
+    canViewTraineeLmp?: (trainee: Trainee) => boolean;
+    canAddRemedialPackageForTrainee?: (trainee: Trainee) => boolean;
+    onAccessDenied?: (actionLabel: string) => void;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -110,6 +116,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     currentUserName,
     pt051Assessments,
     userProfile,
+    canViewTraineeProfile = () => true,
+    canViewTraineePt051 = () => true,
+    canEditTraineePt051 = () => true,
+    canViewTraineeLmp = () => true,
+    canAddRemedialPackageForTrainee = () => true,
+    onAccessDenied,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -130,13 +142,16 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     useEffect(() => {
         if (selectedPersonForProfile) {
+            if (!canViewTraineeProfile(selectedPersonForProfile)) {
+                onAccessDenied?.('trainee profile');
+                onProfileOpened?.();
+                return;
+            }
             setSelectedTrainee(selectedPersonForProfile);
             setIsCreatingNew(false);
-            if (onProfileOpened) {
-                onProfileOpened();
-            }
+            onProfileOpened?.();
         }
-    }, [selectedPersonForProfile, onProfileOpened]);
+    }, [selectedPersonForProfile, onProfileOpened, canViewTraineeProfile, onAccessDenied]);
 
     const groupedTrainees = useMemo(() => {
         const groups: { [course: string]: Trainee[] } = {};
@@ -386,8 +401,16 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                             >
                                                                 <span className="font-mono text-gray-500 w-16 flex-shrink-0">{trainee.rank}</span>
                                                                 <button 
-                                                                    onClick={() => setSelectedTrainee(trainee)}
-                                                                    className={`truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1`}
+                                                                    onClick={() => {
+                                                                        if (!canViewTraineeProfile(trainee)) {
+                                                                            onAccessDenied?.('trainee profile');
+                                                                            return;
+                                                                        }
+                                                                        setSelectedTrainee(trainee);
+                                                                    }}
+                                                                    disabled={!canViewTraineeProfile(trainee)}
+                                                                    title={canViewTraineeProfile(trainee) ? undefined : 'Your permission profile does not allow this trainee profile'}
+                                                                    className={`truncate text-left ${nameColorClass} hover:underline focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 ${!canViewTraineeProfile(trainee) ? 'opacity-50 cursor-not-allowed hover:no-underline' : ''}`}
                                                                 >
                                                                     {trainee.name}
                                                                 </button>
@@ -457,6 +480,11 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     pt051Assessments={pt051Assessments}
                     traineeLMPs={traineeLMPs}
                     userProfile={userProfile}
+                    canViewPt051={canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    canEditPt051={canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    canViewIndividualLmp={canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    canAddRemedialPackage={canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
+                    onAccessDenied={onAccessDenied}
                 />
             )}
             {hoveredTrainee && flyoutPosition && (

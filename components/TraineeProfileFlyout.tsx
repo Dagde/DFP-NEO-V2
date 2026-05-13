@@ -47,6 +47,11 @@ interface TraineeProfileFlyoutProps {
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
   onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
+  canViewPt051?: boolean;
+  canEditPt051?: boolean;
+  canViewIndividualLmp?: boolean;
+  canAddRemedialPackage?: boolean;
+  onAccessDenied?: (actionLabel: string) => void;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -270,6 +275,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   traineeLMPs,
   userProfile,
   onSelectPt051ForEvent,
+  canViewPt051 = true,
+  canEditPt051 = true,
+  canViewIndividualLmp = true,
+  canAddRemedialPackage = true,
+  onAccessDenied,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -682,6 +692,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
     
     const handleHateSheetClick = () => {
+        if (!canViewPt051) {
+            onAccessDenied?.('PT-051 performance history');
+            return;
+        }
         if (pt051Assessments !== undefined) {
             // Render inline as a tab (keeps flyout/sidebar open)
             setActiveTab(prev => prev === 'hatesheet' ? null : 'hatesheet');
@@ -693,6 +707,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handleIndividualLMPClick = () => {
+        if (!canViewIndividualLmp) {
+            onAccessDenied?.('Individual LMP');
+            return;
+        }
         if (traineeLMPs !== undefined) {
             // Render inline as a tab (keeps flyout/sidebar open)
             setActiveTab(prev => prev === 'lmp' ? null : 'lmp');
@@ -1119,6 +1137,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             }}
                             onBackToRoster={() => setActiveTab(null)}
                             onInsertPt051={() => {}}
+                            canEditPt051={canEditPt051}
                           />
                         </div>
                       );
@@ -1450,9 +1469,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                          <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>PT-051</button>
-                          <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>
-                          <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>
+                          {canViewPt051 && <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>PT-051</button>}
+                          {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
+                          {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
