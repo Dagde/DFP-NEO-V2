@@ -147,14 +147,11 @@ const sectionAccentStyle = {
   backgroundColor: 'rgba(125, 211, 252, 0.72)',
   boxShadow: '0 0 18px rgba(125, 211, 252, 0.28)',
 };
-const ACCESS_SCOPE_TONES = [
-  { border: 'rgba(245, 158, 11, 0.58)', fill: 'rgba(245, 158, 11, 0.13)', applyBorder: 'rgba(251, 191, 36, 0.36)' },
-  { border: 'rgba(168, 85, 247, 0.56)', fill: 'rgba(168, 85, 247, 0.13)', applyBorder: 'rgba(196, 181, 253, 0.34)' },
-  { border: 'rgba(34, 197, 94, 0.52)', fill: 'rgba(34, 197, 94, 0.12)', applyBorder: 'rgba(134, 239, 172, 0.32)' },
-  { border: 'rgba(244, 63, 94, 0.50)', fill: 'rgba(244, 63, 94, 0.11)', applyBorder: 'rgba(251, 113, 133, 0.32)' },
-  { border: 'rgba(99, 102, 241, 0.54)', fill: 'rgba(99, 102, 241, 0.12)', applyBorder: 'rgba(165, 180, 252, 0.32)' },
-  { border: 'rgba(132, 204, 22, 0.48)', fill: 'rgba(132, 204, 22, 0.11)', applyBorder: 'rgba(190, 242, 100, 0.30)' },
-];
+const ACCESS_SCOPE_TONE = {
+  border: 'rgba(34, 197, 94, 0.52)',
+  fill: 'rgba(34, 197, 94, 0.12)',
+  applyBorder: 'rgba(134, 239, 172, 0.32)',
+};
 
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
@@ -742,15 +739,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             </div>
           )}
 
-          {selectedAccessRows.map(({ access, index }, scopePosition) => {
+          {selectedAccessRows.map(({ access, index }) => {
             const appliesToAllFeatures = !access.moduleCode;
             const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
-            const scopeTone = ACCESS_SCOPE_TONES[scopePosition % ACCESS_SCOPE_TONES.length];
             return (
               <div
                 key={access.id || `${access.userId}-${index}`}
                 className="rounded border bg-gray-900 p-3"
-                style={{ borderColor: scopeTone.border, boxShadow: `0 0 0 1px ${scopeTone.fill}` }}
+                style={{ borderColor: ACCESS_SCOPE_TONE.border, boxShadow: `0 0 0 1px ${ACCESS_SCOPE_TONE.fill}` }}
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h5 className="text-sm font-bold text-white">Access Scope</h5>
@@ -768,7 +764,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
                 <div
                   className="mt-3 rounded border p-3"
-                  style={{ backgroundColor: scopeTone.fill, borderColor: scopeTone.applyBorder }}
+                  style={{ backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder }}
                 >
                   <div className="flex flex-wrap items-start gap-3">
                     <label className="flex items-start gap-2 text-sm text-cyan-50">

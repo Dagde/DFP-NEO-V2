@@ -56655,14 +56655,11 @@ const sectionAccentStyle = {
   backgroundColor: "rgba(125, 211, 252, 0.72)",
   boxShadow: "0 0 18px rgba(125, 211, 252, 0.28)"
 };
-const ACCESS_SCOPE_TONES = [
-  { border: "rgba(245, 158, 11, 0.58)", fill: "rgba(245, 158, 11, 0.13)", applyBorder: "rgba(251, 191, 36, 0.36)" },
-  { border: "rgba(168, 85, 247, 0.56)", fill: "rgba(168, 85, 247, 0.13)", applyBorder: "rgba(196, 181, 253, 0.34)" },
-  { border: "rgba(34, 197, 94, 0.52)", fill: "rgba(34, 197, 94, 0.12)", applyBorder: "rgba(134, 239, 172, 0.32)" },
-  { border: "rgba(244, 63, 94, 0.50)", fill: "rgba(244, 63, 94, 0.11)", applyBorder: "rgba(251, 113, 133, 0.32)" },
-  { border: "rgba(99, 102, 241, 0.54)", fill: "rgba(99, 102, 241, 0.12)", applyBorder: "rgba(165, 180, 252, 0.32)" },
-  { border: "rgba(132, 204, 22, 0.48)", fill: "rgba(132, 204, 22, 0.11)", applyBorder: "rgba(190, 242, 100, 0.30)" }
-];
+const ACCESS_SCOPE_TONE = {
+  border: "rgba(34, 197, 94, 0.52)",
+  fill: "rgba(34, 197, 94, 0.12)",
+  applyBorder: "rgba(134, 239, 172, 0.32)"
+};
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess
@@ -57142,15 +57139,14 @@ const PlatformConfigurationSettings = ({
           }) })
         ] }),
         selectedAccessRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "This user has no access scopes. Add a scope before testing this account." }),
-        selectedAccessRows.map(({ access, index }, scopePosition) => {
+        selectedAccessRows.map(({ access, index }) => {
           const appliesToAllFeatures = !access.moduleCode;
           const showAdvancedFeatureArea = access.settings?.showAdvancedFeatureArea === true;
-          const scopeTone = ACCESS_SCOPE_TONES[scopePosition % ACCESS_SCOPE_TONES.length];
           return /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "div",
             {
               className: "rounded border bg-gray-900 p-3",
-              style: { borderColor: scopeTone.border, boxShadow: `0 0 0 1px ${scopeTone.fill}` },
+              style: { borderColor: ACCESS_SCOPE_TONE.border, boxShadow: `0 0 0 1px ${ACCESS_SCOPE_TONE.fill}` },
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Access Scope" }),
@@ -57172,7 +57168,7 @@ const PlatformConfigurationSettings = ({
                   "div",
                   {
                     className: "mt-3 rounded border p-3",
-                    style: { backgroundColor: scopeTone.fill, borderColor: scopeTone.applyBorder },
+                    style: { backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder },
                     children: [
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 text-sm text-cyan-50", children: [
