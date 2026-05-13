@@ -149,7 +149,8 @@ const sectionAccentStyle = {
 };
 const ACCESS_SCOPE_TONE = {
   border: 'rgba(249, 115, 22, 0.62)',
-  fill: 'rgba(249, 115, 22, 0.22)',
+  fill: 'rgba(249, 115, 22, 0.18)',
+  applyFill: 'rgba(249, 115, 22, 0.26)',
   applyBorder: 'rgba(251, 146, 60, 0.44)',
 };
 
@@ -745,8 +746,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             return (
               <div
                 key={access.id || `${access.userId}-${index}`}
-                className="rounded border bg-gray-900 p-3"
-                style={{ borderColor: ACCESS_SCOPE_TONE.border, boxShadow: `0 0 0 1px ${ACCESS_SCOPE_TONE.fill}` }}
+                className="rounded border p-3"
+                style={{
+                  backgroundColor: ACCESS_SCOPE_TONE.fill,
+                  borderColor: ACCESS_SCOPE_TONE.border,
+                  boxShadow: `0 0 0 1px ${ACCESS_SCOPE_TONE.fill}`,
+                }}
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <h5 className="text-sm font-bold text-white">Access Scope</h5>
@@ -764,7 +769,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
                 <div
                   className="mt-3 rounded border p-3"
-                  style={{ backgroundColor: ACCESS_SCOPE_TONE.fill, borderColor: ACCESS_SCOPE_TONE.applyBorder }}
+                  style={{ backgroundColor: ACCESS_SCOPE_TONE.applyFill, borderColor: ACCESS_SCOPE_TONE.applyBorder }}
                 >
                   <div className="flex flex-wrap items-start gap-3">
                     <label className="flex items-start gap-2 text-sm text-cyan-50">
