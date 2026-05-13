@@ -324,6 +324,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess('Platform configuration saved. Applying changes...');
+      try {
+        sessionStorage.setItem('dfp_restore_view_after_reload', 'Settings');
+        sessionStorage.setItem('dfp_restore_settings_section_after_reload', 'platform-configuration');
+      } catch {
+        // Non-critical: the configuration still saves if session storage is unavailable.
+      }
       window.setTimeout(() => {
         window.location.reload();
       }, 900);

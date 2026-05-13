@@ -979,7 +979,18 @@ const LocaleSettingsSection: React.FC<{
 
 export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props) => {
     type ActiveSection = SettingsMenuSection | 'home';
-    const [activeSection, setActiveSection] = useState<ActiveSection>('home');
+    const [activeSection, setActiveSection] = useState<ActiveSection>(() => {
+        try {
+            const restoreSection = sessionStorage.getItem('dfp_restore_settings_section_after_reload');
+            if (restoreSection) {
+                sessionStorage.removeItem('dfp_restore_settings_section_after_reload');
+                if (restoreSection === 'home' || Object.prototype.hasOwnProperty.call(sectionLabels, restoreSection)) {
+                    return restoreSection as ActiveSection;
+                }
+            }
+        } catch (e) { /* ignore */ }
+        return 'home';
+    });
     const [filteredMockdata, setFilteredMockdata] = useState<Instructor[]>([]);
     const [filteredTraineeMockdata, setFilteredTraineeMockdata] = useState<Trainee[]>([]);
     const { isFrozen } = useSystemFreeze();

@@ -4332,7 +4332,16 @@ const App: React.FC = () => {
         });
     };
 
-    const [activeView, setActiveView] = useState<string>('Program Schedule');
+    const [activeView, setActiveView] = useState<string>(() => {
+        try {
+            const restoreView = sessionStorage.getItem('dfp_restore_view_after_reload');
+            if (restoreView) {
+                sessionStorage.removeItem('dfp_restore_view_after_reload');
+                return restoreView;
+            }
+        } catch (e) { /* ignore */ }
+        return 'Program Schedule';
+    });
     const [previousView, setPreviousView] = useState<string>('Program Schedule');
     const [date, setDate] = useState<string>(() => {
         // Restore last viewed date from localStorage (persists across hard refresh)

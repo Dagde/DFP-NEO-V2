@@ -57173,6 +57173,11 @@ const PlatformConfigurationSettings = ({
       shouldReload = true;
       setApplyingChanges(true);
       onShowSuccess("Platform configuration saved. Applying changes...");
+      try {
+        sessionStorage.setItem("dfp_restore_view_after_reload", "Settings");
+        sessionStorage.setItem("dfp_restore_settings_section_after_reload", "platform-configuration");
+      } catch {
+      }
       window.setTimeout(() => {
         window.location.reload();
       }, 900);
@@ -58754,7 +58759,19 @@ const LocaleSettingsSection = ({
   ] });
 };
 const SettingsViewWithMenu = (props) => {
-  const [activeSection, setActiveSection] = reactExports.useState("home");
+  const [activeSection, setActiveSection] = reactExports.useState(() => {
+    try {
+      const restoreSection = sessionStorage.getItem("dfp_restore_settings_section_after_reload");
+      if (restoreSection) {
+        sessionStorage.removeItem("dfp_restore_settings_section_after_reload");
+        if (restoreSection === "home" || Object.prototype.hasOwnProperty.call(sectionLabels, restoreSection)) {
+          return restoreSection;
+        }
+      }
+    } catch (e) {
+    }
+    return "home";
+  });
   const [filteredMockdata, setFilteredMockdata] = reactExports.useState([]);
   const [filteredTraineeMockdata, setFilteredTraineeMockdata] = reactExports.useState([]);
   const { isFrozen } = useSystemFreeze();
@@ -69630,7 +69647,17 @@ const App = () => {
       });
     });
   };
-  const [activeView, setActiveView] = reactExports.useState("Program Schedule");
+  const [activeView, setActiveView] = reactExports.useState(() => {
+    try {
+      const restoreView = sessionStorage.getItem("dfp_restore_view_after_reload");
+      if (restoreView) {
+        sessionStorage.removeItem("dfp_restore_view_after_reload");
+        return restoreView;
+      }
+    } catch (e) {
+    }
+    return "Program Schedule";
+  });
   const [previousView, setPreviousView] = reactExports.useState("Program Schedule");
   const [date, setDate] = reactExports.useState(() => {
     try {

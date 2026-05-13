@@ -936,6 +936,79 @@ const summariseAuditChangedFields = (changedFields) => {
   }).join('; ');
 };
 
+const isOnlyPermissionProfileAuditEntry = (entry) => {
+  const changedFields = entry?.changes?.changedFields || [];
+  return entry?.entityType === 'CommercialUserAccess'
+    && changedFields.length === 1
+    && changedFields[0]?.field === 'settings.permissionProfileIds';
+};
+
+const collapsePermissionProfileAuditEntries = (entries) => {
+  const orderedEntries = [];
+  const groups = new Map();
+
+  for (const entry of entries) {
+    if (!isOnlyPermissionProfileAuditEntry(entry)) {
+      orderedEntries.push(entry);
+      continue;
+    }
+
+    const changedField = entry.changes.changedFields[0];
+    const context = entry.changes.context || {};
+    const userKey = context.userId || context.username || entry.changes.label || entry.entityId || 'unknown-user';
+    const groupKey = [
+      entry.action,
+      userKey,
+      auditValueString(changedField.before),
+      auditValueString(changedField.after),
+    ].join('|');
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+      orderedEntries.push({ __permissionProfileGroupKey: groupKey });
+    }
+    groups.get(groupKey).push(entry);
+  }
+
+  return orderedEntries.map((entry) => {
+    if (!entry.__permissionProfileGroupKey) return entry;
+
+    const group = groups.get(entry.__permissionProfileGroupKey) || [];
+    const first = group[0];
+    const firstContext = first?.changes?.context || {};
+    const userLabel = firstContext.displayName
+      || firstContext.username
+      || first?.changes?.label
+      || firstContext.userId
+      || 'User';
+    const changedFields = first?.changes?.changedFields || [];
+    const summary = summariseAuditChangedFields(changedFields);
+    const affectedScopes = group
+      .map((groupedEntry) => groupedEntry?.changes?.label)
+      .filter(Boolean);
+
+    return {
+      ...first,
+      entityId: firstContext.userId || firstContext.username || first.entityId,
+      changes: {
+        ...first.changes,
+        label: userLabel,
+        context: {
+          ...firstContext,
+          locationCode: null,
+          unitCode: null,
+          moduleCode: null,
+        },
+        description: `${first.action === 'PLATFORM_CONFIG_ADDED' ? 'Added' : 'Updated'} permission profiles for ${userLabel}: ${summary}`,
+        summary,
+        changedFields,
+        affectedScopes,
+        scopeCount: group.length,
+      },
+    };
+  });
+};
+
 const getRequestIp = (req) => {
   const forwardedFor = req.headers['x-forwarded-for'];
   if (Array.isArray(forwardedFor)) return forwardedFor[0] || req.ip || 'unknown';
@@ -1045,6 +1118,9 @@ function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
         locationCode: afterRow.locationCode || null,
         unitCode: afterRow.unitCode || null,
         moduleCode: afterRow.moduleCode || null,
+        userId: afterRow.userId || null,
+        username: afterRow.username || null,
+        displayName: afterRow.displayName || null,
       };
 
       entries.push({
@@ -1063,7 +1139,7 @@ function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
     }
   }
 
-  return entries;
+  return collapsePermissionProfileAuditEntries(entries);
 }
 
 async function writePlatformConfigAuditEntries(db, req, entries) {
