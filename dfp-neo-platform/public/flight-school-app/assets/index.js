@@ -1583,6 +1583,106 @@ const saveCurrenciesToDB = async (masterCurrencies, currencyRequirements, userId
     return false;
   }
 };
+const PLATFORM_PERMISSION_CATALOG = [
+  {
+    group: "Daily Flying Program",
+    items: [
+      ["dfp.view", "View DFP"],
+      ["dfp.editTiles", "Add, edit and delete tiles"],
+      ["dfp.validation", "Run validation checks"],
+      ["dfp.publish", "Publish DFP"],
+      ["dfp.history", "View historical DFP records"]
+    ]
+  },
+  {
+    group: "NEO Build",
+    items: [
+      ["neo.run", "Run NEO Build"],
+      ["neo.priorities", "Edit build priorities"],
+      ["neo.intelligence", "View build intelligence"],
+      ["neo.override", "Override build results"]
+    ]
+  },
+  {
+    group: "Staff",
+    items: [
+      ["staff.view", "View staff roster"],
+      ["staff.edit", "Edit staff details"],
+      ["staff.currency.view", "View staff currencies"],
+      ["staff.currency.edit", "Edit staff currencies"]
+    ]
+  },
+  {
+    group: "Trainees",
+    items: [
+      ["trainee.roster.view", "View trainee roster"],
+      ["trainee.profile.own", "View own trainee profile"],
+      ["trainee.profile.others", "View other trainee profiles"],
+      ["trainee.pt051.own", "View own PT-051"],
+      ["trainee.pt051.others", "View other trainee PT-051"],
+      ["trainee.pt051.edit", "Edit PT-051"],
+      ["trainee.lmp.own", "View own individual LMP"],
+      ["trainee.lmp.others", "View other trainee individual LMP"],
+      ["trainee.remedial.add", "Add remedial package"]
+    ]
+  },
+  {
+    group: "Reporting",
+    items: [
+      ["reporting.view", "View reports and analytics"],
+      ["reporting.export", "Export reports and records"]
+    ]
+  },
+  {
+    group: "Settings & Administration",
+    items: [
+      ["settings.view", "View settings"],
+      ["settings.schedulingRules.edit", "Edit scheduling rules"],
+      ["settings.userAccess.edit", "Edit user permissions"],
+      ["settings.platform.edit", "Edit platform configuration"],
+      ["settings.superAdmin", "Super Admin: unrestricted platform access"]
+    ]
+  }
+];
+const ALL_PLATFORM_PERMISSION_IDS = PLATFORM_PERMISSION_CATALOG.flatMap((group) => group.items.map(([id]) => id));
+const DEFAULT_PLATFORM_PERMISSION_PROFILES = [
+  {
+    id: "trainee",
+    name: "Trainee",
+    description: "Own-profile training access with restricted access to other trainee performance records.",
+    permissions: ["dfp.view", "trainee.roster.view", "trainee.profile.own", "trainee.pt051.own", "trainee.lmp.own"]
+  },
+  {
+    id: "instructor",
+    name: "Instructor",
+    description: "Instructor access to DFP, staff roster, trainee profiles, PT-051 and LMP records.",
+    permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"]
+  },
+  {
+    id: "flying-supervisor",
+    name: "Flying Supervisor",
+    description: "Supervisor access for daily flying control, validation, publishing and trainee oversight.",
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "dfp.publish", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others", "trainee.remedial.add", "reporting.view"]
+  },
+  {
+    id: "scheduler",
+    name: "Scheduler",
+    description: "Scheduling and build management access.",
+    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override", "reporting.view"]
+  },
+  {
+    id: "unit-admin",
+    name: "Unit Admin",
+    description: "Administration of users, settings and records within assigned access scopes.",
+    permissions: ALL_PLATFORM_PERMISSION_IDS.filter((id) => id !== "settings.superAdmin")
+  },
+  {
+    id: "super-admin",
+    name: "Super Admin",
+    description: "Unrestricted platform administration. Use sparingly.",
+    permissions: ALL_PLATFORM_PERMISSION_IDS
+  }
+];
 const emptyPlatformConfig = {
   organisations: [],
   locations: [],
@@ -1624,6 +1724,54 @@ const getLocationCodesForCurrentRuntime = (config, supportedCodes = ["ESL", "PEA
   return configuredCodes.length > 0 ? configuredCodes : supportedCodes;
 };
 const normaliseAccessValue = (value) => String(value || "").trim().toLowerCase();
+const getPlatformPermissionProfiles = (config) => {
+  const profileConfig = config?.organisations?.[0]?.settings?.permissionProfiles;
+  return Array.isArray(profileConfig) && profileConfig.length > 0 ? profileConfig : DEFAULT_PLATFORM_PERMISSION_PROFILES;
+};
+const uniqueValues = (values) => Array.from(new Set(values));
+const getExplicitPermissionProfileIds = (rows) => uniqueValues(
+  rows.flatMap((row) => Array.isArray(row.settings?.permissionProfileIds) ? row.settings.permissionProfileIds.map((id) => String(id || "")).filter(Boolean) : [])
+);
+const legacyRoleToProfileId = (role) => {
+  const normalisedRole = normaliseAccessValue(role);
+  if (!normalisedRole) return null;
+  if (normalisedRole.includes("super admin")) return "super-admin";
+  if (normalisedRole.includes("platform admin") || normalisedRole.includes("unit admin")) return "unit-admin";
+  if (normalisedRole.includes("flying supervisor") || normalisedRole.includes("course supervisor")) return "flying-supervisor";
+  if (normalisedRole.includes("scheduler")) return "scheduler";
+  if (normalisedRole.includes("instructor")) return "instructor";
+  if (normalisedRole.includes("trainee")) return "trainee";
+  return null;
+};
+const getRoleFallbackProfileIds = (rows) => uniqueValues(
+  rows.map((row) => legacyRoleToProfileId(row.role)).filter((id) => Boolean(id))
+);
+const resolvePermissionsForRows = (config, rows) => {
+  const explicitProfileIds = getExplicitPermissionProfileIds(rows);
+  const profileIds = explicitProfileIds.length > 0 ? explicitProfileIds : getRoleFallbackProfileIds(rows);
+  const profiles = getPlatformPermissionProfiles(config);
+  const profilePermissions = profiles.filter((profile) => profileIds.includes(profile.id)).flatMap((profile) => profile.permissions);
+  const rolePermissions = rows.flatMap((row) => {
+    const role = normaliseAccessValue(row.role);
+    if (role.includes("super admin")) return ALL_PLATFORM_PERMISSION_IDS;
+    if (role.includes("platform admin") || role.includes("unit admin")) {
+      return ALL_PLATFORM_PERMISSION_IDS.filter((id) => id !== "settings.superAdmin");
+    }
+    return [];
+  });
+  const permissions = uniqueValues([...profilePermissions, ...rolePermissions]);
+  const isSuperAdmin = permissions.includes("settings.superAdmin") || rows.some((row) => normaliseAccessValue(row.role).includes("super admin"));
+  const isPlatformAdmin = isSuperAdmin || rows.some((row) => {
+    const role = normaliseAccessValue(row.role);
+    return role.includes("platform admin") || role.includes("unit admin");
+  }) || permissions.some((permission) => permission.startsWith("settings."));
+  return {
+    profileIds,
+    permissions,
+    isSuperAdmin,
+    isPlatformAdmin
+  };
+};
 const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ESL", "PEA"]) => {
   const activeRows = (config?.userAccess || []).filter((row) => row.status !== "INACTIVE");
   const configuredLocations = getLocationCodesForCurrentRuntime(config, supportedCodes);
@@ -1632,7 +1780,10 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
       rows: [],
       isConfigured: false,
       isPlatformAdmin: true,
-      accessibleLocations: configuredLocations
+      isSuperAdmin: true,
+      accessibleLocations: configuredLocations,
+      permissionProfileIds: DEFAULT_PLATFORM_PERMISSION_PROFILES.map((profile) => profile.id),
+      permissions: ALL_PLATFORM_PERMISSION_IDS
     };
   }
   const identifiers = new Set(
@@ -1651,18 +1802,38 @@ const getPlatformAccessContext = (config, userIdentifiers, supportedCodes = ["ES
       rows: [],
       isConfigured: false,
       isPlatformAdmin: true,
-      accessibleLocations: configuredLocations
+      isSuperAdmin: true,
+      accessibleLocations: configuredLocations,
+      permissionProfileIds: DEFAULT_PLATFORM_PERMISSION_PROFILES.map((profile) => profile.id),
+      permissions: ALL_PLATFORM_PERMISSION_IDS
     };
   }
-  const isPlatformAdmin = rows.some((row) => normaliseAccessValue(row.role) === "platform admin");
+  const permissionContext = resolvePermissionsForRows(config, rows);
   const rowLocations = rows.map((row) => row.locationCode || "").filter(Boolean);
   const accessibleLocations = rowLocations.length === 0 ? configuredLocations : configuredLocations.filter((code) => rowLocations.includes(code));
   return {
     rows,
     isConfigured: true,
-    isPlatformAdmin,
-    accessibleLocations: accessibleLocations.length > 0 ? accessibleLocations : configuredLocations
+    isPlatformAdmin: permissionContext.isPlatformAdmin,
+    isSuperAdmin: permissionContext.isSuperAdmin,
+    accessibleLocations: accessibleLocations.length > 0 ? accessibleLocations : configuredLocations,
+    permissionProfileIds: permissionContext.profileIds,
+    permissions: permissionContext.permissions
   };
+};
+const MODULE_PERMISSION_PREFIXES = {
+  dfp: ["dfp."],
+  neo_build: ["neo."],
+  training: ["staff.", "trainee."],
+  reporting: ["reporting."],
+  settings: ["settings."]
+};
+const hasPermissionForModule = (accessContext, moduleCode) => {
+  if (!accessContext.isConfigured) return true;
+  if (accessContext.isPlatformAdmin) return true;
+  const prefixes = MODULE_PERMISSION_PREFIXES[normaliseAccessValue(moduleCode)] || [];
+  if (prefixes.length === 0) return true;
+  return accessContext.permissions.some((permissionId) => prefixes.some((prefix) => permissionId.startsWith(prefix)));
 };
 const hasPlatformModuleAccess = (accessContext, locationCode, moduleCode) => {
   if (!accessContext.isConfigured) return true;
@@ -1677,7 +1848,7 @@ const hasPlatformModuleAccess = (accessContext, locationCode, moduleCode) => {
     const hasModuleAccess = !rowModule || rowModule === targetModule;
     const isEnabled = rowAccess !== "none" && row.status !== "INACTIVE";
     const isAdminScope = ["platform admin", "super admin"].includes(rowRole);
-    return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess);
+    return hasLocationAccess && isEnabled && (isAdminScope || hasModuleAccess) && hasPermissionForModule(accessContext, targetModule);
   });
 };
 const getPlatformModuleForView = (view2) => {
@@ -56533,99 +56704,8 @@ const AppearanceSettings = () => {
     ] })
   ] });
 };
-const PERMISSION_CATALOG = [
-  {
-    group: "Daily Flying Program",
-    items: [
-      ["dfp.view", "View DFP"],
-      ["dfp.editTiles", "Add, edit and delete tiles"],
-      ["dfp.validation", "Run validation checks"],
-      ["dfp.publish", "Publish DFP"],
-      ["dfp.history", "View historical DFP records"]
-    ]
-  },
-  {
-    group: "NEO Build",
-    items: [
-      ["neo.run", "Run NEO Build"],
-      ["neo.priorities", "Edit build priorities"],
-      ["neo.intelligence", "View build intelligence"],
-      ["neo.override", "Override build results"]
-    ]
-  },
-  {
-    group: "Staff",
-    items: [
-      ["staff.view", "View staff roster"],
-      ["staff.edit", "Edit staff details"],
-      ["staff.currency.view", "View staff currencies"],
-      ["staff.currency.edit", "Edit staff currencies"]
-    ]
-  },
-  {
-    group: "Trainees",
-    items: [
-      ["trainee.roster.view", "View trainee roster"],
-      ["trainee.profile.own", "View own trainee profile"],
-      ["trainee.profile.others", "View other trainee profiles"],
-      ["trainee.pt051.own", "View own PT-051"],
-      ["trainee.pt051.others", "View other trainee PT-051"],
-      ["trainee.pt051.edit", "Edit PT-051"],
-      ["trainee.lmp.own", "View own individual LMP"],
-      ["trainee.lmp.others", "View other trainee individual LMP"],
-      ["trainee.remedial.add", "Add remedial package"]
-    ]
-  },
-  {
-    group: "Settings & Administration",
-    items: [
-      ["settings.view", "View settings"],
-      ["settings.schedulingRules.edit", "Edit scheduling rules"],
-      ["settings.userAccess.edit", "Edit user permissions"],
-      ["settings.platform.edit", "Edit platform configuration"],
-      ["settings.superAdmin", "Super Admin: unrestricted platform access"]
-    ]
-  }
-];
-const ALL_PERMISSION_IDS = PERMISSION_CATALOG.flatMap((group) => group.items.map(([id]) => id));
-const DEFAULT_PERMISSION_PROFILES = [
-  {
-    id: "trainee",
-    name: "Trainee",
-    description: "Own-profile training access with restricted access to other trainee performance records.",
-    permissions: ["dfp.view", "trainee.roster.view", "trainee.profile.own", "trainee.pt051.own", "trainee.lmp.own"]
-  },
-  {
-    id: "instructor",
-    name: "Instructor",
-    description: "Instructor access to DFP, staff roster, trainee profiles, PT-051 and LMP records.",
-    permissions: ["dfp.view", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others"]
-  },
-  {
-    id: "flying-supervisor",
-    name: "Flying Supervisor",
-    description: "Supervisor access for daily flying control, validation, publishing and trainee oversight.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "dfp.publish", "staff.view", "staff.currency.view", "trainee.roster.view", "trainee.profile.others", "trainee.pt051.others", "trainee.pt051.edit", "trainee.lmp.others", "trainee.remedial.add"]
-  },
-  {
-    id: "scheduler",
-    name: "Scheduler",
-    description: "Scheduling and build management access.",
-    permissions: ["dfp.view", "dfp.editTiles", "dfp.validation", "neo.run", "neo.priorities", "neo.intelligence", "neo.override"]
-  },
-  {
-    id: "unit-admin",
-    name: "Unit Admin",
-    description: "Administration of users, settings and records within assigned access scopes.",
-    permissions: ALL_PERMISSION_IDS.filter((id) => id !== "settings.superAdmin")
-  },
-  {
-    id: "super-admin",
-    name: "Super Admin",
-    description: "Unrestricted platform administration. Use sparingly.",
-    permissions: ALL_PERMISSION_IDS
-  }
-];
+const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
+const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 const emptyConfig = {
   organisations: [],
   locations: [],

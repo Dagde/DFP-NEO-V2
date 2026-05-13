@@ -1,4 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import {
+  DEFAULT_PLATFORM_PERMISSION_PROFILES,
+  PLATFORM_PERMISSION_CATALOG,
+  type PlatformPermissionProfile,
+} from '../utils/platformConfigService';
 
 type PlatformConfig = {
   organisations: any[];
@@ -13,108 +18,10 @@ type PlatformConfig = {
   schedulingRuleSets: any[];
 };
 
-type PermissionProfile = {
-  id: string;
-  name: string;
-  description: string;
-  permissions: string[];
-};
+type PermissionProfile = PlatformPermissionProfile;
 
-const PERMISSION_CATALOG = [
-  {
-    group: 'Daily Flying Program',
-    items: [
-      ['dfp.view', 'View DFP'],
-      ['dfp.editTiles', 'Add, edit and delete tiles'],
-      ['dfp.validation', 'Run validation checks'],
-      ['dfp.publish', 'Publish DFP'],
-      ['dfp.history', 'View historical DFP records'],
-    ],
-  },
-  {
-    group: 'NEO Build',
-    items: [
-      ['neo.run', 'Run NEO Build'],
-      ['neo.priorities', 'Edit build priorities'],
-      ['neo.intelligence', 'View build intelligence'],
-      ['neo.override', 'Override build results'],
-    ],
-  },
-  {
-    group: 'Staff',
-    items: [
-      ['staff.view', 'View staff roster'],
-      ['staff.edit', 'Edit staff details'],
-      ['staff.currency.view', 'View staff currencies'],
-      ['staff.currency.edit', 'Edit staff currencies'],
-    ],
-  },
-  {
-    group: 'Trainees',
-    items: [
-      ['trainee.roster.view', 'View trainee roster'],
-      ['trainee.profile.own', 'View own trainee profile'],
-      ['trainee.profile.others', 'View other trainee profiles'],
-      ['trainee.pt051.own', 'View own PT-051'],
-      ['trainee.pt051.others', 'View other trainee PT-051'],
-      ['trainee.pt051.edit', 'Edit PT-051'],
-      ['trainee.lmp.own', 'View own individual LMP'],
-      ['trainee.lmp.others', 'View other trainee individual LMP'],
-      ['trainee.remedial.add', 'Add remedial package'],
-    ],
-  },
-  {
-    group: 'Settings & Administration',
-    items: [
-      ['settings.view', 'View settings'],
-      ['settings.schedulingRules.edit', 'Edit scheduling rules'],
-      ['settings.userAccess.edit', 'Edit user permissions'],
-      ['settings.platform.edit', 'Edit platform configuration'],
-      ['settings.superAdmin', 'Super Admin: unrestricted platform access'],
-    ],
-  },
-] as const;
-
-const ALL_PERMISSION_IDS = PERMISSION_CATALOG.flatMap((group) => group.items.map(([id]) => id));
-
-const DEFAULT_PERMISSION_PROFILES: PermissionProfile[] = [
-  {
-    id: 'trainee',
-    name: 'Trainee',
-    description: 'Own-profile training access with restricted access to other trainee performance records.',
-    permissions: ['dfp.view', 'trainee.roster.view', 'trainee.profile.own', 'trainee.pt051.own', 'trainee.lmp.own'],
-  },
-  {
-    id: 'instructor',
-    name: 'Instructor',
-    description: 'Instructor access to DFP, staff roster, trainee profiles, PT-051 and LMP records.',
-    permissions: ['dfp.view', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others'],
-  },
-  {
-    id: 'flying-supervisor',
-    name: 'Flying Supervisor',
-    description: 'Supervisor access for daily flying control, validation, publishing and trainee oversight.',
-    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'dfp.publish', 'staff.view', 'staff.currency.view', 'trainee.roster.view', 'trainee.profile.others', 'trainee.pt051.others', 'trainee.pt051.edit', 'trainee.lmp.others', 'trainee.remedial.add'],
-  },
-  {
-    id: 'scheduler',
-    name: 'Scheduler',
-    description: 'Scheduling and build management access.',
-    permissions: ['dfp.view', 'dfp.editTiles', 'dfp.validation', 'neo.run', 'neo.priorities', 'neo.intelligence', 'neo.override'],
-  },
-  {
-    id: 'unit-admin',
-    name: 'Unit Admin',
-    description: 'Administration of users, settings and records within assigned access scopes.',
-    permissions: ALL_PERMISSION_IDS.filter((id) => id !== 'settings.superAdmin'),
-  },
-  {
-    id: 'super-admin',
-    name: 'Super Admin',
-    description: 'Unrestricted platform administration. Use sparingly.',
-    permissions: ALL_PERMISSION_IDS,
-  },
-];
+const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
+const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 
 const emptyConfig: PlatformConfig = {
   organisations: [],
