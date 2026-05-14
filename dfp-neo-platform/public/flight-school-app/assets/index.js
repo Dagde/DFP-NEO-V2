@@ -57032,26 +57032,26 @@ const DEFAULT_OPERATIONAL_RUNBOOK = {
   notes: ""
 };
 const OPERATIONAL_RUNBOOK_HELP = {
-  environmentName: "Plain English: the name of this installed system. Example: Production, Training Network, Offline Test Rig. Text only; do not include passwords or technical connection strings.",
-  deploymentIdentifier: "Plain English: a stable short identifier for this deployment. Example: DFP-NEO-V2-RAAF-PROD. Use letters, numbers, dashes or spaces.",
-  releaseChannel: "Plain English: the update stream this system follows. Production is live use, Staging is pre-live testing, Customer Acceptance is formal customer test, Offline Package is an isolated deployment package.",
-  supportOwner: "Plain English: the person, team or organisation responsible for supporting this deployment. Example: Unit Admin Cell, Defence Prime Support Desk, or Joe Bloggs.",
-  supportContact: "Plain English: how support is contacted. Example: email address, phone number, service desk queue, or internal extension. Do not enter account passwords or secret tokens.",
-  approvingAuthority: "Plain English: who is allowed to approve operational changes or updates. Example: Chief Instructor, SQNLDR Operations, System Owner, or customer change board.",
-  backupFrequency: "Plain English: how often the database and critical records are backed up. Choose the closest option to the approved local process.",
-  backupRetentionDays: "Plain English: how many days backups are kept before disposal. Enter a whole number. Example: 30 means keep one month of backups.",
-  backupStorageLocation: "Plain English: where backups are stored. Example: local secure NAS path, approved backup server, removable media vault, or customer backup service. Do not enter database URLs, passwords, access keys or tokens.",
-  lastBackupDate: "Plain English: the date the most recent known successful backup was completed. Use the date picker; it stores the date in YYYY-MM-DD format.",
-  lastRestoreTestDate: "Plain English: the date a backup was last restored and proven to work. This is evidence that rollback is more than just theoretical.",
-  restoreTimeObjectiveHours: "Plain English: maximum acceptable time to restore service after a major failure. Enter hours as a whole number. Example: 24 means restore within one day.",
-  restorePointObjectiveHours: "Plain English: maximum acceptable amount of data loss after a restore. Enter hours as a whole number. Example: 24 means restore to within one day of data.",
-  maintenanceWindow: "Plain English: when updates or planned outage work may be performed. Example: Tuesdays 1800-2000 local, after flying complete, or by customer approval only.",
-  updateApprovalProcess: "Plain English: how software updates are approved before use. Example: test in staging, supervisor review, customer change approval, then production release.",
-  lastUpdateDate: "Plain English: the date the application or deployment package was last updated. Use the date picker; it stores the date in YYYY-MM-DD format.",
-  evidenceExportPath: "Plain English: where exported audit evidence or legal record packs are stored. Example: secure records share, local records folder, or approved archive path. Do not enter passwords or tokens.",
-  auditRetentionYears: "Plain English: how many years audit logs and legal record evidence must be retained. Enter a whole number. Example: 7.",
-  accreditationStatus: "Plain English: the current security/accreditation state for this deployment. This is an admin record, not an automatic approval.",
-  notes: "Plain English: operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys or database URLs here."
+  environmentName: "Name this installed system so administrators know what environment they are changing. Examples: Production, Training Network, Offline Test Rig. Text only; do not enter passwords, URLs or connection strings.",
+  deploymentIdentifier: "Use a stable short identifier for this deployment. Recommended format: letters, numbers and dashes, for example DFP-NEO-V2-RAAF-PROD or RAAF-ESL-OFFLINE-01.",
+  releaseChannel: "Select the update stream this system follows. Production is live use; Staging is pre-live testing; Customer Acceptance is formal customer test; Offline Package is an isolated deployment package.",
+  supportOwner: "Record who owns support for this deployment. Examples: Unit Admin Cell, Defence Prime Support Desk, 1FTS Systems Officer, or a named support team.",
+  supportContact: "Record how support is contacted. Acceptable formats include an email address, phone number, internal extension, or service desk queue name. Do not enter account passwords or secret tokens.",
+  approvingAuthority: "Record who can approve operational changes or software updates. Examples: Chief Instructor, SQNLDR Operations, System Owner, or Customer Change Board.",
+  backupFrequency: "Select how often the database and critical records are backed up. Choose the closest option to the approved local backup process.",
+  backupRetentionDays: "Enter the number of days backups are kept before disposal. Whole numbers only. Example: 30 means backups are retained for one month.",
+  backupStorageLocation: "Record the approved backup storage location. Correct examples: \\\\backup-server\\dfp-neo\\backups, /srv/dfp-neo/backups, D:\\DFP-NEO\\Backups, or Secure NAS - Aviation Systems Backup Share. Do not enter database URLs, passwords, access keys or tokens.",
+  lastBackupDate: "Date of the most recent successful backup. Use the date picker. Stored format is YYYY-MM-DD, for example 2026-05-14.",
+  lastRestoreTestDate: "Date a backup was last restored and proven to work. Use the date picker. Stored format is YYYY-MM-DD, for example 2026-05-14.",
+  restoreTimeObjectiveHours: "Maximum acceptable time to restore service after a major failure. Enter hours as a whole number. Example: 24 means service should be restored within one day.",
+  restorePointObjectiveHours: "Maximum acceptable amount of data loss after a restore. Enter hours as a whole number. Example: 24 means the restored system should be no more than one day behind.",
+  maintenanceWindow: "Record when planned outage or update work may occur. Examples: Tuesdays 1800-2000 local, after flying complete, or by customer approval only.",
+  updateApprovalProcess: "Describe how software updates are approved before use. Example: test in staging, supervisor review, customer change approval, then production release.",
+  lastUpdateDate: "Date the application or deployment package was last updated. Use the date picker. Stored format is YYYY-MM-DD, for example 2026-05-14.",
+  evidenceExportPath: "Record where exported audit evidence or legal record packs are stored. Correct examples: \\\\records-server\\dfp-neo\\audit-exports, /srv/dfp-neo/audit-exports, D:\\DFP-NEO\\Evidence, or Approved Records Share - DFP Exports. Do not enter passwords or tokens.",
+  auditRetentionYears: "Enter how many years audit logs and legal record evidence must be retained. Whole numbers only. Example: 7.",
+  accreditationStatus: "Select the current security or accreditation state for this deployment. This is an administrator record; it does not grant formal approval by itself.",
+  notes: "Add operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys, database URLs or access tokens."
 };
 const DEPLOYMENT_READINESS_ITEMS = [
   { id: "localWebServer", label: "Local web server defined", detail: "Required for private network and fully offline installs." },
@@ -58226,10 +58226,19 @@ const SectionHeader = ({ title, subtitle, action }) => {
     }
   );
 };
-const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "group relative inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-400/50 bg-cyan-500/10 text-xs font-bold text-cyan-100", children: [
-  "i",
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal leading-relaxed text-gray-100 shadow-xl group-hover:block", children: text })
-] });
+const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+  "span",
+  {
+    role: "button",
+    tabIndex: 0,
+    "aria-label": "More information",
+    className: "group relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border-2 border-cyan-300/80 bg-transparent text-cyan-100 outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
+    children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[15px] font-bold italic leading-none", children: "i" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
+    ]
+  }
+);
 const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
