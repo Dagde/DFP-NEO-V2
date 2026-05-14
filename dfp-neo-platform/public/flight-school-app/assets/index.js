@@ -49264,7 +49264,7 @@ const ACHistoryAircraftAvailability = ({
     };
     return labels[period];
   };
-  const formatDateLabel = (dateStr) => {
+  const formatDateLabel2 = (dateStr) => {
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short" });
   };
@@ -49290,7 +49290,7 @@ const ACHistoryAircraftAvailability = ({
     () => records.map((r) => ({
       date: r.date,
       value: r.dailyAverage,
-      label: formatDateLabel(r.date)
+      label: formatDateLabel2(r.date)
     })),
     [records]
   );
@@ -49498,12 +49498,12 @@ const ACHistoryAircraftAvailability = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Peak Availability" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-green-400", children: stats.max.toFixed(1) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.maxRecord ? formatDateLabel(stats.maxRecord.date) : "—" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.maxRecord ? formatDateLabel2(stats.maxRecord.date) : "—" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Lowest Availability" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-red-400", children: stats.min.toFixed(1) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.minRecord ? formatDateLabel(stats.minRecord.date) : "—" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.minRecord ? formatDateLabel2(stats.minRecord.date) : "—" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Trend" }),
@@ -56957,6 +56957,108 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
+const DEPLOYMENT_MODE_OPTIONS = [
+  "Online SaaS",
+  "Private Defence Network",
+  "Fully Offline",
+  "Hybrid Offline Sync"
+];
+const LICENSE_VALIDATION_OPTIONS = [
+  "Online licence check",
+  "Private network licence server",
+  "Offline signed licence file",
+  "Hybrid cached licence"
+];
+const LICENSE_ENFORCEMENT_OPTIONS = [
+  "Monitor Only",
+  "Warn Only",
+  "Block Expired Licence"
+];
+const AUTH_MODEL_OPTIONS = [
+  "Local accounts",
+  "Defence SSO",
+  "Hybrid local and SSO"
+];
+const DEFAULT_DEPLOYMENT_PROFILE = {
+  mode: "Online SaaS",
+  validationMethod: "Online licence check",
+  enforcementMode: "Monitor Only",
+  offlineGraceDays: 30,
+  checkIntervalHours: 24,
+  authModel: "Local accounts",
+  dataResidence: "Customer controlled",
+  networkPosture: "Internet connected SaaS",
+  notes: ""
+};
+const DEPLOYMENT_READINESS_ITEMS = [
+  { id: "localWebServer", label: "Local web server defined", detail: "Required for private network and fully offline installs." },
+  { id: "localDatabase", label: "Local database defined", detail: "Postgres or approved customer database target is identified." },
+  { id: "localAuthentication", label: "Local authentication path defined", detail: "Users can log in without public internet access." },
+  { id: "localFileStorage", label: "Local file storage path defined", detail: "Attachments, exports and records have a customer-controlled storage path." },
+  { id: "offlineLicenceFile", label: "Offline licence file process defined", detail: "Signed licence issue, import and renewal process is documented." },
+  { id: "backupRestore", label: "Backup and restore process defined", detail: "Rollback and operational data restore are known before deployment." },
+  { id: "auditExport", label: "Audit export process defined", detail: "Audit logs can be exported for legal and assurance review." },
+  { id: "updateProcess", label: "Update process defined", detail: "Patch delivery and customer acceptance process is known." }
+];
+const MS_PER_DAY = 24 * 60 * 60 * 1e3;
+const normaliseEnforcementMode = (value) => {
+  const raw = String(value || "").trim().toLowerCase();
+  if (raw === "monitor" || raw === "monitor only") return "Monitor Only";
+  if (raw === "warn" || raw === "warn only") return "Warn Only";
+  if (raw === "block" || raw === "block expired" || raw === "block expired licence") return "Block Expired Licence";
+  return "Monitor Only";
+};
+const parseDateOnly = (value) => {
+  if (!value) return null;
+  const parsed = new Date(String(value).slice(0, 10));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+const formatDateLabel = (value) => {
+  const parsed = parseDateOnly(value);
+  if (!parsed) return "Not set";
+  return parsed.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+};
+const getLicenceStatusSummary = (license) => {
+  const status = String(license.status || "ACTIVE").toUpperCase();
+  const today = /* @__PURE__ */ new Date();
+  today.setHours(0, 0, 0, 0);
+  const validFrom = parseDateOnly(license.validFrom);
+  const validUntil = parseDateOnly(license.validUntil);
+  const daysRemaining = validUntil ? Math.ceil((validUntil.getTime() - today.getTime()) / MS_PER_DAY) : null;
+  if (status !== "ACTIVE") {
+    return {
+      label: status || "INACTIVE",
+      detail: "Licence is not currently active.",
+      toneClass: "border-gray-600 bg-gray-800 text-gray-200"
+    };
+  }
+  if (validFrom && validFrom > today) {
+    return {
+      label: "Future",
+      detail: `Starts ${formatDateLabel(validFrom)}`,
+      toneClass: "border-blue-500/40 bg-blue-500/10 text-blue-100"
+    };
+  }
+  if (validUntil && validUntil < today) {
+    return {
+      label: "Expired",
+      detail: `Expired ${formatDateLabel(validUntil)}`,
+      toneClass: "border-red-500/40 bg-red-500/10 text-red-100"
+    };
+  }
+  if (daysRemaining !== null && daysRemaining <= 30) {
+    return {
+      label: "Expiring",
+      detail: `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} remaining`,
+      toneClass: "border-yellow-500/50 bg-yellow-500/10 text-yellow-100"
+    };
+  }
+  return {
+    label: "Active",
+    detail: validUntil ? `Valid until ${formatDateLabel(validUntil)}` : "No expiry date set",
+    toneClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+  };
+};
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess
@@ -57005,6 +57107,64 @@ const PlatformConfigurationSettings = ({
     () => config.licenses.filter((license) => String(license.status || "").toUpperCase() === "ACTIVE").length,
     [config.licenses]
   );
+  const activeModules = reactExports.useMemo(
+    () => config.modules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE"),
+    [config.modules]
+  );
+  const primaryOrganisationIndex = reactExports.useMemo(() => {
+    const activeIndex = config.organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
+    return activeIndex >= 0 ? activeIndex : 0;
+  }, [config.organisations]);
+  const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
+  const primaryOrganisationSettings = primaryOrganisation?.settings || {};
+  const deploymentProfile = {
+    ...DEFAULT_DEPLOYMENT_PROFILE,
+    ...primaryOrganisationSettings.deploymentProfile || {},
+    enforcementMode: normaliseEnforcementMode(primaryOrganisationSettings.deploymentProfile?.enforcementMode)
+  };
+  const deploymentReadiness = primaryOrganisationSettings.deploymentReadiness || {};
+  const readinessCompleteCount = DEPLOYMENT_READINESS_ITEMS.filter((item) => deploymentReadiness[item.id] === true).length;
+  const readinessPercent = DEPLOYMENT_READINESS_ITEMS.length ? Math.round(readinessCompleteCount / DEPLOYMENT_READINESS_ITEMS.length * 100) : 0;
+  const updatePrimaryOrganisationSettings = (updater) => {
+    setConfig((prev) => {
+      const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
+      const activeIndex = organisations.findIndex((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE");
+      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+      const currentOrg = organisations[orgIndex] || organisations[0];
+      const currentSettings = currentOrg.settings || {};
+      const nextSettings = typeof updater === "function" ? updater(currentSettings) : { ...currentSettings, ...updater };
+      organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
+      return { ...prev, organisations };
+    });
+  };
+  const updateDeploymentProfile = (changes) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      deploymentProfile: {
+        ...DEFAULT_DEPLOYMENT_PROFILE,
+        ...settings.deploymentProfile || {},
+        ...changes
+      }
+    }));
+  };
+  const toggleDeploymentReadiness = (itemId, checked) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      deploymentReadiness: {
+        ...settings.deploymentReadiness || {},
+        [itemId]: checked
+      }
+    }));
+  };
+  const updateLicenseFeatures = (licenseIndex, changes) => {
+    const currentFeatures = config.licenses[licenseIndex]?.features || {};
+    updateRow("licenses", licenseIndex, {
+      features: {
+        ...currentFeatures,
+        ...changes
+      }
+    });
+  };
   const updateRow = (collection, index, changes) => {
     setConfig((prev) => ({
       ...prev,
@@ -57076,9 +57236,14 @@ const PlatformConfigurationSettings = ({
             maxUnits: null,
             maxAircraftTypes: null,
             moduleCodes: activeModuleCodes,
-            features: { enforcementMode: "monitor" },
+            features: {
+              enforcementMode: deploymentProfile.enforcementMode,
+              validationMethod: deploymentProfile.validationMethod,
+              offlineGraceDays: deploymentProfile.offlineGraceDays,
+              allowOfflineOperation: deploymentProfile.mode !== "Online SaaS"
+            },
             offlineFingerprint: "",
-            notes: "Licence record only. Enforcement is not active in Stage 10."
+            notes: "Stage 11 deployment readiness record. Enforcement is monitor-only unless deliberately changed by the platform administrator."
           }
         ]
       };
@@ -57367,8 +57532,95 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
+          title: "Deployment Readiness",
+          subtitle: "Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Deployment Mode" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-bold text-white", children: deploymentProfile.mode })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Licence Validation" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-bold text-white", children: deploymentProfile.validationMethod })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Enforcement" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-bold text-white", children: deploymentProfile.enforcementMode })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Readiness" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-lg font-bold text-white", children: [
+              readinessPercent,
+              "%"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 h-2 rounded-full bg-gray-950", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: "h-2 rounded-full bg-cyan-400",
+                style: { width: `${readinessPercent}%` }
+              }
+            ) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Deployment Profile" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: this describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100", children: "Runtime-safe: monitor-first" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Operating Model", value: deploymentProfile.mode, disabled: !canEdit, options: DEPLOYMENT_MODE_OPTIONS, onChange: (value) => updateDeploymentProfile({ mode: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Licence Validation Method", value: deploymentProfile.validationMethod, disabled: !canEdit, options: LICENSE_VALIDATION_OPTIONS, onChange: (value) => updateDeploymentProfile({ validationMethod: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Licence Enforcement Mode", value: deploymentProfile.enforcementMode, disabled: !canEdit, options: LICENSE_ENFORCEMENT_OPTIONS, onChange: (value) => updateDeploymentProfile({ enforcementMode: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Offline Grace Days", value: Number(deploymentProfile.offlineGraceDays ?? 30), disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ offlineGraceDays: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Licence Check Interval Hours", value: Number(deploymentProfile.checkIntervalHours ?? 24), disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ checkIntervalHours: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Authentication Model", value: deploymentProfile.authModel, disabled: !canEdit, options: AUTH_MODEL_OPTIONS, onChange: (value) => updateDeploymentProfile({ authModel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Data Residence", value: deploymentProfile.dataResidence || "", disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ dataResidence: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Network Posture", value: deploymentProfile.networkPosture || "", disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ networkPosture: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Deployment Notes", value: deploymentProfile.notes || "", disabled: !canEdit, onChange: (value) => updateDeploymentProfile({ notes: value }) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Offline And On-Prem Readiness Checklist" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These checks are deliberately visible to administrators. They make the offline/private-network deployment obligations explicit before this app is sold or installed on a defence network." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs font-semibold text-gray-400", children: [
+              readinessCompleteCount,
+              " of ",
+              DEPLOYMENT_READINESS_ITEMS.length,
+              " complete"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-2", children: DEPLOYMENT_READINESS_ITEMS.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-3 rounded border border-gray-700 bg-gray-950 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "checkbox",
+                className: "mt-1 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                checked: deploymentReadiness[item.id] === true,
+                disabled: !canEdit,
+                onChange: (event) => toggleDeploymentReadiness(item.id, event.target.checked)
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold text-white", children: item.label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-400", children: item.detail })
+            ] })
+          ] }, item.id)) })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
           title: "Licensing & Deployment",
-          subtitle: "Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 10 records licence intent; enforcement remains monitor-only.",
+          subtitle: "Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 11 makes licence status and offline readiness explicit while enforcement remains safe by default.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Licence" }) : null
         }
       ),
@@ -57376,15 +57628,34 @@ const PlatformConfigurationSettings = ({
         config.licenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
         config.licenses.map((license, index) => {
           const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
+          const licenceFeatures = license.features || {};
+          const licenceStatus = getLicenceStatusSummary(license);
+          const licensedActiveModuleCount = moduleCodes.filter((code) => activeModules.some((module) => module.code === code)).length;
+          const offlineMode = ["Fully Offline", "Hybrid Offline Sync"].includes(license.deploymentMode || "");
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center gap-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: license.licenseName || "Licence" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
-                license.deploymentMode || "Deployment",
-                " / ",
-                license.status || "Status"
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 lg:grid-cols-[1fr,260px,260px]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: license.licenseName || "Licence" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
+                  license.licenseKey || "No licence key",
+                  " / ",
+                  license.deploymentMode || "Deployment model not set"
+                ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: "Monitor only" })
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border px-3 py-2 ${licenceStatus.toneClass}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide opacity-80", children: "Licence Status" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-base font-bold", children: licenceStatus.label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs opacity-80", children: licenceStatus.detail })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-cyan-100", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Module Coverage" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-base font-bold", children: [
+                  licensedActiveModuleCount,
+                  " of ",
+                  activeModules.length
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/70", children: offlineMode && !license.offlineFingerprint ? "Offline fingerprint still required" : "Entitlements recorded" })
+              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Name", value: license.licenseName || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { licenseName: value }) }),
@@ -57399,6 +57670,52 @@ const PlatformConfigurationSettings = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Units", value: license.maxUnits ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxUnits: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Aircraft Types", value: license.maxAircraftTypes ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxAircraftTypes: value }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Notes", value: license.notes || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { notes: value }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-cyan-100", children: "Licence Controls" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These controls describe how the licence should behave in each deployment model. They are saved now for commercial readiness; live runtime enforcement should remain Monitor Only until a customer acceptance process is complete." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-4", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectField,
+                  {
+                    label: "Validation Method",
+                    value: licenceFeatures.validationMethod || deploymentProfile.validationMethod,
+                    disabled: !canEdit,
+                    options: LICENSE_VALIDATION_OPTIONS,
+                    onChange: (value) => updateLicenseFeatures(index, { validationMethod: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectField,
+                  {
+                    label: "Enforcement Mode",
+                    value: normaliseEnforcementMode(licenceFeatures.enforcementMode || deploymentProfile.enforcementMode),
+                    disabled: !canEdit,
+                    options: LICENSE_ENFORCEMENT_OPTIONS,
+                    onChange: (value) => updateLicenseFeatures(index, { enforcementMode: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  NumberField,
+                  {
+                    label: "Offline Grace Days",
+                    value: Number(licenceFeatures.offlineGraceDays ?? deploymentProfile.offlineGraceDays ?? 30),
+                    disabled: !canEdit,
+                    onChange: (value) => updateLicenseFeatures(index, { offlineGraceDays: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  ToggleField,
+                  {
+                    label: "Allow offline operation",
+                    checked: licenceFeatures.allowOfflineOperation === true,
+                    disabled: !canEdit,
+                    onChange: (checked) => updateLicenseFeatures(index, { allowOfflineOperation: checked })
+                  }
+                )
+              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-700 bg-gray-950 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [

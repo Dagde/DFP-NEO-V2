@@ -675,6 +675,23 @@ const PLATFORM_FIELD_LABELS = {
     name: 'Organisation name',
     status: 'Organisation status',
     'settings.permissionProfiles': 'Permission profile definitions',
+    'settings.deploymentProfile.authModel': 'Authentication model',
+    'settings.deploymentProfile.checkIntervalHours': 'Licence check interval hours',
+    'settings.deploymentProfile.dataResidence': 'Data residence',
+    'settings.deploymentProfile.enforcementMode': 'Licence enforcement mode',
+    'settings.deploymentProfile.mode': 'Deployment mode',
+    'settings.deploymentProfile.networkPosture': 'Network posture',
+    'settings.deploymentProfile.notes': 'Deployment notes',
+    'settings.deploymentProfile.offlineGraceDays': 'Offline grace days',
+    'settings.deploymentProfile.validationMethod': 'Licence validation method',
+    'settings.deploymentReadiness.auditExport': 'Readiness: audit export process defined',
+    'settings.deploymentReadiness.backupRestore': 'Readiness: backup and restore process defined',
+    'settings.deploymentReadiness.localAuthentication': 'Readiness: local authentication path defined',
+    'settings.deploymentReadiness.localDatabase': 'Readiness: local database defined',
+    'settings.deploymentReadiness.localFileStorage': 'Readiness: local file storage path defined',
+    'settings.deploymentReadiness.localWebServer': 'Readiness: local web server defined',
+    'settings.deploymentReadiness.offlineLicenceFile': 'Readiness: offline licence file process defined',
+    'settings.deploymentReadiness.updateProcess': 'Readiness: update process defined',
   },
   CommercialLocation: {
     organisationCode: 'Organisation',
@@ -732,6 +749,10 @@ const PLATFORM_FIELD_LABELS = {
     maxAircraftTypes: 'Maximum aircraft types',
     moduleCodes: 'Licensed modules',
     features: 'Licensed features',
+    'features.allowOfflineOperation': 'Allow offline operation',
+    'features.enforcementMode': 'Licence enforcement mode',
+    'features.offlineGraceDays': 'Offline grace days',
+    'features.validationMethod': 'Licence validation method',
     offlineFingerprint: 'Offline fingerprint',
     notes: 'Licence notes',
   },
@@ -1152,6 +1173,8 @@ function buildPlatformConfigAuditEntries(beforeSnapshot, afterSnapshot) {
         if (auditValueString(beforeValue) !== auditValueString(afterValue)) {
           if (field === 'settings') {
             changedFields.push(...describeSettingsChanges(table.entityType, beforeValue, afterValue));
+          } else if (table.entityType === 'CommercialLicense' && field === 'features') {
+            pushGenericSettingsDiffs(table.entityType, beforeValue, afterValue, 'features', changedFields);
           } else {
             changedFields.push(makeAuditChangedField(table.entityType, field, beforeValue, afterValue));
           }
@@ -1289,35 +1312,118 @@ app.get('/api/platform-config', async (req, res) => {
 app.get('/api/platform-license/status', async (req, res) => {
   try {
     const db = await getPrisma();
-    const [licenses, modules] = await Promise.all([
+    const [licenses, modules, organisations] = await Promise.all([
       db.$queryRawUnsafe(`
         SELECT *
         FROM "CommercialLicense"
-        WHERE "status" = 'ACTIVE'
-          AND ("validFrom" IS NULL OR "validFrom" <= NOW())
-          AND ("validUntil" IS NULL OR "validUntil" >= NOW())
         ORDER BY "licenseName"
       `),
       db.$queryRawUnsafe(`SELECT "code", "name", "status" FROM "CommercialModule" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`),
     ]);
 
+    const normaliseEnforcementMode = (value) => {
+      const raw = String(value || '').trim().toLowerCase();
+      if (raw === 'monitor' || raw === 'monitor only') return 'Monitor Only';
+      if (raw === 'warn' || raw === 'warn only') return 'Warn Only';
+      if (raw === 'block' || raw === 'block expired' || raw === 'block expired licence') return 'Block Expired Licence';
+      return 'Monitor Only';
+    };
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const parseDate = (value) => {
+      if (!value) return null;
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) return null;
+      parsed.setHours(0, 0, 0, 0);
+      return parsed;
+    };
+    const isCurrentLicense = (license) => {
+      if (String(license.status || '').toUpperCase() !== 'ACTIVE') return false;
+      const validFrom = parseDate(license.validFrom);
+      const validUntil = parseDate(license.validUntil);
+      if (validFrom && validFrom > today) return false;
+      if (validUntil && validUntil < today) return false;
+      return true;
+    };
+    const describeLicense = (license) => {
+      const validFrom = parseDate(license.validFrom);
+      const validUntil = parseDate(license.validUntil);
+      const status = String(license.status || 'ACTIVE').toUpperCase();
+      let state = status;
+      let detail = 'Licence is not currently active.';
+      if (status === 'ACTIVE') {
+        if (validFrom && validFrom > today) {
+          state = 'FUTURE';
+          detail = `Starts ${validFrom.toISOString().slice(0, 10)}`;
+        } else if (validUntil && validUntil < today) {
+          state = 'EXPIRED';
+          detail = `Expired ${validUntil.toISOString().slice(0, 10)}`;
+        } else if (validUntil) {
+          const daysRemaining = Math.ceil((validUntil.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+          state = daysRemaining <= 30 ? 'EXPIRING' : 'ACTIVE';
+          detail = `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`;
+        } else {
+          state = 'ACTIVE';
+          detail = 'No expiry date set';
+        }
+      }
+      return {
+        id: license.id,
+        licenseKey: license.licenseKey,
+        licenseName: license.licenseName,
+        organisationCode: license.organisationCode,
+        deploymentMode: license.deploymentMode,
+        state,
+        detail,
+        moduleCount: Array.isArray(license.moduleCodes) ? license.moduleCodes.length : 0,
+        validationMethod: license.features?.validationMethod || null,
+        enforcementMode: normaliseEnforcementMode(license.features?.enforcementMode),
+        allowOfflineOperation: license.features?.allowOfflineOperation === true,
+        hasOfflineFingerprint: Boolean(license.offlineFingerprint),
+      };
+    };
+
+    const activeLicenses = licenses.filter(isCurrentLicense);
     const licensedModuleCodes = Array.from(new Set(
-      licenses.flatMap((license) => Array.isArray(license.moduleCodes) ? license.moduleCodes : [])
+      activeLicenses.flatMap((license) => Array.isArray(license.moduleCodes) ? license.moduleCodes : [])
     )).sort();
     const licensedModules = modules.filter((module) => licensedModuleCodes.includes(module.code));
-    const deploymentModes = Array.from(new Set(licenses.map((license) => license.deploymentMode).filter(Boolean))).sort();
+    const deploymentModes = Array.from(new Set(activeLicenses.map((license) => license.deploymentMode).filter(Boolean))).sort();
+    const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
+    const deploymentProfile = activeOrganisation.settings?.deploymentProfile || {};
+    const readinessChecklist = activeOrganisation.settings?.deploymentReadiness || {};
+    const readinessKeys = [
+      'localWebServer',
+      'localDatabase',
+      'localAuthentication',
+      'localFileStorage',
+      'offlineLicenceFile',
+      'backupRestore',
+      'auditExport',
+      'updateProcess',
+    ];
+    const readinessCompleteCount = readinessKeys.filter((key) => readinessChecklist[key] === true).length;
+    const readinessPercent = readinessKeys.length
+      ? Math.round((readinessCompleteCount / readinessKeys.length) * 100)
+      : 0;
 
     res.json({
-      hasActiveLicense: licenses.length > 0,
-      activeLicenseCount: licenses.length,
+      hasActiveLicense: activeLicenses.length > 0,
+      activeLicenseCount: activeLicenses.length,
       deploymentModes,
       licensedModuleCodes,
       licensedModules,
+      licenseSummaries: licenses.map(describeLicense),
       licenses,
-      enforcementMode: 'monitor',
-      message: licenses.length > 0
-        ? 'Active commercial licence records are present. Enforcement is not enabled in this stage.'
-        : 'No active commercial licence records are present. Enforcement is not enabled in this stage.',
+      deploymentProfile,
+      readinessChecklist,
+      readinessCompleteCount,
+      readinessPercent,
+      enforcementMode: normaliseEnforcementMode(deploymentProfile.enforcementMode),
+      message: activeLicenses.length > 0
+        ? 'Active commercial licence records are present. Stage 11 keeps enforcement monitor-first unless an administrator deliberately changes the deployment profile.'
+        : 'No active commercial licence records are present. Stage 11 keeps enforcement monitor-first unless an administrator deliberately changes the deployment profile.',
     });
   } catch (error) {
     console.error('❌ GET /api/platform-license/status error:', error);

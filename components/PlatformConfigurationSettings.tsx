@@ -62,6 +62,124 @@ const ACCESS_SCOPE_TONE = {
   applyBorder: 'rgba(103, 232, 249, 0.62)',
 };
 
+const DEPLOYMENT_MODE_OPTIONS = [
+  'Online SaaS',
+  'Private Defence Network',
+  'Fully Offline',
+  'Hybrid Offline Sync',
+];
+
+const LICENSE_VALIDATION_OPTIONS = [
+  'Online licence check',
+  'Private network licence server',
+  'Offline signed licence file',
+  'Hybrid cached licence',
+];
+
+const LICENSE_ENFORCEMENT_OPTIONS = [
+  'Monitor Only',
+  'Warn Only',
+  'Block Expired Licence',
+];
+
+const AUTH_MODEL_OPTIONS = [
+  'Local accounts',
+  'Defence SSO',
+  'Hybrid local and SSO',
+];
+
+const DEFAULT_DEPLOYMENT_PROFILE = {
+  mode: 'Online SaaS',
+  validationMethod: 'Online licence check',
+  enforcementMode: 'Monitor Only',
+  offlineGraceDays: 30,
+  checkIntervalHours: 24,
+  authModel: 'Local accounts',
+  dataResidence: 'Customer controlled',
+  networkPosture: 'Internet connected SaaS',
+  notes: '',
+};
+
+const DEPLOYMENT_READINESS_ITEMS = [
+  { id: 'localWebServer', label: 'Local web server defined', detail: 'Required for private network and fully offline installs.' },
+  { id: 'localDatabase', label: 'Local database defined', detail: 'Postgres or approved customer database target is identified.' },
+  { id: 'localAuthentication', label: 'Local authentication path defined', detail: 'Users can log in without public internet access.' },
+  { id: 'localFileStorage', label: 'Local file storage path defined', detail: 'Attachments, exports and records have a customer-controlled storage path.' },
+  { id: 'offlineLicenceFile', label: 'Offline licence file process defined', detail: 'Signed licence issue, import and renewal process is documented.' },
+  { id: 'backupRestore', label: 'Backup and restore process defined', detail: 'Rollback and operational data restore are known before deployment.' },
+  { id: 'auditExport', label: 'Audit export process defined', detail: 'Audit logs can be exported for legal and assurance review.' },
+  { id: 'updateProcess', label: 'Update process defined', detail: 'Patch delivery and customer acceptance process is known.' },
+];
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const normaliseEnforcementMode = (value: any): string => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'monitor' || raw === 'monitor only') return 'Monitor Only';
+  if (raw === 'warn' || raw === 'warn only') return 'Warn Only';
+  if (raw === 'block' || raw === 'block expired' || raw === 'block expired licence') return 'Block Expired Licence';
+  return 'Monitor Only';
+};
+
+const parseDateOnly = (value: any): Date | null => {
+  if (!value) return null;
+  const parsed = new Date(String(value).slice(0, 10));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const formatDateLabel = (value: any): string => {
+  const parsed = parseDateOnly(value);
+  if (!parsed) return 'Not set';
+  return parsed.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const getLicenceStatusSummary = (license: any) => {
+  const status = String(license.status || 'ACTIVE').toUpperCase();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const validFrom = parseDateOnly(license.validFrom);
+  const validUntil = parseDateOnly(license.validUntil);
+  const daysRemaining = validUntil ? Math.ceil((validUntil.getTime() - today.getTime()) / MS_PER_DAY) : null;
+
+  if (status !== 'ACTIVE') {
+    return {
+      label: status || 'INACTIVE',
+      detail: 'Licence is not currently active.',
+      toneClass: 'border-gray-600 bg-gray-800 text-gray-200',
+    };
+  }
+
+  if (validFrom && validFrom > today) {
+    return {
+      label: 'Future',
+      detail: `Starts ${formatDateLabel(validFrom)}`,
+      toneClass: 'border-blue-500/40 bg-blue-500/10 text-blue-100',
+    };
+  }
+
+  if (validUntil && validUntil < today) {
+    return {
+      label: 'Expired',
+      detail: `Expired ${formatDateLabel(validUntil)}`,
+      toneClass: 'border-red-500/40 bg-red-500/10 text-red-100',
+    };
+  }
+
+  if (daysRemaining !== null && daysRemaining <= 30) {
+    return {
+      label: 'Expiring',
+      detail: `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`,
+      toneClass: 'border-yellow-500/50 bg-yellow-500/10 text-yellow-100',
+    };
+  }
+
+  return {
+    label: 'Active',
+    detail: validUntil ? `Valid until ${formatDateLabel(validUntil)}` : 'No expiry date set',
+    toneClass: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-100',
+  };
+};
+
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
   onShowSuccess: (message: string) => void;
@@ -117,6 +235,79 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     () => config.licenses.filter((license) => String(license.status || '').toUpperCase() === 'ACTIVE').length,
     [config.licenses],
   );
+
+  const activeModules = useMemo(
+    () => config.modules.filter((module) => String(module.status || 'ACTIVE').toUpperCase() === 'ACTIVE'),
+    [config.modules],
+  );
+
+  const primaryOrganisationIndex = useMemo(() => {
+    const activeIndex = config.organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
+    return activeIndex >= 0 ? activeIndex : 0;
+  }, [config.organisations]);
+
+  const primaryOrganisation = config.organisations[primaryOrganisationIndex] || null;
+  const primaryOrganisationSettings = primaryOrganisation?.settings || {};
+  const deploymentProfile = {
+    ...DEFAULT_DEPLOYMENT_PROFILE,
+    ...(primaryOrganisationSettings.deploymentProfile || {}),
+    enforcementMode: normaliseEnforcementMode(primaryOrganisationSettings.deploymentProfile?.enforcementMode),
+  };
+  const deploymentReadiness = primaryOrganisationSettings.deploymentReadiness || {};
+  const readinessCompleteCount = DEPLOYMENT_READINESS_ITEMS.filter((item) => deploymentReadiness[item.id] === true).length;
+  const readinessPercent = DEPLOYMENT_READINESS_ITEMS.length
+    ? Math.round((readinessCompleteCount / DEPLOYMENT_READINESS_ITEMS.length) * 100)
+    : 0;
+
+  const updatePrimaryOrganisationSettings = (
+    updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
+  ) => {
+    setConfig((prev) => {
+      const organisations = prev.organisations.length > 0
+        ? [...prev.organisations]
+        : [{ code: 'RAAF', name: 'RAAF', status: 'ACTIVE', settings: {} }];
+      const activeIndex = organisations.findIndex((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE');
+      const orgIndex = activeIndex >= 0 ? activeIndex : 0;
+      const currentOrg = organisations[orgIndex] || organisations[0];
+      const currentSettings = currentOrg.settings || {};
+      const nextSettings = typeof updater === 'function'
+        ? updater(currentSettings)
+        : { ...currentSettings, ...updater };
+      organisations[orgIndex] = { ...currentOrg, settings: nextSettings };
+      return { ...prev, organisations };
+    });
+  };
+
+  const updateDeploymentProfile = (changes: Record<string, any>) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      deploymentProfile: {
+        ...DEFAULT_DEPLOYMENT_PROFILE,
+        ...(settings.deploymentProfile || {}),
+        ...changes,
+      },
+    }));
+  };
+
+  const toggleDeploymentReadiness = (itemId: string, checked: boolean) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      deploymentReadiness: {
+        ...(settings.deploymentReadiness || {}),
+        [itemId]: checked,
+      },
+    }));
+  };
+
+  const updateLicenseFeatures = (licenseIndex: number, changes: Record<string, any>) => {
+    const currentFeatures = config.licenses[licenseIndex]?.features || {};
+    updateRow('licenses', licenseIndex, {
+      features: {
+        ...currentFeatures,
+        ...changes,
+      },
+    });
+  };
 
   const updateRow = (collection: keyof PlatformConfig, index: number, changes: Record<string, any>) => {
     setConfig((prev) => ({
@@ -197,9 +388,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             maxUnits: null,
             maxAircraftTypes: null,
             moduleCodes: activeModuleCodes,
-            features: { enforcementMode: 'monitor' },
+            features: {
+              enforcementMode: deploymentProfile.enforcementMode,
+              validationMethod: deploymentProfile.validationMethod,
+              offlineGraceDays: deploymentProfile.offlineGraceDays,
+              allowOfflineOperation: deploymentProfile.mode !== 'Online SaaS',
+            },
             offlineFingerprint: '',
-            notes: 'Licence record only. Enforcement is not active in Stage 10.',
+            notes: 'Stage 11 deployment readiness record. Enforcement is monitor-only unless deliberately changed by the platform administrator.',
           },
         ],
       };
@@ -572,8 +768,93 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section className={sectionClass}>
         <SectionHeader
+          title="Deployment Readiness"
+          subtitle="Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet."
+        />
+        <div className="space-y-4 p-4">
+          <div className="grid gap-3 lg:grid-cols-4">
+            <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Deployment Mode</div>
+              <div className="mt-2 text-lg font-bold text-white">{deploymentProfile.mode}</div>
+            </div>
+            <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Licence Validation</div>
+              <div className="mt-2 text-lg font-bold text-white">{deploymentProfile.validationMethod}</div>
+            </div>
+            <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Enforcement</div>
+              <div className="mt-2 text-lg font-bold text-white">{deploymentProfile.enforcementMode}</div>
+            </div>
+            <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Readiness</div>
+              <div className="mt-2 text-lg font-bold text-white">{readinessPercent}%</div>
+              <div className="mt-2 h-2 rounded-full bg-gray-950">
+                <div
+                  className="h-2 rounded-full bg-cyan-400"
+                  style={{ width: `${readinessPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-4 flex flex-wrap items-start gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-white">Deployment Profile</h5>
+                <p className="mt-1 text-xs text-gray-400">
+                  Plain English: this describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven.
+                </p>
+              </div>
+              <span className="ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100">
+                Runtime-safe: monitor-first
+              </span>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              <SelectField label="Operating Model" value={deploymentProfile.mode} disabled={!canEdit} options={DEPLOYMENT_MODE_OPTIONS} onChange={(value) => updateDeploymentProfile({ mode: value })} />
+              <SelectField label="Licence Validation Method" value={deploymentProfile.validationMethod} disabled={!canEdit} options={LICENSE_VALIDATION_OPTIONS} onChange={(value) => updateDeploymentProfile({ validationMethod: value })} />
+              <SelectField label="Licence Enforcement Mode" value={deploymentProfile.enforcementMode} disabled={!canEdit} options={LICENSE_ENFORCEMENT_OPTIONS} onChange={(value) => updateDeploymentProfile({ enforcementMode: value })} />
+              <NumberField label="Offline Grace Days" value={Number(deploymentProfile.offlineGraceDays ?? 30)} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ offlineGraceDays: value })} />
+              <NumberField label="Licence Check Interval Hours" value={Number(deploymentProfile.checkIntervalHours ?? 24)} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ checkIntervalHours: value })} />
+              <SelectField label="Authentication Model" value={deploymentProfile.authModel} disabled={!canEdit} options={AUTH_MODEL_OPTIONS} onChange={(value) => updateDeploymentProfile({ authModel: value })} />
+              <Field label="Data Residence" value={deploymentProfile.dataResidence || ''} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ dataResidence: value })} />
+              <Field label="Network Posture" value={deploymentProfile.networkPosture || ''} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ networkPosture: value })} />
+              <TextAreaField label="Deployment Notes" value={deploymentProfile.notes || ''} disabled={!canEdit} onChange={(value) => updateDeploymentProfile({ notes: value })} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <h5 className="text-sm font-bold text-white">Offline And On-Prem Readiness Checklist</h5>
+              <InfoHint text="These checks are deliberately visible to administrators. They make the offline/private-network deployment obligations explicit before this app is sold or installed on a defence network." />
+              <span className="ml-auto text-xs font-semibold text-gray-400">
+                {readinessCompleteCount} of {DEPLOYMENT_READINESS_ITEMS.length} complete
+              </span>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {DEPLOYMENT_READINESS_ITEMS.map((item) => (
+                <label key={item.id} className="flex items-start gap-3 rounded border border-gray-700 bg-gray-950 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                    checked={deploymentReadiness[item.id] === true}
+                    disabled={!canEdit}
+                    onChange={(event) => toggleDeploymentReadiness(item.id, event.target.checked)}
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-white">{item.label}</span>
+                    <span className="mt-1 block text-xs text-gray-400">{item.detail}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={sectionClass}>
+        <SectionHeader
           title="Licensing & Deployment"
-          subtitle="Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 10 records licence intent; enforcement remains monitor-only."
+          subtitle="Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 11 makes licence status and offline readiness explicit while enforcement remains safe by default."
           action={canEdit ? <button type="button" onClick={addLicense} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Licence</button> : null}
         />
         <div className="space-y-4 p-4">
@@ -584,16 +865,33 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           )}
           {config.licenses.map((license, index) => {
             const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
+            const licenceFeatures = license.features || {};
+            const licenceStatus = getLicenceStatusSummary(license);
+            const licensedActiveModuleCount = moduleCodes.filter((code: string) => (
+              activeModules.some((module) => module.code === code)
+            )).length;
+            const offlineMode = ['Fully Offline', 'Hybrid Offline Sync'].includes(license.deploymentMode || '');
             return (
               <div key={license.id || license.licenseKey || index} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <h5 className="text-sm font-bold text-white">{license.licenseName || 'Licence'}</h5>
-                  <span className="rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
-                    {license.deploymentMode || 'Deployment'} / {license.status || 'Status'}
-                  </span>
-                  <span className="rounded bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
-                    Monitor only
-                  </span>
+                <div className="mb-4 grid gap-3 lg:grid-cols-[1fr,260px,260px]">
+                  <div>
+                    <h5 className="text-sm font-bold text-white">{license.licenseName || 'Licence'}</h5>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {license.licenseKey || 'No licence key'} / {license.deploymentMode || 'Deployment model not set'}
+                    </p>
+                  </div>
+                  <div className={`rounded border px-3 py-2 ${licenceStatus.toneClass}`}>
+                    <div className="text-xs font-semibold uppercase tracking-wide opacity-80">Licence Status</div>
+                    <div className="mt-1 text-base font-bold">{licenceStatus.label}</div>
+                    <div className="mt-1 text-xs opacity-80">{licenceStatus.detail}</div>
+                  </div>
+                  <div className="rounded border border-cyan-500/30 bg-cyan-500/10 px-3 py-2 text-cyan-100">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Module Coverage</div>
+                    <div className="mt-1 text-base font-bold">{licensedActiveModuleCount} of {activeModules.length}</div>
+                    <div className="mt-1 text-xs text-cyan-100/70">
+                      {offlineMode && !license.offlineFingerprint ? 'Offline fingerprint still required' : 'Entitlements recorded'}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid gap-3 lg:grid-cols-3">
@@ -609,6 +907,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <OptionalNumberField label="Max Units" value={license.maxUnits ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxUnits: value })} />
                   <OptionalNumberField label="Max Aircraft Types" value={license.maxAircraftTypes ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxAircraftTypes: value })} />
                   <TextAreaField label="Notes" value={license.notes || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { notes: value })} />
+                </div>
+
+                <div className="mt-4 rounded border border-cyan-500/25 bg-cyan-500/10 p-3">
+                  <div className="mb-3 flex items-center gap-2">
+                    <h6 className="text-xs font-bold uppercase tracking-wide text-cyan-100">Licence Controls</h6>
+                    <InfoHint text="These controls describe how the licence should behave in each deployment model. They are saved now for commercial readiness; live runtime enforcement should remain Monitor Only until a customer acceptance process is complete." />
+                  </div>
+                  <div className="grid gap-3 lg:grid-cols-4">
+                    <SelectField
+                      label="Validation Method"
+                      value={licenceFeatures.validationMethod || deploymentProfile.validationMethod}
+                      disabled={!canEdit}
+                      options={LICENSE_VALIDATION_OPTIONS}
+                      onChange={(value) => updateLicenseFeatures(index, { validationMethod: value })}
+                    />
+                    <SelectField
+                      label="Enforcement Mode"
+                      value={normaliseEnforcementMode(licenceFeatures.enforcementMode || deploymentProfile.enforcementMode)}
+                      disabled={!canEdit}
+                      options={LICENSE_ENFORCEMENT_OPTIONS}
+                      onChange={(value) => updateLicenseFeatures(index, { enforcementMode: value })}
+                    />
+                    <NumberField
+                      label="Offline Grace Days"
+                      value={Number(licenceFeatures.offlineGraceDays ?? deploymentProfile.offlineGraceDays ?? 30)}
+                      disabled={!canEdit}
+                      onChange={(value) => updateLicenseFeatures(index, { offlineGraceDays: value })}
+                    />
+                    <ToggleField
+                      label="Allow offline operation"
+                      checked={licenceFeatures.allowOfflineOperation === true}
+                      disabled={!canEdit}
+                      onChange={(checked) => updateLicenseFeatures(index, { allowOfflineOperation: checked })}
+                    />
+                  </div>
                 </div>
 
                 <div className="mt-4 rounded border border-gray-700 bg-gray-950 p-3">
