@@ -58244,21 +58244,23 @@ const SectionHeader = ({ title, subtitle, action }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
-      className: "flex flex-wrap items-center gap-3 border-b px-4 py-4",
+      className: "flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4",
       style: sectionHeaderStyle,
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "div",
-          {
-            className: "h-11 w-1.5 rounded-full",
-            style: sectionAccentStyle
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-bold text-white", children: title }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-300", children: subtitle })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 flex-1 items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              className: "h-11 w-1.5 shrink-0 rounded-full",
+              style: sectionAccentStyle
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-base font-bold text-white", children: title }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-300", children: subtitle })
+          ] })
         ] }),
-        action && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "ml-auto", children: action })
+        action && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "shrink-0", children: action })
       ]
     }
   );

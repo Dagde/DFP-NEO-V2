@@ -1499,18 +1499,20 @@ const Metric = ({ label, value }: { label: string; value: number }) => (
 const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) => {
   return (
     <div
-      className="flex flex-wrap items-center gap-3 border-b px-4 py-4"
+      className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4"
       style={sectionHeaderStyle}
     >
-      <div
-        className="h-11 w-1.5 rounded-full"
-        style={sectionAccentStyle}
-      />
-      <div>
-        <h4 className="text-base font-bold text-white">{title}</h4>
-        <p className="mt-1 text-sm text-gray-300">{subtitle}</p>
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div
+          className="h-11 w-1.5 shrink-0 rounded-full"
+          style={sectionAccentStyle}
+        />
+        <div className="min-w-0">
+          <h4 className="text-base font-bold text-white">{title}</h4>
+          <p className="mt-1 text-sm text-gray-300">{subtitle}</p>
+        </div>
       </div>
-      {action && <div className="ml-auto">{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   );
 };
