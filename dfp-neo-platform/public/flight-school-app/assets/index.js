@@ -56930,6 +56930,7 @@ const emptyConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  licenses: [],
   userAccess: [],
   platformUsers: [],
   schedulingRuleSets: []
@@ -57000,6 +57001,10 @@ const PlatformConfigurationSettings = ({
     () => config.unitModules.filter((item) => item.isEnabled !== false).length,
     [config.unitModules]
   );
+  const activeLicenseCount = reactExports.useMemo(
+    () => config.licenses.filter((license) => String(license.status || "").toUpperCase() === "ACTIVE").length,
+    [config.licenses]
+  );
   const updateRow = (collection, index, changes) => {
     setConfig((prev) => ({
       ...prev,
@@ -57050,6 +57055,39 @@ const PlatformConfigurationSettings = ({
         }
       ]
     }));
+  };
+  const addLicense = () => {
+    setConfig((prev) => {
+      const organisationCode = prev.organisations[0]?.code || "DEFAULT";
+      const activeModuleCodes = prev.modules.filter((module) => String(module.status || "ACTIVE").toUpperCase() === "ACTIVE").map((module) => module.code).filter(Boolean);
+      return {
+        ...prev,
+        licenses: [
+          ...prev.licenses,
+          {
+            organisationCode,
+            licenseKey: `${organisationCode}-LIC-${prev.licenses.length + 1}`,
+            licenseName: "New Licence",
+            deploymentMode: "Online SaaS",
+            status: "ACTIVE",
+            validFrom: "",
+            validUntil: "",
+            maxUsers: null,
+            maxUnits: null,
+            maxAircraftTypes: null,
+            moduleCodes: activeModuleCodes,
+            features: { enforcementMode: "monitor" },
+            offlineFingerprint: "",
+            notes: "Licence record only. Enforcement is not active in Stage 10."
+          }
+        ]
+      };
+    });
+  };
+  const toggleLicenseModule = (licenseIndex, moduleCode, checked) => {
+    const currentCodes = Array.isArray(config.licenses[licenseIndex]?.moduleCodes) ? config.licenses[licenseIndex].moduleCodes : [];
+    const moduleCodes = checked ? Array.from(/* @__PURE__ */ new Set([...currentCodes, moduleCode])) : currentCodes.filter((code) => code !== moduleCode);
+    updateRow("licenses", licenseIndex, { moduleCodes });
   };
   const permissionProfiles = reactExports.useMemo(() => {
     const profiles = config.organisations[0]?.settings?.permissionProfiles;
@@ -57215,11 +57253,12 @@ const PlatformConfigurationSettings = ({
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Organisations", value: config.organisations.length }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Locations", value: config.locations.length }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Units", value: config.units.length }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Active Licences", value: activeLicenseCount })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Organisation & Locations", subtitle: "The top of the hierarchy: customer, base, timezone, and training areas." }),
@@ -57323,6 +57362,73 @@ const PlatformConfigurationSettings = ({
           })
         ] }, unit.code)) })
       ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Licensing & Deployment",
+          subtitle: "Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 10 records licence intent; enforcement remains monitor-only.",
+          action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Licence" }) : null
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        config.licenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
+        config.licenses.map((license, index) => {
+          const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: license.licenseName || "Licence" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300", children: [
+                license.deploymentMode || "Deployment",
+                " / ",
+                license.status || "Status"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100", children: "Monitor only" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Name", value: license.licenseName || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { licenseName: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Licence Key", value: license.licenseKey || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { licenseKey: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Organisation", value: license.organisationCode || config.organisations[0]?.code || "DEFAULT", disabled: !canEdit, options: config.organisations.map((org) => org.code), onChange: (value) => updateRow("licenses", index, { organisationCode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Deployment Model", value: license.deploymentMode || "Online SaaS", disabled: !canEdit, options: ["Online SaaS", "Private Defence Network", "Fully Offline", "Hybrid Offline Sync"], onChange: (value) => updateRow("licenses", index, { deploymentMode: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: license.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "SUSPENDED", "EXPIRED", "INACTIVE"], onChange: (value) => updateRow("licenses", index, { status: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Offline Fingerprint", value: license.offlineFingerprint || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { offlineFingerprint: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid From", value: license.validFrom || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { validFrom: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Valid Until", value: license.validUntil || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { validUntil: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Users", value: license.maxUsers ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxUsers: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Units", value: license.maxUnits ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxUnits: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(OptionalNumberField, { label: "Max Aircraft Types", value: license.maxAircraftTypes ?? null, disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { maxAircraftTypes: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Notes", value: license.notes || "", disabled: !canEdit, onChange: (value) => updateRow("licenses", index, { notes: value }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-700 bg-gray-950 p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Licensed Modules" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This is the commercial entitlement list. Stage 10 stores it for future online, private-network and offline licence checks; it does not yet block modules." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
+                  moduleCodes.length,
+                  " selected"
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 sm:grid-cols-2 lg:grid-cols-3", children: config.modules.map((module) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start gap-2 rounded border border-gray-700 bg-gray-900 p-3 text-sm text-gray-200", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "checkbox",
+                    className: "mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500",
+                    checked: moduleCodes.includes(module.code),
+                    disabled: !canEdit,
+                    onChange: (event) => toggleLicenseModule(index, module.code, event.target.checked)
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block font-semibold text-white", children: module.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-400", children: module.code })
+                ] })
+              ] }, module.code)) })
+            ] })
+          ] }, license.id || license.licenseKey || index);
+        })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -57584,6 +57690,29 @@ const Field = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRunti
 const NumberField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "number", value: value ?? 0, disabled, onChange: (event) => onChange(Number(event.target.value)) })
+] });
+const formatDateInput = (value) => value ? String(value).slice(0, 10) : "";
+const DateField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "date", value: formatDateInput(value), disabled, onChange: (event) => onChange(event.target.value) })
+] });
+const OptionalNumberField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      type: "number",
+      value: value ?? "",
+      disabled,
+      placeholder: "Unlimited",
+      onChange: (event) => onChange(event.target.value === "" ? null : Number(event.target.value))
+    }
+  )
+] });
+const TextAreaField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "lg:col-span-2", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: `${fieldClass} min-h-[74px] resize-y`, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
 ] });
 const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-gray-200", children: label }),

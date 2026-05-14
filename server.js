@@ -442,6 +442,12 @@ app.post('/api/settings', async (req, res) => {
 // tables create the admin-editable foundation for commercial use.
 // ============================================================
 
+const normaliseAuditDateOnly = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return String(value).slice(0, 10);
+};
+
 const PLATFORM_CONFIG_AUDIT_TABLES = [
   {
     collection: 'organisations',
@@ -544,6 +550,31 @@ const PLATFORM_CONFIG_AUDIT_TABLES = [
     }),
     keys: (row) => [row.id, [row.unitCode, row.moduleCode].join('|')].filter(Boolean),
     label: (row) => `${row.unitCode || 'Unit'} / ${row.moduleCode || 'Module'}`,
+  },
+  {
+    collection: 'licenses',
+    entityType: 'CommercialLicense',
+    fields: ['organisationCode', 'licenseKey', 'licenseName', 'deploymentMode', 'status', 'validFrom', 'validUntil', 'maxUsers', 'maxUnits', 'maxAircraftTypes', 'moduleCodes', 'features', 'offlineFingerprint', 'notes'],
+    isValid: (row) => Boolean(row.licenseKey && row.licenseName),
+    normalise: (row) => ({
+      id: row.id || null,
+      organisationCode: row.organisationCode || 'DEFAULT',
+      licenseKey: row.licenseKey || '',
+      licenseName: row.licenseName || '',
+      deploymentMode: row.deploymentMode || 'Online SaaS',
+      status: row.status || 'ACTIVE',
+      validFrom: normaliseAuditDateOnly(row.validFrom),
+      validUntil: normaliseAuditDateOnly(row.validUntil),
+      maxUsers: row.maxUsers === null || row.maxUsers === undefined || row.maxUsers === '' ? null : Number(row.maxUsers),
+      maxUnits: row.maxUnits === null || row.maxUnits === undefined || row.maxUnits === '' ? null : Number(row.maxUnits),
+      maxAircraftTypes: row.maxAircraftTypes === null || row.maxAircraftTypes === undefined || row.maxAircraftTypes === '' ? null : Number(row.maxAircraftTypes),
+      moduleCodes: Array.isArray(row.moduleCodes) ? row.moduleCodes : [],
+      features: row.features || {},
+      offlineFingerprint: row.offlineFingerprint || null,
+      notes: row.notes || null,
+    }),
+    keys: (row) => [row.id, row.licenseKey].filter(Boolean),
+    label: (row) => row.licenseName || row.licenseKey,
   },
   {
     collection: 'schedulingRuleSets',
@@ -688,6 +719,22 @@ const PLATFORM_FIELD_LABELS = {
     moduleCode: 'Module',
     isEnabled: 'Module enabled',
   },
+  CommercialLicense: {
+    organisationCode: 'Organisation',
+    licenseKey: 'Licence key',
+    licenseName: 'Licence name',
+    deploymentMode: 'Deployment model',
+    status: 'Licence status',
+    validFrom: 'Valid from',
+    validUntil: 'Valid until',
+    maxUsers: 'Maximum users',
+    maxUnits: 'Maximum units',
+    maxAircraftTypes: 'Maximum aircraft types',
+    moduleCodes: 'Licensed modules',
+    features: 'Licensed features',
+    offlineFingerprint: 'Offline fingerprint',
+    notes: 'Licence notes',
+  },
   CommercialSchedulingRuleSet: {
     organisationCode: 'Organisation',
     unitCode: 'Unit',
@@ -718,6 +765,7 @@ const PLATFORM_ENTITY_LABELS = {
   CommercialAircraftType: 'aircraft type',
   CommercialResourcePool: 'resource pool',
   CommercialUnitModule: 'unit module',
+  CommercialLicense: 'licence',
   CommercialSchedulingRuleSet: 'scheduling rule set',
   CommercialUserAccess: 'access scope',
 };
@@ -1053,6 +1101,7 @@ async function loadPlatformConfigAuditSnapshot(db) {
     aircraftTypes,
     resourcePools,
     unitModules,
+    licenses,
     schedulingRuleSets,
     userAccess,
   ] = await Promise.all([
@@ -1062,6 +1111,7 @@ async function loadPlatformConfigAuditSnapshot(db) {
     db.$queryRawUnsafe(`SELECT * FROM "CommercialAircraftType"`),
     db.$queryRawUnsafe(`SELECT * FROM "CommercialResourcePool"`),
     db.$queryRawUnsafe(`SELECT * FROM "CommercialUnitModule"`),
+    db.$queryRawUnsafe(`SELECT * FROM "CommercialLicense"`),
     db.$queryRawUnsafe(`SELECT * FROM "CommercialSchedulingRuleSet"`),
     db.$queryRawUnsafe(`SELECT * FROM "CommercialUserAccess"`),
   ]);
@@ -1073,6 +1123,7 @@ async function loadPlatformConfigAuditSnapshot(db) {
     aircraftTypes,
     resourcePools,
     unitModules,
+    licenses,
     schedulingRuleSets,
     userAccess,
   };
@@ -1198,6 +1249,7 @@ app.get('/api/platform-config', async (req, res) => {
       resourcePools,
       modules,
       unitModules,
+      licenses,
       schedulingRuleSets,
       userAccess,
       platformUsers,
@@ -1209,6 +1261,7 @@ app.get('/api/platform-config', async (req, res) => {
       db.$queryRawUnsafe(`SELECT * FROM "CommercialResourcePool" ORDER BY "name"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialModule" ORDER BY "name"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialUnitModule" ORDER BY "unitCode", "moduleCode"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialLicense" ORDER BY "licenseName"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialSchedulingRuleSet" ORDER BY "name"`),
       db.$queryRawUnsafe(`SELECT * FROM "CommercialUserAccess" ORDER BY "displayName", "userId", "locationCode", "unitCode", "moduleCode"`),
       db.$queryRawUnsafe(`SELECT id, "userId", username, email, "firstName", "lastName", role, "isActive" FROM "User" ORDER BY "lastName", "firstName", username`),
@@ -1222,6 +1275,7 @@ app.get('/api/platform-config', async (req, res) => {
       resourcePools,
       modules,
       unitModules,
+      licenses,
       schedulingRuleSets,
       userAccess,
       platformUsers,
@@ -1229,6 +1283,45 @@ app.get('/api/platform-config', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/platform-config error:', error);
     res.status(500).json({ error: 'Failed to load platform configuration', details: error.message });
+  }
+});
+
+app.get('/api/platform-license/status', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const [licenses, modules] = await Promise.all([
+      db.$queryRawUnsafe(`
+        SELECT *
+        FROM "CommercialLicense"
+        WHERE "status" = 'ACTIVE'
+          AND ("validFrom" IS NULL OR "validFrom" <= NOW())
+          AND ("validUntil" IS NULL OR "validUntil" >= NOW())
+        ORDER BY "licenseName"
+      `),
+      db.$queryRawUnsafe(`SELECT "code", "name", "status" FROM "CommercialModule" ORDER BY "name"`),
+    ]);
+
+    const licensedModuleCodes = Array.from(new Set(
+      licenses.flatMap((license) => Array.isArray(license.moduleCodes) ? license.moduleCodes : [])
+    )).sort();
+    const licensedModules = modules.filter((module) => licensedModuleCodes.includes(module.code));
+    const deploymentModes = Array.from(new Set(licenses.map((license) => license.deploymentMode).filter(Boolean))).sort();
+
+    res.json({
+      hasActiveLicense: licenses.length > 0,
+      activeLicenseCount: licenses.length,
+      deploymentModes,
+      licensedModuleCodes,
+      licensedModules,
+      licenses,
+      enforcementMode: 'monitor',
+      message: licenses.length > 0
+        ? 'Active commercial licence records are present. Enforcement is not enabled in this stage.'
+        : 'No active commercial licence records are present. Enforcement is not enabled in this stage.',
+    });
+  } catch (error) {
+    console.error('❌ GET /api/platform-license/status error:', error);
+    res.status(500).json({ error: 'Failed to load platform licence status', details: error.message });
   }
 });
 
@@ -1242,6 +1335,7 @@ app.post('/api/platform-config', async (req, res) => {
       aircraftTypes = [],
       resourcePools = [],
       unitModules = [],
+      licenses = [],
       schedulingRuleSets = [],
       userAccess = [],
     } = req.body || {};
@@ -1249,6 +1343,10 @@ app.post('/api/platform-config', async (req, res) => {
     const now = new Date().toISOString();
     const toJson = (value) => JSON.stringify(value || {});
     const toArray = (value) => Array.isArray(value) ? value : [];
+    const toNullableDate = (value) => value ? String(value).slice(0, 10) : null;
+    const toNullableNumber = (value) => (
+      value === null || value === undefined || value === '' ? null : Number(value)
+    );
     const beforeAuditSnapshot = await loadPlatformConfigAuditSnapshot(db);
 
     for (const org of organisations) {
@@ -1340,6 +1438,69 @@ app.post('/api/platform-config', async (req, res) => {
       `, unitModule.unitCode, unitModule.moduleCode, Boolean(unitModule.isEnabled), toJson(unitModule.settings), now);
     }
 
+    for (const license of licenses) {
+      if (!license.licenseKey || !license.licenseName) continue;
+      const licenseValues = [
+        license.organisationCode || organisations[0]?.code || 'DEFAULT',
+        license.licenseKey,
+        license.licenseName,
+        license.deploymentMode || 'Online SaaS',
+        license.status || 'ACTIVE',
+        toNullableDate(license.validFrom),
+        toNullableDate(license.validUntil),
+        toNullableNumber(license.maxUsers),
+        toNullableNumber(license.maxUnits),
+        toNullableNumber(license.maxAircraftTypes),
+        toArray(license.moduleCodes),
+        toJson(license.features),
+        license.offlineFingerprint || null,
+        license.notes || null,
+        now,
+      ];
+
+      if (license.id) {
+        await db.$executeRawUnsafe(`
+          UPDATE "CommercialLicense" SET
+            "organisationCode" = $2,
+            "licenseKey" = $3,
+            "licenseName" = $4,
+            "deploymentMode" = $5,
+            "status" = $6,
+            "validFrom" = $7::timestamp,
+            "validUntil" = $8::timestamp,
+            "maxUsers" = $9,
+            "maxUnits" = $10,
+            "maxAircraftTypes" = $11,
+            "moduleCodes" = $12::text[],
+            "features" = $13::jsonb,
+            "offlineFingerprint" = $14,
+            "notes" = $15,
+            "updatedAt" = $16::timestamp
+          WHERE "id" = $1
+        `, license.id, ...licenseValues);
+      } else {
+        await db.$executeRawUnsafe(`
+          INSERT INTO "CommercialLicense" ("id", "organisationCode", "licenseKey", "licenseName", "deploymentMode", "status", "validFrom", "validUntil", "maxUsers", "maxUnits", "maxAircraftTypes", "moduleCodes", "features", "offlineFingerprint", "notes", "createdAt", "updatedAt")
+          VALUES (gen_random_uuid()::text, $1, $2, $3, $4, $5, $6::timestamp, $7::timestamp, $8, $9, $10, $11::text[], $12::jsonb, $13, $14, $15::timestamp, $15::timestamp)
+          ON CONFLICT ("licenseKey") DO UPDATE SET
+            "organisationCode" = $1,
+            "licenseName" = $3,
+            "deploymentMode" = $4,
+            "status" = $5,
+            "validFrom" = $6::timestamp,
+            "validUntil" = $7::timestamp,
+            "maxUsers" = $8,
+            "maxUnits" = $9,
+            "maxAircraftTypes" = $10,
+            "moduleCodes" = $11::text[],
+            "features" = $12::jsonb,
+            "offlineFingerprint" = $13,
+            "notes" = $14,
+            "updatedAt" = $15::timestamp
+        `, ...licenseValues);
+      }
+    }
+
     for (const ruleSet of schedulingRuleSets) {
       const name = ruleSet.name || 'Default Scheduling Rules';
       await db.$executeRawUnsafe(`
@@ -1429,6 +1590,7 @@ app.post('/api/platform-config', async (req, res) => {
         aircraftTypes,
         resourcePools,
         unitModules,
+        licenses,
         schedulingRuleSets,
         userAccess,
       });
@@ -5949,6 +6111,32 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialUnitModule_unitCode_idx" ON "CommercialUnitModule"("unitCode");`);
 
     await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "CommercialLicense" (
+        "id" TEXT NOT NULL,
+        "organisationCode" TEXT NOT NULL,
+        "licenseKey" TEXT NOT NULL,
+        "licenseName" TEXT NOT NULL,
+        "deploymentMode" TEXT NOT NULL DEFAULT 'Online SaaS',
+        "status" TEXT NOT NULL DEFAULT 'ACTIVE',
+        "validFrom" TIMESTAMP(3),
+        "validUntil" TIMESTAMP(3),
+        "maxUsers" INTEGER,
+        "maxUnits" INTEGER,
+        "maxAircraftTypes" INTEGER,
+        "moduleCodes" TEXT[] NOT NULL DEFAULT '{}',
+        "features" JSONB NOT NULL DEFAULT '{}',
+        "offlineFingerprint" TEXT,
+        "notes" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "CommercialLicense_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "CommercialLicense_licenseKey_key" ON "CommercialLicense"("licenseKey");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialLicense_organisationCode_idx" ON "CommercialLicense"("organisationCode");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialLicense_status_idx" ON "CommercialLicense"("status");`);
+
+    await db.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "CommercialUserAccess" (
         "id" TEXT NOT NULL,
         "userId" TEXT NOT NULL,
@@ -5996,11 +6184,60 @@ async function ensureCommercialConfigTables(db) {
     await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "CommercialSchedulingRuleSet_aircraftTypeCode_idx" ON "CommercialSchedulingRuleSet"("aircraftTypeCode");`);
 
     await seedCommercialConfigIfEmpty(db);
+    await seedCommercialLicenseIfEmpty(db);
     await seedCommercialUserAccessIfEmpty(db);
     console.log('✅ Commercial platform configuration tables ready');
   } catch (err) {
     console.error('❌ Failed to ensure commercial platform configuration tables:', err.message);
   }
+}
+
+async function seedCommercialLicenseIfEmpty(db) {
+  const existing = await db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLicense"`);
+  if (existing?.[0]?.count > 0) return;
+
+  const now = new Date().toISOString();
+  const organisations = await db.$queryRawUnsafe(`
+    SELECT "code", "name"
+    FROM "CommercialOrganisation"
+    ORDER BY "createdAt" ASC
+    LIMIT 1
+  `);
+  const organisation = organisations?.[0] || { code: 'DEFAULT', name: 'Default Organisation' };
+  const modules = await db.$queryRawUnsafe(`
+    SELECT "code"
+    FROM "CommercialModule"
+    WHERE "status" = 'ACTIVE'
+    ORDER BY "code"
+  `);
+  const moduleCodes = modules.map((module) => module.code).filter(Boolean);
+  const organisationCode = organisation.code || 'DEFAULT';
+  const organisationName = organisation.name || organisationCode;
+
+  await db.$executeRawUnsafe(`
+    INSERT INTO "CommercialLicense" (
+      "id", "organisationCode", "licenseKey", "licenseName", "deploymentMode", "status",
+      "validFrom", "validUntil", "maxUsers", "maxUnits", "maxAircraftTypes", "moduleCodes",
+      "features", "offlineFingerprint", "notes", "createdAt", "updatedAt"
+    )
+    VALUES (
+      gen_random_uuid()::text, $1, $2, $3, 'Online SaaS', 'ACTIVE',
+      NULL, NULL, NULL, NULL, NULL, $4::text[], $5::jsonb, NULL, $6, $7::timestamp, $7::timestamp
+    )
+    ON CONFLICT ("licenseKey") DO NOTHING
+  `,
+    organisationCode,
+    `${organisationCode}-EVAL`,
+    `${organisationName} Evaluation Licence`,
+    moduleCodes,
+    JSON.stringify({
+      enforcementMode: 'monitor',
+      offlineCapable: false,
+      seededBy: 'Stage 10 licensing foundation',
+    }),
+    'Commercial licensing foundation record. Enforcement is not active in this stage.',
+    now
+  );
 }
 
 async function seedCommercialUserAccessIfEmpty(db) {

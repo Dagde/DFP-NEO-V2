@@ -557,6 +557,29 @@ model CommercialUnitModule {
   @@index([moduleCode])
 }
 
+model CommercialLicense {
+  id                 String    @id @default(cuid())
+  organisationCode   String
+  licenseKey         String    @unique
+  licenseName        String
+  deploymentMode     String    @default("Online SaaS")
+  status             String    @default("ACTIVE")
+  validFrom          DateTime?
+  validUntil         DateTime?
+  maxUsers           Int?
+  maxUnits           Int?
+  maxAircraftTypes   Int?
+  moduleCodes        String[]  @default([])
+  features           Json      @default("{}")
+  offlineFingerprint String?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([organisationCode])
+  @@index([status])
+}
+
 model CommercialUserAccess {
   id               String   @id @default(cuid())
   userId           String

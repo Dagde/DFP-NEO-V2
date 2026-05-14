@@ -13,6 +13,7 @@ type PlatformConfig = {
   resourcePools: any[];
   modules: any[];
   unitModules: any[];
+  licenses: any[];
   userAccess: any[];
   platformUsers: any[];
   schedulingRuleSets: any[];
@@ -31,6 +32,7 @@ const emptyConfig: PlatformConfig = {
   resourcePools: [],
   modules: [],
   unitModules: [],
+  licenses: [],
   userAccess: [],
   platformUsers: [],
   schedulingRuleSets: [],
@@ -111,6 +113,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     [config.unitModules],
   );
 
+  const activeLicenseCount = useMemo(
+    () => config.licenses.filter((license) => String(license.status || '').toUpperCase() === 'ACTIVE').length,
+    [config.licenses],
+  );
+
   const updateRow = (collection: keyof PlatformConfig, index: number, changes: Record<string, any>) => {
     setConfig((prev) => ({
       ...prev,
@@ -165,6 +172,48 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         },
       ],
     }));
+  };
+
+  const addLicense = () => {
+    setConfig((prev) => {
+      const organisationCode = prev.organisations[0]?.code || 'DEFAULT';
+      const activeModuleCodes = prev.modules
+        .filter((module) => String(module.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
+        .map((module) => module.code)
+        .filter(Boolean);
+      return {
+        ...prev,
+        licenses: [
+          ...prev.licenses,
+          {
+            organisationCode,
+            licenseKey: `${organisationCode}-LIC-${prev.licenses.length + 1}`,
+            licenseName: 'New Licence',
+            deploymentMode: 'Online SaaS',
+            status: 'ACTIVE',
+            validFrom: '',
+            validUntil: '',
+            maxUsers: null,
+            maxUnits: null,
+            maxAircraftTypes: null,
+            moduleCodes: activeModuleCodes,
+            features: { enforcementMode: 'monitor' },
+            offlineFingerprint: '',
+            notes: 'Licence record only. Enforcement is not active in Stage 10.',
+          },
+        ],
+      };
+    });
+  };
+
+  const toggleLicenseModule = (licenseIndex: number, moduleCode: string, checked: boolean) => {
+    const currentCodes = Array.isArray(config.licenses[licenseIndex]?.moduleCodes)
+      ? config.licenses[licenseIndex].moduleCodes
+      : [];
+    const moduleCodes = checked
+      ? Array.from(new Set([...currentCodes, moduleCode]))
+      : currentCodes.filter((code: string) => code !== moduleCode);
+    updateRow('licenses', licenseIndex, { moduleCodes });
   };
 
   const permissionProfiles = useMemo<PermissionProfile[]>(() => {
@@ -387,11 +436,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Metric label="Organisations" value={config.organisations.length} />
         <Metric label="Locations" value={config.locations.length} />
         <Metric label="Units" value={config.units.length} />
         <Metric label="Enabled Modules" value={enabledModuleCount} />
+        <Metric label="Active Licences" value={activeLicenseCount} />
       </div>
 
       <section className={sectionClass}>
@@ -517,6 +567,77 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className={sectionClass}>
+        <SectionHeader
+          title="Licensing & Deployment"
+          subtitle="Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 10 records licence intent; enforcement remains monitor-only."
+          action={canEdit ? <button type="button" onClick={addLicense} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Licence</button> : null}
+        />
+        <div className="space-y-4 p-4">
+          {config.licenses.length === 0 && (
+            <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
+              No licence records exist yet. Add one before introducing licence enforcement.
+            </div>
+          )}
+          {config.licenses.map((license, index) => {
+            const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
+            return (
+              <div key={license.id || license.licenseKey || index} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <h5 className="text-sm font-bold text-white">{license.licenseName || 'Licence'}</h5>
+                  <span className="rounded bg-gray-950 px-2 py-1 text-xs font-semibold text-gray-300">
+                    {license.deploymentMode || 'Deployment'} / {license.status || 'Status'}
+                  </span>
+                  <span className="rounded bg-cyan-500/10 px-2 py-1 text-xs font-semibold text-cyan-100">
+                    Monitor only
+                  </span>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-3">
+                  <Field label="Licence Name" value={license.licenseName || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { licenseName: value })} />
+                  <Field label="Licence Key" value={license.licenseKey || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { licenseKey: value })} />
+                  <SelectField label="Organisation" value={license.organisationCode || config.organisations[0]?.code || 'DEFAULT'} disabled={!canEdit} options={config.organisations.map((org) => org.code)} onChange={(value) => updateRow('licenses', index, { organisationCode: value })} />
+                  <SelectField label="Deployment Model" value={license.deploymentMode || 'Online SaaS'} disabled={!canEdit} options={['Online SaaS', 'Private Defence Network', 'Fully Offline', 'Hybrid Offline Sync']} onChange={(value) => updateRow('licenses', index, { deploymentMode: value })} />
+                  <SelectField label="Status" value={license.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'SUSPENDED', 'EXPIRED', 'INACTIVE']} onChange={(value) => updateRow('licenses', index, { status: value })} />
+                  <Field label="Offline Fingerprint" value={license.offlineFingerprint || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { offlineFingerprint: value })} />
+                  <DateField label="Valid From" value={license.validFrom || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { validFrom: value })} />
+                  <DateField label="Valid Until" value={license.validUntil || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { validUntil: value })} />
+                  <OptionalNumberField label="Max Users" value={license.maxUsers ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxUsers: value })} />
+                  <OptionalNumberField label="Max Units" value={license.maxUnits ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxUnits: value })} />
+                  <OptionalNumberField label="Max Aircraft Types" value={license.maxAircraftTypes ?? null} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { maxAircraftTypes: value })} />
+                  <TextAreaField label="Notes" value={license.notes || ''} disabled={!canEdit} onChange={(value) => updateRow('licenses', index, { notes: value })} />
+                </div>
+
+                <div className="mt-4 rounded border border-gray-700 bg-gray-950 p-3">
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Licensed Modules</h6>
+                    <InfoHint text="This is the commercial entitlement list. Stage 10 stores it for future online, private-network and offline licence checks; it does not yet block modules." />
+                    <span className="ml-auto text-xs text-gray-400">{moduleCodes.length} selected</span>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {config.modules.map((module) => (
+                      <label key={module.code} className="flex items-start gap-2 rounded border border-gray-700 bg-gray-900 p-3 text-sm text-gray-200">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 rounded border-gray-500 accent-cyan-500"
+                          checked={moduleCodes.includes(module.code)}
+                          disabled={!canEdit}
+                          onChange={(event) => toggleLicenseModule(index, module.code, event.target.checked)}
+                        />
+                        <span>
+                          <span className="block font-semibold text-white">{module.name}</span>
+                          <span className="mt-1 block text-xs text-gray-400">{module.code}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -805,6 +926,36 @@ const NumberField = ({ label, value, disabled, onChange }: { label: string; valu
   <label>
     <span className={labelClass}>{label}</span>
     <input className={fieldClass} type="number" value={value ?? 0} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
+  </label>
+);
+
+const formatDateInput = (value: string) => (value ? String(value).slice(0, 10) : '');
+
+const DateField = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+  <label>
+    <span className={labelClass}>{label}</span>
+    <input className={fieldClass} type="date" value={formatDateInput(value)} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+  </label>
+);
+
+const OptionalNumberField = ({ label, value, disabled, onChange }: { label: string; value: number | null; disabled: boolean; onChange: (value: number | null) => void }) => (
+  <label>
+    <span className={labelClass}>{label}</span>
+    <input
+      className={fieldClass}
+      type="number"
+      value={value ?? ''}
+      disabled={disabled}
+      placeholder="Unlimited"
+      onChange={(event) => onChange(event.target.value === '' ? null : Number(event.target.value))}
+    />
+  </label>
+);
+
+const TextAreaField = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+  <label className="lg:col-span-2">
+    <span className={labelClass}>{label}</span>
+    <textarea className={`${fieldClass} min-h-[74px] resize-y`} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
   </label>
 );
 
