@@ -57408,8 +57408,8 @@ const downloadTextFile = (filename, content, mimeType) => {
 };
 const PlatformConfigurationSettings = ({
   currentUserPermission,
-  scrollTarget,
-  onShowSuccess
+  onShowSuccess,
+  scrollTarget
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
@@ -57420,6 +57420,11 @@ const PlatformConfigurationSettings = ({
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
+  const [licenseStatus, setLicenseStatus] = reactExports.useState(null);
+  const [licenseImportText, setLicenseImportText] = reactExports.useState("");
+  const [licenseImportMessage, setLicenseImportMessage] = reactExports.useState("");
+  const [licenseImportError, setLicenseImportError] = reactExports.useState("");
+  const [licenseActionLoading, setLicenseActionLoading] = reactExports.useState(false);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
   reactExports.useEffect(() => {
     let cancelled = false;
@@ -57427,12 +57432,17 @@ const PlatformConfigurationSettings = ({
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`${getApiBase()}/platform-config`);
+        const [res, licenseRes] = await Promise.all([
+          fetch(`${getApiBase()}/platform-config`),
+          fetch(`${getApiBase()}/platform-license/status`)
+        ]);
         if (!res.ok) throw new Error(`Load failed (${res.status})`);
         const data = await res.json();
+        const nextLicenseStatus = licenseRes.ok ? await licenseRes.json() : null;
         if (!cancelled) {
           const nextConfig = { ...emptyConfig, ...data };
           setConfig(nextConfig);
+          if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
           const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || "";
           setSelectedAccessUserId((current) => current || firstUserId);
         }
@@ -57829,6 +57839,73 @@ const PlatformConfigurationSettings = ({
       setError(err?.message || "Failed to save platform configuration");
     } finally {
       if (!shouldReload) setSaving(false);
+    }
+  };
+  const refreshLicenseStatus = async () => {
+    const res = await fetch(`${getApiBase()}/platform-license/status`);
+    if (!res.ok) throw new Error(`Licence status failed (${res.status})`);
+    const data = await res.json();
+    setLicenseStatus(data);
+    return data;
+  };
+  const reloadPlatformConfig = async () => {
+    const res = await fetch(`${getApiBase()}/platform-config`);
+    if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
+    const data = await res.json();
+    setConfig({ ...emptyConfig, ...data });
+  };
+  const verifySignedLicense = async () => {
+    if (!licenseImportText.trim()) {
+      setLicenseImportError("Paste a signed licence file before verifying.");
+      return;
+    }
+    setLicenseActionLoading(true);
+    setLicenseImportMessage("");
+    setLicenseImportError("");
+    try {
+      const res = await fetch(`${getApiBase()}/platform-license/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signedLicenseFile: licenseImportText })
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.details || body?.detail || body?.error || `Verify failed (${res.status})`);
+      setLicenseImportMessage(`Verified: ${body.payload?.license?.licenseName || body.payload?.license?.licenseKey || "signed licence"} is valid for ${body.deploymentFingerprint}.`);
+    } catch (err) {
+      setLicenseImportError(err?.message || "Signed licence verification failed.");
+    } finally {
+      setLicenseActionLoading(false);
+    }
+  };
+  const importSignedLicense = async () => {
+    if (!canEdit) return;
+    if (!licenseImportText.trim()) {
+      setLicenseImportError("Paste a signed licence file before importing.");
+      return;
+    }
+    setLicenseActionLoading(true);
+    setLicenseImportMessage("");
+    setLicenseImportError("");
+    try {
+      const sessionToken = localStorage.getItem("dfp_session_token");
+      const res = await fetch(`${getApiBase()}/platform-license/import`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
+        body: JSON.stringify({ signedLicenseFile: licenseImportText })
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.details || body?.error || `Import failed (${res.status})`);
+      await Promise.all([reloadPlatformConfig(), refreshLicenseStatus()]);
+      setLicenseImportText("");
+      setLicenseImportMessage(`Imported signed licence ${body.licenseKey}.`);
+      onShowSuccess("Signed licence imported.");
+    } catch (err) {
+      setLicenseImportError(err?.message || "Signed licence import failed.");
+    } finally {
+      setLicenseActionLoading(false);
     }
   };
   if (loading) {
@@ -58241,20 +58318,87 @@ const PlatformConfigurationSettings = ({
         SectionHeader,
         {
           title: "Licensing & Deployment",
-          subtitle: "Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 11 makes licence status and offline readiness explicit while enforcement remains safe by default.",
+          subtitle: "Commercial licensing for online SaaS, private defence networks, hybrid sync and fully offline deployments. Development mode remains non-blocking while signed licence files can be tested end to end.",
           action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addLicense, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Licence" }) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[1.2fr,1fr,1fr]", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Licence Runtime" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-cyan-100/80", children: licenseStatus?.message || "Licence runtime status has not loaded yet." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2 text-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Mode", value: licenseStatus?.runtimeMode || "development" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Enforcement", value: licenseStatus?.enforcementMode || deploymentProfile.enforcementMode }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Signed", value: String(licenseStatus?.verifiedLicenseCount ?? 0) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(MetricPill, { label: "Unsigned Dev", value: String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-400/30 bg-gray-950 px-3 py-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-cyan-100/70", children: "Deployment Fingerprint" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 break-all font-mono text-sm font-bold text-white", children: licenseStatus?.deploymentFingerprint || "Not available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-cyan-100/70", children: [
+              "Public key: ",
+              licenseStatus?.publicKeyConfigured ? "configured" : "not configured"
+            ] })
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-start justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Signed Licence File" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Paste a signed offline licence file here to verify it against this deployment, then import it if valid. Private signing keys are never stored in the app." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: verifySignedLicense,
+                  disabled: licenseActionLoading || !licenseImportText.trim(),
+                  className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: "Verify"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: importSignedLicense,
+                  disabled: !canEdit || licenseActionLoading || !licenseImportText.trim(),
+                  className: "rounded border border-cyan-500 bg-cyan-500 px-4 py-2 text-sm font-bold text-gray-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50",
+                  children: "Import"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "textarea",
+            {
+              className: `${fieldClass} min-h-[110px] font-mono text-xs`,
+              value: licenseImportText,
+              onChange: (event) => {
+                setLicenseImportText(event.target.value);
+                setLicenseImportMessage("");
+                setLicenseImportError("");
+              },
+              placeholder: 'Paste signed licence JSON, for example {"schema":"dfp-neo-license/v1",...}',
+              disabled: !canEdit && !licenseImportText
+            }
+          ),
+          licenseImportMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-100", children: licenseImportMessage }),
+          licenseImportError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100", children: licenseImportError })
+        ] }),
         config.licenses.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100", children: "No licence records exist yet. Add one before introducing licence enforcement." }),
         config.licenses.map((license, index) => {
           const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
           const licenceFeatures = license.features || {};
           const licenceStatus = getLicenceStatusSummary(license);
+          const signatureStatus = licenseStatus?.licenseSummaries?.find((summary) => summary.id === license.id || summary.licenseKey === license.licenseKey);
           const licensedActiveModuleCount = moduleCodes.filter((code) => activeModules.some((module) => module.code === code)).length;
           const offlineMode = ["Fully Offline", "Hybrid Offline Sync"].includes(license.deploymentMode || "");
           return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 lg:grid-cols-[1fr,260px,260px]", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: license.licenseName || "Licence" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-gray-400", children: [
@@ -58276,6 +58420,11 @@ const PlatformConfigurationSettings = ({
                   activeModules.length
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/70", children: offlineMode && !license.offlineFingerprint ? "Offline fingerprint still required" : "Entitlements recorded" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border px-3 py-2 ${signatureStatus?.signatureState === "VERIFIED" ? "border-green-500/40 bg-green-500/10 text-green-100" : signatureStatus?.signatureState === "UNSIGNED_CONFIGURATION" ? "border-yellow-500/40 bg-yellow-500/10 text-yellow-100" : "border-red-500/40 bg-red-500/10 text-red-100"}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide opacity-80", children: "Signed File" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-base font-bold", children: signatureStatus?.signatureState || "Unknown" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs opacity-80", children: signatureStatus?.signatureDetail || "No licence verification result." })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
@@ -58341,7 +58490,7 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded border border-gray-700 bg-gray-950 p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h6", { className: "text-xs font-bold uppercase tracking-wide text-gray-300", children: "Licensed Modules" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This is the commercial entitlement list. Stage 10 stores it for future online, private-network and offline licence checks; it does not yet block modules." }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "This is the commercial entitlement list. In development mode it is visible and testable but does not block access. In production mode, signed licences can be enforced by deployment configuration." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs text-gray-400", children: [
                   moduleCodes.length,
                   " selected"
@@ -58622,6 +58771,10 @@ const HealthMetric = ({ label, value, severity }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold", children: value })
   ] });
 };
+const MetricPill = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 rounded border border-cyan-400/25 bg-gray-950 px-3 py-2", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60", children: label }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 truncate text-sm font-bold text-white", title: value, children: value })
+] });
 const SectionHeader = ({ title, subtitle, action }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
@@ -59211,19 +59364,6 @@ const PeopleProfilePage = ({
     ] })
   ] });
 };
-const platformConfigurationSections = [
-  "platform-configuration-health",
-  "platform-organisation-locations",
-  "platform-units",
-  "platform-resource-pools",
-  "platform-unit-modules",
-  "platform-deployment-readiness",
-  "platform-operational-runbook",
-  "platform-licensing",
-  "platform-permission-profiles",
-  "platform-user-access",
-  "platform-scheduling-rule-sets"
-];
 const platformSectionTargets = {
   "platform-configuration": "platform-configuration-health",
   "platform-configuration-health": "platform-configuration-health",
@@ -59506,46 +59646,70 @@ const sectionColors = {
 };
 const sectionGroups = [
   {
-    label: "Platform Configuration",
+    label: "Platform Setup",
     shortLabel: "Platform",
-    description: "Commercial operating model, deployment posture, licensing, permissions, access scopes and enterprise rule records.",
+    description: "Organisation hierarchy, locations, units, resource pools, modules, deployment posture and licensing.",
     accent: "cyan",
-    sections: [...platformConfigurationSections]
-  },
-  {
-    label: "System Setup",
-    shortLabel: "Setup",
-    description: "Organisation setup, local operating settings, display preferences and emergency control.",
-    accent: "cyan",
-    sections: ["organisation", "locale-settings", "appearance", "emergency"]
+    defaultSection: "platform-configuration-health",
+    sections: [
+      "platform-configuration-health",
+      "platform-organisation-locations",
+      "platform-units",
+      "platform-resource-pools",
+      "platform-unit-modules",
+      "platform-deployment-readiness",
+      "platform-licensing",
+      "organisation",
+      "locale-settings",
+      "appearance"
+    ]
   },
   {
     label: "People & Access",
     shortLabel: "People",
-    description: "Users, permissions, staff and trainee records, and NEO Build profile settings.",
+    description: "Users, permission profiles, access scopes, staff records and trainee records.",
     accent: "violet",
-    sections: ["user-list", "permissions", "staff-database", "trainee-database", "people-profile"]
+    defaultSection: "platform-user-access",
+    sections: [
+      "platform-user-access",
+      "platform-permission-profiles",
+      "user-list",
+      "staff-database",
+      "trainee-database",
+      "people-profile"
+    ]
   },
   {
     label: "Training Standards",
     shortLabel: "Training",
     description: "Scoring rules, currencies and SCT event standards used across the training system.",
     accent: "sky",
-    sections: ["scoring-matrix", "currencies", "sct-events"]
+    defaultSection: "scoring-matrix",
+    sections: ["scoring-matrix", "sct-events", "currencies"]
   },
   {
-    label: "Operations & DFP Rules",
+    label: "Scheduling & DFP Rules",
     shortLabel: "Ops",
-    description: "Operational thresholds, duty limits, turnaround timing, build logic and aircraft availability history.",
+    description: "Operational thresholds, duty limits, turnaround timing, build logic and enterprise rule sets.",
     accent: "amber",
-    sections: ["scheduling-rules", "validation"]
+    defaultSection: "scheduling-rules",
+    sections: ["scheduling-rules", "platform-scheduling-rule-sets"]
   },
   {
-    label: "Data & Records",
+    label: "Data, Audit & Records",
     shortLabel: "Data",
-    description: "Data sources, imports and enduring historical records.",
+    description: "Audit evidence, aircraft availability history, data sources, imports and enduring records.",
     accent: "emerald",
-    sections: ["data-sources", "data-loaders", "historical-data"]
+    defaultSection: "platform-operational-runbook",
+    sections: ["platform-operational-runbook", "validation", "data-sources", "data-loaders", "historical-data"]
+  },
+  {
+    label: "Emergency Control",
+    shortLabel: "Emergency",
+    description: "System freeze and emergency controls.",
+    accent: "red",
+    defaultSection: "emergency",
+    sections: ["emergency"]
   }
 ];
 const timezoneOptions = [
@@ -60011,6 +60175,13 @@ const SettingsViewWithMenu = (props) => {
     visibleSections: group.sections.filter((section) => matchesSettingsSearch(section, group.label))
   })).filter((group) => group.visibleSections.length > 0);
   const hasSettingsMatches = visibleSettingGroups.length > 0;
+  const getDefaultSectionForGroup = (group) => {
+    if (group.visibleSections.includes(group.defaultSection)) return group.defaultSection;
+    return group.visibleSections[0];
+  };
+  const activeGroup = activeSection === "home" ? null : sectionGroups.find((group) => group.sections.includes(activeSection)) || null;
+  const activeGroupAccent = activeGroup ? getAccentClasses(activeGroup.accent) : null;
+  const activeGroupSections = activeGroup?.sections || [];
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", children: [
@@ -60039,17 +60210,17 @@ const SettingsViewWithMenu = (props) => {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-4", children: visibleSettingGroups.map((group) => {
+      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-2", children: visibleSettingGroups.map((group) => {
         const accent = getAccentClasses(group.accent);
-        const groupSections = group.visibleSections;
-        const groupActive = activeSection !== "home" && groupSections.includes(activeSection);
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border ${groupActive ? accent.border : "border-gray-800"} bg-gray-900/45 p-2`, children: [
+        const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
+        const targetSection = getDefaultSectionForGroup(group);
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border ${groupActive ? accent.border : "border-gray-800"} ${groupActive ? "bg-gray-900/70" : "bg-gray-900/45"} p-2`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "a",
+            "button",
             {
-              href: `#${getGroupId(group.label)}`,
-              onClick: () => activeSection !== "home" && setActiveSection("home"),
-              className: "mb-1 flex items-center gap-3 rounded-md px-2 py-2 text-sm text-gray-200 hover:bg-gray-800",
+              type: "button",
+              onClick: () => setActiveSection(targetSection),
+              className: `flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors ${groupActive ? `${accent.badge} ${accent.text}` : group.label === "Emergency Control" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-200 hover:bg-gray-800"}`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold", children: group.label }),
@@ -60057,7 +60228,7 @@ const SettingsViewWithMenu = (props) => {
               ]
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-0.5", children: group.visibleSections.map((section) => {
+          settingsSearch.trim() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-0.5 border-t border-gray-800 pt-1", children: group.visibleSections.map((section) => {
             const sectionAccent = getSectionAccent(section, group.accent);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
@@ -60091,7 +60262,7 @@ const SettingsViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Configure the operating model through purpose-built administration areas." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Configure the operating model through five practical administration areas plus emergency control." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
@@ -60128,13 +60299,13 @@ const SettingsViewWithMenu = (props) => {
                     ] }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `ml-auto rounded border px-2 py-1 text-[11px] font-semibold ${accent.badge} ${accent.text}`, children: group.shortLabel })
                   ] }) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-gray-800", children: group.visibleSections.map((section) => {
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-3 sm:grid-cols-2", children: group.visibleSections.map((section) => {
                     const sectionAccent = getSectionAccent(section, group.accent);
                     return /* @__PURE__ */ jsxRuntimeExports.jsxs(
                       "button",
                       {
                         onClick: () => setActiveSection(section),
-                        className: `flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${section === "emergency" ? "hover:bg-red-500/10" : "hover:bg-gray-800/70"}`,
+                        className: `flex min-h-[76px] w-full items-start gap-3 rounded-md border border-gray-800 bg-gray-950/35 px-3 py-3 text-left transition-colors ${section === "emergency" ? "hover:border-red-500/40 hover:bg-red-500/10" : "hover:border-gray-700 hover:bg-gray-800/70"}`,
                         children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-1 h-2 w-2 rounded-full ${sectionAccent.rail}` }),
                           /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
@@ -60184,6 +60355,26 @@ const SettingsViewWithMenu = (props) => {
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm text-yellow-200 bg-yellow-900/30 border border-yellow-600/50 rounded px-3 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Read-Only Mode" }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `Settings - ${sectionLabels[activeSection]}` })
           ] })
+        ] }),
+        activeGroup && activeGroupSections.length > 1 && activeGroupAccent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mb-5 rounded-lg border ${activeGroupAccent.border} bg-gray-900/55 p-3`, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-500", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-2 rounded-full ${activeGroupAccent.rail}` }),
+            activeGroup.label
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: activeGroupSections.map((section) => {
+            const isActive = activeSection === section;
+            const sectionAccent = getSectionAccent(section, activeGroup.accent);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => setActiveSection(section),
+                className: `rounded-md border px-3 py-2 text-xs font-semibold transition-colors ${isActive ? `${sectionAccent.badge} ${sectionAccent.text}` : "border-gray-800 bg-gray-950/40 text-gray-400 hover:border-gray-700 hover:bg-gray-800/70 hover:text-gray-200"}`,
+                children: sectionLabels[section]
+              },
+              section
+            );
+          }) })
         ] }),
         activeSection === "scoring-matrix" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-gray-700 flex items-center justify-between pr-3", children: [

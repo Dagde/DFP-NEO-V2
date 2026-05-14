@@ -3,6 +3,14 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import {
+  buildImportedLicenseRecord,
+  evaluateCommercialLicenses,
+  getDeploymentFingerprint,
+  getLicenseRuntimeMode,
+  signLicensePayload,
+  verifySignedLicenseContent,
+} from './lib/licensing.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -1355,87 +1363,100 @@ const readPackageMetadata = () => {
   }
 };
 
+const LICENSE_STATUS_CACHE_MS = Number(process.env.DFP_LICENSE_STATUS_CACHE_MS || 60_000);
+let licenseStatusCache = { expiresAt: 0, status: null };
+
+async function getLicenseStatusSnapshot(db, { forceRefresh = false } = {}) {
+  const now = Date.now();
+  if (!forceRefresh && licenseStatusCache.status && licenseStatusCache.expiresAt > now) {
+    return licenseStatusCache.status;
+  }
+
+  const [licenses, modules, organisations] = await Promise.all([
+    db.$queryRawUnsafe(`
+      SELECT *
+      FROM "CommercialLicense"
+      ORDER BY "licenseName"
+    `),
+    db.$queryRawUnsafe(`SELECT "code", "name", "status" FROM "CommercialModule" ORDER BY "name"`),
+    db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`),
+  ]);
+
+  const status = evaluateCommercialLicenses({
+    licenses,
+    modules,
+    organisations,
+    packageMetadata: readPackageMetadata(),
+  });
+
+  licenseStatusCache = {
+    expiresAt: now + LICENSE_STATUS_CACHE_MS,
+    status: {
+      ...status,
+      licenses,
+      modules,
+      organisations,
+    },
+  };
+
+  return licenseStatusCache.status;
+}
+
+function clearLicenseStatusCache() {
+  licenseStatusCache = { expiresAt: 0, status: null };
+}
+
+function isLicenseRecoveryPath(req) {
+  const pathName = `${req.baseUrl || ''}${req.path || ''}`;
+  return (
+    pathName.startsWith('/api/auth/') ||
+    pathName.startsWith('/api/mobile/auth/') ||
+    pathName.startsWith('/api/platform-license/') ||
+    pathName === '/api/platform-config' ||
+    pathName === '/api/platform-deployment/manifest'
+  );
+}
+
+// Licence enforcement is fully wired for production, but development mode remains
+// non-blocking so clones, test deployments and local builds are not constrained.
+app.use('/api', async (req, res, next) => {
+  try {
+    if (isLicenseRecoveryPath(req)) return next();
+
+    const db = await getPrisma();
+    const licenseStatus = await getLicenseStatusSnapshot(db);
+    res.setHeader('X-DFP-License-Mode', licenseStatus.runtimeMode);
+    res.setHeader('X-DFP-License-Enforcement', licenseStatus.enforcementMode);
+    res.setHeader('X-DFP-License-State', licenseStatus.shouldBlock ? 'blocked' : 'allowed');
+
+    if (!licenseStatus.shouldBlock) return next();
+
+    return res.status(402).json({
+      error: 'Licence enforcement blocked this request',
+      message: licenseStatus.message,
+      runtimeMode: licenseStatus.runtimeMode,
+      enforcementMode: licenseStatus.enforcementMode,
+      deploymentFingerprint: licenseStatus.deploymentFingerprint,
+      recovery: 'Sign in as an authorised administrator, import a valid signed licence file, or switch enforcement to development/monitor mode for non-customer builds.',
+    });
+  } catch (error) {
+    console.error('❌ Licence enforcement middleware error:', error);
+    if (getLicenseRuntimeMode() === 'production' && process.env.DFP_LICENSE_FAIL_CLOSED === 'true') {
+      return res.status(503).json({
+        error: 'Licence status unavailable',
+        message: 'Licence status could not be checked and fail-closed mode is enabled.',
+      });
+    }
+    return next();
+  }
+});
+
 app.get('/api/platform-license/status', async (req, res) => {
   try {
     const db = await getPrisma();
-    const [licenses, modules, organisations] = await Promise.all([
-      db.$queryRawUnsafe(`
-        SELECT *
-        FROM "CommercialLicense"
-        ORDER BY "licenseName"
-      `),
-      db.$queryRawUnsafe(`SELECT "code", "name", "status" FROM "CommercialModule" ORDER BY "name"`),
-      db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`),
-    ]);
+    const licenseStatus = await getLicenseStatusSnapshot(db, { forceRefresh: req.query.refresh === '1' });
+    const { licenses, organisations } = licenseStatus;
 
-    const normaliseEnforcementMode = (value) => {
-      const raw = String(value || '').trim().toLowerCase();
-      if (raw === 'monitor' || raw === 'monitor only') return 'Monitor Only';
-      if (raw === 'warn' || raw === 'warn only') return 'Warn Only';
-      if (raw === 'block' || raw === 'block expired' || raw === 'block expired licence') return 'Block Expired Licence';
-      return 'Monitor Only';
-    };
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const parseDate = (value) => {
-      if (!value) return null;
-      const parsed = new Date(value);
-      if (Number.isNaN(parsed.getTime())) return null;
-      parsed.setHours(0, 0, 0, 0);
-      return parsed;
-    };
-    const isCurrentLicense = (license) => {
-      if (String(license.status || '').toUpperCase() !== 'ACTIVE') return false;
-      const validFrom = parseDate(license.validFrom);
-      const validUntil = parseDate(license.validUntil);
-      if (validFrom && validFrom > today) return false;
-      if (validUntil && validUntil < today) return false;
-      return true;
-    };
-    const describeLicense = (license) => {
-      const validFrom = parseDate(license.validFrom);
-      const validUntil = parseDate(license.validUntil);
-      const status = String(license.status || 'ACTIVE').toUpperCase();
-      let state = status;
-      let detail = 'Licence is not currently active.';
-      if (status === 'ACTIVE') {
-        if (validFrom && validFrom > today) {
-          state = 'FUTURE';
-          detail = `Starts ${validFrom.toISOString().slice(0, 10)}`;
-        } else if (validUntil && validUntil < today) {
-          state = 'EXPIRED';
-          detail = `Expired ${validUntil.toISOString().slice(0, 10)}`;
-        } else if (validUntil) {
-          const daysRemaining = Math.ceil((validUntil.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
-          state = daysRemaining <= 30 ? 'EXPIRING' : 'ACTIVE';
-          detail = `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`;
-        } else {
-          state = 'ACTIVE';
-          detail = 'No expiry date set';
-        }
-      }
-      return {
-        id: license.id,
-        licenseKey: license.licenseKey,
-        licenseName: license.licenseName,
-        organisationCode: license.organisationCode,
-        deploymentMode: license.deploymentMode,
-        state,
-        detail,
-        moduleCount: Array.isArray(license.moduleCodes) ? license.moduleCodes.length : 0,
-        validationMethod: license.features?.validationMethod || null,
-        enforcementMode: normaliseEnforcementMode(license.features?.enforcementMode),
-        allowOfflineOperation: license.features?.allowOfflineOperation === true,
-        hasOfflineFingerprint: Boolean(license.offlineFingerprint),
-      };
-    };
-
-    const activeLicenses = licenses.filter(isCurrentLicense);
-    const licensedModuleCodes = Array.from(new Set(
-      activeLicenses.flatMap((license) => Array.isArray(license.moduleCodes) ? license.moduleCodes : [])
-    )).sort();
-    const licensedModules = modules.filter((module) => licensedModuleCodes.includes(module.code));
-    const deploymentModes = Array.from(new Set(activeLicenses.map((license) => license.deploymentMode).filter(Boolean))).sort();
     const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
     const deploymentProfile = activeOrganisation.settings?.deploymentProfile || {};
     const readinessChecklist = activeOrganisation.settings?.deploymentReadiness || {};
@@ -1455,25 +1476,172 @@ app.get('/api/platform-license/status', async (req, res) => {
       : 0;
 
     res.json({
-      hasActiveLicense: activeLicenses.length > 0,
-      activeLicenseCount: activeLicenses.length,
-      deploymentModes,
-      licensedModuleCodes,
-      licensedModules,
-      licenseSummaries: licenses.map(describeLicense),
+      ...licenseStatus,
       licenses,
       deploymentProfile,
       readinessChecklist,
       readinessCompleteCount,
       readinessPercent,
-      enforcementMode: normaliseEnforcementMode(deploymentProfile.enforcementMode),
-      message: activeLicenses.length > 0
-        ? 'Active commercial licence records are present. Stage 11 keeps enforcement monitor-first unless an administrator deliberately changes the deployment profile.'
-        : 'No active commercial licence records are present. Stage 11 keeps enforcement monitor-first unless an administrator deliberately changes the deployment profile.',
+      runtimeMode: getLicenseRuntimeMode(),
     });
   } catch (error) {
     console.error('❌ GET /api/platform-license/status error:', error);
     res.status(500).json({ error: 'Failed to load platform licence status', details: error.message });
+  }
+});
+
+app.get('/api/platform-license/fingerprint', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const organisations = await db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`);
+    const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
+    const operationalRunbook = activeOrganisation.settings?.operationalRunbook || {};
+    const deploymentProfile = activeOrganisation.settings?.deploymentProfile || {};
+    const packageMetadata = readPackageMetadata();
+    res.json({
+      runtimeMode: getLicenseRuntimeMode(),
+      deploymentFingerprint: getDeploymentFingerprint({
+        organisation: activeOrganisation,
+        organisationCode: activeOrganisation.code,
+        deploymentProfile,
+        operationalRunbook,
+        packageMetadata,
+      }),
+      organisationCode: activeOrganisation.code || null,
+      organisationName: activeOrganisation.name || null,
+      deploymentIdentifier: operationalRunbook.deploymentIdentifier || null,
+      publicKeyConfigured: Boolean(process.env.DFP_LICENSE_PUBLIC_KEY || process.env.DFP_LICENCE_PUBLIC_KEY || process.env.DFP_LICENSE_PUBLIC_KEYS_JSON || process.env.DFP_LICENCE_PUBLIC_KEYS_JSON),
+    });
+  } catch (error) {
+    console.error('❌ GET /api/platform-license/fingerprint error:', error);
+    res.status(500).json({ error: 'Failed to load deployment fingerprint', details: error.message });
+  }
+});
+
+app.post('/api/platform-license/verify', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const organisations = await db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`);
+    const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
+    const operationalRunbook = activeOrganisation.settings?.operationalRunbook || {};
+    const deploymentProfile = activeOrganisation.settings?.deploymentProfile || {};
+    const deploymentFingerprint = getDeploymentFingerprint({
+      organisation: activeOrganisation,
+      organisationCode: activeOrganisation.code,
+      deploymentProfile,
+      operationalRunbook,
+      packageMetadata: readPackageMetadata(),
+    });
+    const verification = verifySignedLicenseContent(req.body?.signedLicenseFile || req.body?.license || req.body, {
+      deploymentFingerprint,
+      packageMetadata: readPackageMetadata(),
+    });
+    res.status(verification.signatureState === 'VERIFIED' ? 200 : 400).json({
+      ok: verification.ok,
+      signatureState: verification.signatureState,
+      detail: verification.detail,
+      dateState: verification.dateState || null,
+      deploymentFingerprint: verification.deploymentFingerprint || deploymentFingerprint,
+      payload: verification.payload || null,
+    });
+  } catch (error) {
+    console.error('❌ POST /api/platform-license/verify error:', error);
+    res.status(500).json({ error: 'Failed to verify signed licence', details: error.message });
+  }
+});
+
+app.post('/api/platform-license/import', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const organisations = await db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`);
+    const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
+    const operationalRunbook = activeOrganisation.settings?.operationalRunbook || {};
+    const deploymentProfile = activeOrganisation.settings?.deploymentProfile || {};
+    const deploymentFingerprint = getDeploymentFingerprint({
+      organisation: activeOrganisation,
+      organisationCode: activeOrganisation.code,
+      deploymentProfile,
+      operationalRunbook,
+      packageMetadata: readPackageMetadata(),
+    });
+    const imported = buildImportedLicenseRecord(req.body?.signedLicenseFile || req.body?.license || req.body, {
+      deploymentFingerprint,
+      packageMetadata: readPackageMetadata(),
+    });
+    const now = new Date().toISOString();
+    await db.$executeRawUnsafe(`
+      INSERT INTO "CommercialLicense" (
+        "id", "organisationCode", "licenseKey", "licenseName", "deploymentMode", "status",
+        "validFrom", "validUntil", "maxUsers", "maxUnits", "maxAircraftTypes", "moduleCodes",
+        "features", "offlineFingerprint", "notes", "createdAt", "updatedAt"
+      )
+      VALUES (
+        gen_random_uuid()::text, $1, $2, $3, $4, $5,
+        $6::timestamp, $7::timestamp, $8, $9, $10, $11::text[],
+        $12::jsonb, $13, $14, $15::timestamp, $15::timestamp
+      )
+      ON CONFLICT ("licenseKey") DO UPDATE SET
+        "organisationCode" = $1,
+        "licenseName" = $3,
+        "deploymentMode" = $4,
+        "status" = $5,
+        "validFrom" = $6::timestamp,
+        "validUntil" = $7::timestamp,
+        "maxUsers" = $8,
+        "maxUnits" = $9,
+        "maxAircraftTypes" = $10,
+        "moduleCodes" = $11::text[],
+        "features" = $12::jsonb,
+        "offlineFingerprint" = $13,
+        "notes" = $14,
+        "updatedAt" = $15::timestamp
+    `,
+      imported.organisationCode,
+      imported.licenseKey,
+      imported.licenseName,
+      imported.deploymentMode,
+      imported.status,
+      imported.validFrom,
+      imported.validUntil,
+      imported.maxUsers,
+      imported.maxUnits,
+      imported.maxAircraftTypes,
+      imported.moduleCodes,
+      JSON.stringify(imported.features),
+      imported.offlineFingerprint,
+      imported.notes,
+      now,
+    );
+    clearLicenseStatusCache();
+    res.json({
+      ok: true,
+      message: 'Signed licence imported successfully.',
+      licenseKey: imported.licenseKey,
+      deploymentFingerprint,
+    });
+  } catch (error) {
+    console.error('❌ POST /api/platform-license/import error:', error);
+    res.status(400).json({ error: 'Failed to import signed licence', details: error.message });
+  }
+});
+
+app.post('/api/platform-license/generate-development', async (req, res) => {
+  try {
+    const privateKeyPem = process.env.DFP_LICENSE_PRIVATE_KEY || process.env.DFP_LICENCE_PRIVATE_KEY;
+    const allowDevGenerator = process.env.DFP_ENABLE_DEV_LICENSE_GENERATOR === 'true' || getLicenseRuntimeMode() === 'development';
+    if (!allowDevGenerator || !privateKeyPem) {
+      return res.status(403).json({
+        error: 'Development licence generator is not enabled on this deployment.',
+        details: 'Generate customer licences outside the app with scripts/generate-license.mjs, or enable DFP_ENABLE_DEV_LICENSE_GENERATOR only in a private development environment.',
+      });
+    }
+    const signedLicenseFile = signLicensePayload(req.body?.payload || req.body, privateKeyPem, {
+      keyId: process.env.DFP_LICENSE_KEY_ID || 'development',
+    });
+    res.json({ ok: true, signedLicenseFile });
+  } catch (error) {
+    console.error('❌ POST /api/platform-license/generate-development error:', error);
+    res.status(400).json({ error: 'Failed to generate development signed licence', details: error.message });
   }
 });
 
@@ -1493,6 +1661,8 @@ app.get('/api/platform-deployment/manifest', async (req, res) => {
       activeLicenseCountRows,
       activeUserAccessCountRows,
       auditLogCountRows,
+      licenses,
+      modules,
     ] = await Promise.all([
       db.$queryRawUnsafe(`SELECT version() AS version`),
       db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`),
@@ -1503,6 +1673,8 @@ app.get('/api/platform-deployment/manifest', async (req, res) => {
       db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLicense" WHERE "status" = 'ACTIVE'`),
       db.$queryRawUnsafe(`SELECT COUNT(DISTINCT "userId")::int AS count FROM "CommercialUserAccess" WHERE "status" = 'ACTIVE'`),
       db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "AuditLog"`),
+      db.$queryRawUnsafe(`SELECT * FROM "CommercialLicense" ORDER BY "licenseName"`),
+      db.$queryRawUnsafe(`SELECT "code", "name", "status" FROM "CommercialModule" ORDER BY "name"`),
     ]);
 
     const countValue = (rows) => Number(rows?.[0]?.count || 0);
@@ -1527,6 +1699,14 @@ app.get('/api/platform-deployment/manifest', async (req, res) => {
     if (!operationalRunbook.lastRestoreTestDate) warnings.push('Restore test date is not recorded.');
     if (!operationalRunbook.updateApprovalProcess) warnings.push('Update approval process is not recorded.');
     if (countValue(activeLicenseCountRows) === 0) warnings.push('No active commercial licence records found.');
+    const licenseStatus = evaluateCommercialLicenses({
+      licenses,
+      modules,
+      organisations,
+      packageMetadata,
+    });
+    if (licenseStatus.runtimeMode === 'production' && !licenseStatus.publicKeyConfigured) warnings.push('Production licence mode is active but no licence public key is configured.');
+    if (licenseStatus.invalidLicenseCount > 0) warnings.push(`${licenseStatus.invalidLicenseCount} licence record${licenseStatus.invalidLicenseCount === 1 ? '' : 's'} failed signature or deployment validation.`);
 
     res.json({
       generatedAt,
@@ -1550,6 +1730,20 @@ app.get('/api/platform-deployment/manifest', async (req, res) => {
         status: activeOrganisation.status || null,
       },
       deploymentProfile,
+      licensing: {
+        runtimeMode: licenseStatus.runtimeMode,
+        enforcementMode: licenseStatus.enforcementMode,
+        developmentBypass: licenseStatus.developmentBypass,
+        hasActiveLicense: licenseStatus.hasActiveLicense,
+        activeLicenseCount: licenseStatus.activeLicenseCount,
+        verifiedLicenseCount: licenseStatus.verifiedLicenseCount,
+        unsignedLicenseCount: licenseStatus.unsignedLicenseCount,
+        invalidLicenseCount: licenseStatus.invalidLicenseCount,
+        publicKeyConfigured: licenseStatus.publicKeyConfigured,
+        deploymentFingerprint: licenseStatus.deploymentFingerprint,
+        licensedModuleCodes: licenseStatus.licensedModuleCodes,
+        shouldBlock: licenseStatus.shouldBlock,
+      },
       operationalRunbook,
       readiness: {
         checklist: readinessChecklist,
@@ -1863,6 +2057,7 @@ app.post('/api/platform-config', async (req, res) => {
       auditResult = { count: 0, warning: auditError.message };
     }
 
+    clearLicenseStatusCache();
     res.json({ success: true, audit: auditResult });
   } catch (error) {
     console.error('❌ POST /api/platform-config error:', error);
@@ -6494,11 +6689,12 @@ async function seedCommercialLicenseIfEmpty(db) {
     `${organisationName} Evaluation Licence`,
     moduleCodes,
     JSON.stringify({
-      enforcementMode: 'monitor',
+      enforcementMode: 'Monitor Only',
       offlineCapable: false,
-      seededBy: 'Stage 10 licensing foundation',
+      developmentOnly: true,
+      seededBy: 'Development licensing foundation',
     }),
-    'Commercial licensing foundation record. Enforcement is not active in this stage.',
+    'Development licensing foundation record. Use signed licence files for production or offline customer deployments.',
     now
   );
 }

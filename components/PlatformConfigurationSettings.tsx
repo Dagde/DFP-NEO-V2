@@ -19,6 +19,23 @@ type PlatformConfig = {
   schedulingRuleSets: any[];
 };
 
+type LicenseRuntimeStatus = {
+  hasActiveLicense?: boolean;
+  activeLicenseCount?: number;
+  runtimeMode?: string;
+  developmentBypass?: boolean;
+  enforcementMode?: string;
+  shouldBlock?: boolean;
+  deploymentFingerprint?: string;
+  publicKeyConfigured?: boolean;
+  verifiedLicenseCount?: number;
+  unsignedLicenseCount?: number;
+  invalidLicenseCount?: number;
+  licensedModuleCodes?: string[];
+  licenseSummaries?: any[];
+  message?: string;
+};
+
 type PermissionProfile = PlatformPermissionProfile;
 
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
@@ -591,14 +608,14 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
 
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
-  scrollTarget?: string;
   onShowSuccess: (message: string) => void;
+  scrollTarget?: string;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
   currentUserPermission,
-  scrollTarget,
   onShowSuccess,
+  scrollTarget,
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
@@ -609,6 +626,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
+  const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
+  const [licenseImportText, setLicenseImportText] = useState('');
+  const [licenseImportMessage, setLicenseImportMessage] = useState('');
+  const [licenseImportError, setLicenseImportError] = useState('');
+  const [licenseActionLoading, setLicenseActionLoading] = useState(false);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
 
@@ -618,12 +640,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${getApiBase()}/platform-config`);
+        const [res, licenseRes] = await Promise.all([
+          fetch(`${getApiBase()}/platform-config`),
+          fetch(`${getApiBase()}/platform-license/status`),
+        ]);
         if (!res.ok) throw new Error(`Load failed (${res.status})`);
         const data = await res.json();
+        const nextLicenseStatus = licenseRes.ok ? await licenseRes.json() : null;
         if (!cancelled) {
           const nextConfig = { ...emptyConfig, ...data };
           setConfig(nextConfig);
+          if (nextLicenseStatus) setLicenseStatus(nextLicenseStatus);
           const firstUserId = nextConfig.platformUsers[0]?.userId || nextConfig.platformUsers[0]?.username || nextConfig.userAccess[0]?.userId || '';
           setSelectedAccessUserId((current) => current || firstUserId);
         }
@@ -636,6 +663,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     load();
     return () => { cancelled = true; };
   }, []);
+
   useEffect(() => {
     if (!scrollTarget || loading) return;
     const frame = window.requestAnimationFrame(() => {
@@ -644,7 +672,6 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     });
     return () => window.cancelAnimationFrame(frame);
   }, [scrollTarget, loading]);
-
 
   const enabledModuleCount = useMemo(
     () => config.unitModules.filter((item) => item.isEnabled !== false).length,
@@ -1095,6 +1122,77 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       setError(err?.message || 'Failed to save platform configuration');
     } finally {
       if (!shouldReload) setSaving(false);
+    }
+  };
+
+  const refreshLicenseStatus = async () => {
+    const res = await fetch(`${getApiBase()}/platform-license/status`);
+    if (!res.ok) throw new Error(`Licence status failed (${res.status})`);
+    const data = await res.json();
+    setLicenseStatus(data);
+    return data;
+  };
+
+  const reloadPlatformConfig = async () => {
+    const res = await fetch(`${getApiBase()}/platform-config`);
+    if (!res.ok) throw new Error(`Configuration reload failed (${res.status})`);
+    const data = await res.json();
+    setConfig({ ...emptyConfig, ...data });
+  };
+
+  const verifySignedLicense = async () => {
+    if (!licenseImportText.trim()) {
+      setLicenseImportError('Paste a signed licence file before verifying.');
+      return;
+    }
+    setLicenseActionLoading(true);
+    setLicenseImportMessage('');
+    setLicenseImportError('');
+    try {
+      const res = await fetch(`${getApiBase()}/platform-license/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signedLicenseFile: licenseImportText }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.details || body?.detail || body?.error || `Verify failed (${res.status})`);
+      setLicenseImportMessage(`Verified: ${body.payload?.license?.licenseName || body.payload?.license?.licenseKey || 'signed licence'} is valid for ${body.deploymentFingerprint}.`);
+    } catch (err: any) {
+      setLicenseImportError(err?.message || 'Signed licence verification failed.');
+    } finally {
+      setLicenseActionLoading(false);
+    }
+  };
+
+  const importSignedLicense = async () => {
+    if (!canEdit) return;
+    if (!licenseImportText.trim()) {
+      setLicenseImportError('Paste a signed licence file before importing.');
+      return;
+    }
+    setLicenseActionLoading(true);
+    setLicenseImportMessage('');
+    setLicenseImportError('');
+    try {
+      const sessionToken = localStorage.getItem('dfp_session_token');
+      const res = await fetch(`${getApiBase()}/platform-license/import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        },
+        body: JSON.stringify({ signedLicenseFile: licenseImportText }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.details || body?.error || `Import failed (${res.status})`);
+      await Promise.all([reloadPlatformConfig(), refreshLicenseStatus()]);
+      setLicenseImportText('');
+      setLicenseImportMessage(`Imported signed licence ${body.licenseKey}.`);
+      onShowSuccess('Signed licence imported.');
+    } catch (err: any) {
+      setLicenseImportError(err?.message || 'Signed licence import failed.');
+    } finally {
+      setLicenseActionLoading(false);
     }
   };
 
@@ -1563,10 +1661,80 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       <section id="platform-licensing" className={sectionClass}>
         <SectionHeader
           title="Licensing & Deployment"
-          subtitle="Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 11 makes licence status and offline readiness explicit while enforcement remains safe by default."
+          subtitle="Commercial licensing for online SaaS, private defence networks, hybrid sync and fully offline deployments. Development mode remains non-blocking while signed licence files can be tested end to end."
           action={canEdit ? <button type="button" onClick={addLicense} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Licence</button> : null}
         />
         <div className="space-y-4 p-4">
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 p-4">
+            <div className="grid gap-3 lg:grid-cols-[1.2fr,1fr,1fr]">
+              <div>
+                <h5 className="text-sm font-bold text-white">Licence Runtime</h5>
+                <p className="mt-1 text-xs text-cyan-100/80">
+                  {licenseStatus?.message || 'Licence runtime status has not loaded yet.'}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <MetricPill label="Mode" value={licenseStatus?.runtimeMode || 'development'} />
+                <MetricPill label="Enforcement" value={licenseStatus?.enforcementMode || deploymentProfile.enforcementMode} />
+                <MetricPill label="Signed" value={String(licenseStatus?.verifiedLicenseCount ?? 0)} />
+                <MetricPill label="Unsigned Dev" value={String(licenseStatus?.unsignedLicenseCount ?? config.licenses.length)} />
+              </div>
+              <div className="rounded border border-cyan-400/30 bg-gray-950 px-3 py-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-cyan-100/70">Deployment Fingerprint</div>
+                <div className="mt-1 break-all font-mono text-sm font-bold text-white">{licenseStatus?.deploymentFingerprint || 'Not available'}</div>
+                <div className="mt-1 text-xs text-cyan-100/70">
+                  Public key: {licenseStatus?.publicKeyConfigured ? 'configured' : 'not configured'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-white">Signed Licence File</h5>
+                <p className="mt-1 text-xs text-gray-400">
+                  Paste a signed offline licence file here to verify it against this deployment, then import it if valid. Private signing keys are never stored in the app.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={verifySignedLicense}
+                  disabled={licenseActionLoading || !licenseImportText.trim()}
+                  className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Verify
+                </button>
+                <button
+                  type="button"
+                  onClick={importSignedLicense}
+                  disabled={!canEdit || licenseActionLoading || !licenseImportText.trim()}
+                  className="rounded border border-cyan-500 bg-cyan-500 px-4 py-2 text-sm font-bold text-gray-950 hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Import
+                </button>
+              </div>
+            </div>
+            <textarea
+              className={`${fieldClass} min-h-[110px] font-mono text-xs`}
+              value={licenseImportText}
+              onChange={(event) => {
+                setLicenseImportText(event.target.value);
+                setLicenseImportMessage('');
+                setLicenseImportError('');
+              }}
+              placeholder='Paste signed licence JSON, for example {"schema":"dfp-neo-license/v1",...}'
+              disabled={!canEdit && !licenseImportText}
+            />
+            {licenseImportMessage && (
+              <div className="mt-3 rounded border border-green-500/40 bg-green-500/10 px-3 py-2 text-sm text-green-100">{licenseImportMessage}</div>
+            )}
+            {licenseImportError && (
+              <div className="mt-3 rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-100">{licenseImportError}</div>
+            )}
+          </div>
+
           {config.licenses.length === 0 && (
             <div className="rounded border border-yellow-600/40 bg-yellow-900/20 px-3 py-3 text-sm text-yellow-100">
               No licence records exist yet. Add one before introducing licence enforcement.
@@ -1576,13 +1744,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             const moduleCodes = Array.isArray(license.moduleCodes) ? license.moduleCodes : [];
             const licenceFeatures = license.features || {};
             const licenceStatus = getLicenceStatusSummary(license);
+            const signatureStatus = licenseStatus?.licenseSummaries?.find((summary) => (
+              summary.id === license.id || summary.licenseKey === license.licenseKey
+            ));
             const licensedActiveModuleCount = moduleCodes.filter((code: string) => (
               activeModules.some((module) => module.code === code)
             )).length;
             const offlineMode = ['Fully Offline', 'Hybrid Offline Sync'].includes(license.deploymentMode || '');
             return (
               <div key={license.id || license.licenseKey || index} className="rounded-lg border border-gray-700 bg-gray-900 p-4">
-                <div className="mb-4 grid gap-3 lg:grid-cols-[1fr,260px,260px]">
+                <div className="mb-4 grid gap-3 xl:grid-cols-[1fr,230px,230px,230px]">
                   <div>
                     <h5 className="text-sm font-bold text-white">{license.licenseName || 'Licence'}</h5>
                     <p className="mt-1 text-xs text-gray-400">
@@ -1600,6 +1771,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                     <div className="mt-1 text-xs text-cyan-100/70">
                       {offlineMode && !license.offlineFingerprint ? 'Offline fingerprint still required' : 'Entitlements recorded'}
                     </div>
+                  </div>
+                  <div className={`rounded border px-3 py-2 ${
+                    signatureStatus?.signatureState === 'VERIFIED'
+                      ? 'border-green-500/40 bg-green-500/10 text-green-100'
+                      : signatureStatus?.signatureState === 'UNSIGNED_CONFIGURATION'
+                        ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-100'
+                        : 'border-red-500/40 bg-red-500/10 text-red-100'
+                  }`}>
+                    <div className="text-xs font-semibold uppercase tracking-wide opacity-80">Signed File</div>
+                    <div className="mt-1 text-base font-bold">{signatureStatus?.signatureState || 'Unknown'}</div>
+                    <div className="mt-1 text-xs opacity-80">{signatureStatus?.signatureDetail || 'No licence verification result.'}</div>
                   </div>
                 </div>
 
@@ -1656,7 +1838,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <div className="mt-4 rounded border border-gray-700 bg-gray-950 p-3">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
                     <h6 className="text-xs font-bold uppercase tracking-wide text-gray-300">Licensed Modules</h6>
-                    <InfoHint text="This is the commercial entitlement list. Stage 10 stores it for future online, private-network and offline licence checks; it does not yet block modules." />
+                    <InfoHint text="This is the commercial entitlement list. In development mode it is visible and testable but does not block access. In production mode, signed licences can be enforced by deployment configuration." />
                     <span className="ml-auto text-xs text-gray-400">{moduleCodes.length} selected</span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -1960,6 +2142,13 @@ const HealthMetric = ({ label, value, severity }: { label: string; value: number
     </div>
   );
 };
+
+const MetricPill = ({ label, value }: { label: string; value: string }) => (
+  <div className="min-w-0 rounded border border-cyan-400/25 bg-gray-950 px-3 py-2">
+    <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100/60">{label}</div>
+    <div className="mt-1 truncate text-sm font-bold text-white" title={value}>{value}</div>
+  </div>
+);
 
 const SectionHeader = ({ title, subtitle, action }: { title: string; subtitle: string; action?: React.ReactNode }) => {
   return (
