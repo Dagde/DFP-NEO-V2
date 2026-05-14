@@ -88,6 +88,28 @@ const AUTH_MODEL_OPTIONS = [
   'Hybrid local and SSO',
 ];
 
+const RELEASE_CHANNEL_OPTIONS = [
+  'Production',
+  'Staging',
+  'Customer Acceptance',
+  'Offline Package',
+];
+
+const BACKUP_FREQUENCY_OPTIONS = [
+  'Hourly',
+  'Daily',
+  'Weekly',
+  'Manual',
+];
+
+const ACCREDITATION_STATUS_OPTIONS = [
+  'Not started',
+  'In preparation',
+  'Submitted',
+  'Approved',
+  'Renewal due',
+];
+
 const DEFAULT_DEPLOYMENT_PROFILE = {
   mode: 'Online SaaS',
   validationMethod: 'Online licence check',
@@ -97,6 +119,29 @@ const DEFAULT_DEPLOYMENT_PROFILE = {
   authModel: 'Local accounts',
   dataResidence: 'Customer controlled',
   networkPosture: 'Internet connected SaaS',
+  notes: '',
+};
+
+const DEFAULT_OPERATIONAL_RUNBOOK = {
+  environmentName: 'Production',
+  deploymentIdentifier: 'DFP-NEO-V2',
+  releaseChannel: 'Production',
+  supportOwner: '',
+  supportContact: '',
+  approvingAuthority: '',
+  backupFrequency: 'Daily',
+  backupRetentionDays: 30,
+  backupStorageLocation: '',
+  lastBackupDate: '',
+  lastRestoreTestDate: '',
+  restoreTimeObjectiveHours: 24,
+  restorePointObjectiveHours: 24,
+  maintenanceWindow: '',
+  updateApprovalProcess: '',
+  lastUpdateDate: '',
+  evidenceExportPath: '',
+  auditRetentionYears: 7,
+  accreditationStatus: 'Not started',
   notes: '',
 };
 
@@ -258,6 +303,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const readinessPercent = DEPLOYMENT_READINESS_ITEMS.length
     ? Math.round((readinessCompleteCount / DEPLOYMENT_READINESS_ITEMS.length) * 100)
     : 0;
+  const operationalRunbook = {
+    ...DEFAULT_OPERATIONAL_RUNBOOK,
+    ...(primaryOrganisationSettings.operationalRunbook || {}),
+  };
+  const operationalSignals = [
+    {
+      label: 'Support owner',
+      complete: Boolean(operationalRunbook.supportOwner && operationalRunbook.supportContact),
+      detail: 'Named support owner and contact path are recorded.',
+    },
+    {
+      label: 'Backup policy',
+      complete: Boolean(operationalRunbook.backupFrequency && Number(operationalRunbook.backupRetentionDays) > 0 && operationalRunbook.backupStorageLocation),
+      detail: 'Backup cadence, retention and storage location are recorded.',
+    },
+    {
+      label: 'Restore assurance',
+      complete: Boolean(operationalRunbook.lastRestoreTestDate && Number(operationalRunbook.restoreTimeObjectiveHours) > 0 && Number(operationalRunbook.restorePointObjectiveHours) > 0),
+      detail: 'Restore test date, RTO and RPO are recorded.',
+    },
+    {
+      label: 'Update process',
+      complete: Boolean(operationalRunbook.maintenanceWindow && operationalRunbook.updateApprovalProcess),
+      detail: 'Maintenance window and update approval process are recorded.',
+    },
+    {
+      label: 'Evidence retention',
+      complete: Boolean(operationalRunbook.evidenceExportPath && Number(operationalRunbook.auditRetentionYears) > 0),
+      detail: 'Audit evidence export path and retention period are recorded.',
+    },
+  ];
+  const operationalCompleteCount = operationalSignals.filter((signal) => signal.complete).length;
+  const operationalReadinessPercent = operationalSignals.length
+    ? Math.round((operationalCompleteCount / operationalSignals.length) * 100)
+    : 0;
 
   const updatePrimaryOrganisationSettings = (
     updater: Record<string, any> | ((settings: Record<string, any>) => Record<string, any>),
@@ -284,6 +364,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       deploymentProfile: {
         ...DEFAULT_DEPLOYMENT_PROFILE,
         ...(settings.deploymentProfile || {}),
+        ...changes,
+      },
+    }));
+  };
+
+  const updateOperationalRunbook = (changes: Record<string, any>) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      operationalRunbook: {
+        ...DEFAULT_OPERATIONAL_RUNBOOK,
+        ...(settings.operationalRunbook || {}),
         ...changes,
       },
     }));
@@ -847,6 +938,130 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 </label>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={sectionClass}>
+        <SectionHeader
+          title="Operational Runbook"
+          subtitle="Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets."
+        />
+        <div className="space-y-4 p-4">
+          <div className="grid gap-3 lg:grid-cols-4">
+            <div className="rounded border border-sky-500/30 bg-sky-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-sky-100/70">Environment</div>
+              <div className="mt-2 text-lg font-bold text-white">{operationalRunbook.environmentName || 'Not set'}</div>
+              <div className="mt-1 text-xs text-sky-100/70">{operationalRunbook.releaseChannel || 'Release channel not set'}</div>
+            </div>
+            <div className="rounded border border-sky-500/30 bg-sky-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-sky-100/70">Support Owner</div>
+              <div className="mt-2 text-lg font-bold text-white">{operationalRunbook.supportOwner || 'Not set'}</div>
+              <div className="mt-1 truncate text-xs text-sky-100/70">{operationalRunbook.supportContact || 'Support contact not set'}</div>
+            </div>
+            <div className="rounded border border-sky-500/30 bg-sky-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-sky-100/70">Last Restore Test</div>
+              <div className="mt-2 text-lg font-bold text-white">{formatDateLabel(operationalRunbook.lastRestoreTestDate)}</div>
+              <div className="mt-1 text-xs text-sky-100/70">RTO {operationalRunbook.restoreTimeObjectiveHours}h / RPO {operationalRunbook.restorePointObjectiveHours}h</div>
+            </div>
+            <div className="rounded border border-sky-500/30 bg-sky-500/10 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-sky-100/70">Ops Readiness</div>
+              <div className="mt-2 text-lg font-bold text-white">{operationalReadinessPercent}%</div>
+              <div className="mt-2 h-2 rounded-full bg-gray-950">
+                <div
+                  className="h-2 rounded-full bg-sky-400"
+                  style={{ width: `${operationalReadinessPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-4 flex flex-wrap items-start gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-white">Environment Identity</h5>
+                <p className="mt-1 text-xs text-gray-400">
+                  Plain English: identify which deployed environment this is, who owns support, and who approves operational changes.
+                </p>
+              </div>
+              <span className="ml-auto rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-100">
+                Non-secret admin record
+              </span>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              <Field label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
+              <Field label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
+              <SelectField label="Release Channel" value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEdit} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
+              <Field label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
+              <Field label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
+              <Field label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-4">
+              <h5 className="text-sm font-bold text-white">Backup And Restore</h5>
+              <p className="mt-1 text-xs text-gray-400">
+                Plain English: record where backups live, how long they are retained, and when a restore was last proven.
+              </p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              <SelectField label="Backup Frequency" value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEdit} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
+              <NumberField label="Backup Retention Days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
+              <Field label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
+              <DateField label="Last Backup Date" value={operationalRunbook.lastBackupDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
+              <DateField label="Last Restore Test Date" value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
+              <div className="grid grid-cols-2 gap-3">
+                <NumberField label="RTO Hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
+                <NumberField label="RPO Hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-4">
+              <h5 className="text-sm font-bold text-white">Update, Evidence And Accreditation</h5>
+              <p className="mt-1 text-xs text-gray-400">
+                Plain English: record when updates may be applied, who approves them, where evidence exports are stored, and the current accreditation posture.
+              </p>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+              <Field label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
+              <Field label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
+              <DateField label="Last Update Date" value={operationalRunbook.lastUpdateDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
+              <Field label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
+              <NumberField label="Audit Retention Years" value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
+              <SelectField label="Accreditation Status" value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEdit} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
+              <TextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ notes: value })} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <h5 className="text-sm font-bold text-white">Operational Checks</h5>
+              <InfoHint text="These checks are derived from the runbook fields. They are not enforcement gates yet; they are a simple readiness signal for deployment and customer assurance." />
+              <span className="ml-auto text-xs font-semibold text-gray-400">
+                {operationalCompleteCount} of {operationalSignals.length} complete
+              </span>
+            </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              {operationalSignals.map((signal) => (
+                <div key={signal.label} className={`rounded border p-3 ${signal.complete ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-yellow-600/40 bg-yellow-900/20'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${signal.complete ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
+                    <span className="text-sm font-bold text-white">{signal.label}</span>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-400">{signal.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-4">
+            <h5 className="text-sm font-bold text-white">Non-secret Deployment Manifest</h5>
+            <p className="mt-1 text-xs text-sky-100/80">
+              Support teams can inspect a safe manifest at <span className="font-mono text-white">/api/platform-deployment/manifest</span>. It reports deployment posture, readiness status, counts and warnings, but no database URLs, tokens or secrets.
+            </p>
           </div>
         </div>
       </section>

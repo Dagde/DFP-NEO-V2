@@ -692,6 +692,26 @@ const PLATFORM_FIELD_LABELS = {
     'settings.deploymentReadiness.localWebServer': 'Readiness: local web server defined',
     'settings.deploymentReadiness.offlineLicenceFile': 'Readiness: offline licence file process defined',
     'settings.deploymentReadiness.updateProcess': 'Readiness: update process defined',
+    'settings.operationalRunbook.accreditationStatus': 'Accreditation status',
+    'settings.operationalRunbook.approvingAuthority': 'Operational approving authority',
+    'settings.operationalRunbook.auditRetentionYears': 'Audit retention years',
+    'settings.operationalRunbook.backupFrequency': 'Backup frequency',
+    'settings.operationalRunbook.backupRetentionDays': 'Backup retention days',
+    'settings.operationalRunbook.backupStorageLocation': 'Backup storage location',
+    'settings.operationalRunbook.deploymentIdentifier': 'Deployment identifier',
+    'settings.operationalRunbook.environmentName': 'Environment name',
+    'settings.operationalRunbook.evidenceExportPath': 'Evidence export path',
+    'settings.operationalRunbook.lastBackupDate': 'Last backup date',
+    'settings.operationalRunbook.lastRestoreTestDate': 'Last restore test date',
+    'settings.operationalRunbook.lastUpdateDate': 'Last update date',
+    'settings.operationalRunbook.maintenanceWindow': 'Maintenance window',
+    'settings.operationalRunbook.notes': 'Operational notes',
+    'settings.operationalRunbook.releaseChannel': 'Release channel',
+    'settings.operationalRunbook.restorePointObjectiveHours': 'Restore point objective hours',
+    'settings.operationalRunbook.restoreTimeObjectiveHours': 'Restore time objective hours',
+    'settings.operationalRunbook.supportContact': 'Support contact',
+    'settings.operationalRunbook.supportOwner': 'Support owner',
+    'settings.operationalRunbook.updateApprovalProcess': 'Update approval process',
   },
   CommercialLocation: {
     organisationCode: 'Organisation',
@@ -1309,6 +1329,32 @@ app.get('/api/platform-config', async (req, res) => {
   }
 });
 
+const DEPLOYMENT_READINESS_LABELS = {
+  localWebServer: 'Local web server defined',
+  localDatabase: 'Local database defined',
+  localAuthentication: 'Local authentication path defined',
+  localFileStorage: 'Local file storage path defined',
+  offlineLicenceFile: 'Offline licence file process defined',
+  backupRestore: 'Backup and restore process defined',
+  auditExport: 'Audit export process defined',
+  updateProcess: 'Update process defined',
+};
+
+const readPackageMetadata = () => {
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+    return {
+      name: packageJson.name || 'dfp-neo',
+      version: packageJson.version || 'unknown',
+    };
+  } catch (error) {
+    return {
+      name: 'dfp-neo',
+      version: 'unknown',
+    };
+  }
+};
+
 app.get('/api/platform-license/status', async (req, res) => {
   try {
     const db = await getPrisma();
@@ -1428,6 +1474,117 @@ app.get('/api/platform-license/status', async (req, res) => {
   } catch (error) {
     console.error('❌ GET /api/platform-license/status error:', error);
     res.status(500).json({ error: 'Failed to load platform licence status', details: error.message });
+  }
+});
+
+app.get('/api/platform-deployment/manifest', async (req, res) => {
+  const generatedAt = new Date().toISOString();
+  const packageMetadata = readPackageMetadata();
+
+  try {
+    const db = await getPrisma();
+    const [
+      dbVersionRows,
+      organisations,
+      organisationCountRows,
+      activeLocationCountRows,
+      activeUnitCountRows,
+      moduleCountRows,
+      activeLicenseCountRows,
+      activeUserAccessCountRows,
+      auditLogCountRows,
+    ] = await Promise.all([
+      db.$queryRawUnsafe(`SELECT version() AS version`),
+      db.$queryRawUnsafe(`SELECT "code", "name", "status", "settings" FROM "CommercialOrganisation" ORDER BY "name"`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialOrganisation"`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLocation" WHERE "status" = 'ACTIVE'`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialUnit" WHERE "status" = 'ACTIVE'`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialModule" WHERE "status" = 'ACTIVE'`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "CommercialLicense" WHERE "status" = 'ACTIVE'`),
+      db.$queryRawUnsafe(`SELECT COUNT(DISTINCT "userId")::int AS count FROM "CommercialUserAccess" WHERE "status" = 'ACTIVE'`),
+      db.$queryRawUnsafe(`SELECT COUNT(*)::int AS count FROM "AuditLog"`),
+    ]);
+
+    const countValue = (rows) => Number(rows?.[0]?.count || 0);
+    const activeOrganisation = organisations.find((org) => String(org.status || 'ACTIVE').toUpperCase() === 'ACTIVE') || organisations[0] || {};
+    const settings = activeOrganisation.settings || {};
+    const deploymentProfile = settings.deploymentProfile || {};
+    const readinessChecklist = settings.deploymentReadiness || {};
+    const operationalRunbook = settings.operationalRunbook || {};
+    const readinessKeys = Object.keys(DEPLOYMENT_READINESS_LABELS);
+    const missingReadiness = readinessKeys
+      .filter((key) => readinessChecklist[key] !== true)
+      .map((key) => DEPLOYMENT_READINESS_LABELS[key]);
+    const readinessCompleteCount = readinessKeys.length - missingReadiness.length;
+    const readinessPercent = readinessKeys.length
+      ? Math.round((readinessCompleteCount / readinessKeys.length) * 100)
+      : 0;
+
+    const warnings = [];
+    if (missingReadiness.length > 0) warnings.push(`${missingReadiness.length} deployment readiness item${missingReadiness.length === 1 ? '' : 's'} incomplete.`);
+    if (!operationalRunbook.supportOwner || !operationalRunbook.supportContact) warnings.push('Support owner/contact is not fully recorded.');
+    if (!operationalRunbook.backupStorageLocation) warnings.push('Backup storage location is not recorded.');
+    if (!operationalRunbook.lastRestoreTestDate) warnings.push('Restore test date is not recorded.');
+    if (!operationalRunbook.updateApprovalProcess) warnings.push('Update approval process is not recorded.');
+    if (countValue(activeLicenseCountRows) === 0) warnings.push('No active commercial licence records found.');
+
+    res.json({
+      generatedAt,
+      secretsRedacted: true,
+      application: {
+        name: packageMetadata.name,
+        version: packageMetadata.version,
+        runtime: 'node',
+      },
+      environment: {
+        nodeEnv: process.env.NODE_ENV || 'development',
+        database: {
+          connected: true,
+          engine: 'PostgreSQL',
+          version: String(dbVersionRows?.[0]?.version || 'PostgreSQL').split(' on ')[0],
+        },
+      },
+      organisation: {
+        code: activeOrganisation.code || null,
+        name: activeOrganisation.name || null,
+        status: activeOrganisation.status || null,
+      },
+      deploymentProfile,
+      operationalRunbook,
+      readiness: {
+        checklist: readinessChecklist,
+        completeCount: readinessCompleteCount,
+        total: readinessKeys.length,
+        percent: readinessPercent,
+        missing: missingReadiness,
+      },
+      inventory: {
+        organisations: countValue(organisationCountRows),
+        activeLocations: countValue(activeLocationCountRows),
+        activeUnits: countValue(activeUnitCountRows),
+        activeModules: countValue(moduleCountRows),
+        activeLicences: countValue(activeLicenseCountRows),
+        activeUsersWithAccess: countValue(activeUserAccessCountRows),
+        auditLogEntries: countValue(auditLogCountRows),
+      },
+      warnings,
+      note: 'This deployment manifest is intentionally non-secret. It must not expose database URLs, passwords, tokens or private licence keys.',
+    });
+  } catch (error) {
+    console.error('❌ GET /api/platform-deployment/manifest error:', error);
+    res.status(500).json({
+      generatedAt,
+      secretsRedacted: true,
+      application: packageMetadata,
+      environment: {
+        nodeEnv: process.env.NODE_ENV || 'development',
+        database: {
+          connected: false,
+        },
+      },
+      error: 'Failed to generate deployment manifest',
+      details: error.message,
+    });
   }
 });
 

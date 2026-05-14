@@ -56979,6 +56979,25 @@ const AUTH_MODEL_OPTIONS = [
   "Defence SSO",
   "Hybrid local and SSO"
 ];
+const RELEASE_CHANNEL_OPTIONS = [
+  "Production",
+  "Staging",
+  "Customer Acceptance",
+  "Offline Package"
+];
+const BACKUP_FREQUENCY_OPTIONS = [
+  "Hourly",
+  "Daily",
+  "Weekly",
+  "Manual"
+];
+const ACCREDITATION_STATUS_OPTIONS = [
+  "Not started",
+  "In preparation",
+  "Submitted",
+  "Approved",
+  "Renewal due"
+];
 const DEFAULT_DEPLOYMENT_PROFILE = {
   mode: "Online SaaS",
   validationMethod: "Online licence check",
@@ -56988,6 +57007,28 @@ const DEFAULT_DEPLOYMENT_PROFILE = {
   authModel: "Local accounts",
   dataResidence: "Customer controlled",
   networkPosture: "Internet connected SaaS",
+  notes: ""
+};
+const DEFAULT_OPERATIONAL_RUNBOOK = {
+  environmentName: "Production",
+  deploymentIdentifier: "DFP-NEO-V2",
+  releaseChannel: "Production",
+  supportOwner: "",
+  supportContact: "",
+  approvingAuthority: "",
+  backupFrequency: "Daily",
+  backupRetentionDays: 30,
+  backupStorageLocation: "",
+  lastBackupDate: "",
+  lastRestoreTestDate: "",
+  restoreTimeObjectiveHours: 24,
+  restorePointObjectiveHours: 24,
+  maintenanceWindow: "",
+  updateApprovalProcess: "",
+  lastUpdateDate: "",
+  evidenceExportPath: "",
+  auditRetentionYears: 7,
+  accreditationStatus: "Not started",
   notes: ""
 };
 const DEPLOYMENT_READINESS_ITEMS = [
@@ -57125,6 +57166,39 @@ const PlatformConfigurationSettings = ({
   const deploymentReadiness = primaryOrganisationSettings.deploymentReadiness || {};
   const readinessCompleteCount = DEPLOYMENT_READINESS_ITEMS.filter((item) => deploymentReadiness[item.id] === true).length;
   const readinessPercent = DEPLOYMENT_READINESS_ITEMS.length ? Math.round(readinessCompleteCount / DEPLOYMENT_READINESS_ITEMS.length * 100) : 0;
+  const operationalRunbook = {
+    ...DEFAULT_OPERATIONAL_RUNBOOK,
+    ...primaryOrganisationSettings.operationalRunbook || {}
+  };
+  const operationalSignals = [
+    {
+      label: "Support owner",
+      complete: Boolean(operationalRunbook.supportOwner && operationalRunbook.supportContact),
+      detail: "Named support owner and contact path are recorded."
+    },
+    {
+      label: "Backup policy",
+      complete: Boolean(operationalRunbook.backupFrequency && Number(operationalRunbook.backupRetentionDays) > 0 && operationalRunbook.backupStorageLocation),
+      detail: "Backup cadence, retention and storage location are recorded."
+    },
+    {
+      label: "Restore assurance",
+      complete: Boolean(operationalRunbook.lastRestoreTestDate && Number(operationalRunbook.restoreTimeObjectiveHours) > 0 && Number(operationalRunbook.restorePointObjectiveHours) > 0),
+      detail: "Restore test date, RTO and RPO are recorded."
+    },
+    {
+      label: "Update process",
+      complete: Boolean(operationalRunbook.maintenanceWindow && operationalRunbook.updateApprovalProcess),
+      detail: "Maintenance window and update approval process are recorded."
+    },
+    {
+      label: "Evidence retention",
+      complete: Boolean(operationalRunbook.evidenceExportPath && Number(operationalRunbook.auditRetentionYears) > 0),
+      detail: "Audit evidence export path and retention period are recorded."
+    }
+  ];
+  const operationalCompleteCount = operationalSignals.filter((signal) => signal.complete).length;
+  const operationalReadinessPercent = operationalSignals.length ? Math.round(operationalCompleteCount / operationalSignals.length * 100) : 0;
   const updatePrimaryOrganisationSettings = (updater) => {
     setConfig((prev) => {
       const organisations = prev.organisations.length > 0 ? [...prev.organisations] : [{ code: "RAAF", name: "RAAF", status: "ACTIVE", settings: {} }];
@@ -57143,6 +57217,16 @@ const PlatformConfigurationSettings = ({
       deploymentProfile: {
         ...DEFAULT_DEPLOYMENT_PROFILE,
         ...settings.deploymentProfile || {},
+        ...changes
+      }
+    }));
+  };
+  const updateOperationalRunbook = (changes) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      operationalRunbook: {
+        ...DEFAULT_OPERATIONAL_RUNBOOK,
+        ...settings.operationalRunbook || {},
         ...changes
       }
     }));
@@ -57612,6 +57696,130 @@ const PlatformConfigurationSettings = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs text-gray-400", children: item.detail })
             ] })
           ] }, item.id)) })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Operational Runbook",
+          subtitle: "Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets."
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/30 bg-sky-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-sky-100/70", children: "Environment" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-bold text-white", children: operationalRunbook.environmentName || "Not set" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-sky-100/70", children: operationalRunbook.releaseChannel || "Release channel not set" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/30 bg-sky-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-sky-100/70", children: "Support Owner" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-bold text-white", children: operationalRunbook.supportOwner || "Not set" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 truncate text-xs text-sky-100/70", children: operationalRunbook.supportContact || "Support contact not set" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/30 bg-sky-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-sky-100/70", children: "Last Restore Test" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-lg font-bold text-white", children: formatDateLabel(operationalRunbook.lastRestoreTestDate) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-sky-100/70", children: [
+              "RTO ",
+              operationalRunbook.restoreTimeObjectiveHours,
+              "h / RPO ",
+              operationalRunbook.restorePointObjectiveHours,
+              "h"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-sky-500/30 bg-sky-500/10 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-sky-100/70", children: "Ops Readiness" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-lg font-bold text-white", children: [
+              operationalReadinessPercent,
+              "%"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 h-2 rounded-full bg-gray-950", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: "h-2 rounded-full bg-sky-400",
+                style: { width: `${operationalReadinessPercent}%` }
+              }
+            ) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Environment Identity" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: identify which deployed environment this is, who owns support, and who approves operational changes." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-100", children: "Non-secret admin record" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Environment Name", value: operationalRunbook.environmentName || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ environmentName: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Deployment Identifier", value: operationalRunbook.deploymentIdentifier || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ deploymentIdentifier: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Release Channel", value: operationalRunbook.releaseChannel || "Production", disabled: !canEdit, options: RELEASE_CHANNEL_OPTIONS, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Owner", value: operationalRunbook.supportOwner || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportOwner: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Contact", value: operationalRunbook.supportContact || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportContact: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Approving Authority", value: operationalRunbook.approvingAuthority || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ approvingAuthority: value }) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Backup And Restore" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: record where backups live, how long they are retained, and when a restore was last proven." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Backup Frequency", value: operationalRunbook.backupFrequency || "Daily", disabled: !canEdit, options: BACKUP_FREQUENCY_OPTIONS, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Backup Retention Days", value: Number(operationalRunbook.backupRetentionDays ?? 30), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Backup Storage Location", value: operationalRunbook.backupStorageLocation || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Backup Date", value: operationalRunbook.lastBackupDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastBackupDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Restore Test Date", value: operationalRunbook.lastRestoreTestDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RTO Hours", value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RPO Hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }) })
+            ] })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Update, Evidence And Accreditation" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: record when updates may be applied, who approves them, where evidence exports are stored, and the current accreditation posture." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Maintenance Window", value: operationalRunbook.maintenanceWindow || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ maintenanceWindow: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Update Approval Process", value: operationalRunbook.updateApprovalProcess || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ updateApprovalProcess: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Update Date", value: operationalRunbook.lastUpdateDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastUpdateDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Evidence Export Path", value: operationalRunbook.evidenceExportPath || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ evidenceExportPath: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Audit Retention Years", value: Number(operationalRunbook.auditRetentionYears ?? 7), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ auditRetentionYears: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Accreditation Status", value: operationalRunbook.accreditationStatus || "Not started", disabled: !canEdit, options: ACCREDITATION_STATUS_OPTIONS, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Operational Notes", value: operationalRunbook.notes || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ notes: value }) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Operational Checks" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "These checks are derived from the runbook fields. They are not enforcement gates yet; they are a simple readiness signal for deployment and customer assurance." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-auto text-xs font-semibold text-gray-400", children: [
+              operationalCompleteCount,
+              " of ",
+              operationalSignals.length,
+              " complete"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-2 md:grid-cols-2", children: operationalSignals.map((signal) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded border p-3 ${signal.complete ? "border-emerald-500/40 bg-emerald-500/10" : "border-yellow-600/40 bg-yellow-900/20"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${signal.complete ? "bg-emerald-400" : "bg-yellow-400"}` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-bold text-white", children: signal.label })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: signal.detail })
+          ] }, signal.label)) })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-sky-500/30 bg-sky-500/10 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Non-secret Deployment Manifest" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs text-sky-100/80", children: [
+            "Support teams can inspect a safe manifest at ",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-white", children: "/api/platform-deployment/manifest" }),
+            ". It reports deployment posture, readiness status, counts and warnings, but no database URLs, tokens or secrets."
+          ] })
         ] })
       ] })
     ] }),
