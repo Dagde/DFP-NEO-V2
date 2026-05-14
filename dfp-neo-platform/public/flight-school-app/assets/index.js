@@ -57031,6 +57031,28 @@ const DEFAULT_OPERATIONAL_RUNBOOK = {
   accreditationStatus: "Not started",
   notes: ""
 };
+const OPERATIONAL_RUNBOOK_HELP = {
+  environmentName: "Plain English: the name of this installed system. Example: Production, Training Network, Offline Test Rig. Text only; do not include passwords or technical connection strings.",
+  deploymentIdentifier: "Plain English: a stable short identifier for this deployment. Example: DFP-NEO-V2-RAAF-PROD. Use letters, numbers, dashes or spaces.",
+  releaseChannel: "Plain English: the update stream this system follows. Production is live use, Staging is pre-live testing, Customer Acceptance is formal customer test, Offline Package is an isolated deployment package.",
+  supportOwner: "Plain English: the person, team or organisation responsible for supporting this deployment. Example: Unit Admin Cell, Defence Prime Support Desk, or Joe Bloggs.",
+  supportContact: "Plain English: how support is contacted. Example: email address, phone number, service desk queue, or internal extension. Do not enter account passwords or secret tokens.",
+  approvingAuthority: "Plain English: who is allowed to approve operational changes or updates. Example: Chief Instructor, SQNLDR Operations, System Owner, or customer change board.",
+  backupFrequency: "Plain English: how often the database and critical records are backed up. Choose the closest option to the approved local process.",
+  backupRetentionDays: "Plain English: how many days backups are kept before disposal. Enter a whole number. Example: 30 means keep one month of backups.",
+  backupStorageLocation: "Plain English: where backups are stored. Example: local secure NAS path, approved backup server, removable media vault, or customer backup service. Do not enter database URLs, passwords, access keys or tokens.",
+  lastBackupDate: "Plain English: the date the most recent known successful backup was completed. Use the date picker; it stores the date in YYYY-MM-DD format.",
+  lastRestoreTestDate: "Plain English: the date a backup was last restored and proven to work. This is evidence that rollback is more than just theoretical.",
+  restoreTimeObjectiveHours: "Plain English: maximum acceptable time to restore service after a major failure. Enter hours as a whole number. Example: 24 means restore within one day.",
+  restorePointObjectiveHours: "Plain English: maximum acceptable amount of data loss after a restore. Enter hours as a whole number. Example: 24 means restore to within one day of data.",
+  maintenanceWindow: "Plain English: when updates or planned outage work may be performed. Example: Tuesdays 1800-2000 local, after flying complete, or by customer approval only.",
+  updateApprovalProcess: "Plain English: how software updates are approved before use. Example: test in staging, supervisor review, customer change approval, then production release.",
+  lastUpdateDate: "Plain English: the date the application or deployment package was last updated. Use the date picker; it stores the date in YYYY-MM-DD format.",
+  evidenceExportPath: "Plain English: where exported audit evidence or legal record packs are stored. Example: secure records share, local records folder, or approved archive path. Do not enter passwords or tokens.",
+  auditRetentionYears: "Plain English: how many years audit logs and legal record evidence must be retained. Enter a whole number. Example: 7.",
+  accreditationStatus: "Plain English: the current security/accreditation state for this deployment. This is an admin record, not an automatic approval.",
+  notes: "Plain English: operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys or database URLs here."
+};
 const DEPLOYMENT_READINESS_ITEMS = [
   { id: "localWebServer", label: "Local web server defined", detail: "Required for private network and fully offline installs." },
   { id: "localDatabase", label: "Local database defined", detail: "Postgres or approved customer database target is identified." },
@@ -57754,12 +57776,12 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-100", children: "Non-secret admin record" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Environment Name", value: operationalRunbook.environmentName || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ environmentName: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Deployment Identifier", value: operationalRunbook.deploymentIdentifier || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ deploymentIdentifier: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Release Channel", value: operationalRunbook.releaseChannel || "Production", disabled: !canEdit, options: RELEASE_CHANNEL_OPTIONS, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Owner", value: operationalRunbook.supportOwner || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportOwner: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Contact", value: operationalRunbook.supportContact || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportContact: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Approving Authority", value: operationalRunbook.approvingAuthority || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ approvingAuthority: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Environment Name", info: OPERATIONAL_RUNBOOK_HELP.environmentName, value: operationalRunbook.environmentName || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ environmentName: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Deployment Identifier", info: OPERATIONAL_RUNBOOK_HELP.deploymentIdentifier, value: operationalRunbook.deploymentIdentifier || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ deploymentIdentifier: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Release Channel", info: OPERATIONAL_RUNBOOK_HELP.releaseChannel, value: operationalRunbook.releaseChannel || "Production", disabled: !canEdit, options: RELEASE_CHANNEL_OPTIONS, onChange: (value) => updateOperationalRunbook({ releaseChannel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Owner", info: OPERATIONAL_RUNBOOK_HELP.supportOwner, value: operationalRunbook.supportOwner || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportOwner: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Support Contact", info: OPERATIONAL_RUNBOOK_HELP.supportContact, value: operationalRunbook.supportContact || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ supportContact: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Approving Authority", info: OPERATIONAL_RUNBOOK_HELP.approvingAuthority, value: operationalRunbook.approvingAuthority || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ approvingAuthority: value }) })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
@@ -57768,14 +57790,14 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: record where backups live, how long they are retained, and when a restore was last proven." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Backup Frequency", value: operationalRunbook.backupFrequency || "Daily", disabled: !canEdit, options: BACKUP_FREQUENCY_OPTIONS, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Backup Retention Days", value: Number(operationalRunbook.backupRetentionDays ?? 30), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Backup Storage Location", value: operationalRunbook.backupStorageLocation || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Backup Date", value: operationalRunbook.lastBackupDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastBackupDate: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Restore Test Date", value: operationalRunbook.lastRestoreTestDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Backup Frequency", info: OPERATIONAL_RUNBOOK_HELP.backupFrequency, value: operationalRunbook.backupFrequency || "Daily", disabled: !canEdit, options: BACKUP_FREQUENCY_OPTIONS, onChange: (value) => updateOperationalRunbook({ backupFrequency: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Backup Retention Days", info: OPERATIONAL_RUNBOOK_HELP.backupRetentionDays, value: Number(operationalRunbook.backupRetentionDays ?? 30), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupRetentionDays: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Backup Storage Location", info: OPERATIONAL_RUNBOOK_HELP.backupStorageLocation, value: operationalRunbook.backupStorageLocation || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ backupStorageLocation: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Backup Date", info: OPERATIONAL_RUNBOOK_HELP.lastBackupDate, value: operationalRunbook.lastBackupDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastBackupDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Restore Test Date", info: OPERATIONAL_RUNBOOK_HELP.lastRestoreTestDate, value: operationalRunbook.lastRestoreTestDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastRestoreTestDate: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RTO Hours", value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RPO Hours", value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RTO Hours", info: OPERATIONAL_RUNBOOK_HELP.restoreTimeObjectiveHours, value: Number(operationalRunbook.restoreTimeObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "RPO Hours", info: OPERATIONAL_RUNBOOK_HELP.restorePointObjectiveHours, value: Number(operationalRunbook.restorePointObjectiveHours ?? 24), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ restorePointObjectiveHours: value }) })
             ] })
           ] })
         ] }),
@@ -57785,13 +57807,13 @@ const PlatformConfigurationSettings = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: record when updates may be applied, who approves them, where evidence exports are stored, and the current accreditation posture." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Maintenance Window", value: operationalRunbook.maintenanceWindow || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ maintenanceWindow: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Update Approval Process", value: operationalRunbook.updateApprovalProcess || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ updateApprovalProcess: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Update Date", value: operationalRunbook.lastUpdateDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastUpdateDate: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Evidence Export Path", value: operationalRunbook.evidenceExportPath || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ evidenceExportPath: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Audit Retention Years", value: Number(operationalRunbook.auditRetentionYears ?? 7), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ auditRetentionYears: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Accreditation Status", value: operationalRunbook.accreditationStatus || "Not started", disabled: !canEdit, options: ACCREDITATION_STATUS_OPTIONS, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Operational Notes", value: operationalRunbook.notes || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ notes: value }) })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Maintenance Window", info: OPERATIONAL_RUNBOOK_HELP.maintenanceWindow, value: operationalRunbook.maintenanceWindow || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ maintenanceWindow: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Update Approval Process", info: OPERATIONAL_RUNBOOK_HELP.updateApprovalProcess, value: operationalRunbook.updateApprovalProcess || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ updateApprovalProcess: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DateField, { label: "Last Update Date", info: OPERATIONAL_RUNBOOK_HELP.lastUpdateDate, value: operationalRunbook.lastUpdateDate || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ lastUpdateDate: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Evidence Export Path", info: OPERATIONAL_RUNBOOK_HELP.evidenceExportPath, value: operationalRunbook.evidenceExportPath || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ evidenceExportPath: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Audit Retention Years", info: OPERATIONAL_RUNBOOK_HELP.auditRetentionYears, value: Number(operationalRunbook.auditRetentionYears ?? 7), disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ auditRetentionYears: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Accreditation Status", info: OPERATIONAL_RUNBOOK_HELP.accreditationStatus, value: operationalRunbook.accreditationStatus || "Not started", disabled: !canEdit, options: ACCREDITATION_STATUS_OPTIONS, onChange: (value) => updateOperationalRunbook({ accreditationStatus: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TextAreaField, { label: "Operational Notes", info: OPERATIONAL_RUNBOOK_HELP.notes, value: operationalRunbook.notes || "", disabled: !canEdit, onChange: (value) => updateOperationalRunbook({ notes: value }) })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: [
@@ -58208,21 +58230,25 @@ const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { 
   "i",
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal leading-relaxed text-gray-100 shadow-xl group-hover:block", children: text })
 ] });
-const Field = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
+  info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
+] });
+const Field = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
 ] });
-const NumberField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+const NumberField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "number", value: value ?? 0, disabled, onChange: (event) => onChange(Number(event.target.value)) })
 ] });
 const formatDateInput = (value) => value ? String(value).slice(0, 10) : "";
-const DateField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+const DateField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, type: "date", value: formatDateInput(value), disabled, onChange: (event) => onChange(event.target.value) })
 ] });
-const OptionalNumberField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+const OptionalNumberField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(
     "input",
     {
@@ -58235,8 +58261,8 @@ const OptionalNumberField = ({ label, value, disabled, onChange }) => /* @__PURE
     }
   )
 ] });
-const TextAreaField = ({ label, value, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "lg:col-span-2", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+const TextAreaField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "lg:col-span-2", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: `${fieldClass} min-h-[74px] resize-y`, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
 ] });
 const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center justify-between gap-3 rounded border border-gray-700 bg-gray-950 px-3 py-2", children: [
@@ -58252,8 +58278,8 @@ const ToggleField = ({ label, checked, disabled, onChange }) => /* @__PURE__ */ 
     }
   )
 ] });
-const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: labelClass, children: label }),
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = "None", info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option || emptyLabel }, option)) })
 ] });
 const UserSearchSelect = ({

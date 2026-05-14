@@ -145,6 +145,29 @@ const DEFAULT_OPERATIONAL_RUNBOOK = {
   notes: '',
 };
 
+const OPERATIONAL_RUNBOOK_HELP: Record<string, string> = {
+  environmentName: 'Plain English: the name of this installed system. Example: Production, Training Network, Offline Test Rig. Text only; do not include passwords or technical connection strings.',
+  deploymentIdentifier: 'Plain English: a stable short identifier for this deployment. Example: DFP-NEO-V2-RAAF-PROD. Use letters, numbers, dashes or spaces.',
+  releaseChannel: 'Plain English: the update stream this system follows. Production is live use, Staging is pre-live testing, Customer Acceptance is formal customer test, Offline Package is an isolated deployment package.',
+  supportOwner: 'Plain English: the person, team or organisation responsible for supporting this deployment. Example: Unit Admin Cell, Defence Prime Support Desk, or Joe Bloggs.',
+  supportContact: 'Plain English: how support is contacted. Example: email address, phone number, service desk queue, or internal extension. Do not enter account passwords or secret tokens.',
+  approvingAuthority: 'Plain English: who is allowed to approve operational changes or updates. Example: Chief Instructor, SQNLDR Operations, System Owner, or customer change board.',
+  backupFrequency: 'Plain English: how often the database and critical records are backed up. Choose the closest option to the approved local process.',
+  backupRetentionDays: 'Plain English: how many days backups are kept before disposal. Enter a whole number. Example: 30 means keep one month of backups.',
+  backupStorageLocation: 'Plain English: where backups are stored. Example: local secure NAS path, approved backup server, removable media vault, or customer backup service. Do not enter database URLs, passwords, access keys or tokens.',
+  lastBackupDate: 'Plain English: the date the most recent known successful backup was completed. Use the date picker; it stores the date in YYYY-MM-DD format.',
+  lastRestoreTestDate: 'Plain English: the date a backup was last restored and proven to work. This is evidence that rollback is more than just theoretical.',
+  restoreTimeObjectiveHours: 'Plain English: maximum acceptable time to restore service after a major failure. Enter hours as a whole number. Example: 24 means restore within one day.',
+  restorePointObjectiveHours: 'Plain English: maximum acceptable amount of data loss after a restore. Enter hours as a whole number. Example: 24 means restore to within one day of data.',
+  maintenanceWindow: 'Plain English: when updates or planned outage work may be performed. Example: Tuesdays 1800-2000 local, after flying complete, or by customer approval only.',
+  updateApprovalProcess: 'Plain English: how software updates are approved before use. Example: test in staging, supervisor review, customer change approval, then production release.',
+  lastUpdateDate: 'Plain English: the date the application or deployment package was last updated. Use the date picker; it stores the date in YYYY-MM-DD format.',
+  evidenceExportPath: 'Plain English: where exported audit evidence or legal record packs are stored. Example: secure records share, local records folder, or approved archive path. Do not enter passwords or tokens.',
+  auditRetentionYears: 'Plain English: how many years audit logs and legal record evidence must be retained. Enter a whole number. Example: 7.',
+  accreditationStatus: 'Plain English: the current security/accreditation state for this deployment. This is an admin record, not an automatic approval.',
+  notes: 'Plain English: operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys or database URLs here.',
+};
+
 const DEPLOYMENT_READINESS_ITEMS = [
   { id: 'localWebServer', label: 'Local web server defined', detail: 'Required for private network and fully offline installs.' },
   { id: 'localDatabase', label: 'Local database defined', detail: 'Postgres or approved customer database target is identified.' },
@@ -989,12 +1012,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </span>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
-              <Field label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
-              <SelectField label="Release Channel" value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEdit} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
-              <Field label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
-              <Field label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
-              <Field label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
+              <Field label="Environment Name" info={OPERATIONAL_RUNBOOK_HELP.environmentName} value={operationalRunbook.environmentName || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
+              <Field label="Deployment Identifier" info={OPERATIONAL_RUNBOOK_HELP.deploymentIdentifier} value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
+              <SelectField label="Release Channel" info={OPERATIONAL_RUNBOOK_HELP.releaseChannel} value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEdit} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
+              <Field label="Support Owner" info={OPERATIONAL_RUNBOOK_HELP.supportOwner} value={operationalRunbook.supportOwner || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
+              <Field label="Support Contact" info={OPERATIONAL_RUNBOOK_HELP.supportContact} value={operationalRunbook.supportContact || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
+              <Field label="Approving Authority" info={OPERATIONAL_RUNBOOK_HELP.approvingAuthority} value={operationalRunbook.approvingAuthority || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
             </div>
           </div>
 
@@ -1006,14 +1029,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <SelectField label="Backup Frequency" value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEdit} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
-              <NumberField label="Backup Retention Days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
-              <Field label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
-              <DateField label="Last Backup Date" value={operationalRunbook.lastBackupDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
-              <DateField label="Last Restore Test Date" value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
+              <SelectField label="Backup Frequency" info={OPERATIONAL_RUNBOOK_HELP.backupFrequency} value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEdit} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
+              <NumberField label="Backup Retention Days" info={OPERATIONAL_RUNBOOK_HELP.backupRetentionDays} value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
+              <Field label="Backup Storage Location" info={OPERATIONAL_RUNBOOK_HELP.backupStorageLocation} value={operationalRunbook.backupStorageLocation || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
+              <DateField label="Last Backup Date" info={OPERATIONAL_RUNBOOK_HELP.lastBackupDate} value={operationalRunbook.lastBackupDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
+              <DateField label="Last Restore Test Date" info={OPERATIONAL_RUNBOOK_HELP.lastRestoreTestDate} value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
               <div className="grid grid-cols-2 gap-3">
-                <NumberField label="RTO Hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
-                <NumberField label="RPO Hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
+                <NumberField label="RTO Hours" info={OPERATIONAL_RUNBOOK_HELP.restoreTimeObjectiveHours} value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
+                <NumberField label="RPO Hours" info={OPERATIONAL_RUNBOOK_HELP.restorePointObjectiveHours} value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
               </div>
             </div>
           </div>
@@ -1026,13 +1049,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
-              <Field label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
-              <DateField label="Last Update Date" value={operationalRunbook.lastUpdateDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
-              <Field label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
-              <NumberField label="Audit Retention Years" value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
-              <SelectField label="Accreditation Status" value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEdit} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
-              <TextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ notes: value })} />
+              <Field label="Maintenance Window" info={OPERATIONAL_RUNBOOK_HELP.maintenanceWindow} value={operationalRunbook.maintenanceWindow || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
+              <Field label="Update Approval Process" info={OPERATIONAL_RUNBOOK_HELP.updateApprovalProcess} value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
+              <DateField label="Last Update Date" info={OPERATIONAL_RUNBOOK_HELP.lastUpdateDate} value={operationalRunbook.lastUpdateDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
+              <Field label="Evidence Export Path" info={OPERATIONAL_RUNBOOK_HELP.evidenceExportPath} value={operationalRunbook.evidenceExportPath || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
+              <NumberField label="Audit Retention Years" info={OPERATIONAL_RUNBOOK_HELP.auditRetentionYears} value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
+              <SelectField label="Accreditation Status" info={OPERATIONAL_RUNBOOK_HELP.accreditationStatus} value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEdit} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
+              <TextAreaField label="Operational Notes" info={OPERATIONAL_RUNBOOK_HELP.notes} value={operationalRunbook.notes || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ notes: value })} />
             </div>
           </div>
 
@@ -1463,32 +1486,39 @@ const InfoHint = ({ text }: { text: string }) => (
   </span>
 );
 
-const Field = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+const FieldLabel = ({ label, info }: { label: string; info?: string }) => (
+  <span className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+    <span>{label}</span>
+    {info ? <InfoHint text={info} /> : null}
+  </span>
+);
+
+const Field = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
   <label>
-    <span className={labelClass}>{label}</span>
+    <FieldLabel label={label} info={info} />
     <input className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
   </label>
 );
 
-const NumberField = ({ label, value, disabled, onChange }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void }) => (
+const NumberField = ({ label, value, disabled, onChange, info }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void; info?: string }) => (
   <label>
-    <span className={labelClass}>{label}</span>
+    <FieldLabel label={label} info={info} />
     <input className={fieldClass} type="number" value={value ?? 0} disabled={disabled} onChange={(event) => onChange(Number(event.target.value))} />
   </label>
 );
 
 const formatDateInput = (value: string) => (value ? String(value).slice(0, 10) : '');
 
-const DateField = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+const DateField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
   <label>
-    <span className={labelClass}>{label}</span>
+    <FieldLabel label={label} info={info} />
     <input className={fieldClass} type="date" value={formatDateInput(value)} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
   </label>
 );
 
-const OptionalNumberField = ({ label, value, disabled, onChange }: { label: string; value: number | null; disabled: boolean; onChange: (value: number | null) => void }) => (
+const OptionalNumberField = ({ label, value, disabled, onChange, info }: { label: string; value: number | null; disabled: boolean; onChange: (value: number | null) => void; info?: string }) => (
   <label>
-    <span className={labelClass}>{label}</span>
+    <FieldLabel label={label} info={info} />
     <input
       className={fieldClass}
       type="number"
@@ -1500,9 +1530,9 @@ const OptionalNumberField = ({ label, value, disabled, onChange }: { label: stri
   </label>
 );
 
-const TextAreaField = ({ label, value, disabled, onChange }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void }) => (
+const TextAreaField = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
   <label className="lg:col-span-2">
-    <span className={labelClass}>{label}</span>
+    <FieldLabel label={label} info={info} />
     <textarea className={`${fieldClass} min-h-[74px] resize-y`} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
   </label>
 );
@@ -1520,9 +1550,9 @@ const ToggleField = ({ label, checked, disabled, onChange }: { label: string; ch
   </label>
 );
 
-const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = 'None' }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void; emptyLabel?: string }) => (
+const SelectField = ({ label, value, disabled, options, onChange, emptyLabel = 'None', info }: { label: string; value: string; disabled: boolean; options: string[]; onChange: (value: string) => void; emptyLabel?: string; info?: string }) => (
   <label>
-    <span className={labelClass}>{label}</span>
+    <FieldLabel label={label} info={info} />
     <select className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)}>
       {options.map((option) => <option key={option} value={option}>{option || emptyLabel}</option>)}
     </select>
