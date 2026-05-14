@@ -1728,7 +1728,7 @@ const getPlatformPermissionProfiles = (config) => {
   const normalisedProfiles = Array.isArray(profileConfig) ? profileConfig.map((profile) => {
     const id = String(profile?.id || "").trim();
     if (!id) return null;
-    const permissions = Array.isArray(profile?.permissions) ? uniqueValues(profile.permissions.map((permission) => String(permission || "").trim()).filter(Boolean)) : [];
+    const permissions = Array.isArray(profile?.permissions) ? uniqueValues$1(profile.permissions.map((permission) => String(permission || "").trim()).filter(Boolean)) : [];
     return {
       id,
       name: String(profile?.name || id).trim(),
@@ -1738,8 +1738,8 @@ const getPlatformPermissionProfiles = (config) => {
   }).filter((profile) => Boolean(profile)) : [];
   return normalisedProfiles.length > 0 ? normalisedProfiles : DEFAULT_PLATFORM_PERMISSION_PROFILES;
 };
-const uniqueValues = (values) => Array.from(new Set(values));
-const getExplicitPermissionProfileIds = (rows) => uniqueValues(
+const uniqueValues$1 = (values) => Array.from(new Set(values));
+const getExplicitPermissionProfileIds = (rows) => uniqueValues$1(
   rows.flatMap((row) => Array.isArray(parseSettingsObject(row.settings).permissionProfileIds) ? parseSettingsObject(row.settings).permissionProfileIds.map((id) => String(id || "").trim()).filter(Boolean) : [])
 );
 const legacyRoleToProfileId = (role) => {
@@ -1752,7 +1752,7 @@ const legacyRoleToProfileId = (role) => {
   if (normalisedRole.includes("trainee")) return "trainee";
   return null;
 };
-const getRoleFallbackProfileIds = (rows) => uniqueValues(
+const getRoleFallbackProfileIds = (rows) => uniqueValues$1(
   rows.map((row) => legacyRoleToProfileId(row.role)).filter((id) => Boolean(id))
 );
 const resolvePermissionsForRows = (config, rows) => {
@@ -1769,7 +1769,7 @@ const resolvePermissionsForRows = (config, rows) => {
     }
     return [];
   });
-  const permissions = uniqueValues([...profilePermissions, ...rolePermissions]);
+  const permissions = uniqueValues$1([...profilePermissions, ...rolePermissions]);
   const isSuperAdmin = permissions.includes("settings.superAdmin") || rows.some((row) => normaliseAccessValue(row.role).includes("super admin"));
   const isPlatformAdmin = isSuperAdmin || rows.some((row) => {
     const role = normaliseAccessValue(row.role);
@@ -1876,12 +1876,12 @@ const getPlatformDataScopeForLocation = (accessContext, locationCode) => {
     return !rowLocation || normaliseAccessValue(rowLocation) === normaliseAccessValue(targetLocation);
   });
   const relevantRows = matchingRows.length > 0 ? matchingRows : activeRows;
-  const unitCodes = uniqueValues(
+  const unitCodes = uniqueValues$1(
     relevantRows.map((row) => String(row.unitCode || "").trim()).filter(Boolean)
   );
   const hasAllUnitScope = relevantRows.length === 0 || relevantRows.some((row) => !String(row.unitCode || "").trim());
   return {
-    organisationCodes: uniqueValues(
+    organisationCodes: uniqueValues$1(
       relevantRows.map((row) => String(row.organisationCode || "").trim()).filter(Boolean)
     ),
     locationCode: targetLocation,
@@ -57150,6 +57150,209 @@ const getLicenceStatusSummary = (license) => {
     toneClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
   };
 };
+const isActiveRecord = (item) => String(item?.status || "ACTIVE").toUpperCase() !== "INACTIVE";
+const toIdentifier = (value) => String(value || "").trim();
+const toNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+const uniqueValues = (values) => Array.from(new Set(values.filter(Boolean)));
+const buildConfigurationHealth = (config, permissionProfiles, readinessPercent, operationalReadinessPercent) => {
+  const items = [];
+  const add = (severity, area, title, detail, idSuffix = `${area}-${title}-${items.length}`) => {
+    items.push({
+      id: `${severity}-${idSuffix}`.replace(/\s+/g, "-").toLowerCase(),
+      severity,
+      area,
+      title,
+      detail
+    });
+  };
+  const activeOrganisations = config.organisations.filter(isActiveRecord);
+  const activeLocations = config.locations.filter(isActiveRecord);
+  const activeUnits = config.units.filter(isActiveRecord);
+  const activeAircraftTypes = config.aircraftTypes.filter(isActiveRecord);
+  const activeModules = config.modules.filter(isActiveRecord);
+  const activeResourcePools = config.resourcePools.filter(isActiveRecord);
+  const activeLicences = config.licenses.filter(isActiveRecord);
+  const activeUserAccess = config.userAccess.filter(isActiveRecord);
+  const activeOrganisationCodes = new Set(activeOrganisations.map((org) => toIdentifier(org.code)));
+  const activeLocationCodes = new Set(activeLocations.map((location) => toIdentifier(location.code)));
+  const activeUnitCodes = new Set(activeUnits.map((unit) => toIdentifier(unit.code)));
+  const activeAircraftTypeCodes = new Set(activeAircraftTypes.map((aircraft) => toIdentifier(aircraft.code)));
+  const activeModuleCodes = new Set(activeModules.map((module) => toIdentifier(module.code)));
+  const userIds = new Set(config.platformUsers.flatMap((user) => uniqueValues([user.userId, user.username].map(toIdentifier))));
+  const profileIds = new Set(permissionProfiles.map((profile) => toIdentifier(profile.id)));
+  if (activeOrganisations.length === 0) {
+    add("CRITICAL", "Organisation", "No active organisation", "At least one active organisation is required before the platform can be managed as a commercial deployment.", "organisation-none");
+  } else {
+    add("OK", "Organisation", "Active organisation exists", `${activeOrganisations.length} active organisation${activeOrganisations.length === 1 ? "" : "s"} available for configuration.`, "organisation-active");
+  }
+  if (activeLocations.length === 0) {
+    add("CRITICAL", "Locations", "No active locations", "The location selector, staff lists and DFP schedule need at least one active location.", "locations-none");
+  } else {
+    add("OK", "Locations", "Active locations exist", `${activeLocations.length} active location${activeLocations.length === 1 ? "" : "s"} available.`, "locations-active");
+  }
+  activeLocations.forEach((location) => {
+    const locationCode = toIdentifier(location.code);
+    const organisationCode = toIdentifier(location.organisationCode);
+    if (organisationCode && !activeOrganisationCodes.has(organisationCode)) {
+      add("WARNING", "Locations", `${locationCode} references inactive organisation`, `${locationCode} points to ${organisationCode}, which is not an active organisation.`, `location-${locationCode}-org`);
+    }
+    const unitsAtLocation = activeUnits.filter((unit) => toIdentifier(unit.locationCode) === locationCode);
+    if (unitsAtLocation.length === 0) {
+      add("WARNING", "Locations", `${locationCode} has no active units`, "Users may be able to select the location, but unit-aware scheduling and access scoping will be incomplete.", `location-${locationCode}-units`);
+    }
+  });
+  if (activeUnits.length === 0) {
+    add("CRITICAL", "Units", "No active units", "At least one active unit is needed for commercial unit-based configuration.", "units-none");
+  }
+  activeUnits.forEach((unit) => {
+    const unitCode = toIdentifier(unit.code);
+    const locationCode = toIdentifier(unit.locationCode);
+    if (!locationCode || !activeLocationCodes.has(locationCode)) {
+      add("CRITICAL", "Units", `${unitCode} has invalid location`, `The unit is assigned to "${locationCode || "blank"}", which is not an active location.`, `unit-${unitCode}-location`);
+    }
+    const enabledModules = activeModules.filter((module) => {
+      const unitModule = config.unitModules.find((item) => toIdentifier(item.unitCode) === unitCode && toIdentifier(item.moduleCode) === toIdentifier(module.code));
+      return unitModule?.isEnabled !== false;
+    });
+    if (enabledModules.length === 0) {
+      add("WARNING", "Modules", `${unitCode} has no enabled modules`, "The unit exists, but no active app areas are enabled for it.", `unit-${unitCode}-modules`);
+    }
+    const matchingPools = activeResourcePools.filter((pool) => toIdentifier(pool.unitCode) === unitCode || !toIdentifier(pool.unitCode) && toIdentifier(pool.locationCode) === locationCode);
+    if (matchingPools.length === 0) {
+      add("WARNING", "Resource Pools", `${unitCode} has no active resource pool`, "DFP resource counts may fall back to legacy defaults until a matching pool is configured.", `unit-${unitCode}-pools`);
+    }
+  });
+  if (activeUnits.length > 0 && !items.some((item) => item.area === "Units" && item.severity === "CRITICAL")) {
+    add("OK", "Units", "Active units are linked to locations", "No active unit is pointing at a missing or inactive location.", "units-linked");
+  }
+  activeResourcePools.forEach((pool) => {
+    const poolName = toIdentifier(pool.name) || toIdentifier(pool.code) || "Resource pool";
+    const locationCode = toIdentifier(pool.locationCode);
+    const unitCode = toIdentifier(pool.unitCode);
+    const aircraftTypeCode = toIdentifier(pool.aircraftTypeCode);
+    if (locationCode && !activeLocationCodes.has(locationCode)) {
+      add("CRITICAL", "Resource Pools", `${poolName} has invalid location`, `${poolName} points to ${locationCode}, which is not an active location.`, `pool-${poolName}-location`);
+    }
+    if (unitCode && !activeUnitCodes.has(unitCode)) {
+      add("CRITICAL", "Resource Pools", `${poolName} has invalid unit`, `${poolName} points to ${unitCode}, which is not an active unit.`, `pool-${poolName}-unit`);
+    }
+    if (aircraftTypeCode && !activeAircraftTypeCodes.has(aircraftTypeCode)) {
+      add("WARNING", "Resource Pools", `${poolName} has invalid aircraft type`, `${poolName} points to ${aircraftTypeCode}, which is not an active aircraft type.`, `pool-${poolName}-aircraft`);
+    }
+    if (pool.settings?.applyToV2Runtime === true) {
+      const totalResources = ["aircraft", "ftd", "cpt", "standby", "ground"].reduce((sum, key) => sum + toNumber(pool.settings?.[key]), 0);
+      if (totalResources <= 0) {
+        add("CRITICAL", "Resource Pools", `${poolName} has no usable resources`, "This pool is wired into the V2 runtime, but all resource counts are zero or blank.", `pool-${poolName}-empty`);
+      }
+    }
+  });
+  const runtimePools = activeResourcePools.filter((pool) => pool.settings?.applyToV2Runtime === true);
+  if (runtimePools.length === 0) {
+    add("WARNING", "Resource Pools", "No pool is wired to the live DFP", 'At least one resource pool should have "Apply to V2 runtime" enabled so the DFP uses platform configuration rather than legacy defaults.', "runtime-pool-none");
+  } else if (!items.some((item) => item.area === "Resource Pools" && item.severity === "CRITICAL")) {
+    add("OK", "Resource Pools", "Runtime resource pools are configured", `${runtimePools.length} active resource pool${runtimePools.length === 1 ? "" : "s"} feed the live DFP runtime.`, "runtime-pool-active");
+  }
+  activeUserAccess.forEach((access) => {
+    const userId = toIdentifier(access.userId);
+    const userLabel = access.displayName || userId || "Unknown user";
+    const locationCode = toIdentifier(access.locationCode);
+    const unitCode = toIdentifier(access.unitCode);
+    const moduleCode = toIdentifier(access.moduleCode);
+    const assignedProfiles = Array.isArray(access.settings?.permissionProfileIds) ? access.settings.permissionProfileIds.map(toIdentifier).filter(Boolean) : [];
+    if (!userId || !userIds.has(userId)) {
+      add("CRITICAL", "User Access", `${userLabel} has invalid user record`, "The access scope points to a user that is not present in the platform user list.", `access-${userId || userLabel}-user`);
+    }
+    if (locationCode && !activeLocationCodes.has(locationCode)) {
+      add("CRITICAL", "User Access", `${userLabel} has invalid location scope`, `${locationCode} is not an active location.`, `access-${userId}-${locationCode}`);
+    }
+    if (unitCode && !activeUnitCodes.has(unitCode)) {
+      add("CRITICAL", "User Access", `${userLabel} has invalid unit scope`, `${unitCode} is not an active unit.`, `access-${userId}-${unitCode}`);
+    }
+    const unit = unitCode ? config.units.find((item) => toIdentifier(item.code) === unitCode) : null;
+    if (unit && locationCode && toIdentifier(unit.locationCode) !== locationCode) {
+      add("CRITICAL", "User Access", `${userLabel} has mismatched scope`, `${unitCode} belongs to ${toIdentifier(unit.locationCode)}, but the access scope is set to ${locationCode}.`, `access-${userId}-${unitCode}-mismatch`);
+    }
+    if (moduleCode && !activeModuleCodes.has(moduleCode)) {
+      add("WARNING", "User Access", `${userLabel} has inactive feature-area scope`, `${moduleCode} is not an active module. Use "All Enabled Features" unless a deliberate one-area restriction is required.`, `access-${userId}-${moduleCode}`);
+    }
+    if (assignedProfiles.length === 0) {
+      add("WARNING", "User Access", `${userLabel} has no permission profile`, "The scope defines where the user can work, but no profile defines what they can do there.", `access-${userId}-profiles-none`);
+    }
+    assignedProfiles.forEach((profileId) => {
+      if (!profileIds.has(profileId)) {
+        add("WARNING", "User Access", `${userLabel} has unknown permission profile`, `${profileId} is assigned but does not exist in Permission Profiles.`, `access-${userId}-profile-${profileId}`);
+      }
+    });
+  });
+  const activeUsersWithAccess = uniqueValues(activeUserAccess.map((access) => toIdentifier(access.userId)));
+  if (activeUsersWithAccess.length === 0) {
+    add("CRITICAL", "User Access", "No users have active access", "No active user access scopes exist. Administrators may be locked out after enforcement is tightened.", "access-none");
+  } else if (!items.some((item) => item.area === "User Access" && item.severity === "CRITICAL")) {
+    add("OK", "User Access", "User scopes are structurally valid", `${activeUsersWithAccess.length} user${activeUsersWithAccess.length === 1 ? "" : "s"} have active access scopes without invalid location or unit references.`, "access-valid");
+  }
+  permissionProfiles.forEach((profile) => {
+    if (!Array.isArray(profile.permissions) || profile.permissions.length === 0) {
+      add("WARNING", "Permission Profiles", `${profile.name || profile.id} has no permissions`, "Users assigned this profile will not gain any capability from it.", `profile-${profile.id}-empty`);
+    }
+  });
+  if (permissionProfiles.length > 0 && !items.some((item) => item.area === "Permission Profiles" && item.severity !== "OK")) {
+    add("OK", "Permission Profiles", "Permission profiles are populated", `${permissionProfiles.length} reusable permission profile${permissionProfiles.length === 1 ? "" : "s"} are available.`, "profiles-ok");
+  }
+  activeModules.forEach((module) => {
+    const moduleCode = toIdentifier(module.code);
+    const enabledSomewhere = activeUnits.some((unit) => {
+      const unitModule = config.unitModules.find((item) => toIdentifier(item.unitCode) === toIdentifier(unit.code) && toIdentifier(item.moduleCode) === moduleCode);
+      return unitModule?.isEnabled !== false;
+    });
+    if (!enabledSomewhere) {
+      add("WARNING", "Modules", `${moduleCode} is active but unused`, "The module is active globally but is not enabled for any active unit.", `module-${moduleCode}-unused`);
+    }
+  });
+  const today = /* @__PURE__ */ new Date();
+  today.setHours(0, 0, 0, 0);
+  if (activeLicences.length === 0) {
+    add("WARNING", "Licensing", "No active licence record", "Commercial installs should have at least one active licence record, even while enforcement remains Monitor Only.", "licence-none");
+  } else {
+    activeLicences.forEach((license) => {
+      const licenseName = license.licenseName || license.licenseKey || "Licence";
+      const validUntil = parseDateOnly(license.validUntil);
+      if (validUntil && validUntil < today) {
+        add("CRITICAL", "Licensing", `${licenseName} is expired`, `Expired on ${formatDateLabel(validUntil)}.`, `licence-${licenseName}-expired`);
+      } else if (!validUntil) {
+        add("WARNING", "Licensing", `${licenseName} has no expiry date`, "This may be acceptable for a perpetual licence, but it should be deliberate and recorded.", `licence-${licenseName}-no-expiry`);
+      }
+    });
+    if (!items.some((item) => item.area === "Licensing" && item.severity === "CRITICAL")) {
+      add("OK", "Licensing", "Active licence record exists", `${activeLicences.length} active licence record${activeLicences.length === 1 ? "" : "s"} found.`, "licence-active");
+    }
+  }
+  if (readinessPercent < 100) {
+    add("WARNING", "Deployment Readiness", "Deployment checklist incomplete", `Offline and private-network readiness is ${readinessPercent}% complete.`, "deployment-readiness");
+  } else {
+    add("OK", "Deployment Readiness", "Deployment checklist complete", "All deployment readiness checks are recorded.", "deployment-readiness-ok");
+  }
+  if (operationalReadinessPercent < 100) {
+    add("WARNING", "Operational Runbook", "Operational runbook incomplete", `Support, backup, restore, update and evidence readiness is ${operationalReadinessPercent}% complete.`, "runbook-readiness");
+  } else {
+    add("OK", "Operational Runbook", "Operational runbook complete", "Support, backup, restore, update and evidence records are complete.", "runbook-readiness-ok");
+  }
+  const severityRank = { CRITICAL: 0, WARNING: 1, OK: 2 };
+  return items.sort((a, b) => severityRank[a.severity] - severityRank[b.severity] || a.area.localeCompare(b.area) || a.title.localeCompare(b.title));
+};
+const downloadTextFile = (filename, content, mimeType) => {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess
@@ -57392,6 +57595,48 @@ const PlatformConfigurationSettings = ({
     const profiles = config.organisations[0]?.settings?.permissionProfiles;
     return Array.isArray(profiles) && profiles.length > 0 ? profiles : DEFAULT_PERMISSION_PROFILES;
   }, [config.organisations]);
+  const configurationHealth = reactExports.useMemo(
+    () => buildConfigurationHealth(config, permissionProfiles, readinessPercent, operationalReadinessPercent),
+    [config, permissionProfiles, readinessPercent, operationalReadinessPercent]
+  );
+  const configurationHealthSummary = reactExports.useMemo(() => configurationHealth.reduce((summary, item) => ({
+    ...summary,
+    [item.severity]: summary[item.severity] + 1
+  }), { OK: 0, WARNING: 0, CRITICAL: 0 }), [configurationHealth]);
+  const exportConfigurationHealthReport = () => {
+    const generatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const report = {
+      generatedAt,
+      summary: configurationHealthSummary,
+      inventory: {
+        organisations: config.organisations.length,
+        activeOrganisations: config.organisations.filter(isActiveRecord).length,
+        locations: config.locations.length,
+        activeLocations: config.locations.filter(isActiveRecord).length,
+        units: config.units.length,
+        activeUnits: config.units.filter(isActiveRecord).length,
+        resourcePools: config.resourcePools.length,
+        activeResourcePools: config.resourcePools.filter(isActiveRecord).length,
+        modules: config.modules.length,
+        activeModules: config.modules.filter(isActiveRecord).length,
+        licences: config.licenses.length,
+        activeLicences: config.licenses.filter(isActiveRecord).length,
+        platformUsers: config.platformUsers.length,
+        activeUserAccessScopes: config.userAccess.filter(isActiveRecord).length
+      },
+      readiness: {
+        deploymentReadinessPercent: readinessPercent,
+        operationalReadinessPercent
+      },
+      checks: configurationHealth,
+      note: "Configuration health is advisory and non-secret. This export intentionally excludes database URLs, passwords, tokens and private licence keys."
+    };
+    downloadTextFile(
+      `dfp-neo-configuration-health-${generatedAt.slice(0, 10)}.json`,
+      JSON.stringify(report, null, 2),
+      "application/json"
+    );
+  };
   const updatePermissionProfiles = (profiles) => {
     setConfig((prev) => {
       const organisations = prev.organisations.length > 0 ? prev.organisations : [{ code: "DEFAULT", name: "Default Organisation", status: "ACTIVE", settings: {} }];
@@ -57558,6 +57803,49 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Units", value: config.units.length }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Active Licences", value: activeLicenseCount })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SectionHeader,
+        {
+          title: "Configuration Health",
+          subtitle: "Advisory checks for the commercial platform model. These checks highlight setup gaps without blocking the current app.",
+          action: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: exportConfigurationHealthReport,
+              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 shadow hover:bg-gray-200",
+              children: "Export Configuration Report"
+            }
+          )
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(HealthMetric, { label: "Critical", value: configurationHealthSummary.CRITICAL, severity: "CRITICAL" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(HealthMetric, { label: "Warnings", value: configurationHealthSummary.WARNING, severity: "WARNING" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(HealthMetric, { label: "OK", value: configurationHealthSummary.OK, severity: "OK" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-900 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Commercial Configuration Assurance" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs leading-relaxed text-gray-400", children: "This is a management view for administrators. Critical items should be fixed before relying on the platform model; warnings are setup gaps or records that should be reviewed before sale, deployment, or accreditation evidence export." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-100", children: "Advisory only" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: configurationHealth.map((item) => {
+          const tone = getConfigurationHealthTone(item.severity);
+          return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `rounded-lg border p-3 ${tone.rowClass}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded border px-2 py-1 text-xs font-bold ${tone.badgeClass}`, children: item.severity === "OK" ? "OK" : item.severity === "WARNING" ? "Warning" : "Critical" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: item.area }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-sm font-bold text-white", children: item.title }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm leading-relaxed text-gray-300", children: item.detail })
+            ] })
+          ] }) }, item.id);
+        }) })
+      ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { className: sectionClass, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Organisation & Locations", subtitle: "The top of the hierarchy: customer, base, timezone, and training areas." }),
@@ -58240,6 +58528,34 @@ const Metric = ({ label, value }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide text-gray-500", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold text-white", children: value })
 ] });
+const getConfigurationHealthTone = (severity) => {
+  if (severity === "CRITICAL") {
+    return {
+      badgeClass: "border-red-500/50 bg-red-500/15 text-red-100",
+      rowClass: "border-red-500/35 bg-red-500/10",
+      metricClass: "border-red-500/40 bg-red-500/10 text-red-100"
+    };
+  }
+  if (severity === "WARNING") {
+    return {
+      badgeClass: "border-yellow-500/50 bg-yellow-500/15 text-yellow-100",
+      rowClass: "border-yellow-500/35 bg-yellow-500/10",
+      metricClass: "border-yellow-500/40 bg-yellow-500/10 text-yellow-100"
+    };
+  }
+  return {
+    badgeClass: "border-emerald-500/50 bg-emerald-500/15 text-emerald-100",
+    rowClass: "border-emerald-500/30 bg-emerald-500/10",
+    metricClass: "border-emerald-500/40 bg-emerald-500/10 text-emerald-100"
+  };
+};
+const HealthMetric = ({ label, value, severity }) => {
+  const tone = getConfigurationHealthTone(severity);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border p-4 ${tone.metricClass}`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs font-semibold uppercase tracking-wide opacity-75", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 text-2xl font-bold", children: value })
+  ] });
+};
 const SectionHeader = ({ title, subtitle, action }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
