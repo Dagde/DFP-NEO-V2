@@ -58232,9 +58232,9 @@ const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     role: "button",
     tabIndex: 0,
     "aria-label": "More information",
-    className: "group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
+    className: "group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 normal-case outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
     children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[21px] font-bold italic leading-none", children: "i" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[21px] font-bold italic leading-none normal-case", children: "i" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-8 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
     ]
   }
