@@ -69,7 +69,7 @@ const CurrencyAuditFlyout: React.FC<CurrencyAuditFlyoutProps> = ({ personId, per
           </div>
           <button
             onClick={onClose}
-            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed"
+            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black"
             title="Close"
           >
             Close

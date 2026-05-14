@@ -2419,7 +2419,7 @@ const AuditFlyout = ({
                 "button",
                 {
                   onClick: handleExport,
-                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-green-400",
+                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black",
                   title: "Export to CSV",
                   children: "Export CSV"
                 }
@@ -2428,7 +2428,7 @@ const AuditFlyout = ({
                 "button",
                 {
                   onClick: handlePrint,
-                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-sky-400",
+                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed text-black",
                   title: "Print Audit Log",
                   children: "Print"
                 }
@@ -2437,7 +2437,7 @@ const AuditFlyout = ({
                 "button",
                 {
                   onClick: onClose,
-                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed",
+                  className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black",
                   children: "Close"
                 }
               )
@@ -8909,7 +8909,7 @@ const CurrencyAuditFlyout = ({ personId, personName, onClose }) => {
             "button",
             {
               onClick: onClose,
-              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed",
+              className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-lg btn-aluminium-brushed text-black",
               title: "Close",
               children: "Close"
             }
