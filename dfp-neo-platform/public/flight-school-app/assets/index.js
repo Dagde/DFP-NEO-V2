@@ -57703,7 +57703,7 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex flex-wrap items-start gap-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-white", children: "Deployment Profile" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Plain English: this describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven." })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100", children: "Runtime-safe: monitor-first" })
           ] }),
@@ -58212,7 +58212,7 @@ const PlatformConfigurationSettings = ({
                           /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: "Use this only when a user should administer one area but not another. Example: ESL + 1FTS + NEO_BUILD lets the user work with NEO Build for 1FTS, but not training records or reporting." })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Feature Area", value: access.moduleCode || "", disabled: !canEdit || appliesToAllFeatures, options: ["", ...config.modules.map((module) => module.code)], onChange: (value) => updateRow("userAccess", index, { moduleCode: value || null }), emptyLabel: "All Enabled Features" }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Plain English: leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-xs text-gray-400", children: "Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting." })
                       ] })
                     ]
                   }

@@ -945,7 +945,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <div>
                 <h5 className="text-sm font-bold text-white">Deployment Profile</h5>
                 <p className="mt-1 text-xs text-gray-400">
-                  Plain English: this describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven.
+                  Describes how this customer installation is expected to run and how the licence will be checked. Keep enforcement at Monitor Only until the customer acceptance path is proven.
                 </p>
               </div>
               <span className="ml-auto rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-100">
@@ -1460,7 +1460,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       </div>
                       <SelectField label="Feature Area" value={access.moduleCode || ''} disabled={!canEdit || appliesToAllFeatures} options={['', ...config.modules.map((module) => module.code)]} onChange={(value) => updateRow('userAccess', index, { moduleCode: value || null })} emptyLabel="All Enabled Features" />
                       <p className="mt-2 text-xs text-gray-400">
-                        Plain English: leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting.
+                        Leave this as all enabled features unless you deliberately want to restrict this scope to a single app area such as DFP, NEO Build, Training, or Reporting.
                       </p>
                     </div>
                   )}
