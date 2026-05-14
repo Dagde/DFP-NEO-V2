@@ -136,7 +136,40 @@ type SettingsSection =
     | 'appearance'
     | 'emergency';
 
-type SettingsMenuSection = SettingsSection | 'locale-settings' | 'scheduling-rules';
+const platformConfigurationSections = [
+    'platform-configuration-health',
+    'platform-organisation-locations',
+    'platform-units',
+    'platform-resource-pools',
+    'platform-unit-modules',
+    'platform-deployment-readiness',
+    'platform-operational-runbook',
+    'platform-licensing',
+    'platform-permission-profiles',
+    'platform-user-access',
+    'platform-scheduling-rule-sets',
+] as const;
+
+type PlatformConfigurationMenuSection = typeof platformConfigurationSections[number];
+type SettingsMenuSection = SettingsSection | 'locale-settings' | 'scheduling-rules' | PlatformConfigurationMenuSection;
+
+const platformSectionTargets: Record<'platform-configuration' | PlatformConfigurationMenuSection, string> = {
+    'platform-configuration': 'platform-configuration-health',
+    'platform-configuration-health': 'platform-configuration-health',
+    'platform-organisation-locations': 'platform-organisation-locations',
+    'platform-units': 'platform-units',
+    'platform-resource-pools': 'platform-resource-pools',
+    'platform-unit-modules': 'platform-unit-modules',
+    'platform-deployment-readiness': 'platform-deployment-readiness',
+    'platform-operational-runbook': 'platform-operational-runbook',
+    'platform-licensing': 'platform-licensing',
+    'platform-permission-profiles': 'platform-permission-profiles',
+    'platform-user-access': 'platform-user-access',
+    'platform-scheduling-rule-sets': 'platform-scheduling-rule-sets',
+};
+
+const isPlatformConfigurationMenuSection = (section: SettingsMenuSection): section is 'platform-configuration' | PlatformConfigurationMenuSection =>
+    Object.prototype.hasOwnProperty.call(platformSectionTargets, section);
 
 const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
@@ -164,6 +197,17 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'units': 'Units',
     'organisation': 'Organisation',
     'platform-configuration': 'Platform Configuration',
+    'platform-configuration-health': 'Configuration Health',
+    'platform-organisation-locations': 'Organisation & Locations',
+    'platform-units': 'Units',
+    'platform-resource-pools': 'Aircraft & Resource Pools',
+    'platform-unit-modules': 'Unit Modules',
+    'platform-deployment-readiness': 'Deployment Readiness',
+    'platform-operational-runbook': 'Operational Runbook',
+    'platform-licensing': 'Licensing & Deployment',
+    'platform-permission-profiles': 'Permission Profiles',
+    'platform-user-access': 'User Access Context',
+    'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
     'appearance': 'App Appearance',
     'emergency': 'Emergency',
 };
@@ -198,6 +242,13 @@ const allSections: SettingsSection[] = [
 ];
 
 type ScoringMatrixTab = 'Airmanship' | 'Preparation' | 'Technique' | 'Elements';
+
+const platformConfigurationIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+    <path d="M4 5h16v4H4zM4 15h16v4H4z"/>
+    <path d="M8 9v6M16 9v6M12 3v18"/>
+  </svg>
+);
 
 // ─── Icon definitions for each section ───────────────────────────────────────
 const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
@@ -367,12 +418,18 @@ const sectionIcons: Record<SettingsMenuSection, React.ReactNode> = {
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M6 14h.01M10 14h.01M14 14h.01M18 14h.01"/>
     </svg>
   ),
-  'platform-configuration': (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
-      <path d="M4 5h16v4H4zM4 15h16v4H4z"/>
-      <path d="M8 9v6M16 9v6M12 3v18"/>
-    </svg>
-  ),
+  'platform-configuration': platformConfigurationIcon,
+  'platform-configuration-health': platformConfigurationIcon,
+  'platform-organisation-locations': platformConfigurationIcon,
+  'platform-units': platformConfigurationIcon,
+  'platform-resource-pools': platformConfigurationIcon,
+  'platform-unit-modules': platformConfigurationIcon,
+  'platform-deployment-readiness': platformConfigurationIcon,
+  'platform-operational-runbook': platformConfigurationIcon,
+  'platform-licensing': platformConfigurationIcon,
+  'platform-permission-profiles': platformConfigurationIcon,
+  'platform-user-access': platformConfigurationIcon,
+  'platform-scheduling-rule-sets': platformConfigurationIcon,
   'appearance': (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
       <circle cx="12" cy="12" r="4"/>
@@ -420,6 +477,17 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'units': 'Configure unit settings',
   'organisation': 'Fleet sharing and multi-unit configuration',
   'platform-configuration': 'Commercial hierarchy, modules, resource pools and rule sets',
+  'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
+  'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
+  'platform-units': 'Unit type, location and operating status',
+  'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
+  'platform-unit-modules': 'Enabled capability modules by unit',
+  'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid deployment posture',
+  'platform-operational-runbook': 'Support, backup, restore, update and accreditation records',
+  'platform-licensing': 'Licence model, entitlements and validation posture',
+  'platform-permission-profiles': 'Reusable permission profiles for user roles',
+  'platform-user-access': 'User scopes defining where permissions apply',
+  'platform-scheduling-rule-sets': 'Commercial scheduling rule set records',
   'appearance': 'Choose dark or light display theme',
   'emergency': 'System freeze and emergency controls',
 };
@@ -463,6 +531,17 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'units':             'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'organisation':      'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-configuration': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-configuration-health': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-organisation-locations': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-units': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-resource-pools': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-unit-modules': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-deployment-readiness': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-operational-runbook': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-licensing': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-permission-profiles': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-user-access': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-scheduling-rule-sets': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
   // EMERGENCY - red icons
   'emergency':         'from-red-500/20 to-red-600/10 border-red-500/30 text-red-400',
@@ -477,11 +556,18 @@ const sectionGroups: {
   sections: SettingsMenuSection[];
 }[] = [
   {
+    label: 'Platform Configuration',
+    shortLabel: 'Platform',
+    description: 'Commercial operating model, deployment posture, licensing, permissions, access scopes and enterprise rule records.',
+    accent: 'cyan',
+    sections: [...platformConfigurationSections],
+  },
+  {
     label: 'System Setup',
     shortLabel: 'Setup',
-    description: 'Commercial hierarchy, locations, units, resource pools, timezone, display preferences and emergency control.',
+    description: 'Organisation setup, local operating settings, display preferences and emergency control.',
     accent: 'cyan',
-    sections: ['platform-configuration', 'organisation', 'locale-settings', 'appearance', 'emergency'],
+    sections: ['organisation', 'locale-settings', 'appearance', 'emergency'],
   },
   {
     label: 'People & Access',
@@ -1052,6 +1138,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
         }))
         .filter(group => group.visibleSections.length > 0);
     const hasSettingsMatches = visibleSettingGroups.length > 0;
+    const activePlatformTarget =
+        activeSection !== 'home' && isPlatformConfigurationMenuSection(activeSection)
+            ? platformSectionTargets[activeSection]
+            : undefined;
+    const isPlatformConfigurationActive = Boolean(activePlatformTarget);
 
     return (
         <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900">
@@ -1081,7 +1172,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {visibleSettingGroups.map(group => {
                         const accent = getAccentClasses(group.accent);
                         const groupSections = group.visibleSections;
-                        const groupActive = groupSections.includes(activeSection as SettingsSection);
+                        const groupActive = activeSection !== 'home' && groupSections.includes(activeSection);
                         return (
                             <div key={group.label} className={`rounded-lg border ${groupActive ? accent.border : 'border-gray-800'} bg-gray-900/45 p-2`}>
                                 <a
@@ -1141,7 +1232,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <div className="flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4">
                                     <div className="min-w-0">
                                         <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
-                                        <p className="text-sm text-gray-400 mt-0.5">Configure the operating model through five practical administration areas.</p>
+                                        <p className="text-sm text-gray-400 mt-0.5">Configure the operating model through purpose-built administration areas.</p>
                                     </div>
                                     <div className="ml-auto flex items-center gap-[10px]">
                                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -1348,7 +1439,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                      activeSection !== 'trainee-mockdata' &&
                      activeSection !== 'data-sources' &&
                      activeSection !== 'organisation' &&
-                     activeSection !== 'platform-configuration' &&
+                     !isPlatformConfigurationActive &&
                      activeSection !== 'appearance' &&
                      activeSection !== 'people-profile' && (
                         <SettingsView {...props} hideHeader={true} activeSection={activeSection as SettingsSection} />
@@ -1412,10 +1503,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             settingsLoaded={props.settingsLoaded}
                         />
                     )}
-                    {activeSection === 'platform-configuration' && (
+                    {isPlatformConfigurationActive && (
                         <PlatformConfigurationSettings
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
+                            scrollTarget={activePlatformTarget}
                         />
                     )}
                     {activeSection === 'appearance' && (

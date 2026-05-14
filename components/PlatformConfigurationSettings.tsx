@@ -591,11 +591,13 @@ const downloadTextFile = (filename: string, content: string, mimeType: string) =
 
 interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
+  scrollTarget?: string;
   onShowSuccess: (message: string) => void;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
   currentUserPermission,
+  scrollTarget,
   onShowSuccess,
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
@@ -634,6 +636,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     load();
     return () => { cancelled = true; };
   }, []);
+  useEffect(() => {
+    if (!scrollTarget || loading) return;
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(scrollTarget);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [scrollTarget, loading]);
+
 
   const enabledModuleCount = useMemo(
     () => config.unitModules.filter((item) => item.isEnabled !== false).length,
@@ -1142,7 +1153,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <Metric label="Active Licences" value={activeLicenseCount} />
       </div>
 
-      <section className={sectionClass}>
+      <section id="platform-configuration-health" className={sectionClass}>
         <SectionHeader
           title="Configuration Health"
           subtitle="Advisory checks for the commercial platform model. These checks highlight setup gaps without blocking the current app."
@@ -1205,7 +1216,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-organisation-locations" className={sectionClass}>
         <SectionHeader title="Organisation & Locations" subtitle="The top of the hierarchy: customer, base, timezone, and training areas." />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
@@ -1227,7 +1238,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-units" className={sectionClass}>
         <SectionHeader
           title="Units"
           subtitle="Unit is the centre of configuration: type, location, enabled modules and future UI behaviour."
@@ -1246,7 +1257,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-resource-pools" className={sectionClass}>
         <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
@@ -1286,7 +1297,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-unit-modules" className={sectionClass}>
         <SectionHeader title="Unit Modules" subtitle="Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." />
         <div className="overflow-x-auto p-4">
           <table className="min-w-full text-left text-sm">
@@ -1331,7 +1342,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-deployment-readiness" className={sectionClass}>
         <SectionHeader
           title="Deployment Readiness"
           subtitle="Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet."
@@ -1416,7 +1427,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-operational-runbook" className={sectionClass}>
         <SectionHeader
           title="Operational Runbook"
           subtitle="Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets."
@@ -1549,7 +1560,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-licensing" className={sectionClass}>
         <SectionHeader
           title="Licensing & Deployment"
           subtitle="Commercial licence records for SaaS, private defence networks, hybrid sync and fully offline deployments. Stage 11 makes licence status and offline readiness explicit while enforcement remains safe by default."
@@ -1672,7 +1683,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-permission-profiles" className={sectionClass}>
         <SectionHeader
           title="Permission Profiles"
           subtitle="Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it."
@@ -1732,7 +1743,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-user-access" className={sectionClass}>
         <SectionHeader
           title="User Access Context"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
@@ -1893,7 +1904,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section className={sectionClass}>
+      <section id="platform-scheduling-rule-sets" className={sectionClass}>
         <SectionHeader title="Scheduling Rule Sets" subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." />
         <div className="space-y-3 p-4">
           {config.schedulingRuleSets.map((ruleSet, index) => (
