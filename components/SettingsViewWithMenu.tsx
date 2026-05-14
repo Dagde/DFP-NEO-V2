@@ -175,13 +175,13 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'scoring-matrix': 'Scoring Matrix',
     'currencies': 'Currencies',
     'sct-events': 'SCT Events',
-    'people-profile': 'People Profile',
+    'people-profile': 'NEO Build People Profile',
     'scheduling-rules': 'Scheduling Rules',
     'event-limits': 'Event Limits',
     'duty-turnaround': 'Duty & Turnaround',
     'business-rules': 'Business Rules',
     'permissions': 'Permissions',
-    'data-loaders': 'Data Loaders',
+    'data-loaders': 'Data Import',
     'data-sources': 'Data Sources',
     'user-list': 'User List',
     'staff-database': 'Staff Database',
@@ -189,25 +189,25 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'staff-mockdata': 'Staff MockData',
     'trainee-mockdata': 'Trainee MockData',
     'staff-combined-data': 'Staff Combined Data',
-    'validation': 'AC History',
+    'validation': 'Aircraft Availability History',
     'historical-data': 'Historical Data',
-    'locale-settings': 'Locale Settings',
+    'locale-settings': 'Locations & Timezones',
     'timezone': 'Timezone',
     'location': 'Location',
     'units': 'Units',
-    'organisation': 'Organisation',
+    'organisation': 'Fleet Sharing',
     'platform-configuration': 'Platform Configuration',
     'platform-configuration-health': 'Configuration Health',
-    'platform-organisation-locations': 'Organisation & Locations',
-    'platform-units': 'Units',
+    'platform-organisation-locations': 'Organisation, Bases & Areas',
+    'platform-units': 'Units & Ownership',
     'platform-resource-pools': 'Aircraft & Resource Pools',
-    'platform-unit-modules': 'Unit Modules',
+    'platform-unit-modules': 'Unit Features & Modules',
     'platform-deployment-readiness': 'Deployment Readiness',
     'platform-operational-runbook': 'Operational Runbook',
     'platform-licensing': 'Licensing & Deployment',
     'platform-permission-profiles': 'Permission Profiles',
-    'platform-user-access': 'User Access Context',
-    'platform-scheduling-rule-sets': 'Scheduling Rule Sets',
+    'platform-user-access': 'User Access Scopes',
+    'platform-scheduling-rule-sets': 'Enterprise Rule Sets',
     'appearance': 'App Appearance',
     'emergency': 'Emergency',
 };
@@ -455,7 +455,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'scoring-matrix': 'Configure scoring logic and weighting',
   'currencies': 'Manage qualification expiry dates',
   'sct-events': 'Event scoring rules and triggers',
-  'people-profile': 'Set NEO Build basis course',
+  'people-profile': 'Assign NEO Build training basis and exclusions',
   'scheduling-rules': 'Event limits, duty rules, turnarounds and dispatch limits',
   'event-limits': 'Define operational thresholds',
   'duty-turnaround': 'Crew duty limits & rest times',
@@ -469,9 +469,9 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'staff-mockdata': 'Staff test data view',
   'trainee-mockdata': 'Trainee test data view',
   'staff-combined-data': 'Combined staff data overview',
-  'validation': 'Aircraft availability history',
+  'validation': 'Review fleet availability records and averages',
   'historical-data': 'Seed & refresh historical training records',
-  'locale-settings': 'Locations, timezone and unit assignment',
+  'locale-settings': 'Manage bases, unit assignment, timezones and training areas',
   'timezone': 'Configure timezone settings',
   'location': 'Manage base locations',
   'units': 'Configure unit settings',
@@ -479,14 +479,14 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-configuration': 'Commercial hierarchy, modules, resource pools and rule sets',
   'platform-configuration-health': 'Configuration warnings, risks and remediation guidance',
   'platform-organisation-locations': 'Customer organisation, bases, timezones and training areas',
-  'platform-units': 'Unit type, location and operating status',
+  'platform-units': 'Unit type, base ownership and operating status',
   'platform-resource-pools': 'Aircraft types, shared pools and resource counts',
-  'platform-unit-modules': 'Enabled capability modules by unit',
+  'platform-unit-modules': 'Enable features and modules for each unit',
   'platform-deployment-readiness': 'SaaS, on-premise, offline and hybrid deployment posture',
   'platform-operational-runbook': 'Support, backup, restore, update and accreditation records',
   'platform-licensing': 'Licence model, entitlements and validation posture',
   'platform-permission-profiles': 'Reusable permission profiles for user roles',
-  'platform-user-access': 'User scopes defining where permissions apply',
+  'platform-user-access': 'Control where each user can work',
   'platform-scheduling-rule-sets': 'Commercial scheduling rule set records',
   'appearance': 'Choose dark or light display theme',
   'emergency': 'System freeze and emergency controls',
@@ -557,9 +557,9 @@ const sectionGroups: {
   sections: SettingsMenuSection[];
 }[] = [
   {
-    label: 'Platform Setup',
+    label: 'Platform & Deployment',
     shortLabel: 'Platform',
-    description: 'Organisation hierarchy, locations, units, resource pools, modules, deployment posture and licensing.',
+    description: 'Customer, bases, units, aircraft pools, enabled features, licensing and deployment posture.',
     accent: 'cyan',
     defaultSection: 'platform-configuration-health',
     sections: [
@@ -576,9 +576,9 @@ const sectionGroups: {
     ],
   },
   {
-    label: 'People & Access',
+    label: 'People & Permissions',
     shortLabel: 'People',
-    description: 'Users, permission profiles, access scopes, staff records and trainee records.',
+    description: 'User accounts, permission profiles, access scopes, staff records and trainee records.',
     accent: 'violet',
     defaultSection: 'platform-user-access',
     sections: [
@@ -591,7 +591,7 @@ const sectionGroups: {
     ],
   },
   {
-    label: 'Training Standards',
+    label: 'Training & Standards',
     shortLabel: 'Training',
     description: 'Scoring rules, currencies and SCT event standards used across the training system.',
     accent: 'sky',
@@ -599,23 +599,23 @@ const sectionGroups: {
     sections: ['scoring-matrix', 'sct-events', 'currencies'],
   },
   {
-    label: 'Scheduling & DFP Rules',
-    shortLabel: 'Ops',
-    description: 'Operational thresholds, duty limits, turnaround timing, build logic and enterprise rule sets.',
+    label: 'Scheduling & DFP',
+    shortLabel: 'Scheduling',
+    description: 'DFP build rules, duty limits, turnaround timing, aircraft availability and enterprise rule sets.',
     accent: 'amber',
     defaultSection: 'scheduling-rules',
-    sections: ['scheduling-rules', 'platform-scheduling-rule-sets'],
+    sections: ['scheduling-rules', 'platform-scheduling-rule-sets', 'validation'],
   },
   {
-    label: 'Data, Audit & Records',
+    label: 'Records & Data',
     shortLabel: 'Data',
-    description: 'Audit evidence, aircraft availability history, data sources, imports and enduring records.',
+    description: 'Operational runbook, evidence, data sources, imports and enduring historical records.',
     accent: 'emerald',
     defaultSection: 'platform-operational-runbook',
-    sections: ['platform-operational-runbook', 'validation', 'data-sources', 'data-loaders', 'historical-data'],
+    sections: ['platform-operational-runbook', 'data-sources', 'data-loaders', 'historical-data'],
   },
   {
-    label: 'Emergency Control',
+    label: 'Emergency',
     shortLabel: 'Emergency',
     description: 'System freeze and emergency controls.',
     accent: 'red',
@@ -1107,6 +1107,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const { isFrozen } = useSystemFreeze();
     const [scoringMatrixTab, setScoringMatrixTab] = useState<ScoringMatrixTab>('Airmanship');
     const [settingsSearch, setSettingsSearch] = useState('');
+    const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
     // Initialize filtered mockdata with instructorsData
     React.useEffect(() => {
@@ -1178,12 +1179,20 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
             ? platformSectionTargets[activeSection]
             : undefined;
     const isPlatformConfigurationActive = Boolean(activePlatformTarget);
+    const isSearchActive = settingsSearch.trim().length > 0;
+    const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
+        setExpandedGroups({ [group.label]: true });
+        setActiveSection(getDefaultSectionForGroup(group));
+    };
 
     return (
         <div data-settings-view="true" className="flex-1 flex overflow-hidden bg-gray-900">
             <aside className="hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block">
                 <button
-                    onClick={() => setActiveSection('home')}
+                    onClick={() => {
+                        setActiveSection('home');
+                        setExpandedGroups({});
+                    }}
                     className={`mb-4 w-full rounded-lg border px-3 py-3 text-left transition-colors ${
                         activeSection === 'home'
                             ? 'border-sky-500/50 bg-sky-500/10 text-white'
@@ -1207,26 +1216,39 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {visibleSettingGroups.map(group => {
                         const accent = getAccentClasses(group.accent);
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
-                        const targetSection = getDefaultSectionForGroup(group);
+                        const showSubmenu = isSearchActive || groupActive || expandedGroups[group.label];
                         return (
                             <div key={group.label} className={`rounded-lg border ${groupActive ? accent.border : 'border-gray-800'} ${groupActive ? 'bg-gray-900/70' : 'bg-gray-900/45'} p-2`}>
                                 <button
                                     type="button"
-                                    onClick={() => setActiveSection(targetSection)}
+                                    onClick={() => openSettingsGroup(group)}
                                     className={`flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors ${
                                         groupActive
                                             ? `${accent.badge} ${accent.text}`
-                                            : group.label === 'Emergency Control'
+                                            : group.label === 'Emergency'
                                                 ? 'text-red-300 hover:bg-red-500/10 hover:text-red-200'
                                                 : 'text-gray-200 hover:bg-gray-800'
                                     }`}
+                                    aria-expanded={showSubmenu}
+                                    aria-controls={getGroupId(group.label)}
                                 >
                                     <span className={`h-2.5 w-2.5 rounded-full ${accent.rail}`} />
-                                    <span className="font-bold">{group.label}</span>
-                                    <span className="ml-auto text-xs text-gray-600">{group.sections.length}</span>
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block truncate font-bold">{group.label}</span>
+                                        <span className="mt-0.5 block truncate text-[11px] font-normal text-gray-500">{group.shortLabel}</span>
+                                    </span>
+                                    <span className="text-xs text-gray-600">{group.visibleSections.length}</span>
+                                    <svg
+                                        className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${showSubmenu ? 'rotate-90' : ''}`}
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
                                 </button>
-                                {settingsSearch.trim() && (
-                                <div className="mt-1 space-y-0.5 border-t border-gray-800 pt-1">
+                                {showSubmenu && (
+                                <div id={getGroupId(group.label)} className="mt-1 space-y-0.5 border-t border-gray-800 pt-1">
                                     {group.visibleSections.map(section => {
                                         const sectionAccent = getSectionAccent(section, group.accent);
                                         return (
@@ -1241,8 +1263,15 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                                             : 'text-gray-500 hover:bg-gray-800 hover:text-gray-200'
                                                 }`}
                                             >
-                                                {section === 'emergency' && <span className={`h-2 w-2 rounded-full ${sectionAccent.rail}`} />}
-                                                <span>{sectionLabels[section]}</span>
+                                                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}`} />
+                                                <span className="min-w-0">
+                                                    <span className="block truncate">{sectionLabels[section]}</span>
+                                                    {activeSection === section && (
+                                                        <span className="mt-0.5 block whitespace-normal text-[11px] font-normal leading-snug text-gray-500">
+                                                            {sectionDescriptions[section]}
+                                                        </span>
+                                                    )}
+                                                </span>
                                             </button>
                                         );
                                     })}
@@ -1275,7 +1304,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <div className="flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4">
                                     <div className="min-w-0">
                                         <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">Settings</h1>
-                                        <p className="text-sm text-gray-400 mt-0.5">Configure the operating model through five practical administration areas plus emergency control.</p>
+                                        <p className="text-sm text-gray-400 mt-0.5">Use the chapters on the left, or the cards below, to jump directly to the setting you need.</p>
                                     </div>
                                     <div className="ml-auto flex items-center gap-[10px]">
                                         {!['Super Admin', 'Admin', 'Scheduler'].includes(props.currentUserPermission) && (
@@ -1376,7 +1405,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                                 </svg>
-                                Back
+                                Settings Home
                             </button>
                             <div className={`w-5 h-5 flex-shrink-0 ${sectionColors[activeSection as SettingsMenuSection]?.split(' ')[3] || 'text-sky-400'}`}>
                                 {sectionIcons[activeSection as SettingsMenuSection]}

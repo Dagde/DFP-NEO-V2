@@ -59383,13 +59383,13 @@ const sectionLabels = {
   "scoring-matrix": "Scoring Matrix",
   "currencies": "Currencies",
   "sct-events": "SCT Events",
-  "people-profile": "People Profile",
+  "people-profile": "NEO Build People Profile",
   "scheduling-rules": "Scheduling Rules",
   "event-limits": "Event Limits",
   "duty-turnaround": "Duty & Turnaround",
   "business-rules": "Business Rules",
   "permissions": "Permissions",
-  "data-loaders": "Data Loaders",
+  "data-loaders": "Data Import",
   "data-sources": "Data Sources",
   "user-list": "User List",
   "staff-database": "Staff Database",
@@ -59397,25 +59397,25 @@ const sectionLabels = {
   "staff-mockdata": "Staff MockData",
   "trainee-mockdata": "Trainee MockData",
   "staff-combined-data": "Staff Combined Data",
-  "validation": "AC History",
+  "validation": "Aircraft Availability History",
   "historical-data": "Historical Data",
-  "locale-settings": "Locale Settings",
+  "locale-settings": "Locations & Timezones",
   "timezone": "Timezone",
   "location": "Location",
   "units": "Units",
-  "organisation": "Organisation",
+  "organisation": "Fleet Sharing",
   "platform-configuration": "Platform Configuration",
   "platform-configuration-health": "Configuration Health",
-  "platform-organisation-locations": "Organisation & Locations",
-  "platform-units": "Units",
+  "platform-organisation-locations": "Organisation, Bases & Areas",
+  "platform-units": "Units & Ownership",
   "platform-resource-pools": "Aircraft & Resource Pools",
-  "platform-unit-modules": "Unit Modules",
+  "platform-unit-modules": "Unit Features & Modules",
   "platform-deployment-readiness": "Deployment Readiness",
   "platform-operational-runbook": "Operational Runbook",
   "platform-licensing": "Licensing & Deployment",
   "platform-permission-profiles": "Permission Profiles",
-  "platform-user-access": "User Access Context",
-  "platform-scheduling-rule-sets": "Scheduling Rule Sets",
+  "platform-user-access": "User Access Scopes",
+  "platform-scheduling-rule-sets": "Enterprise Rule Sets",
   "appearance": "App Appearance",
   "emergency": "Emergency"
 };
@@ -59561,7 +59561,7 @@ const sectionDescriptions = {
   "scoring-matrix": "Configure scoring logic and weighting",
   "currencies": "Manage qualification expiry dates",
   "sct-events": "Event scoring rules and triggers",
-  "people-profile": "Set NEO Build basis course",
+  "people-profile": "Assign NEO Build training basis and exclusions",
   "scheduling-rules": "Event limits, duty rules, turnarounds and dispatch limits",
   "event-limits": "Define operational thresholds",
   "duty-turnaround": "Crew duty limits & rest times",
@@ -59575,9 +59575,9 @@ const sectionDescriptions = {
   "staff-mockdata": "Staff test data view",
   "trainee-mockdata": "Trainee test data view",
   "staff-combined-data": "Combined staff data overview",
-  "validation": "Aircraft availability history",
+  "validation": "Review fleet availability records and averages",
   "historical-data": "Seed & refresh historical training records",
-  "locale-settings": "Locations, timezone and unit assignment",
+  "locale-settings": "Manage bases, unit assignment, timezones and training areas",
   "timezone": "Configure timezone settings",
   "location": "Manage base locations",
   "units": "Configure unit settings",
@@ -59585,14 +59585,14 @@ const sectionDescriptions = {
   "platform-configuration": "Commercial hierarchy, modules, resource pools and rule sets",
   "platform-configuration-health": "Configuration warnings, risks and remediation guidance",
   "platform-organisation-locations": "Customer organisation, bases, timezones and training areas",
-  "platform-units": "Unit type, location and operating status",
+  "platform-units": "Unit type, base ownership and operating status",
   "platform-resource-pools": "Aircraft types, shared pools and resource counts",
-  "platform-unit-modules": "Enabled capability modules by unit",
+  "platform-unit-modules": "Enable features and modules for each unit",
   "platform-deployment-readiness": "SaaS, on-premise, offline and hybrid deployment posture",
   "platform-operational-runbook": "Support, backup, restore, update and accreditation records",
   "platform-licensing": "Licence model, entitlements and validation posture",
   "platform-permission-profiles": "Reusable permission profiles for user roles",
-  "platform-user-access": "User scopes defining where permissions apply",
+  "platform-user-access": "Control where each user can work",
   "platform-scheduling-rule-sets": "Commercial scheduling rule set records",
   "appearance": "Choose dark or light display theme",
   "emergency": "System freeze and emergency controls"
@@ -59646,9 +59646,9 @@ const sectionColors = {
 };
 const sectionGroups = [
   {
-    label: "Platform Setup",
+    label: "Platform & Deployment",
     shortLabel: "Platform",
-    description: "Organisation hierarchy, locations, units, resource pools, modules, deployment posture and licensing.",
+    description: "Customer, bases, units, aircraft pools, enabled features, licensing and deployment posture.",
     accent: "cyan",
     defaultSection: "platform-configuration-health",
     sections: [
@@ -59665,9 +59665,9 @@ const sectionGroups = [
     ]
   },
   {
-    label: "People & Access",
+    label: "People & Permissions",
     shortLabel: "People",
-    description: "Users, permission profiles, access scopes, staff records and trainee records.",
+    description: "User accounts, permission profiles, access scopes, staff records and trainee records.",
     accent: "violet",
     defaultSection: "platform-user-access",
     sections: [
@@ -59680,7 +59680,7 @@ const sectionGroups = [
     ]
   },
   {
-    label: "Training Standards",
+    label: "Training & Standards",
     shortLabel: "Training",
     description: "Scoring rules, currencies and SCT event standards used across the training system.",
     accent: "sky",
@@ -59688,23 +59688,23 @@ const sectionGroups = [
     sections: ["scoring-matrix", "sct-events", "currencies"]
   },
   {
-    label: "Scheduling & DFP Rules",
-    shortLabel: "Ops",
-    description: "Operational thresholds, duty limits, turnaround timing, build logic and enterprise rule sets.",
+    label: "Scheduling & DFP",
+    shortLabel: "Scheduling",
+    description: "DFP build rules, duty limits, turnaround timing, aircraft availability and enterprise rule sets.",
     accent: "amber",
     defaultSection: "scheduling-rules",
-    sections: ["scheduling-rules", "platform-scheduling-rule-sets"]
+    sections: ["scheduling-rules", "platform-scheduling-rule-sets", "validation"]
   },
   {
-    label: "Data, Audit & Records",
+    label: "Records & Data",
     shortLabel: "Data",
-    description: "Audit evidence, aircraft availability history, data sources, imports and enduring records.",
+    description: "Operational runbook, evidence, data sources, imports and enduring historical records.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
-    sections: ["platform-operational-runbook", "validation", "data-sources", "data-loaders", "historical-data"]
+    sections: ["platform-operational-runbook", "data-sources", "data-loaders", "historical-data"]
   },
   {
-    label: "Emergency Control",
+    label: "Emergency",
     shortLabel: "Emergency",
     description: "System freeze and emergency controls.",
     accent: "red",
@@ -60131,6 +60131,7 @@ const SettingsViewWithMenu = (props) => {
   const { isFrozen } = useSystemFreeze();
   const [scoringMatrixTab, setScoringMatrixTab] = reactExports.useState("Airmanship");
   const [settingsSearch, setSettingsSearch] = reactExports.useState("");
+  const [expandedGroups, setExpandedGroups] = reactExports.useState({});
   React.useEffect(() => {
     setFilteredMockdata(props.instructorsData);
   }, [props.instructorsData]);
@@ -60184,12 +60185,20 @@ const SettingsViewWithMenu = (props) => {
   const activeGroupSections = activeGroup?.sections || [];
   const activePlatformTarget = activeSection !== "home" && isPlatformConfigurationMenuSection(activeSection) ? platformSectionTargets[activeSection] : void 0;
   const isPlatformConfigurationActive = Boolean(activePlatformTarget);
+  const isSearchActive = settingsSearch.trim().length > 0;
+  const openSettingsGroup = (group) => {
+    setExpandedGroups({ [group.label]: true });
+    setActiveSection(getDefaultSectionForGroup(group));
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-settings-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "hidden w-72 flex-shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-950/35 p-4 xl:block", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
-          onClick: () => setActiveSection("home"),
+          onClick: () => {
+            setActiveSection("home");
+            setExpandedGroups({});
+          },
           className: `mb-4 w-full rounded-lg border px-3 py-3 text-left transition-colors ${activeSection === "home" ? "border-sky-500/50 bg-sky-500/10 text-white" : "border-gray-800 bg-gray-900/50 text-gray-300 hover:border-gray-700 hover:bg-gray-900"}`,
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-sm font-bold", children: "Settings Home" }),
@@ -60213,22 +60222,37 @@ const SettingsViewWithMenu = (props) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "space-y-2", children: visibleSettingGroups.map((group) => {
         const accent = getAccentClasses(group.accent);
         const groupActive = activeSection !== "home" && group.sections.includes(activeSection);
-        const targetSection = getDefaultSectionForGroup(group);
+        const showSubmenu = isSearchActive || groupActive || expandedGroups[group.label];
         return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border ${groupActive ? accent.border : "border-gray-800"} ${groupActive ? "bg-gray-900/70" : "bg-gray-900/45"} p-2`, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "button",
             {
               type: "button",
-              onClick: () => setActiveSection(targetSection),
-              className: `flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors ${groupActive ? `${accent.badge} ${accent.text}` : group.label === "Emergency Control" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-200 hover:bg-gray-800"}`,
+              onClick: () => openSettingsGroup(group),
+              className: `flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm transition-colors ${groupActive ? `${accent.badge} ${accent.text}` : group.label === "Emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-200 hover:bg-gray-800"}`,
+              "aria-expanded": showSubmenu,
+              "aria-controls": getGroupId(group.label),
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2.5 w-2.5 rounded-full ${accent.rail}` }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold", children: group.label }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-auto text-xs text-gray-600", children: group.sections.length })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0 flex-1", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate font-bold", children: group.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block truncate text-[11px] font-normal text-gray-500", children: group.shortLabel })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-600", children: group.visibleSections.length }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "svg",
+                  {
+                    className: `h-3.5 w-3.5 flex-shrink-0 transition-transform ${showSubmenu ? "rotate-90" : ""}`,
+                    fill: "none",
+                    stroke: "currentColor",
+                    viewBox: "0 0 24 24",
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" })
+                  }
+                )
               ]
             }
           ),
-          settingsSearch.trim() && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 space-y-0.5 border-t border-gray-800 pt-1", children: group.visibleSections.map((section) => {
+          showSubmenu && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { id: getGroupId(group.label), className: "mt-1 space-y-0.5 border-t border-gray-800 pt-1", children: group.visibleSections.map((section) => {
             const sectionAccent = getSectionAccent(section, group.accent);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
@@ -60236,8 +60260,11 @@ const SettingsViewWithMenu = (props) => {
                 onClick: () => setActiveSection(section),
                 className: `flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-xs font-semibold transition-colors ${activeSection === section ? `${sectionAccent.badge} ${sectionAccent.text}` : section === "emergency" ? "text-red-300 hover:bg-red-500/10 hover:text-red-200" : "text-gray-500 hover:bg-gray-800 hover:text-gray-200"}`,
                 children: [
-                  section === "emergency" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-2 w-2 rounded-full ${sectionAccent.rail}` }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: sectionLabels[section] })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `h-1.5 w-1.5 flex-shrink-0 rounded-full ${sectionAccent.rail}` }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: sectionLabels[section] }),
+                    activeSection === section && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-0.5 block whitespace-normal text-[11px] font-normal leading-snug text-gray-500", children: sectionDescriptions[section] })
+                  ] })
                 ]
               },
               section
@@ -60262,7 +60289,7 @@ const SettingsViewWithMenu = (props) => {
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-4 border-b border-gray-700 px-5 py-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl lg:text-3xl font-bold text-white tracking-tight", children: "Settings" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Configure the operating model through five practical administration areas plus emergency control." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-0.5", children: "Use the chapters on the left, or the cards below, to jump directly to the setting you need." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "ml-auto flex items-center gap-[10px]", children: [
             !["Super Admin", "Admin", "Scheduler"].includes(props.currentUserPermission) && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-yellow-300 bg-yellow-900/30 border border-yellow-600/40 rounded px-2 py-1 whitespace-nowrap", children: "Read-Only Mode" }),
@@ -60345,7 +60372,7 @@ const SettingsViewWithMenu = (props) => {
               className: "flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 bg-gray-800 border border-gray-700 rounded-lg hover:bg-gray-700 hover:text-white transition-colors",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 19l-7-7 7-7" }) }),
-                "Back"
+                "Settings Home"
               ]
             }
           ),
