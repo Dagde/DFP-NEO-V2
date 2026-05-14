@@ -285,6 +285,7 @@ type ConfigurationHealthItem = {
   area: string;
   title: string;
   detail: string;
+  remediation?: string;
 };
 
 const isActiveRecord = (item: any): boolean => String(item?.status || 'ACTIVE').toUpperCase() !== 'INACTIVE';
@@ -297,6 +298,59 @@ const toNumber = (value: any): number => {
 };
 
 const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
+
+const getDefaultConfigurationHealthRemediation = (area: string, title: string): string => {
+  const lowerTitle = title.toLowerCase();
+  if (area === 'Organisation') {
+    return 'Open Organisation and create or reactivate the operating organisation. Example: code RAAF, name RAAF, status ACTIVE.';
+  }
+  if (area === 'Locations') {
+    if (lowerTitle.includes('organisation')) {
+      return 'Open Locale Settings or Organisation & Locations, then assign the location to an active organisation or reactivate the referenced organisation.';
+    }
+    return 'Open Locale Settings or Organisation & Locations, then create or reactivate the location and at least one unit at that location.';
+  }
+  if (area === 'Units') {
+    return 'Open Organisation & Locations and assign the unit to an active location, or reactivate the correct location before saving.';
+  }
+  if (area === 'Modules') {
+    return 'Open the unit/module setup area and enable the required app areas for that unit, or deactivate unused modules if they are not required.';
+  }
+  if (area === 'Resource Pools') {
+    if (lowerTitle.includes('no usable resources')) {
+      return 'Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, FTD, CPT, STBY or Ground, then save.';
+    }
+    if (lowerTitle.includes('live dfp')) {
+      return 'Open Resource Pools and enable Apply to V2 runtime on the pool that should drive the active DFP resource rows.';
+    }
+    return 'Open Resource Pools and correct the pool location, unit, aircraft type and resource counts so they match active platform records.';
+  }
+  if (area === 'User Access') {
+    if (lowerTitle.includes('no permission profile')) {
+      return 'Open User Access Context, search for the user, then tick at least one permission profile such as Instructor, Scheduler or Unit Admin.';
+    }
+    if (lowerTitle.includes('unknown permission profile')) {
+      return 'Open User Access Context and remove the unknown profile, or recreate that profile in Permission Profiles before assigning it.';
+    }
+    return 'Open User Access Context, search for the user, then correct the active access scope so the user, location, unit and feature area match active records.';
+  }
+  if (area === 'Permission Profiles') {
+    return 'Open Permission Profiles and tick the capabilities this profile should grant, or remove the profile if it is no longer used.';
+  }
+  if (area === 'Licensing') {
+    if (lowerTitle.includes('expired')) {
+      return 'Open Licensing, enter a current valid-until date or install a renewed licence file/key, then save.';
+    }
+    return 'Open Licensing and add, activate or complete the licence record. For a perpetual licence, record that deliberately in the licence notes.';
+  }
+  if (area === 'Deployment Readiness') {
+    return 'Open Deployment Readiness and complete the missing checklist fields, especially local database, authentication, file storage, licence and update process items.';
+  }
+  if (area === 'Operational Runbook') {
+    return 'Open Operational Runbook and complete support, backup, restore, update, audit and accreditation fields using the help icon examples beside each section.';
+  }
+  return 'Open the matching Platform Configuration section, correct the referenced record, save, and recheck Configuration Health.';
+};
 
 const buildConfigurationHealth = (
   config: PlatformConfig,
@@ -311,6 +365,7 @@ const buildConfigurationHealth = (
     title: string,
     detail: string,
     idSuffix = `${area}-${title}-${items.length}`,
+    remediation?: string,
   ) => {
     items.push({
       id: `${severity}-${idSuffix}`.replace(/\s+/g, '-').toLowerCase(),
@@ -318,6 +373,7 @@ const buildConfigurationHealth = (
       area,
       title,
       detail,
+      remediation: severity === 'OK' ? undefined : remediation || getDefaultConfigurationHealthRemediation(area, title),
     });
   };
 
@@ -1134,6 +1190,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                       <div className="text-xs font-semibold uppercase tracking-wide text-gray-400">{item.area}</div>
                       <div className="mt-1 text-sm font-bold text-white">{item.title}</div>
                       <p className="mt-1 text-sm leading-relaxed text-gray-300">{item.detail}</p>
+                      {item.remediation && (
+                        <p className="mt-2 rounded border border-gray-600 bg-gray-950/60 px-3 py-2 text-sm leading-relaxed text-gray-200">
+                          <span className="font-bold text-cyan-100">Fix: </span>
+                          {item.remediation}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
