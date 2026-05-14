@@ -58232,14 +58232,14 @@ const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     role: "button",
     tabIndex: 0,
     "aria-label": "More information",
-    className: "group relative inline-flex h-5 w-5 cursor-help items-center justify-center rounded-full border-2 border-cyan-300/80 bg-transparent text-cyan-100 outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
+    className: "group relative inline-flex h-6 w-6 shrink-0 cursor-help items-center justify-center rounded-full border-2 border-cyan-300 bg-transparent text-cyan-100 outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
     children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[15px] font-bold italic leading-none", children: "i" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[18px] font-bold italic leading-none", children: "i" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-6 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
     ]
   }
 );
-const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
+const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mb-1 flex min-h-6 items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-400", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
 ] });
