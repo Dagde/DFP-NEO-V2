@@ -168,6 +168,35 @@ const OPERATIONAL_RUNBOOK_HELP: Record<string, string> = {
   notes: 'Add operational notes that help future administrators understand this deployment. Do not record secrets, passwords, licence private keys, database URLs or access tokens.',
 };
 
+const OPERATIONAL_RUNBOOK_SECTION_HELP: Record<string, string> = {
+  environmentIdentity: [
+    `Environment Name: ${OPERATIONAL_RUNBOOK_HELP.environmentName}`,
+    `Deployment Identifier: ${OPERATIONAL_RUNBOOK_HELP.deploymentIdentifier}`,
+    `Release Channel: ${OPERATIONAL_RUNBOOK_HELP.releaseChannel}`,
+    `Support Owner: ${OPERATIONAL_RUNBOOK_HELP.supportOwner}`,
+    `Support Contact: ${OPERATIONAL_RUNBOOK_HELP.supportContact}`,
+    `Approving Authority: ${OPERATIONAL_RUNBOOK_HELP.approvingAuthority}`,
+  ].join('\n\n'),
+  backupRestore: [
+    `Backup Frequency: ${OPERATIONAL_RUNBOOK_HELP.backupFrequency}`,
+    `Backup Retention Days: ${OPERATIONAL_RUNBOOK_HELP.backupRetentionDays}`,
+    `Backup Storage Location: ${OPERATIONAL_RUNBOOK_HELP.backupStorageLocation}`,
+    `Last Backup Date: ${OPERATIONAL_RUNBOOK_HELP.lastBackupDate}`,
+    `Last Restore Test Date: ${OPERATIONAL_RUNBOOK_HELP.lastRestoreTestDate}`,
+    `RTO Hours: ${OPERATIONAL_RUNBOOK_HELP.restoreTimeObjectiveHours}`,
+    `RPO Hours: ${OPERATIONAL_RUNBOOK_HELP.restorePointObjectiveHours}`,
+  ].join('\n\n'),
+  updateEvidenceAccreditation: [
+    `Maintenance Window: ${OPERATIONAL_RUNBOOK_HELP.maintenanceWindow}`,
+    `Update Approval Process: ${OPERATIONAL_RUNBOOK_HELP.updateApprovalProcess}`,
+    `Last Update Date: ${OPERATIONAL_RUNBOOK_HELP.lastUpdateDate}`,
+    `Evidence Export Path: ${OPERATIONAL_RUNBOOK_HELP.evidenceExportPath}`,
+    `Audit Retention Years: ${OPERATIONAL_RUNBOOK_HELP.auditRetentionYears}`,
+    `Accreditation Status: ${OPERATIONAL_RUNBOOK_HELP.accreditationStatus}`,
+    `Operational Notes: ${OPERATIONAL_RUNBOOK_HELP.notes}`,
+  ].join('\n\n'),
+};
+
 const DEPLOYMENT_READINESS_ITEMS = [
   { id: 'localWebServer', label: 'Local web server defined', detail: 'Required for private network and fully offline installs.' },
   { id: 'localDatabase', label: 'Local database defined', detail: 'Postgres or approved customer database target is identified.' },
@@ -1002,9 +1031,12 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-4 flex flex-wrap items-start gap-3">
               <div>
-                <h5 className="text-sm font-bold text-white">Environment Identity</h5>
+                <div className="flex items-center gap-2">
+                  <h5 className="text-sm font-bold text-white">Environment Identity</h5>
+                  <InfoHint text={OPERATIONAL_RUNBOOK_SECTION_HELP.environmentIdentity} />
+                </div>
                 <p className="mt-1 text-xs text-gray-400">
-                  Plain English: identify which deployed environment this is, who owns support, and who approves operational changes.
+                  Identify which deployed environment this is, who owns support, and who approves operational changes.
                 </p>
               </div>
               <span className="ml-auto rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-bold text-sky-100">
@@ -1012,50 +1044,56 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </span>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Environment Name" info={OPERATIONAL_RUNBOOK_HELP.environmentName} value={operationalRunbook.environmentName || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
-              <Field label="Deployment Identifier" info={OPERATIONAL_RUNBOOK_HELP.deploymentIdentifier} value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
-              <SelectField label="Release Channel" info={OPERATIONAL_RUNBOOK_HELP.releaseChannel} value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEdit} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
-              <Field label="Support Owner" info={OPERATIONAL_RUNBOOK_HELP.supportOwner} value={operationalRunbook.supportOwner || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
-              <Field label="Support Contact" info={OPERATIONAL_RUNBOOK_HELP.supportContact} value={operationalRunbook.supportContact || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
-              <Field label="Approving Authority" info={OPERATIONAL_RUNBOOK_HELP.approvingAuthority} value={operationalRunbook.approvingAuthority || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
+              <Field label="Environment Name" value={operationalRunbook.environmentName || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ environmentName: value })} />
+              <Field label="Deployment Identifier" value={operationalRunbook.deploymentIdentifier || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ deploymentIdentifier: value })} />
+              <SelectField label="Release Channel" value={operationalRunbook.releaseChannel || 'Production'} disabled={!canEdit} options={RELEASE_CHANNEL_OPTIONS} onChange={(value) => updateOperationalRunbook({ releaseChannel: value })} />
+              <Field label="Support Owner" value={operationalRunbook.supportOwner || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportOwner: value })} />
+              <Field label="Support Contact" value={operationalRunbook.supportContact || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ supportContact: value })} />
+              <Field label="Approving Authority" value={operationalRunbook.approvingAuthority || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ approvingAuthority: value })} />
             </div>
           </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-4">
-              <h5 className="text-sm font-bold text-white">Backup And Restore</h5>
+              <div className="flex items-center gap-2">
+                <h5 className="text-sm font-bold text-white">Backup And Restore</h5>
+                <InfoHint text={OPERATIONAL_RUNBOOK_SECTION_HELP.backupRestore} />
+              </div>
               <p className="mt-1 text-xs text-gray-400">
-                Plain English: record where backups live, how long they are retained, and when a restore was last proven.
+                Record where backups live, how long they are retained, and when a restore was last proven.
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <SelectField label="Backup Frequency" info={OPERATIONAL_RUNBOOK_HELP.backupFrequency} value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEdit} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
-              <NumberField label="Backup Retention Days" info={OPERATIONAL_RUNBOOK_HELP.backupRetentionDays} value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
-              <Field label="Backup Storage Location" info={OPERATIONAL_RUNBOOK_HELP.backupStorageLocation} value={operationalRunbook.backupStorageLocation || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
-              <DateField label="Last Backup Date" info={OPERATIONAL_RUNBOOK_HELP.lastBackupDate} value={operationalRunbook.lastBackupDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
-              <DateField label="Last Restore Test Date" info={OPERATIONAL_RUNBOOK_HELP.lastRestoreTestDate} value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
+              <SelectField label="Backup Frequency" value={operationalRunbook.backupFrequency || 'Daily'} disabled={!canEdit} options={BACKUP_FREQUENCY_OPTIONS} onChange={(value) => updateOperationalRunbook({ backupFrequency: value })} />
+              <NumberField label="Backup Retention Days" value={Number(operationalRunbook.backupRetentionDays ?? 30)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupRetentionDays: value })} />
+              <Field label="Backup Storage Location" value={operationalRunbook.backupStorageLocation || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ backupStorageLocation: value })} />
+              <DateField label="Last Backup Date" value={operationalRunbook.lastBackupDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastBackupDate: value })} />
+              <DateField label="Last Restore Test Date" value={operationalRunbook.lastRestoreTestDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastRestoreTestDate: value })} />
               <div className="grid grid-cols-2 gap-3">
-                <NumberField label="RTO Hours" info={OPERATIONAL_RUNBOOK_HELP.restoreTimeObjectiveHours} value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
-                <NumberField label="RPO Hours" info={OPERATIONAL_RUNBOOK_HELP.restorePointObjectiveHours} value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
+                <NumberField label="RTO Hours" value={Number(operationalRunbook.restoreTimeObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restoreTimeObjectiveHours: value })} />
+                <NumberField label="RPO Hours" value={Number(operationalRunbook.restorePointObjectiveHours ?? 24)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ restorePointObjectiveHours: value })} />
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border border-gray-700 bg-gray-900 p-4">
             <div className="mb-4">
-              <h5 className="text-sm font-bold text-white">Update, Evidence And Accreditation</h5>
+              <div className="flex items-center gap-2">
+                <h5 className="text-sm font-bold text-white">Update, Evidence And Accreditation</h5>
+                <InfoHint text={OPERATIONAL_RUNBOOK_SECTION_HELP.updateEvidenceAccreditation} />
+              </div>
               <p className="mt-1 text-xs text-gray-400">
-                Plain English: record when updates may be applied, who approves them, where evidence exports are stored, and the current accreditation posture.
+                Record when updates may be applied, who approves them, where evidence exports are stored, and the current accreditation posture.
               </p>
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
-              <Field label="Maintenance Window" info={OPERATIONAL_RUNBOOK_HELP.maintenanceWindow} value={operationalRunbook.maintenanceWindow || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
-              <Field label="Update Approval Process" info={OPERATIONAL_RUNBOOK_HELP.updateApprovalProcess} value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
-              <DateField label="Last Update Date" info={OPERATIONAL_RUNBOOK_HELP.lastUpdateDate} value={operationalRunbook.lastUpdateDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
-              <Field label="Evidence Export Path" info={OPERATIONAL_RUNBOOK_HELP.evidenceExportPath} value={operationalRunbook.evidenceExportPath || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
-              <NumberField label="Audit Retention Years" info={OPERATIONAL_RUNBOOK_HELP.auditRetentionYears} value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
-              <SelectField label="Accreditation Status" info={OPERATIONAL_RUNBOOK_HELP.accreditationStatus} value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEdit} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
-              <TextAreaField label="Operational Notes" info={OPERATIONAL_RUNBOOK_HELP.notes} value={operationalRunbook.notes || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ notes: value })} />
+              <Field label="Maintenance Window" value={operationalRunbook.maintenanceWindow || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ maintenanceWindow: value })} />
+              <Field label="Update Approval Process" value={operationalRunbook.updateApprovalProcess || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ updateApprovalProcess: value })} />
+              <DateField label="Last Update Date" value={operationalRunbook.lastUpdateDate || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ lastUpdateDate: value })} />
+              <Field label="Evidence Export Path" value={operationalRunbook.evidenceExportPath || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ evidenceExportPath: value })} />
+              <NumberField label="Audit Retention Years" value={Number(operationalRunbook.auditRetentionYears ?? 7)} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ auditRetentionYears: value })} />
+              <SelectField label="Accreditation Status" value={operationalRunbook.accreditationStatus || 'Not started'} disabled={!canEdit} options={ACCREDITATION_STATUS_OPTIONS} onChange={(value) => updateOperationalRunbook({ accreditationStatus: value })} />
+              <TextAreaField label="Operational Notes" value={operationalRunbook.notes || ''} disabled={!canEdit} onChange={(value) => updateOperationalRunbook({ notes: value })} />
             </div>
           </div>
 
@@ -1485,7 +1523,7 @@ const InfoHint = ({ text }: { text: string }) => (
     className="group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 normal-case outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white"
   >
     <span aria-hidden="true" className="font-serif text-[21px] font-bold italic leading-none normal-case">i</span>
-    <span className="pointer-events-none absolute left-1/2 top-8 z-20 hidden w-80 -translate-x-1/2 rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
+    <span className="pointer-events-none absolute left-1/2 top-8 z-20 hidden w-96 max-w-[min(24rem,80vw)] -translate-x-1/2 whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
       {text}
     </span>
   </span>
