@@ -19211,8 +19211,7 @@ const PrioritiesView = ({
   remedialRequests = [],
   onToggleRemedialRequest = (_traineeId, _eventCode) => {
   },
-  currencyNames,
-  activeSection = "course-priority"
+  currencyNames
 }) => {
   const courseDragItem = reactExports.useRef(null);
   const courseDragOverItem = reactExports.useRef(null);
@@ -19438,205 +19437,258 @@ const PrioritiesView = ({
     }) })
   ] }) });
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-course-priority grid grid-cols-1 lg:grid-cols-2 gap-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 flex justify-between items-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Course Priority" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-0.5", children: [
-            school === "ESL" ? "East Sale (ESL)" : "Pearce (PEA)",
-            " — locality courses only"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500", children: [
-          "Last updated: ",
-          courseTimestamp
-        ] })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-course-demand space-y-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fourth Input" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Course Demand" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Set the relative course weighting after time windows, resources and people rules are known." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: coursePriorities.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-8 text-center text-gray-500", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium", children: [
-          "No courses found for ",
-          school === "ESL" ? "East Sale" : "Pearce"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1", children: "Courses will appear here once trainees are loaded for this locality." })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "li",
-          {
-            draggable: true,
-            onDragStart: () => handleCourseDragStart(index),
-            onDragEnter: () => handleCourseDragEnter(index),
-            onDragEnd: handleCourseDragEnd,
-            onDragOver: (e) => e.preventDefault(),
-            className: "p-3 bg-gray-700/50 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500", children: index + 1 }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: course })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-mono w-12 text-center ${totalPercentage !== 100 && "text-red-400"}`, children: [
-                  coursePercentages.get(course) ?? 0,
-                  "%"
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "up", onClick: () => handlePercentageChange(course, "increase"), disabled: (coursePercentages.get(course) ?? 0) >= 100 }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handlePercentageChange(course, "decrease"), disabled: (coursePercentages.get(course) ?? 0) <= 5 })
-                ] })
-              ] })
-            ]
-          },
-          course
-        )) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`, children: [
-          "Total: ",
-          totalPercentage,
-          "%"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priority-help": "true", className: "mt-2 p-2 bg-blue-500/10 border border-blue-500/30 rounded text-xs text-blue-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold mb-1", children: "ℹ️ Weighted Priority System:" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "list-disc list-inside space-y-1 text-blue-200", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Percentages are auto-normalized to 100%" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Minimum percentage per course: 5%" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Higher % = more events (biased allocation)" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "All courses still get events (no starvation)" })
-          ] })
-        ] })
-      ] }) })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-build-factors", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Build Factors" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-x-6 gap-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-gray-400", children: "Available Aircraft" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", value: availableAircraftCount, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`);
-                onUpdateAircraftCount(parseInt(e.target.value));
-              }, className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-gray-400", children: "FTD Available" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", value: availableFtdCount, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`);
-                onUpdateFtdCount(parseInt(e.target.value));
-              }, className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-gray-400", children: "CPT Available" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", value: availableCptCount, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`);
-                onUpdateCptCount(parseInt(e.target.value));
-              }, className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg h-fit", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4 flex justify-between items-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Course Priority" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-0.5", children: [
+              school === "ESL" ? "East Sale (ESL)" : "Pearce (PEA)",
+              " — locality courses only"
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Day Flying Window" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mt-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingStartTime, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`);
-                  onUpdateFlyingStartTime(parseFloat(e.target.value));
-                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 shrink-0", children: "to" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingEndTime, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`);
-                  onUpdateFlyingEndTime(parseFloat(e.target.value));
-                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "FTD Operating Window" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mt-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdStartTime, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`);
-                  onUpdateFtdStartTime(parseFloat(e.target.value));
-                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 shrink-0", children: "to" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdEndTime, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`);
-                  onUpdateFtdEndTime(parseFloat(e.target.value));
-                }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer mb-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
-                  logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
-                  onUpdateAllowNightFlying(e.target.checked);
-                }, className: "h-4 w-4 bg-gray-700 rounded accent-sky-500 shrink-0" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-sky-400", children: "Allow Night Flying" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Night Flying Window" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2 mt-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
-                    logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
-                    onUpdateCommenceNightFlying(parseFloat(e.target.value));
-                  }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 shrink-0", children: "to" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ceaseNightFlying, disabled: !allowNightFlying, onChange: (e) => {
-                    logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
-                    onUpdateCeaseNightFlying(parseFloat(e.target.value));
-                  }, className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-500", children: [
+            "Last updated: ",
+            courseTimestamp
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: coursePriorities.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "py-8 text-center text-gray-500", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium", children: [
+            "No courses found for ",
+            school === "ESL" ? "East Sale" : "Pearce"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1", children: "Courses will appear here once trainees are loaded for this locality." })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2", children: coursePriorities.map((course, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "li",
+            {
+              draggable: true,
+              onDragStart: () => handleCourseDragStart(index),
+              onDragEnter: () => handleCourseDragEnter(index),
+              onDragEnd: handleCourseDragEnd,
+              onDragOver: (e) => e.preventDefault(),
+              className: "p-3 bg-slate-950/70 border border-slate-700 rounded-md text-white flex items-center justify-between cursor-grab active:cursor-grabbing",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500", children: index + 1 }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: course })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-mono w-12 text-center ${totalPercentage !== 100 && "text-red-400"}`, children: [
+                    coursePercentages.get(course) ?? 0,
+                    "%"
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "up", onClick: () => handlePercentageChange(course, "increase"), disabled: (coursePercentages.get(course) ?? 0) >= 100 }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(ArrowButton, { direction: "down", onClick: () => handlePercentageChange(course, "decrease"), disabled: (coursePercentages.get(course) ?? 0) <= 5 })
+                  ] })
                 ] })
-              ] })
+              ]
+            },
+            course
+          )) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `mt-3 p-2 rounded text-center text-sm font-semibold ${totalPercentage === 100 ? "bg-green-500/20 text-green-300" : "bg-amber-500/20 text-amber-300"}`, children: [
+            "Total: ",
+            totalPercentage,
+            "%"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priority-help": "true", className: "mt-2 p-2 bg-cyan-500/10 border border-cyan-500/30 rounded text-xs text-cyan-300", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-semibold mb-1", children: "ℹ️ Weighted Priority System:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "list-disc list-inside space-y-1 text-cyan-200", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Percentages are auto-normalized to 100%" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Minimum percentage per course: 5%" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Higher % = more events (biased allocation)" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "All courses still get events (no starvation)" })
             ] })
           ] })
         ] }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-build-timeline space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "First Input" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Set the time boundaries that govern where flight, FTD and night events may be placed." })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Instructor Allocation Priorities" }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 space-y-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 lg:grid-cols-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "Day Flying Window" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingStartTime, onChange: (e) => {
+              logAudit("Priorities", "Edit", "Updated flying start time", `${flyingStartTime} → ${parseFloat(e.target.value)}`);
+              onUpdateFlyingStartTime(parseFloat(e.target.value));
+            }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: flyingEndTime, onChange: (e) => {
+              logAudit("Priorities", "Edit", "Updated flying end time", `${flyingEndTime} → ${parseFloat(e.target.value)}`);
+              onUpdateFlyingEndTime(parseFloat(e.target.value));
+            }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "FTD Operating Window" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdStartTime, onChange: (e) => {
+              logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`);
+              onUpdateFtdStartTime(parseFloat(e.target.value));
+            }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdEndTime, onChange: (e) => {
+              logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`);
+              onUpdateFtdEndTime(parseFloat(e.target.value));
+            }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-3 flex cursor-pointer items-center space-x-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: allowNightFlying, onChange: (e) => {
+              logAudit("Priorities", "Edit", "Updated allow night flying", `${allowNightFlying} → ${e.target.checked}`);
+              onUpdateAllowNightFlying(e.target.checked);
+            }, className: "h-4 w-4 shrink-0 rounded bg-slate-800 accent-cyan-500" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-cyan-300", children: "Allow Night Flying" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `transition-opacity duration-150 ${allowNightFlying ? "opacity-100" : "opacity-40 pointer-events-none"}`, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "Night Flying Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: commenceNightFlying, disabled: !allowNightFlying, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated commence night flying time", `${commenceNightFlying} → ${parseFloat(e.target.value)}`);
+                onUpdateCommenceNightFlying(parseFloat(e.target.value));
+              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ceaseNightFlying, disabled: !allowNightFlying, onChange: (e) => {
+                logAudit("Priorities", "Edit", "Updated cease night flying time", `${ceaseNightFlying} → ${parseFloat(e.target.value)}`);
+                onUpdateCeaseNightFlying(parseFloat(e.target.value));
+              }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500 disabled:cursor-not-allowed", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
+            ] })
+          ] })
+        ] })
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-resources-capacity space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Second Input" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Resource Capacity" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Declare the physical capacity available for this build before weighting the course demand." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 md:grid-cols-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: "Available Aircraft" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", value: availableAircraftCount, onChange: (e) => {
+            logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`);
+            onUpdateAircraftCount(parseInt(e.target.value));
+          }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-slate-300", children: "FTD Available" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", value: availableFtdCount, onChange: (e) => {
+            logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`);
+            onUpdateFtdCount(parseInt(e.target.value));
+          }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-slate-300", children: "CPT Available" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", value: availableCptCount, onChange: (e) => {
+            logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`);
+            onUpdateCptCount(parseInt(e.target.value));
+          }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+        ] })
+      ] })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "section-people-rules space-y-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Third Input" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Instructor Allocation Rules" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Set how strongly the build should prefer or require assigned instructor groups for flight and FTD events." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                onClick: () => {
+                  const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
+                  logAudit("Priorities", "Edit", "Instructor Priority Mode toggled", `${instructorPriority.enabled} → ${next.enabled}`);
+                  onUpdateInstructorPriority(next);
+                },
+                className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? "bg-sky-500" : "bg-gray-600"}`,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${instructorPriority.enabled ? "translate-x-6" : "translate-x-1"}` })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: "Priority Mode" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: "When on, the scheduler prioritises selected instructor groups for flight and FTD events." })
+        ] }),
+        instructorPriority.enabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 pl-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-3 cursor-pointer", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-gray-300 mb-2", children: "Mode" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2 bg-gray-700 rounded-lg p-1 w-fit", children: ["soft", "hard"].map((m) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  const next = { ...instructorPriority, mode: m };
+                  logAudit("Priorities", "Edit", "Instructor Priority mode changed", `${instructorPriority.mode} → ${m}`);
+                  onUpdateInstructorPriority(next);
+                },
+                className: `px-4 py-1.5 rounded-md text-sm font-medium transition-all ${instructorPriority.mode === m ? m === "hard" ? "bg-red-600 text-white shadow" : "bg-sky-600 text-white shadow" : "text-gray-400 hover:text-white"}`,
+                children: m === "soft" ? "Soft" : "Hard"
+              },
+              m
+            )) }),
+            instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Soft:" }),
+              " The scheduler will prefer instructors from selected groups but will use any available instructor if none are free."
+            ] }),
+            instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-medium", children: "Hard:" }),
+              " Flight and FTD events will only be placed if an instructor from the required groups is available. If none are free, the event is placed on STBY with no instructor. CPT and Ground are unaffected."
+            ] })
+          ] }),
+          instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium text-gray-300 mb-2", children: [
+              "Preferred Groups",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(select one or more)" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [
+              { key: "primary", label: "Primary Instructor", desc: "Trainee's assigned primary instructor" },
+              { key: "secondary", label: "Secondary Instructor", desc: "Trainee's assigned secondary instructor" },
+              { key: "sameFlight", label: "Same Flight Instructor", desc: "Instructor from the exact same flight (e.g. CFS/A)" }
+            ].map(({ key, label, desc }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "div",
+                "input",
                 {
-                  onClick: () => {
-                    const next = { ...instructorPriority, enabled: !instructorPriority.enabled };
-                    logAudit("Priorities", "Edit", "Instructor Priority Mode toggled", `${instructorPriority.enabled} → ${next.enabled}`);
+                  type: "checkbox",
+                  checked: instructorPriority.softGroups[key],
+                  onChange: (e) => {
+                    const next = {
+                      ...instructorPriority,
+                      softGroups: { ...instructorPriority.softGroups, [key]: e.target.checked }
+                    };
+                    logAudit("Priorities", "Edit", `Soft group ${key} changed`, `${instructorPriority.softGroups[key]} → ${e.target.checked}`);
                     onUpdateInstructorPriority(next);
                   },
-                  className: `relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${instructorPriority.enabled ? "bg-sky-500" : "bg-gray-600"}`,
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${instructorPriority.enabled ? "translate-x-6" : "translate-x-1"}` })
+                  className: "mt-0.5 h-4 w-4 bg-gray-700 rounded accent-sky-500"
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: "Priority Mode" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: "When on, the scheduler prioritises selected instructor groups for flight and FTD events." })
-          ] }),
-          instructorPriority.enabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 pl-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-gray-300 mb-2", children: "Mode" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center space-x-2 bg-gray-700 rounded-lg p-1 w-fit", children: ["soft", "hard"].map((m) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => {
-                    const next = { ...instructorPriority, mode: m };
-                    logAudit("Priorities", "Edit", "Instructor Priority mode changed", `${instructorPriority.mode} → ${m}`);
-                    onUpdateInstructorPriority(next);
-                  },
-                  className: `px-4 py-1.5 rounded-md text-sm font-medium transition-all ${instructorPriority.mode === m ? m === "hard" ? "bg-red-600 text-white shadow" : "bg-sky-600 text-white shadow" : "text-gray-400 hover:text-white"}`,
-                  children: m === "soft" ? "Soft" : "Hard"
-                },
-                m
-              )) }),
-              instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-medium", children: "Soft:" }),
-                " The scheduler will prefer instructors from selected groups but will use any available instructor if none are free."
-              ] }),
-              instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-medium", children: "Hard:" }),
-                " Flight and FTD events will only be placed if an instructor from the required groups is available. If none are free, the event is placed on STBY with no instructor. CPT and Ground are unaffected."
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-200 group-hover:text-white", children: label }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: desc })
               ] })
-            ] }),
-            instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium text-gray-300 mb-2", children: [
-                "Preferred Groups",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(select one or more)" })
+            ] }, key)) })
+          ] }),
+          instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium text-gray-300 mb-1", children: [
+                "Required Groups",
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(flight/FTD will go to STBY if none available)" })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-2", children: "Select which instructor groups must be available for a flight or FTD to be placed on the schedule. If none from the selected groups are free, the event is placed on STBY with no instructor assigned." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3", children: [
                 { key: "primary", label: "Primary Instructor", desc: "Trainee's assigned primary instructor" },
                 { key: "secondary", label: "Secondary Instructor", desc: "Trainee's assigned secondary instructor" },
                 { key: "sameFlight", label: "Same Flight Instructor", desc: "Instructor from the exact same flight (e.g. CFS/A)" }
@@ -19645,16 +19697,16 @@ const PrioritiesView = ({
                   "input",
                   {
                     type: "checkbox",
-                    checked: instructorPriority.softGroups[key],
+                    checked: instructorPriority.hardGroups[key],
                     onChange: (e) => {
                       const next = {
                         ...instructorPriority,
-                        softGroups: { ...instructorPriority.softGroups, [key]: e.target.checked }
+                        hardGroups: { ...instructorPriority.hardGroups, [key]: e.target.checked }
                       };
-                      logAudit("Priorities", "Edit", `Soft group ${key} changed`, `${instructorPriority.softGroups[key]} → ${e.target.checked}`);
+                      logAudit("Priorities", "Edit", `Hard group ${key} changed`, `${instructorPriority.hardGroups[key]} → ${e.target.checked}`);
                       onUpdateInstructorPriority(next);
                     },
-                    className: "mt-0.5 h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                    className: "mt-0.5 h-4 w-4 bg-gray-700 rounded accent-red-500"
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -19663,208 +19715,222 @@ const PrioritiesView = ({
                 ] })
               ] }, key)) })
             ] }),
-            instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium text-gray-300 mb-1", children: [
-                  "Required Groups",
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(flight/FTD will go to STBY if none available)" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-2", children: "Select which instructor groups must be available for a flight or FTD to be placed on the schedule. If none from the selected groups are free, the event is placed on STBY with no instructor assigned." }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3", children: [
-                  { key: "primary", label: "Primary Instructor", desc: "Trainee's assigned primary instructor" },
-                  { key: "secondary", label: "Secondary Instructor", desc: "Trainee's assigned secondary instructor" },
-                  { key: "sameFlight", label: "Same Flight Instructor", desc: "Instructor from the exact same flight (e.g. CFS/A)" }
-                ].map(({ key, label, desc }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-start space-x-3 cursor-pointer group", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
-                    {
-                      type: "checkbox",
-                      checked: instructorPriority.hardGroups[key],
-                      onChange: (e) => {
-                        const next = {
-                          ...instructorPriority,
-                          hardGroups: { ...instructorPriority.hardGroups, [key]: e.target.checked }
-                        };
-                        logAudit("Priorities", "Edit", `Hard group ${key} changed`, `${instructorPriority.hardGroups[key]} → ${e.target.checked}`);
-                        onUpdateInstructorPriority(next);
-                      },
-                      className: "mt-0.5 h-4 w-4 bg-gray-700 rounded accent-red-500"
-                    }
-                  ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-medium text-gray-200 group-hover:text-white", children: label }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400", children: desc })
-                  ] })
-                ] }, key)) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Note:" }),
-                " CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal."
-              ] })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Note:" }),
+              " CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal."
             ] })
           ] })
         ] })
       ] })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-sct-requests bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "SCT Requests" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "flight", requests: sctFlights }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "ftd", requests: sctFtds })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-highest-priority bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Highest Priority Events" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-sct-optional bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional SCT Events" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
-      sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority SCT events. Add SCT requests with MEDIUM or LOW priority in the SCT Requests tab above." }),
-      sctFlights.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT Flights" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFlights.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.name }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: req.includeInBuild || false,
-                onChange: () => onToggleSctInclude(req.id, "flight"),
-                className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
-              }
-            ) })
-          ] }, req.id)) })
-        ] }) })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-directed-events space-y-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Fifth Input" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Directed Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Review hard requests and build exceptions after the normal course weighting is set." })
       ] }),
-      sctFtds.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT FTDs" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "SCT Requests" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "flight", requests: sctFlights }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SctRequestTable, { type: "ftd", requests: sctFtds })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Highest Priority Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(PriorityEventTable, { events: standardPriorityEvents })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-amber-400 mb-2", children: "Optional SCT Events" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-4", children: 'MEDIUM and LOW priority SCT events can be manually included in the NEO Build. Check the "Include" box to add to the build.' }),
+        sctFlights.filter((r) => r.priority !== "High").length === 0 && sctFtds.filter((r) => r.priority !== "High").length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-sm italic", children: "No MEDIUM or LOW priority SCT events. Add SCT requests with MEDIUM or LOW priority in the SCT Requests tab above." }),
+        sctFlights.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT Flights" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFlights.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: req.includeInBuild || false,
+                  onChange: () => onToggleSctInclude(req.id, "flight"),
+                  className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                }
+              ) })
+            ] }, req.id)) })
+          ] }) })
+        ] }),
+        sctFtds.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT FTDs" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFtds.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: req.includeInBuild || false,
+                  onChange: () => onToggleSctInclude(req.id, "ftd"),
+                  className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                }
+              ) })
+            ] }, req.id)) })
+          ] }) })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Remedial Priority Queue" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Trainee" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Course" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Type" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Currency" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Priority" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Include in Build" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Staff" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Force Schedule" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: sctFtds.filter((r) => r.priority !== "High").map((req) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.name }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-semibold", children: req.event }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.flightType }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: req.currency || "N/A" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `py-2 px-2 font-semibold ${req.priority === "Medium" ? "text-orange-400" : "text-green-400"}`, children: req.priority }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: req.includeInBuild || false,
-                onChange: () => onToggleSctInclude(req.id, "ftd"),
-                className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
-              }
-            ) })
-          ] }, req.id)) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee, item }) => {
+            const existingRequest = remedialRequests.find((r) => r.traineeId === trainee.idNumber && r.eventCode === item.code);
+            const forceSchedule = existingRequest?.forceSchedule || false;
+            const allocatedStaff = item.resourcesHuman && item.resourcesHuman.length > 0 ? item.resourcesHuman[0] : "Not Assigned";
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 font-semibold text-white", children: trainee.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: trainee.course }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-mono", children: item.code }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: allocatedStaff }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "checkbox",
+                  checked: forceSchedule,
+                  onChange: () => onToggleRemedialRequest(trainee.idNumber, item.code),
+                  className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
+                }
+              ) })
+            ] }, `${trainee.idNumber}-${item.code}`);
+          }) })
         ] }) })
       ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "section-remedial-queue bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Remedial Priority Queue" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Trainee" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Course" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Event" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Staff" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-center", children: "Force Schedule" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "divide-y divide-gray-700/50", children: incompleteRemedials.map(({ trainee, item }) => {
-          const existingRequest = remedialRequests.find((r) => r.traineeId === trainee.idNumber && r.eventCode === item.code);
-          const forceSchedule = existingRequest?.forceSchedule || false;
-          const allocatedStaff = item.resourcesHuman && item.resourcesHuman.length > 0 ? item.resourcesHuman[0] : "Not Assigned";
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/50", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 font-semibold text-white", children: trainee.name }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: trainee.course }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-amber-300 font-mono", children: item.code }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-gray-300", children: allocatedStaff }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "checkbox",
-                checked: forceSchedule,
-                onChange: () => onToggleRemedialRequest(trainee.idNumber, item.code),
-                className: "h-4 w-4 bg-gray-700 rounded accent-sky-500"
-              }
-            ) })
-          ] }, `${trainee.idNumber}-${item.code}`);
-        }) })
-      ] }) })
     ] })
   ] });
 };
 const PrioritiesViewWithMenu = (props) => {
-  const [activeSection, setActiveSection] = reactExports.useState("course-priority");
-  const menuItems = [
-    { id: "course-priority", label: "Course Priority", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 7a1 1 0 000 2h7a1 1 0 100-2H3zM3 11a1 1 0 100 2h4a1 1 0 100-2H3zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" }) }) },
-    { id: "build-factors", label: "Build Factors", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z", clipRule: "evenodd" }) }) },
-    { id: "sct-requests", label: "SCT Requests", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z", clipRule: "evenodd" }) }) },
-    { id: "highest-priority", label: "Highest Priority", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" }) }) },
-    { id: "remedial-queue", label: "Remedial Queue", icon: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", clipRule: "evenodd" }) }) }
+  const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
+  const workflowItems = [
+    {
+      id: "build-timeline",
+      step: "01",
+      label: "Flying Windows",
+      shortLabel: "Timeline",
+      description: "Set the day, simulator and night windows before anything else."
+    },
+    {
+      id: "resources-capacity",
+      step: "02",
+      label: "Resource Capacity",
+      shortLabel: "Resources",
+      description: "Declare the aircraft, FTD and CPT capacity available to the build."
+    },
+    {
+      id: "people-rules",
+      step: "03",
+      label: "Instructor Rules",
+      shortLabel: "People",
+      description: "Control how instructor preference or restriction should influence placement."
+    },
+    {
+      id: "course-demand",
+      step: "04",
+      label: "Course Demand",
+      shortLabel: "Courses",
+      description: "Weight the competing course demand after time and resources are known."
+    },
+    {
+      id: "directed-events",
+      step: "05",
+      label: "Directed Events",
+      shortLabel: "Exceptions",
+      description: "Manage SCT requests, high-priority events, optional SCT and remedial queues."
+    }
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-gray-900", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 border-b border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-2xl font-bold text-white", children: "Build Priorities" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400 mt-1", children: "Configuration" })
+  const activeWorkflowItem = workflowItems.find((item) => item.id === activeSection) ?? workflowItems[0];
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-priorities-view": "true", className: "flex-1 flex overflow-hidden bg-slate-950 text-slate-100", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-80 bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5 border-b border-slate-700/60", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] uppercase tracking-[0.22em] text-cyan-200/70", children: "NEO Build" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "mt-1 text-2xl font-bold text-white", children: "Build Priorities" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-slate-300", children: "Configure the build in the same order a supervisor would plan the DFP by hand." })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto p-4 space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500", children: "Build Flow" }),
+        workflowItems.map((item) => {
+          const isActive = activeSection === item.id;
+          return /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: () => setActiveSection(item.id),
+              className: `w-full rounded-lg border p-4 text-left transition-all ${isActive ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30" : "border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80"}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${isActive ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-slate-600 bg-slate-800 text-slate-400"}`, children: item.step }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "min-w-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-base font-semibold", children: item.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mt-1 block text-xs leading-5 text-slate-400", children: item.description })
+                ] })
+              ] })
+            },
+            item.id
+          );
+        })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex-1 overflow-y-auto p-4 space-y-1", children: menuItems.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setActiveSection(item.id),
-          className: `w-full text-left px-4 py-3 rounded-lg transition-all ${activeSection === item.id ? "bg-sky-600 text-white shadow-lg" : "text-gray-300 hover:bg-gray-700 hover:text-white"}`,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-            item.icon,
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium", children: item.label })
-          ] })
-        },
-        item.id
-      )) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-t border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Priorities" }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-t border-slate-700/60 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Priorities" }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto bg-gray-900", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("main", { className: "flex-1 overflow-y-auto bg-slate-950", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
-                    .priorities-content > div:not(.section-${activeSection}):not(.section-sct-optional) {
+                    .priorities-content > div:not(.section-${activeSection}) {
                         display: none !important;
                     }
-                    .priorities-content > div.section-sct-optional {
-                        display: ${activeSection === "highest-priority" ? "block" : "none"} !important;
-                    }
-                    .priorities-content > div.section-course-priority {
-                        display: ${activeSection === "course-priority" ? "grid" : "none"} !important;
-                    }
-                    .priorities-content > div.section-build-factors {
-                        display: ${activeSection === "build-factors" ? "grid" : "none"} !important;
+                    .priorities-content > div.section-${activeSection} {
+                        display: block !important;
                     }
                 ` }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-2xl font-bold text-white mb-3", children: [
-          activeSection === "course-priority" && "Course Priority",
-          activeSection === "build-factors" && "Build Factors",
-          activeSection === "sct-requests" && "SCT Requests",
-          activeSection === "highest-priority" && "Highest Priority Events",
-          activeSection === "remedial-queue" && "Remedial Priority Queue"
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-6 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-start justify-between gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-cyan-300/60 bg-cyan-300/10 text-sm font-bold text-cyan-100", children: activeWorkflowItem.step }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: activeWorkflowItem.shortLabel }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-3xl font-bold text-white", children: activeWorkflowItem.label }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 max-w-3xl text-sm leading-6 text-slate-300", children: activeWorkflowItem.description })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "rounded-md border border-slate-600/70 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300", children: [
+            props.school === "ESL" ? "East Sale" : "Pearce",
+            " build setup"
+          ] })
         ] }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "priorities-content", children: /* @__PURE__ */ jsxRuntimeExports.jsx(PrioritiesView, { ...props, activeSection }) })
       ] })

@@ -53,103 +53,128 @@ interface PrioritiesViewWithMenuProps {
   currencyNames: string[];
 }
 
-type PrioritiesSection = 'course-priority' | 'build-factors' | 'sct-requests' | 'highest-priority' | 'remedial-queue';
+type PrioritiesSection = 'build-timeline' | 'resources-capacity' | 'people-rules' | 'course-demand' | 'directed-events';
 
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
-    const [activeSection, setActiveSection] = useState<PrioritiesSection>('course-priority');
+    const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
 
-    const menuItems = [
-        { id: 'course-priority' as const, label: 'Course Priority', icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M3 3a1 1 0 000 2h11a1 1 0 100-2H3zM3 7a1 1 0 000 2h7a1 1 0 100-2H3zM3 11a1 1 0 100 2h4a1 1 0 100-2H3zM15 8a1 1 0 10-2 0v5.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L15 13.586V8z" />
-            </svg>
-        )},
-        { id: 'build-factors' as const, label: 'Build Factors', icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-        )},
-        { id: 'sct-requests' as const, label: 'SCT Requests', icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-            </svg>
-        )},
-        { id: 'highest-priority' as const, label: 'Highest Priority', icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-        )},
-        { id: 'remedial-queue' as const, label: 'Remedial Queue', icon: (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-        )},
+    const workflowItems = [
+        {
+            id: 'build-timeline' as const,
+            step: '01',
+            label: 'Flying Windows',
+            shortLabel: 'Timeline',
+            description: 'Set the day, simulator and night windows before anything else.',
+        },
+        {
+            id: 'resources-capacity' as const,
+            step: '02',
+            label: 'Resource Capacity',
+            shortLabel: 'Resources',
+            description: 'Declare the aircraft, FTD and CPT capacity available to the build.',
+        },
+        {
+            id: 'people-rules' as const,
+            step: '03',
+            label: 'Instructor Rules',
+            shortLabel: 'People',
+            description: 'Control how instructor preference or restriction should influence placement.',
+        },
+        {
+            id: 'course-demand' as const,
+            step: '04',
+            label: 'Course Demand',
+            shortLabel: 'Courses',
+            description: 'Weight the competing course demand after time and resources are known.',
+        },
+        {
+            id: 'directed-events' as const,
+            step: '05',
+            label: 'Directed Events',
+            shortLabel: 'Exceptions',
+            description: 'Manage SCT requests, high-priority events, optional SCT and remedial queues.',
+        },
     ];
 
+    const activeWorkflowItem = workflowItems.find((item) => item.id === activeSection) ?? workflowItems[0];
+
     return (
-        <div data-priorities-view="true" className="flex-1 flex overflow-hidden bg-gray-900">
-            {/* Side Menu */}
-            <div className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0">
-                <div className="p-6 border-b border-gray-700">
-                    <h1 className="text-2xl font-bold text-white">Build Priorities</h1>
-                    <p className="text-sm text-gray-400 mt-1">Configuration</p>
+        <div data-priorities-view="true" className="flex-1 flex overflow-hidden bg-slate-950 text-slate-100">
+            <aside className="w-80 bg-slate-950/95 border-r border-slate-700/60 flex flex-col flex-shrink-0">
+                <div className="p-5 border-b border-slate-700/60">
+                    <div className="rounded-lg border border-cyan-500/20 bg-cyan-500/10 p-4">
+                        <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">NEO Build</p>
+                        <h1 className="mt-1 text-2xl font-bold text-white">Build Priorities</h1>
+                        <p className="mt-2 text-sm text-slate-300">
+                            Configure the build in the same order a supervisor would plan the DFP by hand.
+                        </p>
+                    </div>
                 </div>
-                <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-                    {menuItems.map((item) => (
+                <nav className="flex-1 overflow-y-auto p-4 space-y-3">
+                    <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500">Build Flow</p>
+                    {workflowItems.map((item) => {
+                        const isActive = activeSection === item.id;
+                        return (
                         <button
                             key={item.id}
                             onClick={() => setActiveSection(item.id)}
-                            className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
-                                activeSection === item.id
-                                    ? 'bg-sky-600 text-white shadow-lg'
-                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            className={`w-full rounded-lg border p-4 text-left transition-all ${
+                                isActive
+                                    ? 'border-cyan-400/70 bg-cyan-500/15 text-white shadow-lg shadow-cyan-950/30'
+                                    : 'border-slate-700/60 bg-slate-900/60 text-slate-300 hover:border-slate-500 hover:bg-slate-800/80'
                             }`}
                         >
-                            <div className="flex items-center space-x-3">
-                                {item.icon}
-                                <span className="font-medium">{item.label}</span>
+                            <div className="flex items-start gap-3">
+                                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-bold ${
+                                    isActive ? 'border-cyan-300/70 bg-cyan-300/15 text-cyan-100' : 'border-slate-600 bg-slate-800 text-slate-400'
+                                }`}>
+                                    {item.step}
+                                </span>
+                                <span className="min-w-0">
+                                    <span className="block text-base font-semibold">{item.label}</span>
+                                    <span className="mt-1 block text-xs leading-5 text-slate-400">{item.description}</span>
+                                </span>
                             </div>
                         </button>
-                    ))}
+                    )})}
                 </nav>
-                
-                {/* Audit Button at Bottom */}
-                <div className="p-4 border-t border-gray-700">
+                <div className="border-t border-slate-700/60 p-4">
                     <AuditButton pageName="Priorities" />
                 </div>
-            </div>
+            </aside>
 
-            {/* Main Content - Render PrioritiesView with filtered content */}
-            <div className="flex-1 overflow-y-auto bg-gray-900">
+            <main className="flex-1 overflow-y-auto bg-slate-950">
                 <style>{`
-                    .priorities-content > div:not(.section-${activeSection}):not(.section-sct-optional) {
+                    .priorities-content > div:not(.section-${activeSection}) {
                         display: none !important;
                     }
-                    .priorities-content > div.section-sct-optional {
-                        display: ${activeSection === 'highest-priority' ? 'block' : 'none'} !important;
-                    }
-                    .priorities-content > div.section-course-priority {
-                        display: ${activeSection === 'course-priority' ? 'grid' : 'none'} !important;
-                    }
-                    .priorities-content > div.section-build-factors {
-                        display: ${activeSection === 'build-factors' ? 'grid' : 'none'} !important;
+                    .priorities-content > div.section-${activeSection} {
+                        display: block !important;
                     }
                 `}</style>
                 <div className="p-6">
-                    <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-white mb-3">
-                            {activeSection === 'course-priority' && 'Course Priority'}
-                            {activeSection === 'build-factors' && 'Build Factors'}
-                            {activeSection === 'sct-requests' && 'SCT Requests'}
-                            {activeSection === 'highest-priority' && 'Highest Priority Events'}
-                            {activeSection === 'remedial-queue' && 'Remedial Priority Queue'}
-                        </h2>
+                    <div className="mb-6 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="flex items-start gap-4">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-cyan-300/60 bg-cyan-300/10 text-sm font-bold text-cyan-100">
+                                    {activeWorkflowItem.step}
+                                </div>
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">{activeWorkflowItem.shortLabel}</p>
+                                    <h2 className="mt-1 text-3xl font-bold text-white">{activeWorkflowItem.label}</h2>
+                                    <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">{activeWorkflowItem.description}</p>
+                                </div>
+                            </div>
+                            <span className="rounded-md border border-slate-600/70 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-300">
+                                {props.school === 'ESL' ? 'East Sale' : 'Pearce'} build setup
+                            </span>
+                        </div>
                     </div>
                     <div className="priorities-content">
                         <PrioritiesView {...props} activeSection={activeSection} />
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };
