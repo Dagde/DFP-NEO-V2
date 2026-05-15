@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail } from '../types';
+import { ScheduleEvent, Instructor, Trainee, Score, SyllabusItemDetail, CancellationRecord } from '../types';
 import PeopleTab from './tabs/PeopleTab';
 import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
 import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
+import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
 
 interface CourseAnalysis {
   courseName: string;
@@ -72,13 +73,21 @@ interface BuildIntelligenceViewProps {
   syllabusDetails: SyllabusItemDetail[];
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
   courseColors: { [key: string]: string };
+  currentUserRole: string;
+  currentUserId?: string;
+  cancellationRecords: CancellationRecord[];
+  currentAircraftAvailable?: number;
+  totalAircraft?: number;
+  timezoneOffset?: number;
+  dayFlyingStart?: string;
+  dayFlyingEnd?: string;
   
   // From Build Analysis
   buildDate: string;
   analysis: BuildAnalysis | null;
 }
 
-type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'managerial-analytics';
+type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 'managerial-analytics';
 
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
@@ -99,6 +108,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
     { id: 'people' as TabType, label: 'People' },
     { id: 'course-metrics' as TabType, label: 'Course Metrics' },
     { id: 'build-analytics' as TabType, label: 'Build Analytics' },
+    { id: 'ac-history' as TabType, label: 'AC History' },
     { id: 'managerial-analytics' as TabType, label: 'Managerial Analytics' }
   ];
 
@@ -167,6 +177,19 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
               <BuildAnalyticsTab
                 events={props.events}
                 analysis={props.analysis}
+              />
+            )}
+
+            {activeTab === 'ac-history' && (
+              <ACHistoryIntelligencePanel
+                cancellationRecords={props.cancellationRecords}
+                currentUserId={props.currentUserId}
+                currentAircraftAvailable={props.currentAircraftAvailable}
+                totalAircraft={props.totalAircraft}
+                currentUserRole={props.currentUserRole}
+                timezoneOffset={props.timezoneOffset}
+                dayFlyingStart={props.dayFlyingStart}
+                dayFlyingEnd={props.dayFlyingEnd}
               />
             )}
 

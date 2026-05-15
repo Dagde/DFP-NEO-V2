@@ -22958,6 +22958,1619 @@ const TrainingIntelligenceTab = () => {
     ] })
   ] }) });
 };
+const ACHistoryAnalytics = ({
+  cancellationRecords,
+  cancellationCodes
+}) => {
+  const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
+  const [showAllCodes, setShowAllCodes] = reactExports.useState(false);
+  const [sortBy, setSortBy] = reactExports.useState("count");
+  const [sortDirection, setSortDirection] = reactExports.useState("desc");
+  const getDateRange = (period) => {
+    const now = /* @__PURE__ */ new Date();
+    const end = new Date(now);
+    let start = new Date(now);
+    switch (period) {
+      case "week":
+        start.setDate(now.getDate() - 7);
+        break;
+      case "month":
+        start.setMonth(now.getMonth() - 1);
+        break;
+      case "6months":
+        start.setMonth(now.getMonth() - 6);
+        break;
+      case "year":
+        start.setFullYear(now.getFullYear() - 1);
+        break;
+      case "2years":
+        start.setFullYear(now.getFullYear() - 2);
+        break;
+      case "5years":
+        start.setFullYear(now.getFullYear() - 5);
+        break;
+      case "lastFY":
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        if (currentMonth >= 6) {
+          start = new Date(currentYear - 1, 6, 1);
+          end.setFullYear(currentYear);
+          end.setMonth(5, 30);
+        } else {
+          start = new Date(currentYear - 2, 6, 1);
+          end.setFullYear(currentYear - 1);
+          end.setMonth(5, 30);
+        }
+        break;
+      case "lastCY":
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        end.setFullYear(now.getFullYear() - 1);
+        end.setMonth(11, 31);
+        break;
+    }
+    return { start, end };
+  };
+  const getPreviousDateRange = (period) => {
+    const currentRange = getDateRange(period);
+    const duration = currentRange.end.getTime() - currentRange.start.getTime();
+    const end = new Date(currentRange.start);
+    const start = new Date(currentRange.start.getTime() - duration);
+    return { start, end };
+  };
+  const filterRecordsByDateRange = (records, start, end) => {
+    return records.filter((record) => {
+      const recordDate = new Date(record.eventDate);
+      return recordDate >= start && recordDate <= end;
+    });
+  };
+  const analytics = reactExports.useMemo(() => {
+    const currentRange = getDateRange(selectedPeriod);
+    const previousRange = getPreviousDateRange(selectedPeriod);
+    const currentRecords = filterRecordsByDateRange(cancellationRecords, currentRange.start, currentRange.end);
+    const previousRecords = filterRecordsByDateRange(cancellationRecords, previousRange.start, previousRange.end);
+    const totalCurrent = currentRecords.length;
+    const analyticsData = cancellationCodes.map((code) => {
+      const currentCount = currentRecords.filter(
+        (r) => r.cancellationCode === code.code || r.cancellationCode === "OTHER" && r.manualCodeEntry === code.code
+      ).length;
+      const previousCount = previousRecords.filter(
+        (r) => r.cancellationCode === code.code || r.cancellationCode === "OTHER" && r.manualCodeEntry === code.code
+      ).length;
+      const percentage = totalCurrent > 0 ? currentCount / totalCurrent * 100 : 0;
+      let trend = 0;
+      if (previousCount > 0) {
+        trend = (currentCount - previousCount) / previousCount * 100;
+      } else if (currentCount > 0) {
+        trend = 100;
+      }
+      return {
+        code: code.code,
+        category: code.category,
+        description: code.description,
+        totalCount: currentCount,
+        percentage,
+        trend,
+        previousCount
+      };
+    });
+    let sorted = [...analyticsData];
+    switch (sortBy) {
+      case "count":
+        sorted.sort((a, b) => sortDirection === "desc" ? b.totalCount - a.totalCount : a.totalCount - b.totalCount);
+        break;
+      case "percentage":
+        sorted.sort((a, b) => sortDirection === "desc" ? b.percentage - a.percentage : a.percentage - b.percentage);
+        break;
+      case "category":
+        sorted.sort((a, b) => {
+          const categoryCompare = sortDirection === "desc" ? b.category.localeCompare(a.category) : a.category.localeCompare(b.category);
+          if (categoryCompare !== 0) return categoryCompare;
+          return b.totalCount - a.totalCount;
+        });
+        break;
+    }
+    if (!showAllCodes) {
+      sorted = sorted.filter((a) => a.totalCount > 0);
+    }
+    return sorted;
+  }, [cancellationRecords, cancellationCodes, selectedPeriod, sortBy, sortDirection, showAllCodes]);
+  const handleSort = (column) => {
+    if (sortBy === column) {
+      setSortDirection(sortDirection === "desc" ? "asc" : "desc");
+    } else {
+      setSortBy(column);
+      setSortDirection("desc");
+    }
+  };
+  const formatPeriodLabel = (period) => {
+    const labels = {
+      week: "Past Week",
+      month: "Past Month",
+      "6months": "Past 6 Months",
+      year: "Past Year",
+      "2years": "Past 2 Years",
+      "5years": "Past 5 Years",
+      lastFY: "Last Financial Year",
+      lastCY: "Last Calendar Year"
+    };
+    return labels[period];
+  };
+  const getTrendIcon = (trend) => {
+    if (trend > 5) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "↑" });
+    } else if (trend < -5) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400", children: "↓" });
+    } else {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "→" });
+    }
+  };
+  const totalCancellations = analytics.reduce((sum, a) => sum + a.totalCount, 0);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 mt-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-between items-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "AC History (Cancellation Analytics & Trends)" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Time Period" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: ["week", "month", "6months", "year", "2years", "5years", "lastFY", "lastCY"].map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => setSelectedPeriod(period),
+          className: `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${selectedPeriod === period ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+          children: formatPeriodLabel(period)
+        },
+        period
+      )) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            type: "checkbox",
+            checked: showAllCodes,
+            onChange: (e) => setShowAllCodes(e.target.checked),
+            className: "h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 accent-sky-500"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: "Show codes with zero occurrences" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-400", children: [
+        "Total Cancellations: ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: totalCancellations })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Code" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "th",
+          {
+            className: "text-left py-3 px-4 text-gray-300 font-semibold cursor-pointer hover:text-white",
+            onClick: () => handleSort("category"),
+            children: [
+              "Category ",
+              sortBy === "category" && (sortDirection === "desc" ? "↓" : "↑")
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Description" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "th",
+          {
+            className: "text-right py-3 px-4 text-gray-300 font-semibold cursor-pointer hover:text-white",
+            onClick: () => handleSort("count"),
+            children: [
+              "Total ",
+              sortBy === "count" && (sortDirection === "desc" ? "↓" : "↑")
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "th",
+          {
+            className: "text-right py-3 px-4 text-gray-300 font-semibold cursor-pointer hover:text-white",
+            onClick: () => handleSort("percentage"),
+            children: [
+              "Percentage ",
+              sortBy === "percentage" && (sortDirection === "desc" ? "↓" : "↑")
+            ]
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Trend" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: analytics.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "py-8 text-center text-gray-400", children: "No cancellation data available for the selected period." }) }) : analytics.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/20", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-mono font-semibold", children: item.code }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: item.category }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: item.description }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-white font-semibold", children: item.totalCount }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-right text-white", children: [
+          item.percentage.toFixed(1),
+          "%"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center space-x-2", children: [
+            getTrendIcon(item.trend),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-xs ${item.trend > 5 ? "text-red-400" : item.trend < -5 ? "text-green-400" : "text-gray-400"}`, children: [
+              item.trend > 0 ? "+" : "",
+              item.trend.toFixed(0),
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500 mt-1", children: [
+            "(prev: ",
+            item.previousCount,
+            ")"
+          ] })
+        ] })
+      ] }, item.code)) })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Percentages are calculated relative to all Flight + FTD cancellations in the selected period." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend indicators compare the selected period to the immediately preceding equivalent period." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Both active and inactive codes appear in analytics if used historically." })
+    ] })
+  ] });
+};
+const AvailabilityChart = ({ data, totalAircraft }) => {
+  const W = 900;
+  const H = 220;
+  const PAD = { top: 20, right: 24, bottom: 48, left: 52 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+  const [hovered, setHovered] = reactExports.useState(null);
+  if (data.length === 0) {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No data available for the selected period" });
+  }
+  const values = data.map((d) => d.value);
+  const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
+  const maxVal = Math.ceil(Math.max(...values) + 1);
+  const range = maxVal - minVal || 1;
+  const xScale = (i) => PAD.left + i / Math.max(data.length - 1, 1) * chartW;
+  const yScale = (v) => PAD.top + chartH - (v - minVal) / range * chartH;
+  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(" ");
+  const areaPath = `M ${xScale(0)},${yScale(data[0].value)} ` + data.slice(1).map((d, i) => `L ${xScale(i + 1)},${yScale(d.value)}`).join(" ") + ` L ${xScale(data.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`;
+  const yTicks = Array.from({ length: 5 }, (_, i) => minVal + range / 4 * i);
+  const xLabelStep = Math.max(1, Math.ceil(data.length / 10));
+  const xLabels = data.filter((_, i) => i % xLabelStep === 0 || i === data.length - 1);
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full overflow-x-auto", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "svg",
+      {
+        viewBox: `0 0 ${W} ${H}`,
+        className: "w-full",
+        style: { minWidth: 320 },
+        onMouseLeave: () => setHovered(null),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("defs", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "areaGrad", x1: "0", y1: "0", x2: "0", y2: "1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#0ea5e9", stopOpacity: "0.35" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#0ea5e9", stopOpacity: "0.02" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "lineGrad", x1: "0", y1: "0", x2: "1", y2: "0", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#38bdf8" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#0ea5e9" })
+            ] })
+          ] }),
+          yTicks.map((tick, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "line",
+              {
+                x1: PAD.left,
+                y1: yScale(tick),
+                x2: PAD.left + chartW,
+                y2: yScale(tick),
+                stroke: "#374151",
+                strokeWidth: "1",
+                strokeDasharray: "4 4"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "text",
+              {
+                x: PAD.left - 8,
+                y: yScale(tick) + 4,
+                textAnchor: "end",
+                fontSize: "11",
+                fill: "#9ca3af",
+                children: tick.toFixed(1)
+              }
+            )
+          ] }, i)),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "line",
+            {
+              x1: PAD.left,
+              y1: yScale(avg),
+              x2: PAD.left + chartW,
+              y2: yScale(avg),
+              stroke: "#f59e0b",
+              strokeWidth: "1.5",
+              strokeDasharray: "6 3",
+              opacity: "0.7"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "text",
+            {
+              x: PAD.left + chartW + 4,
+              y: yScale(avg) + 4,
+              fontSize: "10",
+              fill: "#f59e0b",
+              opacity: "0.9",
+              children: "avg"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: areaPath, fill: "url(#areaGrad)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "polyline",
+            {
+              points,
+              fill: "none",
+              stroke: "url(#lineGrad)",
+              strokeWidth: "2.5",
+              strokeLinejoin: "round",
+              strokeLinecap: "round"
+            }
+          ),
+          data.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "circle",
+              {
+                cx: xScale(i),
+                cy: yScale(d.value),
+                r: hovered === i ? 6 : 3.5,
+                fill: hovered === i ? "#38bdf8" : "#0ea5e9",
+                stroke: hovered === i ? "#fff" : "#1e3a5f",
+                strokeWidth: hovered === i ? 2 : 1,
+                style: { cursor: "pointer", transition: "r 0.1s" },
+                onMouseEnter: () => setHovered(i)
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "rect",
+              {
+                x: xScale(i) - 12,
+                y: PAD.top,
+                width: 24,
+                height: chartH,
+                fill: "transparent",
+                onMouseEnter: () => setHovered(i)
+              }
+            )
+          ] }, i)),
+          hovered !== null && (() => {
+            const d = data[hovered];
+            const cx = xScale(hovered);
+            const cy = yScale(d.value);
+            const tipW = 130;
+            const tipH = 44;
+            const tipX = Math.min(cx - tipW / 2, W - PAD.right - tipW);
+            const tipY = cy - tipH - 10 < PAD.top ? cy + 14 : cy - tipH - 10;
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "rect",
+                {
+                  x: tipX,
+                  y: tipY,
+                  width: tipW,
+                  height: tipH,
+                  rx: "6",
+                  fill: "#1f2937",
+                  stroke: "#374151",
+                  strokeWidth: "1"
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "text",
+                {
+                  x: tipX + tipW / 2,
+                  y: tipY + 16,
+                  textAnchor: "middle",
+                  fontSize: "11",
+                  fill: "#9ca3af",
+                  children: d.label
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "text",
+                {
+                  x: tipX + tipW / 2,
+                  y: tipY + 33,
+                  textAnchor: "middle",
+                  fontSize: "13",
+                  fontWeight: "bold",
+                  fill: "#38bdf8",
+                  children: [
+                    d.value.toFixed(2),
+                    " ac"
+                  ]
+                }
+              )
+            ] });
+          })(),
+          xLabels.map((d, _) => {
+            const i = data.indexOf(d);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "text",
+              {
+                x: xScale(i),
+                y: PAD.top + chartH + 18,
+                textAnchor: "middle",
+                fontSize: "10",
+                fill: "#6b7280",
+                transform: `rotate(-35, ${xScale(i)}, ${PAD.top + chartH + 18})`,
+                children: d.label
+              },
+              i
+            );
+          }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "line",
+            {
+              x1: PAD.left,
+              y1: PAD.top,
+              x2: PAD.left,
+              y2: PAD.top + chartH,
+              stroke: "#4b5563",
+              strokeWidth: "1"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "line",
+            {
+              x1: PAD.left,
+              y1: PAD.top + chartH,
+              x2: PAD.left + chartW,
+              y2: PAD.top + chartH,
+              stroke: "#4b5563",
+              strokeWidth: "1"
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "text",
+            {
+              x: 14,
+              y: PAD.top + chartH / 2,
+              textAnchor: "middle",
+              fontSize: "11",
+              fill: "#6b7280",
+              transform: `rotate(-90, 14, ${PAD.top + chartH / 2})`,
+              children: "Aircraft Available"
+            }
+          )
+        ]
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6 mt-2 px-2 text-xs text-gray-400", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-6 h-0.5 bg-sky-400 rounded" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Daily Average" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-6 h-0.5 bg-amber-400 rounded", style: { borderTop: "1.5px dashed #f59e0b" } }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Period Average" })
+      ] })
+    ] })
+  ] });
+};
+const ACHistoryAircraftAvailability = ({
+  currentUserId,
+  currentAircraftAvailable = 0,
+  totalAircraft = 24,
+  currentUserRole,
+  timezoneOffset = 0,
+  dayFlyingStart = "08:00",
+  dayFlyingEnd = "17:00"
+}) => {
+  const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
+  const [records, setRecords] = reactExports.useState([]);
+  const [loading, setLoading] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState(null);
+  const [showTable, setShowTable] = reactExports.useState(false);
+  const [configuredFleetSize, setConfiguredFleetSize] = reactExports.useState(totalAircraft);
+  const [fleetSizeLoading, setFleetSizeLoading] = reactExports.useState(false);
+  const [fleetSizeSaving, setFleetSizeSaving] = reactExports.useState(false);
+  const [fleetSizeError, setFleetSizeError] = reactExports.useState(null);
+  const [showFleetSizeEditor, setShowFleetSizeEditor] = reactExports.useState(false);
+  const [newFleetSize, setNewFleetSize] = reactExports.useState(totalAircraft.toString());
+  const canEditFleetSize = currentUserRole === "Super Admin" || currentUserRole === "Admin";
+  reactExports.useEffect(() => {
+    const fetchFleetSize = async () => {
+      setFleetSizeLoading(true);
+      try {
+        const res = await fetch("/api/system-config/fleet_size", { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.value) {
+            const size = parseInt(data.value, 10);
+            setConfiguredFleetSize(size);
+            setNewFleetSize(size.toString());
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch fleet size config:", err);
+      } finally {
+        setFleetSizeLoading(false);
+      }
+    };
+    fetchFleetSize();
+  }, []);
+  const handleSaveFleetSize = async () => {
+    const size = parseInt(newFleetSize, 10);
+    if (isNaN(size) || size < 1 || size > 100) {
+      setFleetSizeError("Fleet size must be between 1 and 100");
+      return;
+    }
+    setFleetSizeSaving(true);
+    setFleetSizeError(null);
+    try {
+      const res = await fetch("/api/system-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          key: "fleet_size",
+          value: size.toString(),
+          description: "Total number of aircraft in the fleet",
+          updatedBy: currentUserId
+        })
+      });
+      if (res.ok) {
+        setConfiguredFleetSize(size);
+        setShowFleetSizeEditor(false);
+      } else {
+        const data = await res.json();
+        setFleetSizeError(data.error || "Failed to save");
+      }
+    } catch (err) {
+      setFleetSizeError("Failed to save fleet size");
+    } finally {
+      setFleetSizeSaving(false);
+    }
+  };
+  const effectiveFleetSize = configuredFleetSize;
+  const exportCSV = () => {
+    const sorted = [...records].reverse();
+    const header = ["Date", "Day", "Daily Avg (ac)", "Planned", "Actual", "Fleet Size", "Availability %"];
+    const rows = sorted.map((r) => {
+      const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
+      const day = d.toLocaleDateString("en-AU", { weekday: "long" });
+      return [
+        r.date,
+        day,
+        r.dailyAverage.toFixed(2),
+        r.plannedCount,
+        r.actualCount ?? "",
+        r.totalAircraft,
+        r.availabilityPct.toFixed(1)
+      ];
+    });
+    const csv = [header, ...rows].map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `aircraft-availability-${selectedPeriod}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const exportExcel = () => {
+    const sorted = [...records].reverse();
+    const rows = sorted.map((r) => {
+      const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
+      const day = d.toLocaleDateString("en-AU", { weekday: "long" });
+      const pctColor = r.availabilityPct >= 70 ? "#16a34a" : r.availabilityPct >= 50 ? "#d97706" : "#dc2626";
+      return `<tr>
+        <td>${r.date}</td>
+        <td>${day}</td>
+        <td style="text-align:right">${r.dailyAverage.toFixed(2)}</td>
+        <td style="text-align:right">${r.plannedCount}</td>
+        <td style="text-align:right">${r.actualCount ?? ""}</td>
+        <td style="text-align:right">${r.totalAircraft}</td>
+        <td style="text-align:right;color:${pctColor}">${r.availabilityPct.toFixed(1)}%</td>
+      </tr>`;
+    }).join("");
+    const periodLabel = formatPeriodLabel(selectedPeriod);
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="UTF-8">
+<style>
+  th { background:#1e3a5f; color:#38bdf8; font-weight:bold; padding:6px 10px; }
+  td { padding:5px 10px; border-bottom:1px solid #e5e7eb; }
+  tr:nth-child(even) td { background:#f0f9ff; }
+</style>
+</head>
+<body>
+<h2 style="font-family:Arial;color:#1e3a5f">Daily Average Aircraft Available — ${periodLabel}</h2>
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial;font-size:12px">
+  <thead><tr>
+    <th>Date</th><th>Day</th><th>Daily Avg (ac)</th><th>Planned</th><th>Actual</th><th>Fleet Size</th><th>Availability %</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`;
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `aircraft-availability-${selectedPeriod}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  const [todaysAverage, setTodaysAverage] = reactExports.useState(null);
+  const [todaysAverageLoading, setTodaysAverageLoading] = reactExports.useState(false);
+  const [todaysAverageDate, setTodaysAverageDate] = reactExports.useState(null);
+  const [todaysFlyingWindowStart, setTodaysFlyingWindowStart] = reactExports.useState(null);
+  const [todaysFlyingWindowEnd, setTodaysFlyingWindowEnd] = reactExports.useState(null);
+  const [todaysEffectiveEndTime, setTodaysEffectiveEndTime] = reactExports.useState(null);
+  const [currentLocalTime, setCurrentLocalTime] = reactExports.useState(() => {
+    const now = /* @__PURE__ */ new Date();
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  });
+  const setTodaysAverageWithMetadata = (record) => {
+    if (!record) {
+      setTodaysAverage(null);
+      setTodaysAverageDate(null);
+      setTodaysFlyingWindowStart(null);
+      setTodaysFlyingWindowEnd(null);
+      setTodaysEffectiveEndTime(null);
+      return;
+    }
+    setTodaysAverage(record.dailyAverage);
+    setTodaysAverageDate(record.date || null);
+    setTodaysFlyingWindowStart(record.flyingWindowStart || null);
+    setTodaysFlyingWindowEnd(record.flyingWindowEnd || null);
+    setTodaysEffectiveEndTime(record.effectiveEndTime || null);
+  };
+  reactExports.useEffect(() => {
+    const updateTime = () => {
+      const now = /* @__PURE__ */ new Date();
+      setCurrentLocalTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 60 * 1e3);
+    return () => clearInterval(interval);
+  }, []);
+  const refreshTodaysAverage = async () => {
+    setTodaysAverageLoading(true);
+    try {
+      const today = getLocalDateString();
+      console.log(`[AV-REFRESH] Refreshing average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
+      const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          date: today,
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
+          clientTimezoneOffsetHours: timezoneOffset
+        })
+      });
+      if (recalcRes.ok) {
+        const recalcData = await recalcRes.json();
+        if (recalcData.summary) {
+          setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+          await fetchRecords();
+          return;
+        }
+      }
+      const localAvg = computeAverageFromLocalStorage(today);
+      if (localAvg !== null) {
+        setTodaysAverageWithMetadata({
+          dailyAverage: localAvg,
+          date: today,
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd,
+          plannedCount: currentAircraftAvailable ?? 15,
+          actualCount: currentAircraftAvailable ?? 15,
+          totalAircraft: totalAircraft ?? 24
+        });
+      } else {
+        setTodaysAverageWithMetadata(null);
+      }
+    } catch (err) {
+      console.error("Failed to refresh today's average:", err);
+    } finally {
+      setTodaysAverageLoading(false);
+    }
+  };
+  const getDateRange = reactExports.useCallback((period) => {
+    const now = /* @__PURE__ */ new Date();
+    const end = new Date(now);
+    let start = new Date(now);
+    switch (period) {
+      case "week":
+        start.setDate(now.getDate() - 7);
+        break;
+      case "month":
+        start.setMonth(now.getMonth() - 1);
+        break;
+      case "6months":
+        start.setMonth(now.getMonth() - 6);
+        break;
+      case "year":
+        start.setFullYear(now.getFullYear() - 1);
+        break;
+      case "2years":
+        start.setFullYear(now.getFullYear() - 2);
+        break;
+      case "5years":
+        start.setFullYear(now.getFullYear() - 5);
+        break;
+      case "lastFY": {
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+        if (currentMonth >= 6) {
+          start = new Date(currentYear - 1, 6, 1);
+          end.setFullYear(currentYear);
+          end.setMonth(5, 30);
+        } else {
+          start = new Date(currentYear - 2, 6, 1);
+          end.setFullYear(currentYear - 1);
+          end.setMonth(5, 30);
+        }
+        break;
+      }
+      case "lastCY":
+        start = new Date(now.getFullYear() - 1, 0, 1);
+        end.setFullYear(now.getFullYear() - 1);
+        end.setMonth(11, 31);
+        break;
+    }
+    return { start, end };
+  }, []);
+  const toISODate = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  const getLocalDateString = (d = /* @__PURE__ */ new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const fetchRecords = reactExports.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { start, end } = getDateRange(selectedPeriod);
+      const params = new URLSearchParams({
+        startDate: toISODate(start),
+        endDate: toISODate(end)
+      });
+      const res = await fetch(`/api/aircraft-availability-history?${params}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setRecords(data.records || []);
+    } catch (err) {
+      setError("Failed to load aircraft availability history.");
+      console.error("ACHistoryAircraftAvailability fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedPeriod, getDateRange]);
+  reactExports.useEffect(() => {
+    fetchRecords();
+  }, [fetchRecords]);
+  const computeAverageFromLocalStorage = (today) => {
+    try {
+      const stored = localStorage.getItem(`aircraft-availability-${today}`);
+      if (!stored) return null;
+      const data = JSON.parse(stored);
+      const snaps = data.snapshots || [];
+      if (snaps.length === 0) return null;
+      const parseWindowTime = (time, fallbackHour) => {
+        const clean = (time || "").replace(":", "");
+        const h = parseInt(clean.slice(0, -2), 10);
+        const m = parseInt(clean.slice(-2), 10);
+        return (Number.isFinite(h) ? h : fallbackHour) * 60 + (Number.isFinite(m) ? m : 0);
+      };
+      const windowStartMin = parseWindowTime(dayFlyingStart, 8);
+      const windowEndMin = parseWindowTime(dayFlyingEnd, 17);
+      const now = /* @__PURE__ */ new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const effectiveEndMin = Math.min(Math.max(nowMin, windowStartMin), windowEndMin);
+      const totalWindow = effectiveEndMin - windowStartMin;
+      if (totalWindow <= 0) return null;
+      const sorted = [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      let weightedSum = 0;
+      let coveredMinutes = 0;
+      for (let i = 0; i < sorted.length; i++) {
+        const t = new Date(sorted[i].timestamp);
+        const tMin = t.getHours() * 60 + t.getMinutes();
+        const nextMin = i + 1 < sorted.length ? (() => {
+          const n = new Date(sorted[i + 1].timestamp);
+          return n.getHours() * 60 + n.getMinutes();
+        })() : effectiveEndMin;
+        const segStart = Math.max(tMin, windowStartMin);
+        const segEnd = Math.min(nextMin, effectiveEndMin);
+        if (segEnd > segStart) {
+          weightedSum += sorted[i].available * (segEnd - segStart);
+          coveredMinutes += segEnd - segStart;
+        }
+      }
+      if (coveredMinutes < totalWindow) {
+        const lastBeforeEnd = [...sorted].reverse().find((s) => {
+          const t = new Date(s.timestamp);
+          return t.getHours() * 60 + t.getMinutes() <= effectiveEndMin;
+        }) ?? sorted[0];
+        weightedSum += lastBeforeEnd.available * (totalWindow - coveredMinutes);
+      }
+      return totalWindow > 0 ? weightedSum / totalWindow : null;
+    } catch {
+      return null;
+    }
+  };
+  reactExports.useEffect(() => {
+    const fetchTodaysAverage = async () => {
+      setTodaysAverageLoading(true);
+      try {
+        const today = getLocalDateString();
+        console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
+        const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            date: today,
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
+            clientTimezoneOffsetHours: timezoneOffset
+          })
+        });
+        if (recalcRes.ok) {
+          const recalcData = await recalcRes.json();
+          if (recalcData.summary) {
+            setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
+            await fetchRecords();
+            return;
+          }
+        }
+        const localAvg = computeAverageFromLocalStorage(today);
+        if (localAvg !== null) {
+          console.log(`[AV-FETCH] Using localStorage fallback: avg=${localAvg.toFixed(2)}`);
+          setTodaysAverageWithMetadata({
+            dailyAverage: localAvg,
+            date: today,
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
+            plannedCount: currentAircraftAvailable ?? 15,
+            actualCount: currentAircraftAvailable ?? 15,
+            totalAircraft: totalAircraft ?? 24
+          });
+        } else {
+          setTodaysAverageWithMetadata(null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch today's average:", err);
+        const today = getLocalDateString();
+        const localAvg = computeAverageFromLocalStorage(today);
+        if (localAvg !== null) {
+          setTodaysAverageWithMetadata({
+            dailyAverage: localAvg,
+            date: today,
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd
+          });
+        } else {
+          setTodaysAverageWithMetadata(null);
+        }
+      } finally {
+        setTodaysAverageLoading(false);
+      }
+    };
+    fetchTodaysAverage();
+    const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1e3);
+    return () => clearInterval(interval);
+  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]);
+  reactExports.useEffect(() => {
+    const timeoutId = setTimeout(async () => {
+      const today = getLocalDateString();
+      try {
+        const res = await fetch("/api/aircraft-availability-recalculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            date: today,
+            flyingWindowStart: dayFlyingStart,
+            flyingWindowEnd: dayFlyingEnd,
+            clientTimezoneOffsetHours: timezoneOffset
+          })
+        });
+        const data = await res.json();
+        if (data.summary) {
+          setTodaysAverageWithMetadata({ ...data.summary, date: today });
+          await fetchRecords();
+          return;
+        }
+      } catch {
+      }
+      const localAvg = computeAverageFromLocalStorage(today);
+      if (localAvg !== null) {
+        setTodaysAverageWithMetadata({
+          dailyAverage: localAvg,
+          date: today,
+          flyingWindowStart: dayFlyingStart,
+          flyingWindowEnd: dayFlyingEnd
+        });
+      }
+    }, 2e3);
+    return () => clearTimeout(timeoutId);
+  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd]);
+  const formatPeriodLabel = (period) => {
+    const labels = {
+      week: "Past Week",
+      month: "Past Month",
+      "6months": "Past 6 Months",
+      year: "Past Year",
+      "2years": "Past 2 Years",
+      "5years": "Past 5 Years",
+      lastFY: "Last Financial Year",
+      lastCY: "Last Calendar Year"
+    };
+    return labels[period];
+  };
+  const formatDateLabel2 = (dateStr) => {
+    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short" });
+  };
+  const stats = reactExports.useMemo(() => {
+    if (records.length === 0) return null;
+    const avgs = records.map((r) => r.dailyAverage);
+    const pcts = records.map((r) => r.availabilityPct);
+    const mean = avgs.reduce((a, b) => a + b, 0) / avgs.length;
+    const meanPct = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+    const max = Math.max(...avgs);
+    const min = Math.min(...avgs);
+    const maxRecord = records.find((r) => r.dailyAverage === max);
+    const minRecord = records.find((r) => r.dailyAverage === min);
+    const half = Math.floor(records.length / 2);
+    const firstHalf = records.slice(0, half);
+    const secondHalf = records.slice(half);
+    const firstAvg = firstHalf.length > 0 ? firstHalf.reduce((a, r) => a + r.dailyAverage, 0) / firstHalf.length : mean;
+    const secondAvg = secondHalf.length > 0 ? secondHalf.reduce((a, r) => a + r.dailyAverage, 0) / secondHalf.length : mean;
+    const trendPct = firstAvg > 0 ? (secondAvg - firstAvg) / firstAvg * 100 : 0;
+    return { mean, meanPct, max, min, maxRecord, minRecord, trendPct, count: records.length };
+  }, [records]);
+  const chartData = reactExports.useMemo(
+    () => records.map((r) => ({
+      date: r.date,
+      value: r.dailyAverage,
+      label: formatDateLabel2(r.date)
+    })),
+    [records]
+  );
+  const historicalTotalAircraft = records.length > 0 ? Math.max(...records.map((r) => r.totalAircraft)) : totalAircraft;
+  const getTrendIcon = (trend) => {
+    if (trend > 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400", children: "↑" });
+    if (trend < -2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "↓" });
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "→" });
+  };
+  const getTrendColor = (trend) => {
+    if (trend > 2) return "text-green-400";
+    if (trend < -2) return "text-red-400";
+    return "text-gray-400";
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 mt-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "AC History (Aircraft Availability)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          canEditFleetSize && showFleetSizeEditor ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Fleet Size:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "input",
+              {
+                type: "number",
+                min: "1",
+                max: "100",
+                value: newFleetSize,
+                onChange: (e) => setNewFleetSize(e.target.value),
+                className: "w-16 px-2 py-1 text-sm bg-gray-600 text-white rounded border border-gray-500 focus:border-sky-500 focus:outline-none",
+                disabled: fleetSizeSaving
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleSaveFleetSize,
+                disabled: fleetSizeSaving,
+                className: "px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 transition-colors",
+                children: fleetSizeSaving ? "Saving..." : "Save"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: () => {
+                  setShowFleetSizeEditor(false);
+                  setNewFleetSize(configuredFleetSize.toString());
+                  setFleetSizeError(null);
+                },
+                disabled: fleetSizeSaving,
+                className: "px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded hover:bg-gray-500 disabled:opacity-50 transition-colors",
+                children: "Cancel"
+              }
+            )
+          ] }) : canEditFleetSize ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: () => setShowFleetSizeEditor(true),
+              className: "flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/50 text-gray-400 rounded hover:bg-gray-600 hover:text-gray-300 transition-colors",
+              title: "Click to configure fleet size",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                  "Fleet: ",
+                  effectiveFleetSize
+                ] })
+              ]
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/30 text-gray-500 rounded", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+              "Fleet: ",
+              effectiveFleetSize
+            ] })
+          ] }),
+          fleetSizeError && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-red-400", children: fleetSizeError })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+        loading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 text-xs text-gray-400", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "animate-spin h-3.5 w-3.5 text-sky-400", fill: "none", viewBox: "0 0 24 24", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8v8z" })
+          ] }),
+          "Loading…"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => setShowTable((v) => !v),
+            className: "px-3 py-1.5 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors",
+            children: showTable ? "Hide Raw Table" : "Show Raw Table"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gradient-to-br from-sky-900/40 to-sky-800/20 rounded-lg p-4 border border-sky-700/50", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 rounded-full bg-green-400 animate-pulse" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 uppercase tracking-wider", children: "Current Available" })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-3xl font-bold text-sky-400", children: currentAircraftAvailable }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+            "of ",
+            effectiveFleetSize,
+            " aircraft"
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500 mt-1", children: [
+          (currentAircraftAvailable / effectiveFleetSize * 100).toFixed(0),
+          "% availability"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gradient-to-br from-amber-900/40 to-amber-800/20 rounded-lg p-4 border border-amber-700/50", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3 h-3 text-amber-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 uppercase tracking-wider", children: "Today's Average (Flying Window)" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              onClick: refreshTodaysAverage,
+              disabled: todaysAverageLoading,
+              className: "p-1.5 text-gray-400 hover:text-amber-400 hover:bg-amber-900/30 rounded transition-colors disabled:opacity-50",
+              title: "Refresh to current time",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: `w-4 h-4 ${todaysAverageLoading ? "animate-spin" : ""}`, fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" }) })
+            }
+          )
+        ] }),
+        todaysAverageLoading ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "animate-spin h-5 w-5 text-amber-400", fill: "none", viewBox: "0 0 24 24", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8v8z" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Loading..." })
+        ] }) : todaysAverage !== null ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-3xl font-bold text-amber-400", children: todaysAverage.toFixed(2) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "avg aircraft" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500 mt-1", children: [
+            (todaysAverage / effectiveFleetSize * 100).toFixed(0),
+            "% time-weighted availability"
+          ] }),
+          todaysAverageDate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700/50 space-y-0.5", children: [
+            todaysAverageDate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Date:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: (/* @__PURE__ */ new Date(todaysAverageDate + "T00:00:00")).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) })
+            ] }),
+            todaysFlyingWindowStart && todaysFlyingWindowEnd && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Flying Window:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
+                todaysFlyingWindowStart,
+                " - ",
+                todaysFlyingWindowEnd
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Current Time:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300 font-medium", children: currentLocalTime })
+            ] }),
+            todaysEffectiveEndTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Calculated at:" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: todaysEffectiveEndTime })
+            ] })
+          ] })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl font-bold text-gray-500", children: "—" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-600 mt-1", children: "No data recorded today yet" })
+        ] })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Time Period" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: ["week", "month", "6months", "year", "2years", "5years", "lastFY", "lastCY"].map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => setSelectedPeriod(period),
+          className: `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${selectedPeriod === period ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+          children: formatPeriodLabel(period)
+        },
+        period
+      )) })
+    ] }),
+    error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-3 bg-red-900/30 border border-red-700 rounded text-red-300 text-sm", children: [
+      error,
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: fetchRecords, className: "ml-3 underline hover:no-underline", children: "Retry" })
+    ] }),
+    stats && !loading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-750 bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Period Average" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-sky-400", children: stats.mean.toFixed(1) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500", children: [
+          stats.meanPct.toFixed(1),
+          "% of fleet"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Peak Availability" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-green-400", children: stats.max.toFixed(1) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.maxRecord ? formatDateLabel2(stats.maxRecord.date) : "—" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Lowest Availability" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-red-400", children: stats.min.toFixed(1) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.minRecord ? formatDateLabel2(stats.minRecord.date) : "—" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Trend" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `text-2xl font-bold ${getTrendColor(stats.trendPct)}`, children: [
+          getTrendIcon(stats.trendPct),
+          " ",
+          stats.trendPct > 0 ? "+" : "",
+          stats.trendPct.toFixed(1),
+          "%"
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500", children: [
+          stats.count,
+          " data points"
+        ] })
+      ] })
+    ] }),
+    !loading && records.length === 0 && !error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-12 text-gray-500", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-12 h-12 mb-3 opacity-30", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "path",
+        {
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          strokeWidth: 1.5,
+          d: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        }
+      ) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "No aircraft availability data recorded for this period." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1 text-gray-600", children: "Data is automatically recorded daily when aircraft availability is updated." })
+    ] }),
+    !loading && records.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-4 border border-gray-700 mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider", children: [
+        "Daily Average Aircraft Available — ",
+        formatPeriodLabel(selectedPeriod)
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(AvailabilityChart, { data: chartData, totalAircraft: historicalTotalAircraft })
+    ] }),
+    !loading && records.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg border border-gray-700 mt-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-4 py-3 border-b border-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Daily Average Aircraft Available" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 text-xs text-gray-400", children: [
+            "— ",
+            formatPeriodLabel(selectedPeriod)
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: exportCSV,
+              className: "flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-semibold rounded transition-colors",
+              title: "Export as CSV",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "path",
+                  {
+                    strokeLinecap: "round",
+                    strokeLinejoin: "round",
+                    strokeWidth: 2,
+                    d: "M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+                  }
+                ) }),
+                "CSV"
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "button",
+            {
+              onClick: exportExcel,
+              className: "flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-semibold rounded transition-colors",
+              title: "Export as Excel",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "path",
+                  {
+                    strokeLinecap: "round",
+                    strokeLinejoin: "round",
+                    strokeWidth: 2,
+                    d: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  }
+                ) }),
+                "Excel"
+              ]
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700/80 bg-gray-800/60", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Day" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Daily Avg (ac)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Avail %" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Fleet" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
+          [...records].reverse().map((r, idx) => {
+            const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
+            const dayName = d.toLocaleDateString("en-AU", { weekday: "long" });
+            const dateDisplay = d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `border-b border-gray-700/40 hover:bg-gray-700/20 transition-colors ${idx % 2 === 1 ? "bg-gray-800/20" : ""}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-white font-mono text-xs", children: dateDisplay }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-gray-300 text-xs", children: dayName }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-2.5 px-4 text-right", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-bold", children: r.dailyAverage.toFixed(2) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs ml-1", children: "ac" })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `inline-block px-2 py-0.5 rounded text-xs font-semibold ${r.availabilityPct >= 70 ? "bg-green-900/40 text-green-400" : r.availabilityPct >= 50 ? "bg-amber-900/40 text-amber-400" : "bg-red-900/40 text-red-400"}`, children: [
+                r.availabilityPct.toFixed(1),
+                "%"
+              ] }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right text-gray-400 text-xs", children: effectiveFleetSize })
+            ] }, r.id);
+          }),
+          stats && /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t-2 border-gray-600 bg-gray-800/60", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-2.5 px-4 text-gray-300 font-semibold text-xs", colSpan: 2, children: [
+              "Period Average (",
+              records.length,
+              " days)"
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-2.5 px-4 text-right", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 font-bold", children: stats.mean.toFixed(2) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs ml-1", children: "ac" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `inline-block px-2 py-0.5 rounded text-xs font-semibold ${stats.meanPct >= 70 ? "bg-green-900/40 text-green-400" : stats.meanPct >= 50 ? "bg-amber-900/40 text-amber-400" : "bg-red-900/40 text-red-400"}`, children: [
+              stats.meanPct.toFixed(1),
+              "%"
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right text-gray-400 text-xs", children: effectiveFleetSize })
+          ] })
+        ] })
+      ] }) })
+    ] }),
+    showTable && records.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto mt-4 border border-gray-700 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 bg-gray-800/60", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-2 px-3 text-gray-300 font-semibold text-xs", children: "Date" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Daily Avg" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Planned" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Actual" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Fleet" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Avail %" })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...records].reverse().map((r) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700/50 hover:bg-gray-700/20", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-white font-mono text-xs", children: r.date }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-sky-400 font-semibold", children: r.dailyAverage.toFixed(2) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-gray-300", children: r.plannedCount }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-gray-300", children: r.actualCount ?? "—" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-gray-400", children: effectiveFleetSize }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-semibold ${r.availabilityPct >= 70 ? "text-green-400" : r.availabilityPct >= 50 ? "text-amber-400" : "text-red-400"}`, children: [
+          r.availabilityPct.toFixed(1),
+          "%"
+        ] }) })
+      ] }, r.id)) })
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400 space-y-1", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        "• Daily Average is the ",
+        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-gray-300", children: "time-weighted average" }),
+        " aircraft availability during the flying window only."
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Each availability state change is recorded as an event; the daily average weights by minutes active." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend compares the second half of the selected period against the first half." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Availability % is calculated as Daily Average ÷ Total Fleet × 100." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Data is stored in a dedicated database table and persists independently of schedule data." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Both active and inactive codes appear in analytics if used historically." })
+    ] })
+  ] });
+};
+const RecentCancellationsTable = ({
+  cancellationRecords,
+  cancellationCodes
+}) => {
+  const [timePeriod, setTimePeriod] = reactExports.useState("30days");
+  const [sortField, setSortField] = reactExports.useState("date");
+  const [sortDirection, setSortDirection] = reactExports.useState("desc");
+  const filteredRecords = reactExports.useMemo(() => {
+    const now = /* @__PURE__ */ new Date();
+    const cutoffDate = /* @__PURE__ */ new Date();
+    switch (timePeriod) {
+      case "7days":
+        cutoffDate.setDate(now.getDate() - 7);
+        break;
+      case "30days":
+        cutoffDate.setDate(now.getDate() - 30);
+        break;
+      case "90days":
+        cutoffDate.setDate(now.getDate() - 90);
+        break;
+      case "all":
+        return cancellationRecords;
+    }
+    return cancellationRecords.filter((record) => {
+      const recordDate = new Date(record.cancelledAt);
+      return recordDate >= cutoffDate;
+    });
+  }, [cancellationRecords, timePeriod]);
+  const sortedRecords = reactExports.useMemo(() => {
+    const sorted = [...filteredRecords];
+    sorted.sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case "date":
+          comparison = new Date(a.cancelledAt).getTime() - new Date(b.cancelledAt).getTime();
+          break;
+        case "event":
+          comparison = (a.eventName || "").localeCompare(b.eventName || "");
+          break;
+        case "code":
+          comparison = a.cancellationCode.localeCompare(b.cancellationCode);
+          break;
+        case "personnel":
+          comparison = (a.personnelAffected || "").localeCompare(b.personnelAffected || "");
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+    return sorted;
+  }, [filteredRecords, sortField, sortDirection]);
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+  const getCodeDescription = (code) => {
+    const codeObj = cancellationCodes.find((c) => c.code === code);
+    return codeObj?.description || "Unknown";
+  };
+  const formatDate2 = (cancelledAt) => {
+    if (!cancelledAt) {
+      return "No Date";
+    }
+    const date = new Date(cancelledAt);
+    if (isNaN(date.getTime())) {
+      console.log("DATE FIX: Invalid date from:", cancelledAt);
+      return "Invalid Date";
+    }
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  };
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "⇅" });
+    }
+    return sortDirection === "asc" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "↑" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "↓" });
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Recent Cancellations" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-gray-400 text-sm", children: "Time Period:" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "select",
+          {
+            value: timePeriod,
+            onChange: (e) => setTimePeriod(e.target.value),
+            className: "bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white text-sm",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "7days", children: "Last 7 Days" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "30days", children: "Last 30 Days" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "90days", children: "Last 90 Days" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All Time" })
+            ]
+          }
+        )
+      ] })
+    ] }),
+    sortedRecords.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-gray-400", children: "No cancellations found for the selected time period." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
+              onClick: () => handleSort("date"),
+              children: [
+                "Date/Time ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "date" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
+              onClick: () => handleSort("event"),
+              children: [
+                "Event ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "event" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
+              onClick: () => handleSort("code"),
+              children: [
+                "Code ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "code" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-3 px-4 text-left text-gray-300 font-semibold", children: "Reason" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "th",
+            {
+              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
+              onClick: () => handleSort("personnel"),
+              children: [
+                "Personnel Affected ",
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "personnel" })
+              ]
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-3 px-4 text-left text-gray-300 font-semibold", children: "Notes" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: sortedRecords.map((record, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/20", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300 text-sm", children: formatDate2(record.cancelledAt || record.timestamp) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-semibold", children: record.eventName || "N/A" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-amber-400", children: record.cancellationCode }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300 text-sm", children: getCodeDescription(record.cancellationCode) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300 text-sm", children: record.personnelAffected || "N/A" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-400 text-sm max-w-xs truncate", children: record.notes || "-" })
+        ] }, index)) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
+        "Showing ",
+        sortedRecords.length,
+        " cancellation",
+        sortedRecords.length !== 1 ? "s" : ""
+      ] })
+    ] })
+  ] });
+};
+const ACHistoryIntelligencePanel = ({
+  cancellationRecords,
+  currentUserId,
+  currentAircraftAvailable = 0,
+  totalAircraft = 24,
+  currentUserRole,
+  timezoneOffset = 0,
+  dayFlyingStart = "08:00",
+  dayFlyingEnd = "17:00"
+}) => {
+  const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
+  const [codesLoading, setCodesLoading] = reactExports.useState(true);
+  const [codesError, setCodesError] = reactExports.useState(null);
+  const loadCodesFromDB = reactExports.useCallback(async () => {
+    setCodesLoading(true);
+    setCodesError(null);
+    try {
+      const res = await fetch("/api/cancellation-codes", { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.codes)) {
+        setCancellationCodes(data.codes);
+      } else {
+        throw new Error("Invalid response from server");
+      }
+    } catch (err) {
+      console.error("Failed to load cancellation codes for AC History intelligence:", err);
+      setCodesError("Cancellation code details could not be loaded. Recent cancellations and analytics will still show recorded code values.");
+    } finally {
+      setCodesLoading(false);
+    }
+  }, []);
+  reactExports.useEffect(() => {
+    loadCodesFromDB();
+  }, [loadCodesFromDB]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+    codesError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 bg-amber-900/30 border border-amber-700/60 rounded text-amber-200 text-sm flex items-center gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: codesError }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: loadCodesFromDB,
+          className: "ml-auto px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold transition-colors",
+          children: "Retry"
+        }
+      )
+    ] }),
+    codesLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 bg-gray-800 border border-gray-700 rounded text-gray-300 text-sm", children: "Loading cancellation code details..." }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ACHistoryAircraftAvailability,
+      {
+        currentUserId,
+        currentAircraftAvailable,
+        totalAircraft,
+        currentUserRole,
+        timezoneOffset,
+        dayFlyingStart,
+        dayFlyingEnd
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      RecentCancellationsTable,
+      {
+        cancellationRecords,
+        cancellationCodes
+      }
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ACHistoryAnalytics,
+      {
+        cancellationRecords,
+        cancellationCodes
+      }
+    )
+  ] });
+};
 const BuildIntelligenceView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("people");
   const formattedDate = reactExports.useMemo(() => {
@@ -22974,6 +24587,7 @@ const BuildIntelligenceView = (props) => {
     { id: "people", label: "People" },
     { id: "course-metrics", label: "Course Metrics" },
     { id: "build-analytics", label: "Build Analytics" },
+    { id: "ac-history", label: "AC History" },
     { id: "managerial-analytics", label: "Managerial Analytics" }
   ];
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full", children: [
@@ -23026,6 +24640,19 @@ const BuildIntelligenceView = (props) => {
         {
           events: props.events,
           analysis: props.analysis
+        }
+      ),
+      activeTab === "ac-history" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ACHistoryIntelligencePanel,
+        {
+          cancellationRecords: props.cancellationRecords,
+          currentUserId: props.currentUserId,
+          currentAircraftAvailable: props.currentAircraftAvailable,
+          totalAircraft: props.totalAircraft,
+          currentUserRole: props.currentUserRole,
+          timezoneOffset: props.timezoneOffset,
+          dayFlyingStart: props.dayFlyingStart,
+          dayFlyingEnd: props.dayFlyingEnd
         }
       ),
       activeTab === "managerial-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, {})
@@ -39370,14 +40997,14 @@ class LiveMusic {
   /**
        Establishes a connection to the specified model and returns a
        LiveMusicSession object representing that connection.
-  
+
        @experimental
-  
+
        @remarks
-  
+
        @param params - The parameters for establishing a connection to the model.
        @return A live session.
-  
+
        @example
        ```ts
        let model = 'models/lyria-realtime-exp';
@@ -39446,12 +41073,12 @@ class LiveMusicSession {
   /**
       Sets inputs to steer music generation. Updates the session's current
       weighted prompts.
-  
+
       @param params - Contains one property, `weightedPrompts`.
-  
+
         - `weightedPrompts` to send to the model; weights are normalized to
           sum to 1.0.
-  
+
       @experimental
      */
   async setWeightedPrompts(params) {
@@ -39464,12 +41091,12 @@ class LiveMusicSession {
   /**
       Sets a configuration to the model. Updates the session's current
       music generation config.
-  
+
       @param params - Contains one property, `musicGenerationConfig`.
-  
+
         - `musicGenerationConfig` to set in the model. Passing an empty or
       undefined config to the model will reset the config to defaults.
-  
+
       @experimental
      */
   async setMusicGenerationConfig(params) {
@@ -39520,7 +41147,7 @@ class LiveMusicSession {
   }
   /**
        Terminates the WebSocket connection.
-  
+
        @experimental
      */
   close() {
@@ -39572,15 +41199,15 @@ class Live {
   /**
        Establishes a connection to the specified model with the given
        configuration and returns a Session object representing that connection.
-  
+
        @experimental Built-in MCP support is an experimental feature, may change in
        future versions.
-  
+
        @remarks
-  
+
        @param params - The parameters for establishing a connection to the model.
        @return A live session.
-  
+
        @example
        ```ts
        let model: string;
@@ -39780,36 +41407,36 @@ class Session {
   }
   /**
       Send a message over the established connection.
-  
+
       @param params - Contains two **optional** properties, `turns` and
           `turnComplete`.
-  
+
         - `turns` will be converted to a `Content[]`
         - `turnComplete: true` [default] indicates that you are done sending
           content and expect a response. If `turnComplete: false`, the server
           will wait for additional messages before starting generation.
-  
+
       @experimental
-  
+
       @remarks
       There are two ways to send messages to the live API:
       `sendClientContent` and `sendRealtimeInput`.
-  
+
       `sendClientContent` messages are added to the model context **in order**.
       Having a conversation using `sendClientContent` messages is roughly
       equivalent to using the `Chat.sendMessageStream`, except that the state of
       the `chat` history is stored on the API server instead of locally.
-  
+
       Because of `sendClientContent`'s order guarantee, the model cannot respons
       as quickly to `sendClientContent` messages as to `sendRealtimeInput`
       messages. This makes the biggest difference when sending objects that have
       significant preprocessing time (typically images).
-  
+
       The `sendClientContent` message sends a `Content[]`
       which has more options than the `Blob` sent by `sendRealtimeInput`.
-  
+
       So the main use-cases for `sendClientContent` over `sendRealtimeInput` are:
-  
+
       - Sending anything that can't be represented as a `Blob` (text,
       `sendClientContent({turns="Hello?"}`)).
       - Managing turns when not using audio input and voice activity detection.
@@ -39834,23 +41461,23 @@ class Session {
   }
   /**
       Send a realtime message over the established connection.
-  
+
       @param params - Contains one property, `media`.
-  
+
         - `media` will be converted to a `Blob`
-  
+
       @experimental
-  
+
       @remarks
       Use `sendRealtimeInput` for realtime audio chunks and video frames (images).
-  
+
       With `sendRealtimeInput` the api will respond to audio automatically
       based on voice activity detection (VAD).
-  
+
       `sendRealtimeInput` is optimized for responsivness at the expense of
       deterministic ordering guarantees. Audio and video tokens are to the
       context when they become available.
-  
+
       Note: The Call signature expects a `Blob` object, but only a subset
       of audio and image mimetypes are allowed.
      */
@@ -39869,16 +41496,16 @@ class Session {
   }
   /**
       Send a function response message over the established connection.
-  
+
       @param params - Contains property `functionResponses`.
-  
+
         - `functionResponses` will be converted to a `functionResponses[]`
-  
+
       @remarks
       Use `sendFunctionResponse` to reply to `LiveServerToolCall` from the server.
-  
+
       Use {@link types.LiveConnectConfig#tools} to configure the callable functions.
-  
+
       @experimental
      */
   sendToolResponse(params) {
@@ -39890,9 +41517,9 @@ class Session {
   }
   /**
        Terminates the WebSocket connection.
-  
+
        @experimental
-  
+
        @example
        ```ts
        let model: string;
@@ -39907,7 +41534,7 @@ class Session {
            responseModalities: [Modality.AUDIO],
          }
        });
-  
+
        session.close();
        ```
      */
@@ -43683,7 +45310,7 @@ class BaseGeminiNextGenAPIClient {
   }
   /**
      * Used as a callback for mutating the given `FinalRequestOptions` object.
-  
+
      */
   async prepareOptions(options) {
     if (this.clientAdapter && this.clientAdapter.isVertexAI() && !options.path.startsWith(`/${this.apiVersion}/projects/`)) {
@@ -48310,1552 +49937,10 @@ const CancellationCodesTable = ({
     ] }) })
   ] });
 };
-const ACHistoryAnalytics = ({
-  cancellationRecords,
-  cancellationCodes
-}) => {
-  const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
-  const [showAllCodes, setShowAllCodes] = reactExports.useState(false);
-  const [sortBy, setSortBy] = reactExports.useState("count");
-  const [sortDirection, setSortDirection] = reactExports.useState("desc");
-  const getDateRange = (period) => {
-    const now = /* @__PURE__ */ new Date();
-    const end = new Date(now);
-    let start = new Date(now);
-    switch (period) {
-      case "week":
-        start.setDate(now.getDate() - 7);
-        break;
-      case "month":
-        start.setMonth(now.getMonth() - 1);
-        break;
-      case "6months":
-        start.setMonth(now.getMonth() - 6);
-        break;
-      case "year":
-        start.setFullYear(now.getFullYear() - 1);
-        break;
-      case "2years":
-        start.setFullYear(now.getFullYear() - 2);
-        break;
-      case "5years":
-        start.setFullYear(now.getFullYear() - 5);
-        break;
-      case "lastFY":
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-        if (currentMonth >= 6) {
-          start = new Date(currentYear - 1, 6, 1);
-          end.setFullYear(currentYear);
-          end.setMonth(5, 30);
-        } else {
-          start = new Date(currentYear - 2, 6, 1);
-          end.setFullYear(currentYear - 1);
-          end.setMonth(5, 30);
-        }
-        break;
-      case "lastCY":
-        start = new Date(now.getFullYear() - 1, 0, 1);
-        end.setFullYear(now.getFullYear() - 1);
-        end.setMonth(11, 31);
-        break;
-    }
-    return { start, end };
-  };
-  const getPreviousDateRange = (period) => {
-    const currentRange = getDateRange(period);
-    const duration = currentRange.end.getTime() - currentRange.start.getTime();
-    const end = new Date(currentRange.start);
-    const start = new Date(currentRange.start.getTime() - duration);
-    return { start, end };
-  };
-  const filterRecordsByDateRange = (records, start, end) => {
-    return records.filter((record) => {
-      const recordDate = new Date(record.eventDate);
-      return recordDate >= start && recordDate <= end;
-    });
-  };
-  const analytics = reactExports.useMemo(() => {
-    const currentRange = getDateRange(selectedPeriod);
-    const previousRange = getPreviousDateRange(selectedPeriod);
-    const currentRecords = filterRecordsByDateRange(cancellationRecords, currentRange.start, currentRange.end);
-    const previousRecords = filterRecordsByDateRange(cancellationRecords, previousRange.start, previousRange.end);
-    const totalCurrent = currentRecords.length;
-    const analyticsData = cancellationCodes.map((code) => {
-      const currentCount = currentRecords.filter(
-        (r) => r.cancellationCode === code.code || r.cancellationCode === "OTHER" && r.manualCodeEntry === code.code
-      ).length;
-      const previousCount = previousRecords.filter(
-        (r) => r.cancellationCode === code.code || r.cancellationCode === "OTHER" && r.manualCodeEntry === code.code
-      ).length;
-      const percentage = totalCurrent > 0 ? currentCount / totalCurrent * 100 : 0;
-      let trend = 0;
-      if (previousCount > 0) {
-        trend = (currentCount - previousCount) / previousCount * 100;
-      } else if (currentCount > 0) {
-        trend = 100;
-      }
-      return {
-        code: code.code,
-        category: code.category,
-        description: code.description,
-        totalCount: currentCount,
-        percentage,
-        trend,
-        previousCount
-      };
-    });
-    let sorted = [...analyticsData];
-    switch (sortBy) {
-      case "count":
-        sorted.sort((a, b) => sortDirection === "desc" ? b.totalCount - a.totalCount : a.totalCount - b.totalCount);
-        break;
-      case "percentage":
-        sorted.sort((a, b) => sortDirection === "desc" ? b.percentage - a.percentage : a.percentage - b.percentage);
-        break;
-      case "category":
-        sorted.sort((a, b) => {
-          const categoryCompare = sortDirection === "desc" ? b.category.localeCompare(a.category) : a.category.localeCompare(b.category);
-          if (categoryCompare !== 0) return categoryCompare;
-          return b.totalCount - a.totalCount;
-        });
-        break;
-    }
-    if (!showAllCodes) {
-      sorted = sorted.filter((a) => a.totalCount > 0);
-    }
-    return sorted;
-  }, [cancellationRecords, cancellationCodes, selectedPeriod, sortBy, sortDirection, showAllCodes]);
-  const handleSort = (column) => {
-    if (sortBy === column) {
-      setSortDirection(sortDirection === "desc" ? "asc" : "desc");
-    } else {
-      setSortBy(column);
-      setSortDirection("desc");
-    }
-  };
-  const formatPeriodLabel = (period) => {
-    const labels = {
-      week: "Past Week",
-      month: "Past Month",
-      "6months": "Past 6 Months",
-      year: "Past Year",
-      "2years": "Past 2 Years",
-      "5years": "Past 5 Years",
-      lastFY: "Last Financial Year",
-      lastCY: "Last Calendar Year"
-    };
-    return labels[period];
-  };
-  const getTrendIcon = (trend) => {
-    if (trend > 5) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "↑" });
-    } else if (trend < -5) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400", children: "↓" });
-    } else {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "→" });
-    }
-  };
-  const totalCancellations = analytics.reduce((sum, a) => sum + a.totalCount, 0);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 mt-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-between items-center mb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "AC History (Cancellation Analytics & Trends)" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Time Period" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: ["week", "month", "6months", "year", "2years", "5years", "lastFY", "lastCY"].map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setSelectedPeriod(period),
-          className: `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${selectedPeriod === period ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-          children: formatPeriodLabel(period)
-        },
-        period
-      )) })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 flex items-center justify-between", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "input",
-          {
-            type: "checkbox",
-            checked: showAllCodes,
-            onChange: (e) => setShowAllCodes(e.target.checked),
-            className: "h-4 w-4 bg-gray-700 border-gray-600 rounded focus:ring-sky-500 accent-sky-500"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-300", children: "Show codes with zero occurrences" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm text-gray-400", children: [
-        "Total Cancellations: ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: totalCancellations })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Code" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "th",
-          {
-            className: "text-left py-3 px-4 text-gray-300 font-semibold cursor-pointer hover:text-white",
-            onClick: () => handleSort("category"),
-            children: [
-              "Category ",
-              sortBy === "category" && (sortDirection === "desc" ? "↓" : "↑")
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Description" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "th",
-          {
-            className: "text-right py-3 px-4 text-gray-300 font-semibold cursor-pointer hover:text-white",
-            onClick: () => handleSort("count"),
-            children: [
-              "Total ",
-              sortBy === "count" && (sortDirection === "desc" ? "↓" : "↑")
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "th",
-          {
-            className: "text-right py-3 px-4 text-gray-300 font-semibold cursor-pointer hover:text-white",
-            onClick: () => handleSort("percentage"),
-            children: [
-              "Percentage ",
-              sortBy === "percentage" && (sortDirection === "desc" ? "↓" : "↑")
-            ]
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Trend" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: analytics.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "py-8 text-center text-gray-400", children: "No cancellation data available for the selected period." }) }) : analytics.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/20", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-mono font-semibold", children: item.code }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: item.category }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: item.description }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-white font-semibold", children: item.totalCount }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-right text-white", children: [
-          item.percentage.toFixed(1),
-          "%"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center space-x-2", children: [
-            getTrendIcon(item.trend),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `text-xs ${item.trend > 5 ? "text-red-400" : item.trend < -5 ? "text-green-400" : "text-gray-400"}`, children: [
-              item.trend > 0 ? "+" : "",
-              item.trend.toFixed(0),
-              "%"
-            ] })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500 mt-1", children: [
-            "(prev: ",
-            item.previousCount,
-            ")"
-          ] })
-        ] })
-      ] }, item.code)) })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Percentages are calculated relative to all Flight + FTD cancellations in the selected period." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend indicators compare the selected period to the immediately preceding equivalent period." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Both active and inactive codes appear in analytics if used historically." })
-    ] })
-  ] });
-};
-const AvailabilityChart = ({ data, totalAircraft }) => {
-  const W = 900;
-  const H = 220;
-  const PAD = { top: 20, right: 24, bottom: 48, left: 52 };
-  const chartW = W - PAD.left - PAD.right;
-  const chartH = H - PAD.top - PAD.bottom;
-  const [hovered, setHovered] = reactExports.useState(null);
-  if (data.length === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-48 text-gray-500 text-sm", children: "No data available for the selected period" });
-  }
-  const values = data.map((d) => d.value);
-  const minVal = Math.max(0, Math.floor(Math.min(...values) - 1));
-  const maxVal = Math.ceil(Math.max(...values) + 1);
-  const range = maxVal - minVal || 1;
-  const xScale = (i) => PAD.left + i / Math.max(data.length - 1, 1) * chartW;
-  const yScale = (v) => PAD.top + chartH - (v - minVal) / range * chartH;
-  const points = data.map((d, i) => `${xScale(i)},${yScale(d.value)}`).join(" ");
-  const areaPath = `M ${xScale(0)},${yScale(data[0].value)} ` + data.slice(1).map((d, i) => `L ${xScale(i + 1)},${yScale(d.value)}`).join(" ") + ` L ${xScale(data.length - 1)},${PAD.top + chartH} L ${xScale(0)},${PAD.top + chartH} Z`;
-  const yTicks = Array.from({ length: 5 }, (_, i) => minVal + range / 4 * i);
-  const xLabelStep = Math.max(1, Math.ceil(data.length / 10));
-  const xLabels = data.filter((_, i) => i % xLabelStep === 0 || i === data.length - 1);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full overflow-x-auto", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "svg",
-      {
-        viewBox: `0 0 ${W} ${H}`,
-        className: "w-full",
-        style: { minWidth: 320 },
-        onMouseLeave: () => setHovered(null),
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("defs", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "areaGrad", x1: "0", y1: "0", x2: "0", y2: "1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#0ea5e9", stopOpacity: "0.35" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#0ea5e9", stopOpacity: "0.02" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("linearGradient", { id: "lineGrad", x1: "0", y1: "0", x2: "1", y2: "0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "0%", stopColor: "#38bdf8" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("stop", { offset: "100%", stopColor: "#0ea5e9" })
-            ] })
-          ] }),
-          yTicks.map((tick, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "line",
-              {
-                x1: PAD.left,
-                y1: yScale(tick),
-                x2: PAD.left + chartW,
-                y2: yScale(tick),
-                stroke: "#374151",
-                strokeWidth: "1",
-                strokeDasharray: "4 4"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "text",
-              {
-                x: PAD.left - 8,
-                y: yScale(tick) + 4,
-                textAnchor: "end",
-                fontSize: "11",
-                fill: "#9ca3af",
-                children: tick.toFixed(1)
-              }
-            )
-          ] }, i)),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "line",
-            {
-              x1: PAD.left,
-              y1: yScale(avg),
-              x2: PAD.left + chartW,
-              y2: yScale(avg),
-              stroke: "#f59e0b",
-              strokeWidth: "1.5",
-              strokeDasharray: "6 3",
-              opacity: "0.7"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "text",
-            {
-              x: PAD.left + chartW + 4,
-              y: yScale(avg) + 4,
-              fontSize: "10",
-              fill: "#f59e0b",
-              opacity: "0.9",
-              children: "avg"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: areaPath, fill: "url(#areaGrad)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "polyline",
-            {
-              points,
-              fill: "none",
-              stroke: "url(#lineGrad)",
-              strokeWidth: "2.5",
-              strokeLinejoin: "round",
-              strokeLinecap: "round"
-            }
-          ),
-          data.map((d, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "circle",
-              {
-                cx: xScale(i),
-                cy: yScale(d.value),
-                r: hovered === i ? 6 : 3.5,
-                fill: hovered === i ? "#38bdf8" : "#0ea5e9",
-                stroke: hovered === i ? "#fff" : "#1e3a5f",
-                strokeWidth: hovered === i ? 2 : 1,
-                style: { cursor: "pointer", transition: "r 0.1s" },
-                onMouseEnter: () => setHovered(i)
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "rect",
-              {
-                x: xScale(i) - 12,
-                y: PAD.top,
-                width: 24,
-                height: chartH,
-                fill: "transparent",
-                onMouseEnter: () => setHovered(i)
-              }
-            )
-          ] }, i)),
-          hovered !== null && (() => {
-            const d = data[hovered];
-            const cx = xScale(hovered);
-            const cy = yScale(d.value);
-            const tipW = 130;
-            const tipH = 44;
-            const tipX = Math.min(cx - tipW / 2, W - PAD.right - tipW);
-            const tipY = cy - tipH - 10 < PAD.top ? cy + 14 : cy - tipH - 10;
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("g", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "rect",
-                {
-                  x: tipX,
-                  y: tipY,
-                  width: tipW,
-                  height: tipH,
-                  rx: "6",
-                  fill: "#1f2937",
-                  stroke: "#374151",
-                  strokeWidth: "1"
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "text",
-                {
-                  x: tipX + tipW / 2,
-                  y: tipY + 16,
-                  textAnchor: "middle",
-                  fontSize: "11",
-                  fill: "#9ca3af",
-                  children: d.label
-                }
-              ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "text",
-                {
-                  x: tipX + tipW / 2,
-                  y: tipY + 33,
-                  textAnchor: "middle",
-                  fontSize: "13",
-                  fontWeight: "bold",
-                  fill: "#38bdf8",
-                  children: [
-                    d.value.toFixed(2),
-                    " ac"
-                  ]
-                }
-              )
-            ] });
-          })(),
-          xLabels.map((d, _) => {
-            const i = data.indexOf(d);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "text",
-              {
-                x: xScale(i),
-                y: PAD.top + chartH + 18,
-                textAnchor: "middle",
-                fontSize: "10",
-                fill: "#6b7280",
-                transform: `rotate(-35, ${xScale(i)}, ${PAD.top + chartH + 18})`,
-                children: d.label
-              },
-              i
-            );
-          }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "line",
-            {
-              x1: PAD.left,
-              y1: PAD.top,
-              x2: PAD.left,
-              y2: PAD.top + chartH,
-              stroke: "#4b5563",
-              strokeWidth: "1"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "line",
-            {
-              x1: PAD.left,
-              y1: PAD.top + chartH,
-              x2: PAD.left + chartW,
-              y2: PAD.top + chartH,
-              stroke: "#4b5563",
-              strokeWidth: "1"
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "text",
-            {
-              x: 14,
-              y: PAD.top + chartH / 2,
-              textAnchor: "middle",
-              fontSize: "11",
-              fill: "#6b7280",
-              transform: `rotate(-90, 14, ${PAD.top + chartH / 2})`,
-              children: "Aircraft Available"
-            }
-          )
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-6 mt-2 px-2 text-xs text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-6 h-0.5 bg-sky-400 rounded" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Daily Average" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-6 h-0.5 bg-amber-400 rounded", style: { borderTop: "1.5px dashed #f59e0b" } }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Period Average" })
-      ] })
-    ] })
-  ] });
-};
-const ACHistoryAircraftAvailability = ({
-  currentUserId,
-  currentAircraftAvailable = 0,
-  totalAircraft = 24,
-  currentUserRole,
-  timezoneOffset = 0,
-  dayFlyingStart = "08:00",
-  dayFlyingEnd = "17:00"
-}) => {
-  const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
-  const [records, setRecords] = reactExports.useState([]);
-  const [loading, setLoading] = reactExports.useState(false);
-  const [error, setError] = reactExports.useState(null);
-  const [showTable, setShowTable] = reactExports.useState(false);
-  const [configuredFleetSize, setConfiguredFleetSize] = reactExports.useState(totalAircraft);
-  const [fleetSizeLoading, setFleetSizeLoading] = reactExports.useState(false);
-  const [fleetSizeSaving, setFleetSizeSaving] = reactExports.useState(false);
-  const [fleetSizeError, setFleetSizeError] = reactExports.useState(null);
-  const [showFleetSizeEditor, setShowFleetSizeEditor] = reactExports.useState(false);
-  const [newFleetSize, setNewFleetSize] = reactExports.useState(totalAircraft.toString());
-  const canEditFleetSize = currentUserRole === "Super Admin" || currentUserRole === "Admin";
-  reactExports.useEffect(() => {
-    const fetchFleetSize = async () => {
-      setFleetSizeLoading(true);
-      try {
-        const res = await fetch("/api/system-config/fleet_size", { credentials: "include" });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.value) {
-            const size = parseInt(data.value, 10);
-            setConfiguredFleetSize(size);
-            setNewFleetSize(size.toString());
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch fleet size config:", err);
-      } finally {
-        setFleetSizeLoading(false);
-      }
-    };
-    fetchFleetSize();
-  }, []);
-  const handleSaveFleetSize = async () => {
-    const size = parseInt(newFleetSize, 10);
-    if (isNaN(size) || size < 1 || size > 100) {
-      setFleetSizeError("Fleet size must be between 1 and 100");
-      return;
-    }
-    setFleetSizeSaving(true);
-    setFleetSizeError(null);
-    try {
-      const res = await fetch("/api/system-config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          key: "fleet_size",
-          value: size.toString(),
-          description: "Total number of aircraft in the fleet",
-          updatedBy: currentUserId
-        })
-      });
-      if (res.ok) {
-        setConfiguredFleetSize(size);
-        setShowFleetSizeEditor(false);
-      } else {
-        const data = await res.json();
-        setFleetSizeError(data.error || "Failed to save");
-      }
-    } catch (err) {
-      setFleetSizeError("Failed to save fleet size");
-    } finally {
-      setFleetSizeSaving(false);
-    }
-  };
-  const effectiveFleetSize = configuredFleetSize;
-  const exportCSV = () => {
-    const sorted = [...records].reverse();
-    const header = ["Date", "Day", "Daily Avg (ac)", "Planned", "Actual", "Fleet Size", "Availability %"];
-    const rows = sorted.map((r) => {
-      const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
-      const day = d.toLocaleDateString("en-AU", { weekday: "long" });
-      return [
-        r.date,
-        day,
-        r.dailyAverage.toFixed(2),
-        r.plannedCount,
-        r.actualCount ?? "",
-        r.totalAircraft,
-        r.availabilityPct.toFixed(1)
-      ];
-    });
-    const csv = [header, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aircraft-availability-${selectedPeriod}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const exportExcel = () => {
-    const sorted = [...records].reverse();
-    const rows = sorted.map((r) => {
-      const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
-      const day = d.toLocaleDateString("en-AU", { weekday: "long" });
-      const pctColor = r.availabilityPct >= 70 ? "#16a34a" : r.availabilityPct >= 50 ? "#d97706" : "#dc2626";
-      return `<tr>
-        <td>${r.date}</td>
-        <td>${day}</td>
-        <td style="text-align:right">${r.dailyAverage.toFixed(2)}</td>
-        <td style="text-align:right">${r.plannedCount}</td>
-        <td style="text-align:right">${r.actualCount ?? ""}</td>
-        <td style="text-align:right">${r.totalAircraft}</td>
-        <td style="text-align:right;color:${pctColor}">${r.availabilityPct.toFixed(1)}%</td>
-      </tr>`;
-    }).join("");
-    const periodLabel = formatPeriodLabel(selectedPeriod);
-    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-<head><meta charset="UTF-8">
-<style>
-  th { background:#1e3a5f; color:#38bdf8; font-weight:bold; padding:6px 10px; }
-  td { padding:5px 10px; border-bottom:1px solid #e5e7eb; }
-  tr:nth-child(even) td { background:#f0f9ff; }
-</style>
-</head>
-<body>
-<h2 style="font-family:Arial;color:#1e3a5f">Daily Average Aircraft Available — ${periodLabel}</h2>
-<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse;font-family:Arial;font-size:12px">
-  <thead><tr>
-    <th>Date</th><th>Day</th><th>Daily Avg (ac)</th><th>Planned</th><th>Actual</th><th>Fleet Size</th><th>Availability %</th>
-  </tr></thead>
-  <tbody>${rows}</tbody>
-</table>
-</body></html>`;
-    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `aircraft-availability-${selectedPeriod}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-  const [todaysAverage, setTodaysAverage] = reactExports.useState(null);
-  const [todaysAverageLoading, setTodaysAverageLoading] = reactExports.useState(false);
-  const [todaysAverageDate, setTodaysAverageDate] = reactExports.useState(null);
-  const [todaysFlyingWindowStart, setTodaysFlyingWindowStart] = reactExports.useState(null);
-  const [todaysFlyingWindowEnd, setTodaysFlyingWindowEnd] = reactExports.useState(null);
-  const [todaysEffectiveEndTime, setTodaysEffectiveEndTime] = reactExports.useState(null);
-  const [currentLocalTime, setCurrentLocalTime] = reactExports.useState(() => {
-    const now = /* @__PURE__ */ new Date();
-    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  });
-  const setTodaysAverageWithMetadata = (record) => {
-    if (!record) {
-      setTodaysAverage(null);
-      setTodaysAverageDate(null);
-      setTodaysFlyingWindowStart(null);
-      setTodaysFlyingWindowEnd(null);
-      setTodaysEffectiveEndTime(null);
-      return;
-    }
-    setTodaysAverage(record.dailyAverage);
-    setTodaysAverageDate(record.date || null);
-    setTodaysFlyingWindowStart(record.flyingWindowStart || null);
-    setTodaysFlyingWindowEnd(record.flyingWindowEnd || null);
-    setTodaysEffectiveEndTime(record.effectiveEndTime || null);
-  };
-  reactExports.useEffect(() => {
-    const updateTime = () => {
-      const now = /* @__PURE__ */ new Date();
-      setCurrentLocalTime(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 60 * 1e3);
-    return () => clearInterval(interval);
-  }, []);
-  const refreshTodaysAverage = async () => {
-    setTodaysAverageLoading(true);
-    try {
-      const today = getLocalDateString();
-      console.log(`[AV-REFRESH] Refreshing average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
-      const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          date: today,
-          flyingWindowStart: dayFlyingStart,
-          flyingWindowEnd: dayFlyingEnd,
-          clientTimezoneOffsetHours: timezoneOffset
-        })
-      });
-      if (recalcRes.ok) {
-        const recalcData = await recalcRes.json();
-        if (recalcData.summary) {
-          setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
-          await fetchRecords();
-          return;
-        }
-      }
-      const localAvg = computeAverageFromLocalStorage(today);
-      if (localAvg !== null) {
-        setTodaysAverageWithMetadata({
-          dailyAverage: localAvg,
-          date: today,
-          flyingWindowStart: dayFlyingStart,
-          flyingWindowEnd: dayFlyingEnd,
-          plannedCount: currentAircraftAvailable ?? 15,
-          actualCount: currentAircraftAvailable ?? 15,
-          totalAircraft: totalAircraft ?? 24
-        });
-      } else {
-        setTodaysAverageWithMetadata(null);
-      }
-    } catch (err) {
-      console.error("Failed to refresh today's average:", err);
-    } finally {
-      setTodaysAverageLoading(false);
-    }
-  };
-  const getDateRange = reactExports.useCallback((period) => {
-    const now = /* @__PURE__ */ new Date();
-    const end = new Date(now);
-    let start = new Date(now);
-    switch (period) {
-      case "week":
-        start.setDate(now.getDate() - 7);
-        break;
-      case "month":
-        start.setMonth(now.getMonth() - 1);
-        break;
-      case "6months":
-        start.setMonth(now.getMonth() - 6);
-        break;
-      case "year":
-        start.setFullYear(now.getFullYear() - 1);
-        break;
-      case "2years":
-        start.setFullYear(now.getFullYear() - 2);
-        break;
-      case "5years":
-        start.setFullYear(now.getFullYear() - 5);
-        break;
-      case "lastFY": {
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth();
-        if (currentMonth >= 6) {
-          start = new Date(currentYear - 1, 6, 1);
-          end.setFullYear(currentYear);
-          end.setMonth(5, 30);
-        } else {
-          start = new Date(currentYear - 2, 6, 1);
-          end.setFullYear(currentYear - 1);
-          end.setMonth(5, 30);
-        }
-        break;
-      }
-      case "lastCY":
-        start = new Date(now.getFullYear() - 1, 0, 1);
-        end.setFullYear(now.getFullYear() - 1);
-        end.setMonth(11, 31);
-        break;
-    }
-    return { start, end };
-  }, []);
-  const toISODate = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
-  const getLocalDateString = (d = /* @__PURE__ */ new Date()) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-  const fetchRecords = reactExports.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { start, end } = getDateRange(selectedPeriod);
-      const params = new URLSearchParams({
-        startDate: toISODate(start),
-        endDate: toISODate(end)
-      });
-      const res = await fetch(`/api/aircraft-availability-history?${params}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setRecords(data.records || []);
-    } catch (err) {
-      setError("Failed to load aircraft availability history.");
-      console.error("ACHistoryAircraftAvailability fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedPeriod, getDateRange]);
-  reactExports.useEffect(() => {
-    fetchRecords();
-  }, [fetchRecords]);
-  const computeAverageFromLocalStorage = (today) => {
-    try {
-      const stored = localStorage.getItem(`aircraft-availability-${today}`);
-      if (!stored) return null;
-      const data = JSON.parse(stored);
-      const snaps = data.snapshots || [];
-      if (snaps.length === 0) return null;
-      const parseWindowTime = (time, fallbackHour) => {
-        const clean = (time || "").replace(":", "");
-        const h = parseInt(clean.slice(0, -2), 10);
-        const m = parseInt(clean.slice(-2), 10);
-        return (Number.isFinite(h) ? h : fallbackHour) * 60 + (Number.isFinite(m) ? m : 0);
-      };
-      const windowStartMin = parseWindowTime(dayFlyingStart, 8);
-      const windowEndMin = parseWindowTime(dayFlyingEnd, 17);
-      const now = /* @__PURE__ */ new Date();
-      const nowMin = now.getHours() * 60 + now.getMinutes();
-      const effectiveEndMin = Math.min(Math.max(nowMin, windowStartMin), windowEndMin);
-      const totalWindow = effectiveEndMin - windowStartMin;
-      if (totalWindow <= 0) return null;
-      const sorted = [...snaps].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      let weightedSum = 0;
-      let coveredMinutes = 0;
-      for (let i = 0; i < sorted.length; i++) {
-        const t = new Date(sorted[i].timestamp);
-        const tMin = t.getHours() * 60 + t.getMinutes();
-        const nextMin = i + 1 < sorted.length ? (() => {
-          const n = new Date(sorted[i + 1].timestamp);
-          return n.getHours() * 60 + n.getMinutes();
-        })() : effectiveEndMin;
-        const segStart = Math.max(tMin, windowStartMin);
-        const segEnd = Math.min(nextMin, effectiveEndMin);
-        if (segEnd > segStart) {
-          weightedSum += sorted[i].available * (segEnd - segStart);
-          coveredMinutes += segEnd - segStart;
-        }
-      }
-      if (coveredMinutes < totalWindow) {
-        const lastBeforeEnd = [...sorted].reverse().find((s) => {
-          const t = new Date(s.timestamp);
-          return t.getHours() * 60 + t.getMinutes() <= effectiveEndMin;
-        }) ?? sorted[0];
-        weightedSum += lastBeforeEnd.available * (totalWindow - coveredMinutes);
-      }
-      return totalWindow > 0 ? weightedSum / totalWindow : null;
-    } catch {
-      return null;
-    }
-  };
-  reactExports.useEffect(() => {
-    const fetchTodaysAverage = async () => {
-      setTodaysAverageLoading(true);
-      try {
-        const today = getLocalDateString();
-        console.log(`[AV-FETCH] Fetching average for date: ${today}, local time: ${(/* @__PURE__ */ new Date()).getHours()}:${(/* @__PURE__ */ new Date()).getMinutes()}`);
-        const recalcRes = await fetch("/api/aircraft-availability-recalculate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            date: today,
-            flyingWindowStart: dayFlyingStart,
-            flyingWindowEnd: dayFlyingEnd,
-            clientTimezoneOffsetHours: timezoneOffset
-          })
-        });
-        if (recalcRes.ok) {
-          const recalcData = await recalcRes.json();
-          if (recalcData.summary) {
-            setTodaysAverageWithMetadata({ ...recalcData.summary, date: today });
-            await fetchRecords();
-            return;
-          }
-        }
-        const localAvg = computeAverageFromLocalStorage(today);
-        if (localAvg !== null) {
-          console.log(`[AV-FETCH] Using localStorage fallback: avg=${localAvg.toFixed(2)}`);
-          setTodaysAverageWithMetadata({
-            dailyAverage: localAvg,
-            date: today,
-            flyingWindowStart: dayFlyingStart,
-            flyingWindowEnd: dayFlyingEnd,
-            plannedCount: currentAircraftAvailable ?? 15,
-            actualCount: currentAircraftAvailable ?? 15,
-            totalAircraft: totalAircraft ?? 24
-          });
-        } else {
-          setTodaysAverageWithMetadata(null);
-        }
-      } catch (err) {
-        console.error("Failed to fetch today's average:", err);
-        const today = getLocalDateString();
-        const localAvg = computeAverageFromLocalStorage(today);
-        if (localAvg !== null) {
-          setTodaysAverageWithMetadata({
-            dailyAverage: localAvg,
-            date: today,
-            flyingWindowStart: dayFlyingStart,
-            flyingWindowEnd: dayFlyingEnd
-          });
-        } else {
-          setTodaysAverageWithMetadata(null);
-        }
-      } finally {
-        setTodaysAverageLoading(false);
-      }
-    };
-    fetchTodaysAverage();
-    const interval = setInterval(fetchTodaysAverage, 5 * 60 * 1e3);
-    return () => clearInterval(interval);
-  }, [timezoneOffset, dayFlyingStart, dayFlyingEnd]);
-  reactExports.useEffect(() => {
-    const timeoutId = setTimeout(async () => {
-      const today = getLocalDateString();
-      try {
-        const res = await fetch("/api/aircraft-availability-recalculate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            date: today,
-            flyingWindowStart: dayFlyingStart,
-            flyingWindowEnd: dayFlyingEnd,
-            clientTimezoneOffsetHours: timezoneOffset
-          })
-        });
-        const data = await res.json();
-        if (data.summary) {
-          setTodaysAverageWithMetadata({ ...data.summary, date: today });
-          await fetchRecords();
-          return;
-        }
-      } catch {
-      }
-      const localAvg = computeAverageFromLocalStorage(today);
-      if (localAvg !== null) {
-        setTodaysAverageWithMetadata({
-          dailyAverage: localAvg,
-          date: today,
-          flyingWindowStart: dayFlyingStart,
-          flyingWindowEnd: dayFlyingEnd
-        });
-      }
-    }, 2e3);
-    return () => clearTimeout(timeoutId);
-  }, [currentAircraftAvailable, timezoneOffset, dayFlyingStart, dayFlyingEnd]);
-  const formatPeriodLabel = (period) => {
-    const labels = {
-      week: "Past Week",
-      month: "Past Month",
-      "6months": "Past 6 Months",
-      year: "Past Year",
-      "2years": "Past 2 Years",
-      "5years": "Past 5 Years",
-      lastFY: "Last Financial Year",
-      lastCY: "Last Calendar Year"
-    };
-    return labels[period];
-  };
-  const formatDateLabel2 = (dateStr) => {
-    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString("en-AU", { day: "2-digit", month: "short" });
-  };
-  const stats = reactExports.useMemo(() => {
-    if (records.length === 0) return null;
-    const avgs = records.map((r) => r.dailyAverage);
-    const pcts = records.map((r) => r.availabilityPct);
-    const mean = avgs.reduce((a, b) => a + b, 0) / avgs.length;
-    const meanPct = pcts.reduce((a, b) => a + b, 0) / pcts.length;
-    const max = Math.max(...avgs);
-    const min = Math.min(...avgs);
-    const maxRecord = records.find((r) => r.dailyAverage === max);
-    const minRecord = records.find((r) => r.dailyAverage === min);
-    const half = Math.floor(records.length / 2);
-    const firstHalf = records.slice(0, half);
-    const secondHalf = records.slice(half);
-    const firstAvg = firstHalf.length > 0 ? firstHalf.reduce((a, r) => a + r.dailyAverage, 0) / firstHalf.length : mean;
-    const secondAvg = secondHalf.length > 0 ? secondHalf.reduce((a, r) => a + r.dailyAverage, 0) / secondHalf.length : mean;
-    const trendPct = firstAvg > 0 ? (secondAvg - firstAvg) / firstAvg * 100 : 0;
-    return { mean, meanPct, max, min, maxRecord, minRecord, trendPct, count: records.length };
-  }, [records]);
-  const chartData = reactExports.useMemo(
-    () => records.map((r) => ({
-      date: r.date,
-      value: r.dailyAverage,
-      label: formatDateLabel2(r.date)
-    })),
-    [records]
-  );
-  const historicalTotalAircraft = records.length > 0 ? Math.max(...records.map((r) => r.totalAircraft)) : totalAircraft;
-  const getTrendIcon = (trend) => {
-    if (trend > 2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-green-400", children: "↑" });
-    if (trend < -2) return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400", children: "↓" });
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "→" });
-  };
-  const getTrendColor = (trend) => {
-    if (trend > 2) return "text-green-400";
-    if (trend < -2) return "text-red-400";
-    return "text-gray-400";
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6 mt-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "AC History (Aircraft Availability)" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-          canEditFleetSize && showFleetSizeEditor ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400", children: "Fleet Size:" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "input",
-              {
-                type: "number",
-                min: "1",
-                max: "100",
-                value: newFleetSize,
-                onChange: (e) => setNewFleetSize(e.target.value),
-                className: "w-16 px-2 py-1 text-sm bg-gray-600 text-white rounded border border-gray-500 focus:border-sky-500 focus:outline-none",
-                disabled: fleetSizeSaving
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: handleSaveFleetSize,
-                disabled: fleetSizeSaving,
-                className: "px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 transition-colors",
-                children: fleetSizeSaving ? "Saving..." : "Save"
-              }
-            ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "button",
-              {
-                onClick: () => {
-                  setShowFleetSizeEditor(false);
-                  setNewFleetSize(configuredFleetSize.toString());
-                  setFleetSizeError(null);
-                },
-                disabled: fleetSizeSaving,
-                className: "px-2 py-1 text-xs bg-gray-600 text-gray-300 rounded hover:bg-gray-500 disabled:opacity-50 transition-colors",
-                children: "Cancel"
-              }
-            )
-          ] }) : canEditFleetSize ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              onClick: () => setShowFleetSizeEditor(true),
-              className: "flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/50 text-gray-400 rounded hover:bg-gray-600 hover:text-gray-300 transition-colors",
-              title: "Click to configure fleet size",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                  "Fleet: ",
-                  effectiveFleetSize
-                ] })
-              ]
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1.5 px-2.5 py-1 text-xs bg-gray-700/30 text-gray-500 rounded", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-              "Fleet: ",
-              effectiveFleetSize
-            ] })
-          ] }),
-          fleetSizeError && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-red-400", children: fleetSizeError })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-        loading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 text-xs text-gray-400", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "animate-spin h-3.5 w-3.5 text-sky-400", fill: "none", viewBox: "0 0 24 24", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8v8z" })
-          ] }),
-          "Loading…"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            onClick: () => setShowTable((v) => !v),
-            className: "px-3 py-1.5 text-xs bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition-colors",
-            children: showTable ? "Hide Raw Table" : "Show Raw Table"
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mb-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gradient-to-br from-sky-900/40 to-sky-800/20 rounded-lg p-4 border border-sky-700/50", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-2 h-2 rounded-full bg-green-400 animate-pulse" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 uppercase tracking-wider", children: "Current Available" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-3xl font-bold text-sky-400", children: currentAircraftAvailable }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
-            "of ",
-            effectiveFleetSize,
-            " aircraft"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500 mt-1", children: [
-          (currentAircraftAvailable / effectiveFleetSize * 100).toFixed(0),
-          "% availability"
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gradient-to-br from-amber-900/40 to-amber-800/20 rounded-lg p-4 border border-amber-700/50", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3 h-3 text-amber-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 uppercase tracking-wider", children: "Today's Average (Flying Window)" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "button",
-            {
-              onClick: refreshTodaysAverage,
-              disabled: todaysAverageLoading,
-              className: "p-1.5 text-gray-400 hover:text-amber-400 hover:bg-amber-900/30 rounded transition-colors disabled:opacity-50",
-              title: "Refresh to current time",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: `w-4 h-4 ${todaysAverageLoading ? "animate-spin" : ""}`, fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" }) })
-            }
-          )
-        ] }),
-        todaysAverageLoading ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { className: "animate-spin h-5 w-5 text-amber-400", fill: "none", viewBox: "0 0 24 24", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("circle", { className: "opacity-25", cx: "12", cy: "12", r: "10", stroke: "currentColor", strokeWidth: "4" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("path", { className: "opacity-75", fill: "currentColor", d: "M4 12a8 8 0 018-8v8z" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "Loading..." })
-        ] }) : todaysAverage !== null ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-baseline gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-3xl font-bold text-amber-400", children: todaysAverage.toFixed(2) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "avg aircraft" })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500 mt-1", children: [
-            (todaysAverage / effectiveFleetSize * 100).toFixed(0),
-            "% time-weighted availability"
-          ] }),
-          todaysAverageDate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mt-2 pt-2 border-t border-gray-700/50 space-y-0.5", children: [
-            todaysAverageDate && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Date:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: (/* @__PURE__ */ new Date(todaysAverageDate + "T00:00:00")).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }) })
-            ] }),
-            todaysFlyingWindowStart && todaysFlyingWindowEnd && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Flying Window:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
-                todaysFlyingWindowStart,
-                " - ",
-                todaysFlyingWindowEnd
-              ] })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Current Time:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300 font-medium", children: currentLocalTime })
-            ] }),
-            todaysEffectiveEndTime && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "Calculated at:" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: todaysEffectiveEndTime })
-            ] })
-          ] })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xl font-bold text-gray-500", children: "—" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-600 mt-1", children: "No data recorded today yet" })
-        ] })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-2", children: "Time Period" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-2", children: ["week", "month", "6months", "year", "2years", "5years", "lastFY", "lastCY"].map((period) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          onClick: () => setSelectedPeriod(period),
-          className: `px-4 py-2 rounded-md text-sm font-semibold transition-colors ${selectedPeriod === period ? "bg-sky-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
-          children: formatPeriodLabel(period)
-        },
-        period
-      )) })
-    ] }),
-    error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 p-3 bg-red-900/30 border border-red-700 rounded text-red-300 text-sm", children: [
-      error,
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: fetchRecords, className: "ml-3 underline hover:no-underline", children: "Retry" })
-    ] }),
-    stats && !loading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-750 bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Period Average" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-sky-400", children: stats.mean.toFixed(1) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500", children: [
-          stats.meanPct.toFixed(1),
-          "% of fleet"
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Peak Availability" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-green-400", children: stats.max.toFixed(1) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.maxRecord ? formatDateLabel2(stats.maxRecord.date) : "—" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Lowest Availability" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-2xl font-bold text-red-400", children: stats.min.toFixed(1) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-500", children: stats.minRecord ? formatDateLabel2(stats.minRecord.date) : "—" })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-3 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mb-1", children: "Trend" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `text-2xl font-bold ${getTrendColor(stats.trendPct)}`, children: [
-          getTrendIcon(stats.trendPct),
-          " ",
-          stats.trendPct > 0 ? "+" : "",
-          stats.trendPct.toFixed(1),
-          "%"
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-500", children: [
-          stats.count,
-          " data points"
-        ] })
-      ] })
-    ] }),
-    !loading && records.length === 0 && !error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-12 text-gray-500", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-12 h-12 mb-3 opacity-30", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "path",
-        {
-          strokeLinecap: "round",
-          strokeLinejoin: "round",
-          strokeWidth: 1.5,
-          d: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        }
-      ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm", children: "No aircraft availability data recorded for this period." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs mt-1 text-gray-600", children: "Data is automatically recorded daily when aircraft availability is updated." })
-    ] }),
-    !loading && records.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg p-4 border border-gray-700 mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-gray-400 mb-3 font-medium uppercase tracking-wider", children: [
-        "Daily Average Aircraft Available — ",
-        formatPeriodLabel(selectedPeriod)
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(AvailabilityChart, { data: chartData, totalAircraft: historicalTotalAircraft })
-    ] }),
-    !loading && records.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-900/40 rounded-lg border border-gray-700 mt-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-4 py-3 border-b border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold text-white", children: "Daily Average Aircraft Available" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "ml-2 text-xs text-gray-400", children: [
-            "— ",
-            formatPeriodLabel(selectedPeriod)
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              onClick: exportCSV,
-              className: "flex items-center gap-1.5 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs font-semibold rounded transition-colors",
-              title: "Export as CSV",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "path",
-                  {
-                    strokeLinecap: "round",
-                    strokeLinejoin: "round",
-                    strokeWidth: 2,
-                    d: "M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-                  }
-                ) }),
-                "CSV"
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              onClick: exportExcel,
-              className: "flex items-center gap-1.5 px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white text-xs font-semibold rounded transition-colors",
-              title: "Export as Excel",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-3.5 h-3.5", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "path",
-                  {
-                    strokeLinecap: "round",
-                    strokeLinejoin: "round",
-                    strokeWidth: 2,
-                    d: "M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  }
-                ) }),
-                "Excel"
-              ]
-            }
-          )
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700/80 bg-gray-800/60", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Date" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Day" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Daily Avg (ac)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Avail %" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2.5 px-4 text-gray-300 font-semibold text-xs uppercase tracking-wide", children: "Fleet" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { children: [
-          [...records].reverse().map((r, idx) => {
-            const d = /* @__PURE__ */ new Date(r.date + "T00:00:00");
-            const dayName = d.toLocaleDateString("en-AU", { weekday: "long" });
-            const dateDisplay = d.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
-            return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `border-b border-gray-700/40 hover:bg-gray-700/20 transition-colors ${idx % 2 === 1 ? "bg-gray-800/20" : ""}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-white font-mono text-xs", children: dateDisplay }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-gray-300 text-xs", children: dayName }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-2.5 px-4 text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sky-400 font-bold", children: r.dailyAverage.toFixed(2) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs ml-1", children: "ac" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `inline-block px-2 py-0.5 rounded text-xs font-semibold ${r.availabilityPct >= 70 ? "bg-green-900/40 text-green-400" : r.availabilityPct >= 50 ? "bg-amber-900/40 text-amber-400" : "bg-red-900/40 text-red-400"}`, children: [
-                r.availabilityPct.toFixed(1),
-                "%"
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right text-gray-400 text-xs", children: effectiveFleetSize })
-            ] }, r.id);
-          }),
-          stats && /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-t-2 border-gray-600 bg-gray-800/60", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-2.5 px-4 text-gray-300 font-semibold text-xs", colSpan: 2, children: [
-              "Period Average (",
-              records.length,
-              " days)"
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-2.5 px-4 text-right", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 font-bold", children: stats.mean.toFixed(2) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-xs ml-1", children: "ac" })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `inline-block px-2 py-0.5 rounded text-xs font-semibold ${stats.meanPct >= 70 ? "bg-green-900/40 text-green-400" : stats.meanPct >= 50 ? "bg-amber-900/40 text-amber-400" : "bg-red-900/40 text-red-400"}`, children: [
-              stats.meanPct.toFixed(1),
-              "%"
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2.5 px-4 text-right text-gray-400 text-xs", children: effectiveFleetSize })
-          ] })
-        ] })
-      ] }) })
-    ] }),
-    showTable && records.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto mt-4 border border-gray-700 rounded-lg", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 bg-gray-800/60", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-2 px-3 text-gray-300 font-semibold text-xs", children: "Date" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Daily Avg" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Planned" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Actual" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Fleet" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-2 px-3 text-gray-300 font-semibold text-xs", children: "Avail %" })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: [...records].reverse().map((r) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700/50 hover:bg-gray-700/20", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-white font-mono text-xs", children: r.date }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-sky-400 font-semibold", children: r.dailyAverage.toFixed(2) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-gray-300", children: r.plannedCount }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-gray-300", children: r.actualCount ?? "—" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right text-gray-400", children: effectiveFleetSize }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-2 px-3 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: `font-semibold ${r.availabilityPct >= 70 ? "text-green-400" : r.availabilityPct >= 50 ? "text-amber-400" : "text-red-400"}`, children: [
-          r.availabilityPct.toFixed(1),
-          "%"
-        ] }) })
-      ] }, r.id)) })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400 space-y-1", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
-        "• Daily Average is the ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-gray-300", children: "time-weighted average" }),
-        " aircraft availability during the flying window only."
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Each availability state change is recorded as an event; the daily average weights by minutes active." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend compares the second half of the selected period against the first half." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Availability % is calculated as Daily Average ÷ Total Fleet × 100." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Data is stored in a dedicated database table and persists independently of schedule data." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Both active and inactive codes appear in analytics if used historically." })
-    ] })
-  ] });
-};
-const RecentCancellationsTable = ({
-  cancellationRecords,
-  cancellationCodes
-}) => {
-  const [timePeriod, setTimePeriod] = reactExports.useState("30days");
-  const [sortField, setSortField] = reactExports.useState("date");
-  const [sortDirection, setSortDirection] = reactExports.useState("desc");
-  const filteredRecords = reactExports.useMemo(() => {
-    const now = /* @__PURE__ */ new Date();
-    const cutoffDate = /* @__PURE__ */ new Date();
-    switch (timePeriod) {
-      case "7days":
-        cutoffDate.setDate(now.getDate() - 7);
-        break;
-      case "30days":
-        cutoffDate.setDate(now.getDate() - 30);
-        break;
-      case "90days":
-        cutoffDate.setDate(now.getDate() - 90);
-        break;
-      case "all":
-        return cancellationRecords;
-    }
-    return cancellationRecords.filter((record) => {
-      const recordDate = new Date(record.cancelledAt);
-      return recordDate >= cutoffDate;
-    });
-  }, [cancellationRecords, timePeriod]);
-  const sortedRecords = reactExports.useMemo(() => {
-    const sorted = [...filteredRecords];
-    sorted.sort((a, b) => {
-      let comparison = 0;
-      switch (sortField) {
-        case "date":
-          comparison = new Date(a.cancelledAt).getTime() - new Date(b.cancelledAt).getTime();
-          break;
-        case "event":
-          comparison = (a.eventName || "").localeCompare(b.eventName || "");
-          break;
-        case "code":
-          comparison = a.cancellationCode.localeCompare(b.cancellationCode);
-          break;
-        case "personnel":
-          comparison = (a.personnelAffected || "").localeCompare(b.personnelAffected || "");
-          break;
-      }
-      return sortDirection === "asc" ? comparison : -comparison;
-    });
-    return sorted;
-  }, [filteredRecords, sortField, sortDirection]);
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("desc");
-    }
-  };
-  const getCodeDescription = (code) => {
-    const codeObj = cancellationCodes.find((c) => c.code === code);
-    return codeObj?.description || "Unknown";
-  };
-  const formatDate2 = (cancelledAt) => {
-    if (!cancelledAt) {
-      return "No Date";
-    }
-    const date = new Date(cancelledAt);
-    if (isNaN(date.getTime())) {
-      console.log("DATE FIX: Invalid date from:", cancelledAt);
-      return "Invalid Date";
-    }
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500", children: "⇅" });
-    }
-    return sortDirection === "asc" ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "↑" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "↓" });
-  };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Recent Cancellations" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-gray-400 text-sm", children: "Time Period:" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "select",
-          {
-            value: timePeriod,
-            onChange: (e) => setTimePeriod(e.target.value),
-            className: "bg-gray-700 border border-gray-600 rounded px-3 py-1 text-white text-sm",
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "7days", children: "Last 7 Days" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "30days", children: "Last 30 Days" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "90days", children: "Last 90 Days" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All Time" })
-            ]
-          }
-        )
-      ] })
-    ] }),
-    sortedRecords.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-gray-400", children: "No cancellations found for the selected time period." }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "th",
-            {
-              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
-              onClick: () => handleSort("date"),
-              children: [
-                "Date/Time ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "date" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "th",
-            {
-              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
-              onClick: () => handleSort("event"),
-              children: [
-                "Event ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "event" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "th",
-            {
-              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
-              onClick: () => handleSort("code"),
-              children: [
-                "Code ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "code" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-3 px-4 text-left text-gray-300 font-semibold", children: "Reason" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "th",
-            {
-              className: "py-3 px-4 text-left text-gray-300 font-semibold cursor-pointer hover:text-white",
-              onClick: () => handleSort("personnel"),
-              children: [
-                "Personnel Affected ",
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SortIcon, { field: "personnel" })
-              ]
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-3 px-4 text-left text-gray-300 font-semibold", children: "Notes" })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: sortedRecords.map((record, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700 hover:bg-gray-700/20", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300 text-sm", children: formatDate2(record.cancelledAt || record.timestamp) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-semibold", children: record.eventName || "N/A" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono font-bold text-amber-400", children: record.cancellationCode }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300 text-sm", children: getCodeDescription(record.cancellationCode) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300 text-sm", children: record.personnelAffected || "N/A" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-400 text-sm max-w-xs truncate", children: record.notes || "-" })
-        ] }, index)) })
-      ] }) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
-        "Showing ",
-        sortedRecords.length,
-        " cancellation",
-        sortedRecords.length !== 1 ? "s" : ""
-      ] })
-    ] })
-  ] });
-};
 const ACHistoryPage = ({
   currentUserRole,
   cancellationRecords,
-  currentUserId,
-  currentAircraftAvailable = 0,
-  totalAircraft = 24,
-  timezoneOffset = 0,
-  dayFlyingStart = "08:00",
-  dayFlyingEnd = "17:00"
+  currentUserId
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
@@ -49983,35 +50068,9 @@ const ACHistoryPage = ({
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white mb-1", children: "AC History" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "View cancellation analytics, aircraft availability trends, and manage cancellation codes." })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white mb-1", children: "Cancellation Codes" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400", children: "Manage the master cancellation code table used by aircraft availability history, recent cancellations, and cancellation analytics." })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      ACHistoryAircraftAvailability,
-      {
-        currentUserId,
-        currentAircraftAvailable,
-        totalAircraft,
-        currentUserRole,
-        timezoneOffset,
-        dayFlyingStart,
-        dayFlyingEnd
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      RecentCancellationsTable,
-      {
-        cancellationRecords,
-        cancellationCodes
-      }
-    ),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      ACHistoryAnalytics,
-      {
-        cancellationRecords,
-        cancellationCodes
-      }
-    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
       codesError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 px-4 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm flex items-center gap-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
@@ -59397,7 +59456,7 @@ const sectionLabels = {
   "staff-mockdata": "Staff MockData",
   "trainee-mockdata": "Trainee MockData",
   "staff-combined-data": "Staff Combined Data",
-  "validation": "AC Availability & Cancellations",
+  "validation": "Cancellation Codes",
   "historical-data": "Historical Data",
   "locale-settings": "Locations & Timezones",
   "timezone": "Timezone",
@@ -59575,7 +59634,7 @@ const sectionDescriptions = {
   "staff-mockdata": "Staff test data view",
   "trainee-mockdata": "Trainee test data view",
   "staff-combined-data": "Combined staff data overview",
-  "validation": "Availability history, cancellation analytics and cancellation code management",
+  "validation": "Master cancellation code table used by cancellation records and analytics",
   "historical-data": "Seed & refresh historical training records",
   "locale-settings": "Manage bases, unit assignment, timezones and training areas",
   "timezone": "Configure timezone settings",
@@ -59698,7 +59757,7 @@ const sectionGroups = [
   {
     label: "Records & Data",
     shortLabel: "Data",
-    description: "Operational runbook, evidence, aircraft availability, cancellations, imports and enduring historical records.",
+    description: "Operational runbook, evidence, cancellation code governance, imports and enduring historical records.",
     accent: "emerald",
     defaultSection: "platform-operational-runbook",
     sections: ["platform-operational-runbook", "validation", "data-sources", "data-loaders", "historical-data"]
@@ -79117,6 +79176,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             syllabusDetails,
             traineeLMPs,
             courseColors,
+            currentUserRole: currentUserPermission,
+            currentUserId: getCurrentUserId() ?? void 0,
+            cancellationRecords,
+            currentAircraftAvailable: availableAircraftCount,
+            totalAircraft: configuredAirframeCount,
+            timezoneOffset,
+            dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
+            dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             buildDate: buildDfpDate,
             analysis: lastBuildAnalysis
           }

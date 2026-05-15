@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import CancellationCodesTable from './CancellationCodesTable';
-import ACHistoryAnalytics from './ACHistoryAnalytics';
-import ACHistoryAircraftAvailability from './ACHistoryAircraftAvailability';
-import RecentCancellationsTable from './RecentCancellationsTable';
 import { CancellationCode, CancellationRecord } from '../types';
 
 interface ACHistoryPageProps {
@@ -20,11 +17,6 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   currentUserRole,
   cancellationRecords,
   currentUserId,
-  currentAircraftAvailable = 0,
-  totalAircraft = 24,
-  timezoneOffset = 0,
-  dayFlyingStart = '08:00',
-  dayFlyingEnd = '17:00',
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
@@ -171,36 +163,13 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
     <div className="p-6 space-y-6">
       {/* Page Header */}
       <div className="mb-2">
-        <h1 className="text-3xl font-bold text-white mb-1">AC History</h1>
+        <h1 className="text-3xl font-bold text-white mb-1">Cancellation Codes</h1>
         <p className="text-gray-400">
-          View cancellation analytics, aircraft availability trends, and manage cancellation codes.
+          Manage the master cancellation code table used by aircraft availability history, recent cancellations, and cancellation analytics.
         </p>
       </div>
 
-      {/* AC History - Aircraft Availability */}
-      <ACHistoryAircraftAvailability
-        currentUserId={currentUserId}
-        currentAircraftAvailable={currentAircraftAvailable}
-        totalAircraft={totalAircraft}
-        currentUserRole={currentUserRole}
-        timezoneOffset={timezoneOffset}
-        dayFlyingStart={dayFlyingStart}
-        dayFlyingEnd={dayFlyingEnd}
-      />
-
-      {/* Recent Cancellations Table */}
-      <RecentCancellationsTable
-        cancellationRecords={cancellationRecords}
-        cancellationCodes={cancellationCodes}
-      />
-
-      {/* AC History Analytics */}
-      <ACHistoryAnalytics
-        cancellationRecords={cancellationRecords}
-        cancellationCodes={cancellationCodes}
-      />
-
-      {/* ── Cancellation Codes Master Table (bottom) ── */}
+      {/* ── Cancellation Codes Master Table ── */}
       <div>
         {codesError && (
           <div className="mb-3 px-4 py-2 bg-red-900/40 border border-red-700 rounded text-red-300 text-sm flex items-center gap-2">
