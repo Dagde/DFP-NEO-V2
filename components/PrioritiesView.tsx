@@ -590,7 +590,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Second Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Instructor Allocation Rules</h2>
-                        <p className="mt-1 text-sm text-slate-300">Set how strongly the build should prefer or require assigned instructor groups for flight and FTD events.</p>
+                        <p className="mt-1 text-sm text-slate-300">Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and FTD events.</p>
                     </div>
                     <div className="p-4 space-y-5">
 
@@ -610,7 +610,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <span className="font-semibold text-sky-400">Priority Mode</span>
                             </label>
                             <p className="text-xs text-gray-400 mt-1 ml-14">
-                                When on, the scheduler prioritises selected instructor groups for flight and FTD events.
+                                When on, flight and FTD events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected.
                             </p>
                         </div>
 
@@ -641,12 +641,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </div>
                                     {instructorPriority.mode === 'soft' && (
                                         <p className="text-xs text-gray-400 mt-1">
-                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler will prefer instructors from selected groups but will use any available instructor if none are free.
+                                            <span className="text-sky-400 font-medium">Soft:</span> The scheduler attempts the selected instructor chain first. If the primary instructor is unavailable, it can fall back to selected secondary or same-flight instructors; if none are available, it may use any otherwise eligible instructor so the event can still be placed.
                                         </p>
                                     )}
                                     {instructorPriority.mode === 'hard' && (
                                         <p className="text-xs text-gray-400 mt-1">
-                                            <span className="text-red-400 font-medium">Hard:</span> Flight and FTD events will only be placed if an instructor from the required groups is available. If none are free, the event is placed on STBY with no instructor. CPT and Ground are unaffected.
+                                            <span className="text-red-400 font-medium">Hard:</span> Flight and FTD events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. CPT and Ground are unaffected.
                                         </p>
                                     )}
                                 </div>
@@ -659,9 +659,9 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                         </p>
                                         <div className="space-y-2">
                                             {([ 
-                                                { key: 'primary',    label: 'Primary Instructor',         desc: "Trainee's assigned primary instructor" },
-                                                { key: 'secondary',  label: 'Secondary Instructor',       desc: "Trainee's assigned secondary instructor" },
-                                                { key: 'sameFlight', label: 'Same Flight Instructor',     desc: 'Instructor from the exact same flight (e.g. CFS/A)' },
+                                                { key: 'primary',    label: 'Primary Instructor',         desc: "Try the trainee's primary instructor first where possible." },
+                                                { key: 'secondary',  label: 'Secondary Instructor',       desc: "Allow the trainee's secondary instructor as a fallback when the primary is unavailable." },
+                                                { key: 'sameFlight', label: 'Same Flight Instructor',     desc: "Allow another qualified instructor from the trainee's allocated flight as a fallback." },
                                             ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
                                                 <label key={key} className="flex items-start space-x-3 cursor-pointer group">
                                                     <input
@@ -695,13 +695,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                                 <span className="text-xs text-gray-400 font-normal ml-2">(flight/FTD will go to STBY if none available)</span>
                                             </p>
                                             <p className="text-xs text-gray-400 mb-2">
-                                                Select which instructor groups must be available for a flight or FTD to be placed on the schedule. If none from the selected groups are free, the event is placed on STBY with no instructor assigned.
+                                                Select which instructor groups are authorised for flight and FTD placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned.
                                             </p>
                                             <div className="space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3">
                                                 {([
-                                                    { key: 'primary',    label: 'Primary Instructor',     desc: "Trainee's assigned primary instructor" },
-                                                    { key: 'secondary',  label: 'Secondary Instructor',   desc: "Trainee's assigned secondary instructor" },
-                                                    { key: 'sameFlight', label: 'Same Flight Instructor', desc: 'Instructor from the exact same flight (e.g. CFS/A)' },
+                                                    { key: 'primary',    label: 'Primary Instructor',     desc: "Require the trainee's primary instructor unless an authorised fallback group is also selected and available." },
+                                                    { key: 'secondary',  label: 'Secondary Instructor',   desc: "Permit the trainee's secondary instructor as an authorised fallback." },
+                                                    { key: 'sameFlight', label: 'Same Flight Instructor', desc: "Permit another qualified instructor from the trainee's allocated flight as an authorised fallback." },
                                                 ] as { key: keyof InstructorPriorityGroups; label: string; desc: string }[]).map(({ key, label, desc }) => (
                                                     <label key={key} className="flex items-start space-x-3 cursor-pointer group">
                                                         <input
