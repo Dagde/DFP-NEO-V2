@@ -471,18 +471,18 @@ const ColChart: React.FC<{ data: Array<{ label: string; value: number; color?: s
 const StatCard: React.FC<{ label: string; value: string | number; sub?: string; color?: string }> = ({
   label, value, sub, color = 'text-white'
 }) => (
-  <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-    <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+  <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+    <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
     <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-    {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+    {sub && <p className="mt-0.5 text-xs text-slate-500">{sub}</p>}
   </div>
 );
 
 // ── SectionCard ─────────────────────────────────────────────────────────────────
 
 const SCard: React.FC<{ title: string; children: React.ReactNode; className?: string }> = ({ title, children, className }) => (
-  <div className={`bg-gray-800 border border-gray-700 rounded-lg p-4 ${className || ''}`}>
-    <h3 className="text-sm font-semibold text-gray-300 mb-3">{title}</h3>
+  <div className={`rounded-lg border border-cyan-500/20 bg-slate-900/80 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)] ${className || ''}`}>
+    <h3 className="mb-3 text-sm font-semibold text-white">{title}</h3>
     {children}
   </div>
 );
@@ -2314,17 +2314,17 @@ const TrainingIntelligenceTab: React.FC = () => {
         />
       )}
       {/* ── Header Controls ── */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+      <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-shrink-0">
             <h2 className="text-white font-bold text-lg leading-tight">Training Intelligence Engine</h2>
-            <p className="text-gray-400 text-xs">Offline PT-051 analytics &middot; all data stored in database</p>
+            <p className="text-slate-400 text-xs">Offline PT-051 analytics &middot; all data stored in database</p>
           </div>
           <div className="flex-1 min-w-0" />
           <div className="flex items-center gap-2">
-            <label className="text-gray-400 text-sm whitespace-nowrap">Course:</label>
+            <label className="text-slate-400 text-sm whitespace-nowrap">Course:</label>
             <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} disabled={isRunning}
-              className="bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-500">
+              className="rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-400">
               <option value="">&mdash; All Courses &mdash;</option>
               {courses.map(c => <option key={c.name} value={c.name}>{c.name} ({c.recordCount} records)</option>)}
             </select>
@@ -2332,7 +2332,7 @@ const TrainingIntelligenceTab: React.FC = () => {
           <button
             onClick={() => setShowThresholdPanel(true)}
             title="Configure analytics thresholds"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-md text-sm bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-300 hover:text-white transition-all"
+            className="flex items-center gap-1.5 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 transition-all hover:border-cyan-500/45 hover:bg-slate-700 hover:text-white"
           >
             <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" className="flex-shrink-0">
               <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -2340,22 +2340,22 @@ const TrainingIntelligenceTab: React.FC = () => {
             Thresholds
           </button>
                     <button onClick={handleRunAnalytics} disabled={isRunning}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer'}`}>
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer'}`}>
             {isRunning ? <><span className="animate-spin inline-block">\u27F3</span> Running...</> : 'Run Analytics'}
           </button>
         </div>
 
         {runProgress && (
-          <div className="mt-3 bg-blue-900/30 border border-blue-700 rounded px-3 py-2 text-blue-300 text-sm">{runProgress}</div>
+          <div className="mt-3 rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-cyan-200 text-sm">{runProgress}</div>
         )}
         {error && (
-          <div className="mt-3 bg-red-900/30 border border-red-700 rounded px-3 py-2 text-red-300 text-sm flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300 text-sm">
             <span>{error}</span>
             <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-3">&times;</button>
           </div>
         )}
         {recentRuns.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+          <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-500">
             {recentRuns.slice(0, 3).map(run => (
               <span key={run.id} className="flex items-center gap-1">
                 <span className={run.status === 'complete' ? 'text-emerald-500' : run.status === 'failed' ? 'text-red-500' : 'text-yellow-500'}>&bull;</span>
@@ -2368,10 +2368,10 @@ const TrainingIntelligenceTab: React.FC = () => {
 
       {/* ── No Data State ── */}
       {!loading && !summary && !isRunning && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-10 text-center">
+        <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-10 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           <p className="text-white font-semibold text-lg">No analytics data yet</p>
-          <p className="text-gray-400 text-sm mt-1 mb-4">Select a course and click <strong>Run Analytics</strong> to process PT-051 data.</p>
-          <button onClick={handleRunAnalytics} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold">
+          <p className="text-slate-400 text-sm mt-1 mb-4">Select a course and click <strong>Run Analytics</strong> to process PT-051 data.</p>
+          <button onClick={handleRunAnalytics} className="rounded-md bg-cyan-600 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-500">
             Run Analytics Now
           </button>
         </div>
@@ -2379,8 +2379,8 @@ const TrainingIntelligenceTab: React.FC = () => {
 
       {/* ── Loading ── */}
       {loading && (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-10 text-center">
-          <p className="text-gray-400 animate-pulse">Loading analytics data...</p>
+        <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-10 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+          <p className="text-slate-400 animate-pulse">Loading analytics data...</p>
         </div>
       )}
 
@@ -2388,16 +2388,16 @@ const TrainingIntelligenceTab: React.FC = () => {
       {!loading && summary && (
         <>
           {/* Tab nav */}
-          <div className="flex items-center gap-1 border-b-2 border-gray-700 mt-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-cyan-500/20 bg-slate-900/80 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
             {tabs.map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-6 py-2.5 text-sm font-semibold rounded-t-lg transition-all relative ${
+                className={`relative flex items-center gap-1.5 rounded-md border px-6 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === tab.id
-                    ? 'bg-gray-800 text-white border border-b-0 border-blue-500 shadow-[0_-2px_0_0_#3b82f6_inset] -mb-px pb-[11px]'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-800/60 border border-transparent hover:border-gray-600 border-b-0'
+                    ? 'border-cyan-400/70 bg-cyan-500/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.12)]'
+                    : 'border-slate-700 bg-slate-950/70 text-slate-300 hover:border-cyan-500/45 hover:bg-cyan-500/10 hover:text-white'
                 }`}>
                 {activeTab === tab.id && (
-                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-sm" />
+                  <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-t-sm bg-cyan-400" />
                 )}
                 <span>{tab.label}</span>
                 {tab.badge !== undefined && (

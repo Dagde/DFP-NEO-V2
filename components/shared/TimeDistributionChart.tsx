@@ -20,12 +20,14 @@ const TimeDistributionChart: React.FC<TimeDistributionChartProps> = ({ timeDistr
   const hours = Array.from({ length: 24 }, (_, i) => i).filter(hour => eventsByHour.get(hour) && eventsByHour.get(hour)! > 0);
   
   return (
-    <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-      <h2 className="text-xl font-semibold text-sky-400 mb-4">Time Distribution</h2>
-      <p className="text-gray-400 mb-4">
-        Uniformity Score: <span className="text-sky-400 font-semibold">{(timeDistribution.uniformityScore * 100).toFixed(0)}%</span>
-      </p>
-      <div className="relative h-64 flex items-end justify-start gap-2 px-4">
+    <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+      <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+        <h2 className="text-lg font-semibold text-white">Time Distribution</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          Uniformity Score: <span className="font-semibold text-cyan-300">{(timeDistribution.uniformityScore * 100).toFixed(0)}%</span>
+        </p>
+      </div>
+      <div className="relative h-64 flex items-end justify-start gap-2 px-5 py-5">
         {hours.map((hour) => {
           const count = eventsByHour.get(hour) || 0;
           const heightPercent = maxEvents > 0 ? (count / maxEvents) * 100 : 0;
@@ -34,13 +36,13 @@ const TimeDistributionChart: React.FC<TimeDistributionChartProps> = ({ timeDistr
           return (
             <div key={hour} className="flex flex-col items-center justify-end flex-1 min-w-[40px]">
               <div 
-                className="w-full bg-sky-500 rounded-t transition-all hover:bg-sky-400 flex items-start justify-center"
+                className="w-full bg-cyan-500 rounded-t transition-all hover:bg-cyan-400 flex items-start justify-center"
                 style={{ height: `${heightPx}px`, minHeight: '30px' }}
                 title={`${hour.toString().padStart(2, '0')}:00 - ${count} events`}
               >
                 <div className="text-xs text-white font-semibold pt-1">{count}</div>
               </div>
-              <div className="text-xs text-gray-400 mt-1">{hour.toString().padStart(2, '0')}</div>
+              <div className="text-xs text-slate-400 mt-1">{hour.toString().padStart(2, '0')}</div>
             </div>
           );
         })}

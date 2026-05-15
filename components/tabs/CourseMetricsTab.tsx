@@ -140,24 +140,28 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   return (
     <div className="space-y-6">
       {/* Events per Course */}
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-sky-400 mb-4">Events per Course (Excl. Ground School)</h2>
-        {courseStats.eventsPerCourse.size > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {Array.from(courseStats.eventsPerCourse.entries()).sort().map(([course, count]) => (
-              <InteractiveStatCard
-                key={course}
-                title={course}
-                value={count}
-                description={`of ${courseStats.availableTraineesPerCourse.get(course) || 0} available`}
-                personnelList={courseStats.personnelPerCourseLists.get(course) || []}
-                onPersonClick={onNavigateAndSelectPerson}
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-center py-8">No events found for active courses.</p>
-        )}
+      <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+        <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+          <h2 className="text-lg font-semibold text-white">Events per Course (Excl. Ground School)</h2>
+        </div>
+        <div className="p-5">
+          {courseStats.eventsPerCourse.size > 0 ? (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {Array.from(courseStats.eventsPerCourse.entries()).sort().map(([course, count]) => (
+                <InteractiveStatCard
+                  key={course}
+                  title={course}
+                  value={count}
+                  description={`of ${courseStats.availableTraineesPerCourse.get(course) || 0} available`}
+                  personnelList={courseStats.personnelPerCourseLists.get(course) || []}
+                  onPersonClick={onNavigateAndSelectPerson}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-slate-400 py-8">No events found for active courses.</p>
+          )}
+        </div>
       </div>
 
       {/* Course Distribution Analysis - only show if analysis exists */}
@@ -189,13 +193,13 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
 
       {/* Empty state if no build analysis */}
       {!analysis && (
-        <div className="bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700 text-center">
-          <div className="text-6xl mb-4">📊</div>
+        <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-12 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-lg font-bold text-cyan-200">BI</div>
           <h2 className="text-2xl font-semibold text-white mb-2">Build Analysis Required</h2>
-          <p className="text-gray-400 mb-6">
+          <p className="text-slate-400 mb-6">
             Course distribution analysis and pie charts will appear here after you run a DFP build.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Click "NEO - Build" in the Priorities page to generate a build and see detailed course metrics.
           </p>
         </div>

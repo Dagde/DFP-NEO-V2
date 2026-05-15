@@ -19945,28 +19945,29 @@ const InteractiveStatCard = ({
   onPersonClick
 }) => {
   const [isHovered, setIsHovered] = reactExports.useState(false);
+  const cardClass = "relative flex flex-col rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   if (personnelList.length === 0 && !description) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-400 uppercase tracking-wider", children: title }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-4xl font-bold text-white", children: value }),
-      description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-500", children: description })
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: cardClass, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-3xl font-bold text-white", children: value }),
+      description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description })
     ] });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
-      className: "relative bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col",
+      className: `${cardClass} transition-all duration-200 hover:border-cyan-400/50 hover:bg-slate-900`,
       onMouseEnter: () => setIsHovered(true),
       onMouseLeave: () => setIsHovered(false),
       children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-400 uppercase tracking-wider", children: title }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-4xl font-bold text-white", children: value }),
-        description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-500", children: description }),
-        isHovered && personnelList.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-10 top-full left-0 mt-2 w-64 bg-gray-900 border border-sky-500 rounded-lg shadow-2xl p-2 max-h-60 overflow-y-auto animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: personnelList.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-3xl font-bold text-white", children: value }),
+        description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description }),
+        isHovered && personnelList.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute left-0 top-full z-10 mt-2 max-h-60 w-64 overflow-y-auto rounded-lg border border-cyan-500/45 bg-slate-950 p-2 shadow-2xl animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1", children: personnelList.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
             onClick: () => onPersonClick(name),
-            className: "w-full text-left p-2 rounded text-gray-300 hover:bg-sky-800 hover:text-white transition-colors text-sm",
+            className: "w-full rounded p-2 text-left text-sm text-slate-300 transition-colors hover:bg-cyan-500/15 hover:text-white",
             children: name.split(" – ")[0]
           }
         ) }, name)) }) })
@@ -19984,37 +19985,37 @@ const AvailabilityCard = ({
   hoverBorderColor = "",
   courseColors = {}
 }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${bgColor} ${hoverBgColor} ${borderColor} ${hoverBorderColor} rounded-lg p-4 border transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-lg`, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${bgColor} ${hoverBgColor} ${borderColor} ${hoverBorderColor} rounded-lg border p-4 shadow-[0_12px_30px_rgba(0,0,0,0.22)] transition-all duration-300 ease-in-out hover:shadow-lg`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between mb-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: `text-lg font-semibold ${color} transition-colors`, children: title }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-sm font-medium ${color} bg-gray-700/50 px-2 py-1 rounded-full`, children: trainees.length })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `rounded-full bg-slate-950/60 px-2 py-1 text-sm font-medium ${color}`, children: trainees.length })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800", children: trainees.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-8 text-gray-400", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-64 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-900", children: trainees.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center py-8 text-slate-400", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-8 h-8 mb-2 opacity-50", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm italic", children: "No trainees in this category" })
     ] }) : trainees.map((trainee) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "div",
       {
-        className: "flex items-center justify-between p-3 bg-gray-700/50 rounded-md hover:bg-gray-600/60 transition-all duration-200 ease-in-out group cursor-pointer",
+        className: "group flex cursor-pointer items-center justify-between rounded-md bg-slate-950/45 p-3 transition-all duration-200 ease-in-out hover:bg-slate-900/80",
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
-                className: `w-4 h-4 rounded-full transition-all duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-gray-300` : `${color.replace("text-", "bg-")}`}`,
+                className: `w-4 h-4 rounded-full transition-all duration-200 group-hover:scale-125 ${courseColors[trainee.course] ? `border-2 border-slate-300` : `${color.replace("text-", "bg-")}`}`,
                 style: courseColors[trainee.course] ? { backgroundColor: courseColors[trainee.course] } : {}
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white text-sm font-medium group-hover:text-gray-100 transition-colors", children: trainee.name }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-xs group-hover:text-gray-300 transition-colors", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-white transition-colors group-hover:text-slate-100", children: trainee.name }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-slate-400 transition-colors group-hover:text-slate-300", children: [
                 trainee.course,
                 " • ",
                 trainee.rank
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "opacity-0 group-hover:opacity-100 transition-opacity duration-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-gray-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" }) }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "opacity-0 group-hover:opacity-100 transition-opacity duration-200", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4 text-slate-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M9 5l7 7-7 7" }) }) })
         ]
       },
       trainee.id
@@ -20031,29 +20032,29 @@ const ListCard = ({ title, trainees }) => {
     if (filter === "Total") return trainees;
     return trainees.filter((t) => t.course === filter);
   }, [trainees, filter]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 flex flex-col h-fit", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-3 border-b border-gray-700", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-fit flex-col overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-base font-semibold text-gray-200", children: title }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-mono text-sky-400 bg-gray-700/50 px-2 py-0.5 rounded", children: filteredTrainees.length })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-base font-semibold text-white", children: title }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "rounded bg-slate-950/70 px-2 py-0.5 font-mono text-sm text-cyan-200", children: filteredTrainees.length })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "select",
         {
           value: filter,
           onChange: (e) => setFilter(e.target.value),
-          className: "w-full px-2 py-1 text-sm bg-gray-700 text-gray-200 border border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-sky-500",
+          className: "w-full rounded border border-slate-600 bg-slate-950 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-400",
           children: courses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-3 space-y-2 overflow-y-auto max-h-60", children: filteredTrainees.length > 0 ? filteredTrainees.map((trainee, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-baseline text-sm text-gray-300", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-gray-500 w-8 text-right mr-2 flex-shrink-0", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "max-h-60 space-y-2 overflow-y-auto p-3", children: filteredTrainees.length > 0 ? filteredTrainees.map((trainee, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-baseline text-sm text-slate-300", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mr-2 w-8 flex-shrink-0 text-right font-mono text-slate-500", children: [
         index + 1,
         "."
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-gray-200 truncate", children: trainee.name })
-    ] }, trainee.idNumber)) : /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-sm text-gray-500 italic text-center", children: "None" }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate font-semibold text-slate-100", children: trainee.name })
+    ] }, trainee.idNumber)) : /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "text-center text-sm italic text-slate-500", children: "None" }) })
   ] });
 };
 const PeopleTab = ({
@@ -20311,35 +20312,41 @@ const PeopleTab = ({
   const filteredAvailableTrainees = reactExports.useMemo(() => filterTrainees(availableTrainees), [availableTrainees, availabilityFilter, searchTerm]);
   const filteredUnavailableTrainees = reactExports.useMemo(() => filterTrainees(unavailableTrainees), [unavailableTrainees, availabilityFilter, searchTerm]);
   const filteredPausedTrainees = reactExports.useMemo(() => filterTrainees(pausedTrainees), [pausedTrainees, availabilityFilter, searchTerm]);
+  const sectionShell = "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
+  const sectionHeader = "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4";
+  const sectionBody = "p-5";
+  const fieldsetShell = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
+  const legendClass = "px-2 text-lg font-semibold text-white";
+  const inputClass = "bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all";
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Personnel Unavailable" }),
-      unavailableOnSelectedDate.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: unavailableOnSelectedDate.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex justify-between items-center p-3 bg-gray-700/50 rounded-md text-sm", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionShell, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Personnel Unavailable" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionBody, children: unavailableOnSelectedDate.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: unavailableOnSelectedDate.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-950/45 p-3 text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 text-right", children: item.rank }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-12 text-right font-mono text-slate-500", children: item.rank }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: item.name })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-300 font-medium", children: item.period.reason }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-300 w-32 text-right", children: item.period.allDay ? "All Day" : `${formatMilitaryTime2(item.period.startTime)} - ${formatMilitaryTime2(item.period.endTime)}` })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-32 text-right font-mono text-slate-300", children: item.period.allDay ? "All Day" : `${formatMilitaryTime2(item.period.startTime)} - ${formatMilitaryTime2(item.period.endTime)}` })
         ] })
-      ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center py-4", children: "No personnel are recorded as unavailable for this date." })
+      ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-4 text-center text-slate-400", children: "No personnel are recorded as unavailable for this date." }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Waiting for Night Flying" }),
-      traineesWaitingForNightFlying.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: traineesWaitingForNightFlying.map(({ trainee, event }, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex justify-between items-center p-3 bg-gray-700/50 rounded-md text-sm", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionShell, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Waiting for Night Flying" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionBody, children: traineesWaitingForNightFlying.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "max-h-60 overflow-y-auto pr-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-3", children: traineesWaitingForNightFlying.map(({ trainee, event }, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-950/45 p-3 text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-gray-500 w-12 text-right", children: trainee.rank }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-12 text-right font-mono text-slate-500", children: trainee.rank }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: trainee.name })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300 font-medium", children: trainee.course }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-medium text-slate-300", children: trainee.course }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-sky-400", children: event.code })
         ] })
-      ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center py-4", children: "No trainees are currently waiting for a night flying event." })
+      ] }, index)) }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "py-4 text-center text-slate-400", children: "No trainees are currently waiting for a night flying event." }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xl font-semibold text-sky-400 mb-4", children: "Instructors" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: fieldsetShell, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Instructors" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-5 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
@@ -20393,8 +20400,8 @@ const PeopleTab = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xl font-semibold text-sky-400 mb-4", children: "Trainees" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: fieldsetShell, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Trainees" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InteractiveStatCard,
@@ -20448,9 +20455,9 @@ const PeopleTab = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 mb-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-4 sm:space-y-0", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400", children: "Trainee Availability" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `${sectionShell} mb-6`, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Trainee Availability" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full sm:w-auto", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -20460,28 +20467,28 @@ const PeopleTab = ({
                 placeholder: "Search trainees...",
                 value: searchTerm,
                 onChange: (e) => setSearchTerm(e.target.value),
-                className: "w-full sm:w-64 px-3 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-md text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                className: `w-full sm:w-64 px-3 py-2 pl-10 rounded-md text-sm ${inputClass}`
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "absolute left-3 top-2.5 w-4 h-4 text-gray-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "absolute left-3 top-2.5 w-4 h-4 text-slate-400", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" }) }),
             searchTerm && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 onClick: () => setSearchTerm(""),
-                className: "absolute right-3 top-2.5 text-gray-400 hover:text-white transition-colors",
+                className: "absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors",
                 children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-4 h-4", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M6 18L18 6M6 6l12 12" }) })
               }
             )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "availability-filter", className: "text-sm font-medium text-gray-300 whitespace-nowrap", children: "Course:" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "availability-filter", className: "text-sm font-medium text-slate-300 whitespace-nowrap", children: "Course:" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
               {
                 id: "availability-filter",
                 value: availabilityFilter,
                 onChange: (e) => setAvailabilityFilter(e.target.value),
-                className: "px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all",
+                className: `px-3 py-2 rounded-md text-sm ${inputClass}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "all", children: "All Courses" }),
                   allCourses.map((course) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: course, children: course }, course))
@@ -20490,82 +20497,84 @@ const PeopleTab = ({
             )
           ] })
         ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AvailabilityCard,
-          {
-            title: "Available Trainees",
-            trainees: filteredAvailableTrainees,
-            color: "text-green-400",
-            bgColor: "bg-green-900/20",
-            borderColor: "border-green-700",
-            hoverBgColor: "hover:bg-green-900/30",
-            hoverBorderColor: "hover:border-green-600",
-            courseColors
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AvailabilityCard,
-          {
-            title: "Unavailable Trainees",
-            trainees: filteredUnavailableTrainees,
-            color: "text-red-400",
-            bgColor: "bg-red-900/20",
-            borderColor: "border-red-700",
-            hoverBgColor: "hover:bg-red-900/30",
-            hoverBorderColor: "hover:border-red-600",
-            courseColors
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          AvailabilityCard,
-          {
-            title: "Paused Trainees",
-            trainees: filteredPausedTrainees,
-            color: "text-yellow-400",
-            bgColor: "bg-yellow-900/20",
-            borderColor: "border-yellow-700",
-            hoverBgColor: "hover:bg-yellow-900/30",
-            hoverBorderColor: "hover:border-yellow-600",
-            courseColors
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 grid grid-cols-1 md:grid-cols-4 gap-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 rounded-lg p-4 border border-gray-600", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Total Trainees" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-white", children: traineesData.length })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionBody, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            AvailabilityCard,
+            {
+              title: "Available Trainees",
+              trainees: filteredAvailableTrainees,
+              color: "text-green-400",
+              bgColor: "bg-green-900/20",
+              borderColor: "border-green-700",
+              hoverBgColor: "hover:bg-green-900/30",
+              hoverBorderColor: "hover:border-green-600",
+              courseColors
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            AvailabilityCard,
+            {
+              title: "Unavailable Trainees",
+              trainees: filteredUnavailableTrainees,
+              color: "text-red-400",
+              bgColor: "bg-red-900/20",
+              borderColor: "border-red-700",
+              hoverBgColor: "hover:bg-red-900/30",
+              hoverBorderColor: "hover:border-red-600",
+              courseColors
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            AvailabilityCard,
+            {
+              title: "Paused Trainees",
+              trainees: filteredPausedTrainees,
+              color: "text-yellow-400",
+              bgColor: "bg-yellow-900/20",
+              borderColor: "border-yellow-700",
+              hoverBgColor: "hover:bg-yellow-900/30",
+              hoverBorderColor: "hover:border-yellow-600",
+              courseColors
+            }
+          )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-green-700/20 rounded-lg p-4 border border-green-600", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-green-400", children: "Available" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-green-400", children: filteredAvailableTrainees.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-green-300", children: [
-            traineesData.length > 0 ? Math.round(filteredAvailableTrainees.length / traineesData.length * 100) : 0,
-            "%"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-red-700/20 rounded-lg p-4 border border-red-600", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-red-400", children: "Unavailable" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-red-400", children: filteredUnavailableTrainees.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-red-300", children: [
-            traineesData.length > 0 ? Math.round(filteredUnavailableTrainees.length / traineesData.length * 100) : 0,
-            "%"
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-yellow-700/20 rounded-lg p-4 border border-yellow-600", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-yellow-400", children: "Paused" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-yellow-400", children: filteredPausedTrainees.length }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-yellow-300", children: [
-            traineesData.length > 0 ? Math.round(filteredPausedTrainees.length / traineesData.length * 100) : 0,
-            "%"
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-6 grid grid-cols-1 md:grid-cols-4 gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/45 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-400", children: "Total Trainees" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-white", children: traineesData.length })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-green-400", children: "Available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-green-400", children: filteredAvailableTrainees.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-green-300", children: [
+              traineesData.length > 0 ? Math.round(filteredAvailableTrainees.length / traineesData.length * 100) : 0,
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-500/10 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-red-400", children: "Unavailable" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-red-400", children: filteredUnavailableTrainees.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-red-300", children: [
+              traineesData.length > 0 ? Math.round(filteredUnavailableTrainees.length / traineesData.length * 100) : 0,
+              "%"
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-yellow-400", children: "Paused" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-2xl font-bold text-yellow-400", children: filteredPausedTrainees.length }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-yellow-300", children: [
+              traineesData.length > 0 ? Math.round(filteredPausedTrainees.length / traineesData.length * 100) : 0,
+              "%"
+            ] })
           ] })
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Next Event Lists" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: sectionShell, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Next Event Lists" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionBody, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Flight", trainees: nextEventLists.flight }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – FTD", trainees: nextEventLists.ftd }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – CPT", trainees: nextEventLists.cpt }),
@@ -20574,40 +20583,40 @@ const PeopleTab = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – FTD", trainees: nextPlusOneLists.ftd }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – CPT", trainees: nextPlusOneLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Ground School", trainees: nextPlusOneLists.ground })
-      ] })
+      ] }) })
     ] })
   ] });
 };
 const CourseDistributionTable = ({ courseAnalysis }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Course Distribution Analysis" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-left py-3 px-4 text-gray-300 font-semibold", children: "Course" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Target %" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Actual %" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Deviation" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Possible" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Scheduled" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Efficiency" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Flight" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "FTD" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "CPT" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-right py-3 px-4 text-gray-300 font-semibold", children: "Ground" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "text-center py-3 px-4 text-gray-300 font-semibold", children: "Status" })
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-white", children: "Course Distribution Analysis" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-slate-700 bg-slate-950/60", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-left font-semibold text-slate-300", children: "Course" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Target %" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Actual %" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Deviation" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Possible" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Scheduled" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Efficiency" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Flight" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "FTD" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "CPT" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Ground" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-center font-semibold text-slate-300", children: "Status" })
       ] }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { children: courseAnalysis.map((course, index) => {
         const deviationColor = Math.abs(course.deviation) <= 5 ? "text-green-400" : Math.abs(course.deviation) <= 10 ? "text-amber-400" : "text-red-400";
         const efficiencyColor = (course.schedulingEfficiency || 0) >= 80 ? "text-green-400" : (course.schedulingEfficiency || 0) >= 60 ? "text-amber-400" : "text-red-400";
         const statusColor = course.status === "good" ? "text-green-400" : course.status === "fair" ? "text-amber-400" : "text-red-400";
         const statusIcon = course.status === "good" ? "✓" : course.status === "fair" ? "⚠" : "✗";
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-gray-700/50 hover:bg-gray-700/30", children: [
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "border-b border-slate-700/60 hover:bg-cyan-500/5", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 font-semibold text-white", children: course.courseName }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-right text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-right text-slate-300", children: [
             course.targetPercentage.toFixed(1),
             "%"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-right text-gray-300", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4 text-right text-slate-300", children: [
             course.actualPercentage.toFixed(1),
             "%"
           ] }),
@@ -20622,10 +20631,10 @@ const CourseDistributionTable = ({ courseAnalysis }) => {
             (course.schedulingEfficiency || 0).toFixed(0),
             "%"
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-gray-300", children: course.eventsByType.flight }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-gray-300", children: course.eventsByType.ftd }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-gray-300", children: course.eventsByType.cpt }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-gray-300", children: course.eventsByType.ground }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-slate-300", children: course.eventsByType.flight }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-slate-300", children: course.eventsByType.ftd }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-slate-300", children: course.eventsByType.cpt }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-right text-slate-300", children: course.eventsByType.ground }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: `py-3 px-4 text-center font-semibold ${statusColor}`, children: [
             statusIcon,
             " ",
@@ -20639,9 +20648,9 @@ const CourseDistributionTable = ({ courseAnalysis }) => {
 const PieChart = ({ data, title }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0);
   if (total === 0) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: title }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-center py-8", children: "No data available" })
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: title }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "px-5 py-8 text-center text-slate-400", children: "No data available" })
     ] });
   }
   let currentAngle = -90;
@@ -20657,9 +20666,9 @@ const PieChart = ({ data, title }) => {
     currentAngle += angle;
     return segment;
   });
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: title }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-8", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: title }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-8 p-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "200", height: "200", viewBox: "0 0 200 200", className: "transform -rotate-90", children: segments.map((segment, index) => {
         const startAngle = segment.startAngle * Math.PI / 180;
         const endAngle = segment.endAngle * Math.PI / 180;
@@ -20673,7 +20682,7 @@ const PieChart = ({ data, title }) => {
           {
             d: `M 100 100 L ${x1} ${y1} A 90 90 0 ${largeArc} 1 ${x2} ${y2} Z`,
             fill: segment.color,
-            stroke: "#1f2937",
+            stroke: "#0f172a",
             strokeWidth: "2",
             className: "hover:opacity-80 transition-opacity",
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("title", { children: `${segment.label}: ${segment.value} (${segment.percentage.toFixed(1)}%)` })
@@ -20688,11 +20697,11 @@ const PieChart = ({ data, title }) => {
             style: { backgroundColor: segment.color }
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-300", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-slate-300", children: [
           segment.label,
           ": ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: segment.value }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-500 ml-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-slate-500 ml-1", children: [
             "(",
             segment.percentage.toFixed(1),
             "%)"
@@ -20775,9 +20784,9 @@ const CourseMetricsTab = ({
     };
   }, [date, events, traineesData, activeCourses, traineeCourseLookup]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Events per Course (Excl. Ground School)" }),
-      courseStats.eventsPerCourse.size > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: Array.from(courseStats.eventsPerCourse.entries()).sort().map(([course, count]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Events per Course (Excl. Ground School)" }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: courseStats.eventsPerCourse.size > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: Array.from(courseStats.eventsPerCourse.entries()).sort().map(([course, count]) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         InteractiveStatCard,
         {
           title: course,
@@ -20787,7 +20796,7 @@ const CourseMetricsTab = ({
           onPersonClick: onNavigateAndSelectPerson
         },
         course
-      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 text-center py-8", children: "No events found for active courses." })
+      )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-center text-slate-400 py-8", children: "No events found for active courses." }) })
     ] }),
     analysis && analysis.courseAnalysis && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(CourseDistributionTable, { courseAnalysis: analysis.courseAnalysis }),
@@ -20816,18 +20825,18 @@ const CourseMetricsTab = ({
         )
       ] })
     ] }),
-    !analysis && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700 text-center", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "📊" }),
+    !analysis && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-12 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-lg font-bold text-cyan-200", children: "BI" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-semibold text-white mb-2", children: "Build Analysis Required" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mb-6", children: "Course distribution analysis and pie charts will appear here after you run a DFP build." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: 'Click "NEO - Build" in the Priorities page to generate a build and see detailed course metrics.' })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400 mb-6", children: "Course distribution analysis and pie charts will appear here after you run a DFP build." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-500", children: 'Click "NEO - Build" in the Priorities page to generate a build and see detailed course metrics.' })
     ] })
   ] });
 };
-const StatCard$1 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-medium text-gray-400 uppercase tracking-wider", children: title }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-2xl font-bold text-white whitespace-nowrap", children: value }),
-  description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-gray-500", children: description })
+const StatCard$1 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400", children: title }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 whitespace-nowrap text-2xl font-bold text-white", children: value }),
+  description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description })
 ] });
 const LimitingFactorsSection = ({ courseAnalysis }) => {
   const totalLimitingFactors = {
@@ -20847,103 +20856,105 @@ const LimitingFactorsSection = ({ courseAnalysis }) => {
     }
   });
   const hasLimitingFactors = Object.values(totalLimitingFactors).some((v) => v > 0);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Scheduling Bottlenecks" }),
-    hasLimitingFactors ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-900/20 border border-amber-700 rounded-lg p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-amber-400 font-semibold mb-3 flex items-center", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Scheduling Bottlenecks" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-5", children: hasLimitingFactors ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-amber-500/10 border border-amber-500/40 rounded-lg p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-amber-300 font-semibold mb-3 flex items-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-2", children: "⚠" }),
         " Scheduling Constraints Detected"
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "space-y-2 text-sm", children: [
-        totalLimitingFactors.insufficientInstructors > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.insufficientInstructors > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Insufficient Instructors:" }),
           " ",
           totalLimitingFactors.insufficientInstructors,
           " events could not be scheduled due to lack of available instructors"
         ] }),
-        totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No Aircraft Slots:" }),
           " ",
           totalLimitingFactors.noAircraftSlots,
           " flight events could not be scheduled due to lack of available aircraft"
         ] }),
-        totalLimitingFactors.noFtdSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.noFtdSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No FTD Slots:" }),
           " ",
           totalLimitingFactors.noFtdSlots,
           " FTD events could not be scheduled due to lack of available simulators"
         ] }),
-        totalLimitingFactors.noCptSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.noCptSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No CPT Slots:" }),
           " ",
           totalLimitingFactors.noCptSlots,
           " CPT events could not be scheduled due to lack of available simulators"
         ] }),
-        totalLimitingFactors.traineeLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.traineeLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Trainee Daily Limit:" }),
           " ",
           totalLimitingFactors.traineeLimit,
           " events could not be scheduled because trainees reached their daily event limit"
         ] }),
-        totalLimitingFactors.instructorLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.instructorLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Instructor Daily Limit:" }),
           " ",
           totalLimitingFactors.instructorLimit,
           " events could not be scheduled because instructors reached their daily event limit"
         ] }),
-        totalLimitingFactors.noTimeSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-gray-300", children: [
+        totalLimitingFactors.noTimeSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No Suitable Time Slots:" }),
           " ",
           totalLimitingFactors.noTimeSlots,
           " events could not be scheduled due to turnaround time conflicts or unavailability"
         ] })
       ] })
-    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-green-900/20 border border-green-700 rounded-lg p-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-green-400 font-semibold mb-2 flex items-center", children: [
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-emerald-500/10 border border-emerald-500/40 rounded-lg p-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-emerald-300 font-semibold mb-2 flex items-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "mr-2", children: "✓" }),
         " No Scheduling Constraints"
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 text-sm", children: "All possible events were successfully scheduled without hitting any resource or personnel limits." })
-    ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-300 text-sm", children: "All possible events were successfully scheduled without hitting any resource or personnel limits." })
+    ] }) })
   ] });
 };
 const TimeDistributionChart = ({ timeDistribution }) => {
   const eventsByHour = timeDistribution.eventsByHour instanceof Map ? timeDistribution.eventsByHour : new Map(Object.entries(timeDistribution.eventsByHour).map(([k, v]) => [parseInt(k), v]));
   const maxEvents = Math.max(...Array.from(eventsByHour.values()), 0);
   const hours = Array.from({ length: 24 }, (_, i) => i).filter((hour) => eventsByHour.get(hour) && eventsByHour.get(hour) > 0);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Time Distribution" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 mb-4", children: [
-      "Uniformity Score: ",
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sky-400 font-semibold", children: [
-        (timeDistribution.uniformityScore * 100).toFixed(0),
-        "%"
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Time Distribution" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-400", children: [
+        "Uniformity Score: ",
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-semibold text-cyan-300", children: [
+          (timeDistribution.uniformityScore * 100).toFixed(0),
+          "%"
+        ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative h-64 flex items-end justify-start gap-2 px-4", children: hours.map((hour) => {
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative h-64 flex items-end justify-start gap-2 px-5 py-5", children: hours.map((hour) => {
       const count = eventsByHour.get(hour) || 0;
       const heightPx = maxEvents > 0 ? count / maxEvents * 240 : 0;
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-end flex-1 min-w-[40px]", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "div",
           {
-            className: "w-full bg-sky-500 rounded-t transition-all hover:bg-sky-400 flex items-start justify-center",
+            className: "w-full bg-cyan-500 rounded-t transition-all hover:bg-cyan-400 flex items-start justify-center",
             style: { height: `${heightPx}px`, minHeight: "30px" },
             title: `${hour.toString().padStart(2, "0")}:00 - ${count} events`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-white font-semibold pt-1", children: count })
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-gray-400 mt-1", children: hour.toString().padStart(2, "0") })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-slate-400 mt-1", children: hour.toString().padStart(2, "0") })
       ] }, hour);
     }) })
   ] });
 };
 const InsightsSection = ({ insights }) => {
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-sky-400 mb-4", children: "Insights & Recommendations" }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: insights.map((insight, index) => {
-      const bgColor = insight.type === "success" ? "bg-green-900/20 border-green-700" : insight.type === "warning" ? "bg-amber-900/20 border-amber-700" : insight.type === "error" ? "bg-red-900/20 border-red-700" : "bg-blue-900/20 border-blue-700";
-      const textColor = insight.type === "success" ? "text-green-400" : insight.type === "warning" ? "text-amber-400" : insight.type === "error" ? "text-red-400" : "text-blue-400";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Insights & Recommendations" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4 p-5", children: insights.map((insight, index) => {
+      const bgColor = insight.type === "success" ? "bg-emerald-500/10 border-emerald-500/40" : insight.type === "warning" ? "bg-amber-500/10 border-amber-500/40" : insight.type === "error" ? "bg-red-500/10 border-red-500/40" : "bg-cyan-500/10 border-cyan-500/40";
+      const textColor = insight.type === "success" ? "text-emerald-300" : insight.type === "warning" ? "text-amber-300" : insight.type === "error" ? "text-red-300" : "text-cyan-300";
       const icon = insight.type === "success" ? "✓" : insight.type === "warning" ? "⚠" : insight.type === "error" ? "✗" : "ℹ";
       return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `border rounded-lg p-4 ${bgColor}`, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: `font-semibold mb-2 flex items-center ${textColor}`, children: [
@@ -20951,7 +20962,7 @@ const InsightsSection = ({ insights }) => {
           " ",
           insight.message
         ] }),
-        insight.recommendation && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300 text-sm", children: [
+        insight.recommendation && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-slate-300 text-sm", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Recommendation:" }),
           " ",
           insight.recommendation
@@ -20961,6 +20972,8 @@ const InsightsSection = ({ insights }) => {
   ] });
 };
 const BuildAnalyticsTab = ({ events, analysis }) => {
+  const sectionClass2 = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
+  const legendClass = "px-2 text-lg font-semibold text-white";
   const formattedBuildDate = reactExports.useMemo(() => {
     if (!analysis?.buildDate) return "";
     const [year, month, day] = analysis.buildDate.split("-").map(Number);
@@ -20975,7 +20988,7 @@ const BuildAnalyticsTab = ({ events, analysis }) => {
   const tilesStats = reactExports.useMemo(() => {
     const flightTiles = events.filter((e) => e.type === "flight").length;
     const ftdTiles = events.filter((e) => e.type === "ftd").length;
-    const standbyEvents = events.filter((e) => e.resourceId.startsWith("STBY")).length;
+    const standbyEvents = events.filter((e) => e.resourceId?.startsWith("STBY")).length;
     return {
       flightTiles,
       ftdTiles,
@@ -20985,42 +20998,42 @@ const BuildAnalyticsTab = ({ events, analysis }) => {
   }, [events]);
   if (!analysis) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xl font-semibold text-sky-400 mb-4", children: "Tiles" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Tiles" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total FTD Tiles", value: tilesStats.ftdTiles }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Combined Flight/FTD", value: tilesStats.combinedTiles }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700 text-center", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-6xl mb-4", children: "📊" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-12 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-lg font-bold text-cyan-200", children: "BI" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-2xl font-semibold text-white mb-2", children: "No Build Analysis Available" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 mb-6", children: "Build analytics will appear here after you run a DFP build." }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-500", children: 'Click "NEO - Build" in the Priorities page to generate a build and see detailed analytics including:' }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "text-sm text-gray-500 mt-4 space-y-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "• Build Summary (events, aircraft, utilization)" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "• Scheduling Bottlenecks" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "• Time Distribution Analysis" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "• Insights & Recommendations" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400 mb-6", children: "Build analytics will appear here after you run a DFP build." }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-500", children: 'Click "NEO - Build" in the Priorities page to generate a build and see detailed analytics including:' }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "text-sm text-slate-500 mt-4 space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Build Summary (events, aircraft, utilization)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Scheduling Bottlenecks" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Time Distribution Analysis" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Insights & Recommendations" })
         ] })
       ] })
     ] });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xl font-semibold text-sky-400 mb-4", children: "Tiles" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Tiles" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total FTD Tiles", value: tilesStats.ftdTiles }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Combined Flight/FTD", value: tilesStats.combinedTiles }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-xl font-semibold text-sky-400 mb-4", children: "Build Summary" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: sectionClass2, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Build Summary" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Build Date", value: formattedBuildDate }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Events", value: analysis.totalEvents }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Aircraft Available", value: analysis.availableAircraft }),
@@ -21391,13 +21404,13 @@ const StatCard = ({
   value,
   sub,
   color = "text-white"
-}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-4", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 uppercase tracking-wide", children: label }),
+}) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs uppercase tracking-wide text-slate-400", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: `text-2xl font-bold mt-1 ${color}`, children: value }),
-  sub && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500 mt-0.5", children: sub })
+  sub && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-0.5 text-xs text-slate-500", children: sub })
 ] });
-const SCard = ({ title, children, className }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-800 border border-gray-700 rounded-lg p-4 ${className || ""}`, children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-gray-300 mb-3", children: title }),
+const SCard = ({ title, children, className }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `rounded-lg border border-cyan-500/20 bg-slate-900/80 p-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)] ${className || ""}`, children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "mb-3 text-sm font-semibold text-white", children: title }),
   children
 ] });
 const Tag = ({ text, type = "gray" }) => {
@@ -22926,22 +22939,22 @@ const TrainingIntelligenceTab = () => {
         }
       }
     ),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-white font-bold text-lg leading-tight", children: "Training Intelligence Engine" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs", children: "Offline PT-051 analytics · all data stored in database" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400 text-xs", children: "Offline PT-051 analytics · all data stored in database" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-gray-400 text-sm whitespace-nowrap", children: "Course:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-slate-400 text-sm whitespace-nowrap", children: "Course:" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
               value: selectedCourse2,
               onChange: (e) => setSelectedCourse(e.target.value),
               disabled: isRunning,
-              className: "bg-gray-700 border border-gray-600 text-white text-sm rounded-md px-3 py-1.5 focus:outline-none focus:border-blue-500",
+              className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-400",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— All Courses —" }),
                 courses.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: c.name, children: [
@@ -22959,7 +22972,7 @@ const TrainingIntelligenceTab = () => {
           {
             onClick: () => setShowThresholdPanel(true),
             title: "Configure analytics thresholds",
-            className: "flex items-center gap-1.5 px-3 py-2 rounded-md text-sm bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-300 hover:text-white transition-all",
+            className: "flex items-center gap-1.5 rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-slate-300 transition-all hover:border-cyan-500/45 hover:bg-slate-700 hover:text-white",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { width: "14", height: "14", viewBox: "0 0 20 20", fill: "currentColor", className: "flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { fillRule: "evenodd", d: "M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z", clipRule: "evenodd" }) }),
               "Thresholds"
@@ -22971,7 +22984,7 @@ const TrainingIntelligenceTab = () => {
           {
             onClick: handleRunAnalytics,
             disabled: isRunning,
-            className: `flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? "bg-gray-600 text-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"}`,
+            className: `flex items-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-all ${isRunning ? "bg-slate-700 text-slate-400 cursor-not-allowed" : "bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer"}`,
             children: isRunning ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "animate-spin inline-block", children: "\\u27F3" }),
               " Running..."
@@ -22979,12 +22992,12 @@ const TrainingIntelligenceTab = () => {
           }
         )
       ] }),
-      runProgress && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 bg-blue-900/30 border border-blue-700 rounded px-3 py-2 text-blue-300 text-sm", children: runProgress }),
-      error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 bg-red-900/30 border border-red-700 rounded px-3 py-2 text-red-300 text-sm flex items-center justify-between", children: [
+      runProgress && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-cyan-200 text-sm", children: runProgress }),
+      error && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3 flex items-center justify-between rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-red-300 text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: error }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setError(null), className: "text-red-400 hover:text-red-200 ml-3", children: "×" })
       ] }),
-      recentRuns.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-3 text-xs text-gray-500", children: recentRuns.slice(0, 3).map((run) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
+      recentRuns.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 flex flex-wrap gap-3 text-xs text-slate-500", children: recentRuns.slice(0, 3).map((run) => /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "flex items-center gap-1", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: run.status === "complete" ? "text-emerald-500" : run.status === "failed" ? "text-red-500" : "text-yellow-500", children: "•" }),
         run.courseFilter || "All",
         " · ",
@@ -22994,24 +23007,24 @@ const TrainingIntelligenceTab = () => {
         " records"
       ] }, run.id)) })
     ] }),
-    !loading && !summary && !isRunning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-10 text-center", children: [
+    !loading && !summary && !isRunning && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-10 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-white font-semibold text-lg", children: "No analytics data yet" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-400 text-sm mt-1 mb-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-slate-400 text-sm mt-1 mb-4", children: [
         "Select a course and click ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: "Run Analytics" }),
         " to process PT-051 data."
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleRunAnalytics, className: "bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-md text-sm font-semibold", children: "Run Analytics Now" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleRunAnalytics, className: "rounded-md bg-cyan-600 px-5 py-2 text-sm font-semibold text-white hover:bg-cyan-500", children: "Run Analytics Now" })
     ] }),
-    loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 border border-gray-700 rounded-lg p-10 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 animate-pulse", children: "Loading analytics data..." }) }),
+    loading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-10 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400 animate-pulse", children: "Loading analytics data..." }) }),
     !loading && summary && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-1 border-b-2 border-gray-700 mt-2", children: tabs.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-cyan-500/20 bg-slate-900/80 p-2 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: tabs.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "button",
         {
           onClick: () => setActiveTab(tab.id),
-          className: `flex items-center gap-1.5 px-6 py-2.5 text-sm font-semibold rounded-t-lg transition-all relative ${activeTab === tab.id ? "bg-gray-800 text-white border border-b-0 border-blue-500 shadow-[0_-2px_0_0_#3b82f6_inset] -mb-px pb-[11px]" : "text-gray-300 hover:text-white hover:bg-gray-800/60 border border-transparent hover:border-gray-600 border-b-0"}`,
+          className: `relative flex items-center gap-1.5 rounded-md border px-6 py-2.5 text-sm font-semibold transition-all ${activeTab === tab.id ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.12)]" : "border-slate-700 bg-slate-950/70 text-slate-300 hover:border-cyan-500/45 hover:bg-cyan-500/10 hover:text-white"}`,
           children: [
-            activeTab === tab.id && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 rounded-t-sm" }),
+            activeTab === tab.id && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute inset-x-3 bottom-0 h-0.5 rounded-t-sm bg-cyan-400" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: tab.label }),
             tab.badge !== void 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-1 bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none", children: tab.badge })
           ]
@@ -24597,18 +24610,18 @@ const ACHistoryIntelligencePanel = ({
     loadCodesFromDB();
   }, [loadCodesFromDB]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-    codesError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-4 py-2 bg-amber-900/30 border border-amber-700/60 rounded text-amber-200 text-sm flex items-center gap-3", children: [
+    codesError && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: codesError }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           onClick: loadCodesFromDB,
-          className: "ml-auto px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold transition-colors",
+          className: "ml-auto rounded-md border border-slate-600 bg-slate-800 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-slate-700",
           children: "Retry"
         }
       )
     ] }),
-    codesLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-4 py-2 bg-gray-800 border border-gray-700 rounded text-gray-300 text-sm", children: "Loading cancellation code details..." }),
+    codesLoading && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-cyan-500/20 bg-slate-900/80 px-4 py-3 text-sm text-slate-300 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: "Loading cancellation code details..." }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       ACHistoryAircraftAvailability,
       {
@@ -24656,27 +24669,33 @@ const BuildIntelligenceView = (props) => {
     { id: "ac-history", label: "AC History" },
     { id: "managerial-analytics", label: "Managerial Analytics" }
   ];
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col h-full", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("header", { className: "p-6 pb-0", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Build Intelligence" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-lg text-gray-400", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex flex-col overflow-hidden bg-[#111827] text-slate-100", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-full flex-col", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "border-b border-slate-700/60 bg-[#111827] px-6 py-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "h-10 w-1 rounded-full bg-cyan-300", "aria-hidden": "true" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70", children: "NEO Build" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "text-3xl font-bold text-white", children: "Build Intelligence" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm text-slate-300", children: [
         "Comprehensive analysis for DFP on ",
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200 font-semibold", children: formattedDate })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-white", children: formattedDate })
       ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 pt-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex space-x-1", "aria-label": "Tabs", children: tabs.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 pt-5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-slate-900/80 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.22)]", children: /* @__PURE__ */ jsxRuntimeExports.jsx("nav", { className: "flex flex-wrap gap-2", "aria-label": "Build intelligence tabs", children: tabs.map((tab) => /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         onClick: () => setActiveTab(tab.id),
         className: `
-                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
-                    ${activeTab === tab.id ? "bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg" : "bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500"}
+                    min-w-[170px] rounded-md border px-4 py-2.5 text-sm font-semibold transition-all duration-200
+                    ${activeTab === tab.id ? "border-cyan-400/70 bg-cyan-500/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.12)]" : "border-slate-700 bg-slate-950/70 text-slate-300 hover:border-cyan-500/45 hover:bg-cyan-500/10 hover:text-white"}
                   `,
         children: tab.label
       },
       tab.id
     )) }) }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-w-7xl mx-auto w-full", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mx-auto w-full max-w-7xl", children: [
       activeTab === "people" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         PeopleTab,
         {

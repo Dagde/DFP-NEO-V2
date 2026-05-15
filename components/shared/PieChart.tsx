@@ -10,9 +10,11 @@ const PieChart: React.FC<PieChartProps> = ({ data, title }) => {
   
   if (total === 0) {
     return (
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-sky-400 mb-4">{title}</h2>
-        <p className="text-gray-400 text-center py-8">No data available</p>
+      <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+        <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
+        </div>
+        <p className="px-5 py-8 text-center text-slate-400">No data available</p>
       </div>
     );
   }
@@ -32,9 +34,11 @@ const PieChart: React.FC<PieChartProps> = ({ data, title }) => {
   });
   
   return (
-    <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-      <h2 className="text-xl font-semibold text-sky-400 mb-4">{title}</h2>
-      <div className="flex items-center justify-center gap-8">
+    <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+      <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+        <h2 className="text-lg font-semibold text-white">{title}</h2>
+      </div>
+      <div className="flex items-center justify-center gap-8 p-5">
         {/* Pie Chart SVG */}
         <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
           {segments.map((segment, index) => {
@@ -51,7 +55,7 @@ const PieChart: React.FC<PieChartProps> = ({ data, title }) => {
                 <path
                   d={`M 100 100 L ${x1} ${y1} A 90 90 0 ${largeArc} 1 ${x2} ${y2} Z`}
                   fill={segment.color}
-                  stroke="#1f2937"
+                  stroke="#0f172a"
                   strokeWidth="2"
                   className="hover:opacity-80 transition-opacity"
                 >
@@ -70,9 +74,9 @@ const PieChart: React.FC<PieChartProps> = ({ data, title }) => {
                 className="w-4 h-4 rounded" 
                 style={{ backgroundColor: segment.color }}
               />
-              <span className="text-sm text-gray-300">
+              <span className="text-sm text-slate-300">
                 {segment.label}: <span className="font-semibold text-white">{segment.value}</span>
-                <span className="text-gray-500 ml-1">({segment.percentage.toFixed(1)}%)</span>
+                <span className="text-slate-500 ml-1">({segment.percentage.toFixed(1)}%)</span>
               </span>
             </div>
           ))}

@@ -32,24 +32,26 @@ interface CourseDistributionTableProps {
 
 const CourseDistributionTable: React.FC<CourseDistributionTableProps> = ({ courseAnalysis }) => {
   return (
-    <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-      <h2 className="text-xl font-semibold text-sky-400 mb-4">Course Distribution Analysis</h2>
-      <div className="overflow-x-auto">
+    <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+      <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
+        <h2 className="text-xl font-semibold text-white">Course Distribution Analysis</h2>
+      </div>
+      <div className="overflow-x-auto p-5">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-gray-700">
-              <th className="text-left py-3 px-4 text-gray-300 font-semibold">Course</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Target %</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Actual %</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Deviation</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Possible</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Scheduled</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Efficiency</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Flight</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">FTD</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">CPT</th>
-              <th className="text-right py-3 px-4 text-gray-300 font-semibold">Ground</th>
-              <th className="text-center py-3 px-4 text-gray-300 font-semibold">Status</th>
+            <tr className="border-b border-slate-700 bg-slate-950/60">
+              <th className="px-4 py-3 text-left font-semibold text-slate-300">Course</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Target %</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Actual %</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Deviation</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Possible</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Scheduled</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Efficiency</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Flight</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">FTD</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">CPT</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">Ground</th>
+              <th className="px-4 py-3 text-center font-semibold text-slate-300">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -67,10 +69,10 @@ const CourseDistributionTable: React.FC<CourseDistributionTableProps> = ({ cours
                                course.status === 'fair' ? '⚠' : '✗';
               
               return (
-                <tr key={index} className="border-b border-gray-700/50 hover:bg-gray-700/30">
+                <tr key={index} className="border-b border-slate-700/60 hover:bg-cyan-500/5">
                   <td className="py-3 px-4 font-semibold text-white">{course.courseName}</td>
-                  <td className="py-3 px-4 text-right text-gray-300">{course.targetPercentage.toFixed(1)}%</td>
-                  <td className="py-3 px-4 text-right text-gray-300">{course.actualPercentage.toFixed(1)}%</td>
+                  <td className="py-3 px-4 text-right text-slate-300">{course.targetPercentage.toFixed(1)}%</td>
+                  <td className="py-3 px-4 text-right text-slate-300">{course.actualPercentage.toFixed(1)}%</td>
                   <td className={`py-3 px-4 text-right font-semibold ${deviationColor}`}>
                     {course.deviation > 0 ? '+' : ''}{course.deviation.toFixed(1)}%
                   </td>
@@ -79,10 +81,10 @@ const CourseDistributionTable: React.FC<CourseDistributionTableProps> = ({ cours
                   <td className={`py-3 px-4 text-right font-semibold ${efficiencyColor}`}>
                     {(course.schedulingEfficiency || 0).toFixed(0)}%
                   </td>
-                  <td className="py-3 px-4 text-right text-gray-300">{course.eventsByType.flight}</td>
-                  <td className="py-3 px-4 text-right text-gray-300">{course.eventsByType.ftd}</td>
-                  <td className="py-3 px-4 text-right text-gray-300">{course.eventsByType.cpt}</td>
-                  <td className="py-3 px-4 text-right text-gray-300">{course.eventsByType.ground}</td>
+                  <td className="py-3 px-4 text-right text-slate-300">{course.eventsByType.flight}</td>
+                  <td className="py-3 px-4 text-right text-slate-300">{course.eventsByType.ftd}</td>
+                  <td className="py-3 px-4 text-right text-slate-300">{course.eventsByType.cpt}</td>
+                  <td className="py-3 px-4 text-right text-slate-300">{course.eventsByType.ground}</td>
                   <td className={`py-3 px-4 text-center font-semibold ${statusColor}`}>
                     {statusIcon} {course.status.charAt(0).toUpperCase() + course.status.slice(1)}
                   </td>

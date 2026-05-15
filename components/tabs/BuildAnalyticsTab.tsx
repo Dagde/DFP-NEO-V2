@@ -66,6 +66,9 @@ interface BuildAnalyticsTabProps {
 }
 
 const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis }) => {
+  const sectionClass = 'rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
+  const legendClass = 'px-2 text-lg font-semibold text-white';
+
   // Format build date to DD-Mmm-YY
   const formattedBuildDate = useMemo(() => {
     if (!analysis?.buildDate) return '';
@@ -83,7 +86,7 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
   const tilesStats = useMemo(() => {
     const flightTiles = events.filter(e => e.type === 'flight').length;
     const ftdTiles = events.filter(e => e.type === 'ftd').length;
-    const standbyEvents = events.filter(e => e.resourceId.startsWith('STBY')).length;
+    const standbyEvents = events.filter(e => e.resourceId?.startsWith('STBY')).length;
 
     return {
       flightTiles,
@@ -97,9 +100,9 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
     return (
       <div className="space-y-6">
         {/* Tiles - always available from events */}
-        <fieldset className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-          <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Tiles</legend>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <fieldset className={sectionClass}>
+          <legend className={legendClass}>Tiles</legend>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Total Flight Tiles" value={tilesStats.flightTiles} />
             <StatCard title="Total FTD Tiles" value={tilesStats.ftdTiles} />
             <StatCard title="Combined Flight/FTD" value={tilesStats.combinedTiles} />
@@ -108,20 +111,20 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
         </fieldset>
 
         {/* Empty state for build analysis sections */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-12 border border-gray-700 text-center">
-          <div className="text-6xl mb-4">📊</div>
+        <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 p-12 text-center shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-lg font-bold text-cyan-200">BI</div>
           <h2 className="text-2xl font-semibold text-white mb-2">No Build Analysis Available</h2>
-          <p className="text-gray-400 mb-6">
+          <p className="text-slate-400 mb-6">
             Build analytics will appear here after you run a DFP build.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             Click "NEO - Build" in the Priorities page to generate a build and see detailed analytics including:
           </p>
-          <ul className="text-sm text-gray-500 mt-4 space-y-1">
-            <li>• Build Summary (events, aircraft, utilization)</li>
-            <li>• Scheduling Bottlenecks</li>
-            <li>• Time Distribution Analysis</li>
-            <li>• Insights & Recommendations</li>
+          <ul className="text-sm text-slate-500 mt-4 space-y-1">
+            <li>Build Summary (events, aircraft, utilization)</li>
+            <li>Scheduling Bottlenecks</li>
+            <li>Time Distribution Analysis</li>
+            <li>Insights & Recommendations</li>
           </ul>
         </div>
       </div>
@@ -131,9 +134,9 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
   return (
     <div className="space-y-6">
       {/* Tiles */}
-      <fieldset className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Tiles</legend>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <fieldset className={sectionClass}>
+        <legend className={legendClass}>Tiles</legend>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Total Flight Tiles" value={tilesStats.flightTiles} />
           <StatCard title="Total FTD Tiles" value={tilesStats.ftdTiles} />
           <StatCard title="Combined Flight/FTD" value={tilesStats.combinedTiles} />
@@ -142,9 +145,9 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
       </fieldset>
 
       {/* Build Summary */}
-      <fieldset className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Build Summary</legend>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <fieldset className={sectionClass}>
+        <legend className={legendClass}>Build Summary</legend>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
           <StatCard title="Build Date" value={formattedBuildDate} />
           <StatCard title="Total Events" value={analysis.totalEvents} />
           <StatCard title="Aircraft Available" value={analysis.availableAircraft} />

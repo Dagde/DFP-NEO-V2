@@ -113,29 +113,37 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   ];
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
-      <div className="flex flex-col h-full">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#111827] text-slate-100">
+      <div className="flex h-full flex-col">
         {/* Header */}
-        <header className="p-6 pb-0">
-          <h1 className="text-3xl font-bold text-white">Build Intelligence</h1>
-          <p className="text-lg text-gray-400">
-            Comprehensive analysis for DFP on <span className="text-gray-200 font-semibold">{formattedDate}</span>
-          </p>
+        <header className="border-b border-slate-700/60 bg-[#111827] px-6 py-5">
+          <div className="mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+            <div className="mb-2 flex items-center gap-3">
+              <span className="h-10 w-1 rounded-full bg-cyan-300" aria-hidden="true" />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-cyan-200/70">NEO Build</p>
+                <h1 className="text-3xl font-bold text-white">Build Intelligence</h1>
+              </div>
+            </div>
+            <p className="text-sm text-slate-300">
+              Comprehensive analysis for DFP on <span className="font-semibold text-white">{formattedDate}</span>
+            </p>
+          </div>
         </header>
 
         {/* Tab Navigation */}
-        <div className="px-6 pt-4">
-          <div className="border-b border-gray-700">
-            <nav className="flex space-x-1" aria-label="Tabs">
+        <div className="px-6 pt-5">
+          <div className="mx-auto max-w-7xl rounded-lg border border-cyan-500/25 bg-slate-900/80 p-3 shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
+            <nav className="flex flex-wrap gap-2" aria-label="Build intelligence tabs">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={`
-                    w-[180px] px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-all duration-200
+                    min-w-[170px] rounded-md border px-4 py-2.5 text-sm font-semibold transition-all duration-200
                     ${activeTab === tab.id
-                      ? 'bg-gray-900 text-white border-2 border-b-0 border-gray-500 shadow-lg'
-                      : 'bg-gray-700 text-gray-300 border-2 border-gray-600 hover:bg-gray-600 hover:text-white hover:border-gray-500'
+                      ? 'border-cyan-400/70 bg-cyan-500/15 text-white shadow-[0_0_0_1px_rgba(34,211,238,0.12)]'
+                      : 'border-slate-700 bg-slate-950/70 text-slate-300 hover:border-cyan-500/45 hover:bg-cyan-500/10 hover:text-white'
                     }
                   `}
                 >
@@ -148,7 +156,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
 
         {/* Tab Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-7xl mx-auto w-full">
+          <div className="mx-auto w-full max-w-7xl">
             {activeTab === 'people' && (
               <PeopleTab
                 date={props.date}

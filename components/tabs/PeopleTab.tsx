@@ -334,24 +334,33 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   const filteredAvailableTrainees = useMemo(() => filterTrainees(availableTrainees), [availableTrainees, availabilityFilter, searchTerm]);
   const filteredUnavailableTrainees = useMemo(() => filterTrainees(unavailableTrainees), [unavailableTrainees, availabilityFilter, searchTerm]);
   const filteredPausedTrainees = useMemo(() => filterTrainees(pausedTrainees), [pausedTrainees, availabilityFilter, searchTerm]);
+  const sectionShell = 'overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
+  const sectionHeader = 'border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4';
+  const sectionBody = 'p-5';
+  const fieldsetShell = 'rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
+  const legendClass = 'px-2 text-lg font-semibold text-white';
+  const inputClass = 'bg-slate-950 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all';
 
   return (
     <div className="space-y-6">
       {/* Personnel Unavailable */}
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-sky-400 mb-4">Personnel Unavailable</h2>
+      <div className={sectionShell}>
+        <div className={sectionHeader}>
+          <h2 className="text-lg font-semibold text-white">Personnel Unavailable</h2>
+        </div>
+        <div className={sectionBody}>
         {unavailableOnSelectedDate.length > 0 ? (
           <div className="max-h-60 overflow-y-auto pr-2">
             <ul className="space-y-3">
               {unavailableOnSelectedDate.map((item, index) => (
-                <li key={index} className="flex justify-between items-center p-3 bg-gray-700/50 rounded-md text-sm">
+                <li key={index} className="flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-950/45 p-3 text-sm">
                   <div className="flex items-center space-x-3">
-                    <span className="font-mono text-gray-500 w-12 text-right">{item.rank}</span>
+                    <span className="w-12 text-right font-mono text-slate-500">{item.rank}</span>
                     <span className="font-semibold text-white">{item.name}</span>
                   </div>
                   <div className="flex items-center space-x-4">
                     <span className="text-amber-300 font-medium">{item.period.reason}</span>
-                    <span className="font-mono text-gray-300 w-32 text-right">
+                    <span className="w-32 text-right font-mono text-slate-300">
                       {item.period.allDay ? 'All Day' : `${formatMilitaryTime(item.period.startTime)} - ${formatMilitaryTime(item.period.endTime)}`}
                     </span>
                   </div>
@@ -360,24 +369,28 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             </ul>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-4">No personnel are recorded as unavailable for this date.</p>
+          <p className="py-4 text-center text-slate-400">No personnel are recorded as unavailable for this date.</p>
         )}
+        </div>
       </div>
 
       {/* Waiting for Night Flying */}
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-sky-400 mb-4">Waiting for Night Flying</h2>
+      <div className={sectionShell}>
+        <div className={sectionHeader}>
+          <h2 className="text-lg font-semibold text-white">Waiting for Night Flying</h2>
+        </div>
+        <div className={sectionBody}>
         {traineesWaitingForNightFlying.length > 0 ? (
           <div className="max-h-60 overflow-y-auto pr-2">
             <ul className="space-y-3">
               {traineesWaitingForNightFlying.map(({ trainee, event }, index) => (
-                <li key={index} className="flex justify-between items-center p-3 bg-gray-700/50 rounded-md text-sm">
+                <li key={index} className="flex items-center justify-between rounded-md border border-slate-700/70 bg-slate-950/45 p-3 text-sm">
                   <div className="flex items-center space-x-3">
-                    <span className="font-mono text-gray-500 w-12 text-right">{trainee.rank}</span>
+                    <span className="w-12 text-right font-mono text-slate-500">{trainee.rank}</span>
                     <span className="font-semibold text-white">{trainee.name}</span>
                   </div>
                   <div className="flex items-center space-x-4">
-                    <span className="text-gray-300 font-medium">{trainee.course}</span>
+                    <span className="font-medium text-slate-300">{trainee.course}</span>
                     <span className="font-mono text-sky-400">{event.code}</span>
                   </div>
                 </li>
@@ -385,13 +398,14 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             </ul>
           </div>
         ) : (
-          <p className="text-gray-500 text-center py-4">No trainees are currently waiting for a night flying event.</p>
+          <p className="py-4 text-center text-slate-400">No trainees are currently waiting for a night flying event.</p>
         )}
+        </div>
       </div>
 
       {/* Instructors */}
-      <fieldset className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Instructors</legend>
+      <fieldset className={fieldsetShell}>
+        <legend className={legendClass}>Instructors</legend>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           <InteractiveStatCard
             title="Instructors with 4 Events"
@@ -432,8 +446,8 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       </fieldset>
 
       {/* Trainees */}
-      <fieldset className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Trainees</legend>
+      <fieldset className={fieldsetShell}>
+        <legend className={legendClass}>Trainees</legend>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <InteractiveStatCard
             title="Trainees with 0 Events"
@@ -474,9 +488,10 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
       </fieldset>
 
       {/* Trainee Availability */}
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 mb-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 space-y-4 sm:space-y-0">
-          <h2 className="text-xl font-semibold text-sky-400">Trainee Availability</h2>
+      <div className={`${sectionShell} mb-6`}>
+        <div className={sectionHeader}>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+          <h2 className="text-lg font-semibold text-white">Trainee Availability</h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
             <div className="relative w-full sm:w-auto">
               <input
@@ -484,15 +499,15 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
                 placeholder="Search trainees..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full sm:w-64 px-3 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-md text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                className={`w-full sm:w-64 px-3 py-2 pl-10 rounded-md text-sm ${inputClass}`}
               />
-              <svg className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-2.5 text-gray-400 hover:text-white transition-colors"
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -501,12 +516,12 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
               )}
             </div>
             <div className="flex items-center space-x-2">
-              <label htmlFor="availability-filter" className="text-sm font-medium text-gray-300 whitespace-nowrap">Course:</label>
+              <label htmlFor="availability-filter" className="text-sm font-medium text-slate-300 whitespace-nowrap">Course:</label>
               <select 
                 id="availability-filter"
                 value={availabilityFilter}
                 onChange={(e) => setAvailabilityFilter(e.target.value)}
-                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                className={`px-3 py-2 rounded-md text-sm ${inputClass}`}
               >
                 <option value="all">All Courses</option>
                 {allCourses.map(course => (
@@ -516,6 +531,8 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             </div>
           </div>
         </div>
+        </div>
+        <div className={sectionBody}>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AvailabilityCard 
@@ -552,25 +569,25 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         
         {/* Statistics */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gray-700/50 rounded-lg p-4 border border-gray-600">
-            <p className="text-sm text-gray-400">Total Trainees</p>
+          <div className="rounded-lg border border-slate-700 bg-slate-950/45 p-4">
+            <p className="text-sm text-slate-400">Total Trainees</p>
             <p className="text-2xl font-bold text-white">{traineesData.length}</p>
           </div>
-          <div className="bg-green-700/20 rounded-lg p-4 border border-green-600">
+          <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4">
             <p className="text-sm text-green-400">Available</p>
             <p className="text-2xl font-bold text-green-400">{filteredAvailableTrainees.length}</p>
             <p className="text-xs text-green-300">
               {traineesData.length > 0 ? Math.round((filteredAvailableTrainees.length / traineesData.length) * 100) : 0}%
             </p>
           </div>
-          <div className="bg-red-700/20 rounded-lg p-4 border border-red-600">
+          <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4">
             <p className="text-sm text-red-400">Unavailable</p>
             <p className="text-2xl font-bold text-red-400">{filteredUnavailableTrainees.length}</p>
             <p className="text-xs text-red-300">
               {traineesData.length > 0 ? Math.round((filteredUnavailableTrainees.length / traineesData.length) * 100) : 0}%
             </p>
           </div>
-          <div className="bg-yellow-700/20 rounded-lg p-4 border border-yellow-600">
+          <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4">
             <p className="text-sm text-yellow-400">Paused</p>
             <p className="text-2xl font-bold text-yellow-400">{filteredPausedTrainees.length}</p>
             <p className="text-xs text-yellow-300">
@@ -578,11 +595,15 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
             </p>
           </div>
         </div>
+        </div>
       </div>
 
       {/* Next Event Lists */}
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
-        <h2 className="text-xl font-semibold text-sky-400 mb-4">Next Event Lists</h2>
+      <div className={sectionShell}>
+        <div className={sectionHeader}>
+          <h2 className="text-lg font-semibold text-white">Next Event Lists</h2>
+        </div>
+        <div className={sectionBody}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <ListCard title="Next Event – Flight" trainees={nextEventLists.flight} />
           <ListCard title="Next Event – FTD" trainees={nextEventLists.ftd} />
@@ -592,6 +613,7 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
           <ListCard title="Next +1 – FTD" trainees={nextPlusOneLists.ftd} />
           <ListCard title="Next +1 – CPT" trainees={nextPlusOneLists.cpt} />
           <ListCard title="Next +1 – Ground School" trainees={nextPlusOneLists.ground} />
+        </div>
         </div>
       </div>
     </div>

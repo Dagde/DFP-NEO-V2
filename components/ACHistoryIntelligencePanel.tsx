@@ -56,11 +56,11 @@ const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
   return (
     <div className="space-y-6">
       {codesError && (
-        <div className="px-4 py-2 bg-amber-900/30 border border-amber-700/60 rounded text-amber-200 text-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
           <span>{codesError}</span>
           <button
             onClick={loadCodesFromDB}
-            className="ml-auto px-3 py-1 rounded bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold transition-colors"
+            className="ml-auto rounded-md border border-slate-600 bg-slate-800 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-slate-700"
           >
             Retry
           </button>
@@ -68,7 +68,7 @@ const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
       )}
 
       {codesLoading && (
-        <div className="px-4 py-2 bg-gray-800 border border-gray-700 rounded text-gray-300 text-sm">
+        <div className="rounded-lg border border-cyan-500/20 bg-slate-900/80 px-4 py-3 text-sm text-slate-300 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
           Loading cancellation code details...
         </div>
       )}

@@ -16,35 +16,36 @@ const InteractiveStatCard: React.FC<InteractiveStatCardProps> = ({
   onPersonClick 
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const cardClass = "relative flex flex-col rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
 
   if (personnelList.length === 0 && !description) {
     return (
-      <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">{title}</h3>
-        <p className="mt-2 text-4xl font-bold text-white">{value}</p>
-        {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
+      <div className={cardClass}>
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{title}</h3>
+        <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+        {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
       </div>
     );
   }
 
   return (
     <div 
-      className="relative bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700 flex flex-col"
+      className={`${cardClass} transition-all duration-200 hover:border-cyan-400/50 hover:bg-slate-900`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">{title}</h3>
-      <p className="mt-2 text-4xl font-bold text-white">{value}</p>
-      {description && <p className="mt-1 text-sm text-gray-500">{description}</p>}
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">{title}</h3>
+      <p className="mt-2 text-3xl font-bold text-white">{value}</p>
+      {description && <p className="mt-1 text-sm text-slate-400">{description}</p>}
 
       {isHovered && personnelList.length > 0 && (
-        <div className="absolute z-10 top-full left-0 mt-2 w-64 bg-gray-900 border border-sky-500 rounded-lg shadow-2xl p-2 max-h-60 overflow-y-auto animate-fade-in">
+        <div className="absolute left-0 top-full z-10 mt-2 max-h-60 w-64 overflow-y-auto rounded-lg border border-cyan-500/45 bg-slate-950 p-2 shadow-2xl animate-fade-in">
           <ul className="space-y-1">
             {personnelList.map(name => (
               <li key={name}>
                 <button 
                   onClick={() => onPersonClick(name)}
-                  className="w-full text-left p-2 rounded text-gray-300 hover:bg-sky-800 hover:text-white transition-colors text-sm"
+                  className="w-full rounded p-2 text-left text-sm text-slate-300 transition-colors hover:bg-cyan-500/15 hover:text-white"
                 >
                   {name.split(' – ')[0]}
                 </button>
