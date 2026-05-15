@@ -53,7 +53,7 @@ interface PrioritiesViewWithMenuProps {
   currencyNames: string[];
 }
 
-type PrioritiesSection = 'build-timeline' | 'resources-capacity' | 'people-rules' | 'course-demand' | 'directed-events';
+type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
@@ -62,34 +62,27 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
         {
             id: 'build-timeline' as const,
             step: '01',
-            label: 'Flying Windows',
-            shortLabel: 'Timeline',
-            description: 'Set the day, simulator and night windows before anything else.',
-        },
-        {
-            id: 'resources-capacity' as const,
-            step: '02',
-            label: 'Resource Capacity',
-            shortLabel: 'Resources',
-            description: 'Declare the aircraft, FTD and CPT capacity available to the build.',
+            label: 'Flying Windows & Capacity',
+            shortLabel: 'Time & Resources',
+            description: 'Set the day, simulator and night windows, then declare aircraft, FTD and CPT capacity before anything else.',
         },
         {
             id: 'people-rules' as const,
-            step: '03',
+            step: '02',
             label: 'Instructor Rules',
             shortLabel: 'People',
             description: 'Control how instructor preference or restriction should influence placement.',
         },
         {
             id: 'course-demand' as const,
-            step: '04',
+            step: '03',
             label: 'Course Demand',
             shortLabel: 'Courses',
             description: 'Weight the competing course demand after time and resources are known.',
         },
         {
             id: 'directed-events' as const,
-            step: '05',
+            step: '04',
             label: 'Directed Events',
             shortLabel: 'Exceptions',
             description: 'Manage SCT requests, high-priority events, optional SCT and remedial queues.',

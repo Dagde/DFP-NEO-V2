@@ -56,7 +56,7 @@ interface PrioritiesViewProps {
   remedialRequests?: RemedialRequest[];
   onToggleRemedialRequest?: (traineeId: number, eventCode: string) => void;
   currencyNames: string[];
-  activeSection?: 'build-timeline' | 'resources-capacity' | 'people-rules' | 'course-demand' | 'directed-events';
+  activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
 // FIX: Export component as a named const to fix module import error.
@@ -441,7 +441,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
        <>
            <div className="section-course-demand space-y-6">
             <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Third Input</p>
                 <h2 className="mt-1 text-xl font-semibold text-white">Course Demand</h2>
                 <p className="mt-1 text-sm text-slate-300">Set the relative course weighting after time windows, resources and people rules are known.</p>
             </div>
@@ -510,7 +510,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
            <div className="section-build-timeline space-y-6">
                 <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">First Input</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Time Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows</h2>
                         <p className="mt-1 text-sm text-slate-300">Set the time boundaries that govern where flight, FTD and night events may be placed.</p>
                     </div>
@@ -561,12 +561,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
                     </div>
                 </div>
-           </div>
 
-           <div className="section-resources-capacity space-y-6">
                 <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Second Input</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Capacity Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Resource Capacity</h2>
                         <p className="mt-1 text-sm text-slate-300">Declare the physical capacity available for this build before weighting the course demand.</p>
                     </div>
@@ -590,7 +588,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
            <div className="section-people-rules space-y-6">
                 <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg">
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Third Input</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Second Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Instructor Allocation Rules</h2>
                         <p className="mt-1 text-sm text-slate-300">Set how strongly the build should prefer or require assigned instructor groups for flight and FTD events.</p>
                     </div>
@@ -741,7 +739,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                    
         <div className="section-directed-events space-y-6">
         <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fifth Input</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Fourth Input</p>
             <h2 className="mt-1 text-xl font-semibold text-white">Directed Events</h2>
             <p className="mt-1 text-sm text-slate-300">Review hard requests and build exceptions after the normal course weighting is set.</p>
         </div>
