@@ -604,7 +604,7 @@ const sectionGroups: {
     description: 'Persistent scheduling policy, duty limits, turnarounds and enterprise rule sets. Daily build factors stay in NEO Build > Priorities.',
     accent: 'amber',
     defaultSection: 'scheduling-rules',
-    sections: ['scheduling-rules', 'platform-scheduling-rule-sets'],
+    sections: ['scheduling-rules'],
   },
   {
     label: 'Records & Data',
@@ -1535,6 +1535,12 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             <SettingsView {...props} hideHeader={true} activeSection="event-limits" />
                             <SettingsView {...props} hideHeader={true} activeSection="duty-turnaround" />
                             <SettingsView {...props} hideHeader={true} activeSection="business-rules" />
+                            <PlatformConfigurationSettings
+                                currentUserPermission={props.currentUserPermission}
+                                onShowSuccess={props.onShowSuccess}
+                                scrollTarget="platform-scheduling-rule-sets"
+                                sectionOnly={true}
+                            />
                         </div>
                     )}
 
@@ -1619,6 +1625,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
                             scrollTarget={activePlatformTarget}
+                            sectionOnly={true}
                         />
                     )}
                     {activeSection === 'appearance' && (

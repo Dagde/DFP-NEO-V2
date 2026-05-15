@@ -40997,14 +40997,14 @@ class LiveMusic {
   /**
        Establishes a connection to the specified model and returns a
        LiveMusicSession object representing that connection.
-
+  
        @experimental
-
+  
        @remarks
-
+  
        @param params - The parameters for establishing a connection to the model.
        @return A live session.
-
+  
        @example
        ```ts
        let model = 'models/lyria-realtime-exp';
@@ -41073,12 +41073,12 @@ class LiveMusicSession {
   /**
       Sets inputs to steer music generation. Updates the session's current
       weighted prompts.
-
+  
       @param params - Contains one property, `weightedPrompts`.
-
+  
         - `weightedPrompts` to send to the model; weights are normalized to
           sum to 1.0.
-
+  
       @experimental
      */
   async setWeightedPrompts(params) {
@@ -41091,12 +41091,12 @@ class LiveMusicSession {
   /**
       Sets a configuration to the model. Updates the session's current
       music generation config.
-
+  
       @param params - Contains one property, `musicGenerationConfig`.
-
+  
         - `musicGenerationConfig` to set in the model. Passing an empty or
       undefined config to the model will reset the config to defaults.
-
+  
       @experimental
      */
   async setMusicGenerationConfig(params) {
@@ -41147,7 +41147,7 @@ class LiveMusicSession {
   }
   /**
        Terminates the WebSocket connection.
-
+  
        @experimental
      */
   close() {
@@ -41199,15 +41199,15 @@ class Live {
   /**
        Establishes a connection to the specified model with the given
        configuration and returns a Session object representing that connection.
-
+  
        @experimental Built-in MCP support is an experimental feature, may change in
        future versions.
-
+  
        @remarks
-
+  
        @param params - The parameters for establishing a connection to the model.
        @return A live session.
-
+  
        @example
        ```ts
        let model: string;
@@ -41407,36 +41407,36 @@ class Session {
   }
   /**
       Send a message over the established connection.
-
+  
       @param params - Contains two **optional** properties, `turns` and
           `turnComplete`.
-
+  
         - `turns` will be converted to a `Content[]`
         - `turnComplete: true` [default] indicates that you are done sending
           content and expect a response. If `turnComplete: false`, the server
           will wait for additional messages before starting generation.
-
+  
       @experimental
-
+  
       @remarks
       There are two ways to send messages to the live API:
       `sendClientContent` and `sendRealtimeInput`.
-
+  
       `sendClientContent` messages are added to the model context **in order**.
       Having a conversation using `sendClientContent` messages is roughly
       equivalent to using the `Chat.sendMessageStream`, except that the state of
       the `chat` history is stored on the API server instead of locally.
-
+  
       Because of `sendClientContent`'s order guarantee, the model cannot respons
       as quickly to `sendClientContent` messages as to `sendRealtimeInput`
       messages. This makes the biggest difference when sending objects that have
       significant preprocessing time (typically images).
-
+  
       The `sendClientContent` message sends a `Content[]`
       which has more options than the `Blob` sent by `sendRealtimeInput`.
-
+  
       So the main use-cases for `sendClientContent` over `sendRealtimeInput` are:
-
+  
       - Sending anything that can't be represented as a `Blob` (text,
       `sendClientContent({turns="Hello?"}`)).
       - Managing turns when not using audio input and voice activity detection.
@@ -41461,23 +41461,23 @@ class Session {
   }
   /**
       Send a realtime message over the established connection.
-
+  
       @param params - Contains one property, `media`.
-
+  
         - `media` will be converted to a `Blob`
-
+  
       @experimental
-
+  
       @remarks
       Use `sendRealtimeInput` for realtime audio chunks and video frames (images).
-
+  
       With `sendRealtimeInput` the api will respond to audio automatically
       based on voice activity detection (VAD).
-
+  
       `sendRealtimeInput` is optimized for responsivness at the expense of
       deterministic ordering guarantees. Audio and video tokens are to the
       context when they become available.
-
+  
       Note: The Call signature expects a `Blob` object, but only a subset
       of audio and image mimetypes are allowed.
      */
@@ -41496,16 +41496,16 @@ class Session {
   }
   /**
       Send a function response message over the established connection.
-
+  
       @param params - Contains property `functionResponses`.
-
+  
         - `functionResponses` will be converted to a `functionResponses[]`
-
+  
       @remarks
       Use `sendFunctionResponse` to reply to `LiveServerToolCall` from the server.
-
+  
       Use {@link types.LiveConnectConfig#tools} to configure the callable functions.
-
+  
       @experimental
      */
   sendToolResponse(params) {
@@ -41517,9 +41517,9 @@ class Session {
   }
   /**
        Terminates the WebSocket connection.
-
+  
        @experimental
-
+  
        @example
        ```ts
        let model: string;
@@ -41534,7 +41534,7 @@ class Session {
            responseModalities: [Modality.AUDIO],
          }
        });
-
+  
        session.close();
        ```
      */
@@ -45310,7 +45310,7 @@ class BaseGeminiNextGenAPIClient {
   }
   /**
      * Used as a callback for mutating the given `FinalRequestOptions` object.
-
+  
      */
   async prepareOptions(options) {
     if (this.clientAdapter && this.clientAdapter.isVertexAI() && !options.path.startsWith(`/${this.apiVersion}/projects/`)) {
@@ -57468,7 +57468,8 @@ const downloadTextFile = (filename, content, mimeType) => {
 const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess,
-  scrollTarget
+  scrollTarget,
+  sectionOnly = false
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
@@ -57970,39 +57971,51 @@ const PlatformConfigurationSettings = ({
   if (loading) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-gray-300", children: "Loading platform configuration..." });
   }
+  const visibleSectionTarget = sectionOnly ? scrollTarget || "platform-configuration-health" : null;
+  const getSectionClass = (sectionId) => `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId ? " hidden" : ""}`;
+  const saveButton = /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "button",
+    {
+      type: "button",
+      onClick: save,
+      disabled: !canEdit || saving || applyingChanges,
+      className: "ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+      children: applyingChanges ? "Applying..." : saving ? "Saving..." : "Save"
+    }
+  );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative space-y-8", children: [
     applyingChanges && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[200] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-cyan-400/40 bg-gray-900 px-6 py-5 text-center shadow-2xl", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-lg font-bold text-cyan-100", children: "One moment while we apply your changes" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 text-sm text-gray-300", children: "The page will refresh automatically so the updated platform settings are active everywhere." })
     ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: [
+    sectionOnly ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-cyan-100", children: "Platform Configuration" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default." })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "button",
-          {
-            type: "button",
-            onClick: save,
-            disabled: !canEdit || saving || applyingChanges,
-            className: "ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
-            children: applyingChanges ? "Applying..." : saving ? "Saving..." : "Save"
-          }
-        )
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm leading-relaxed text-gray-300", children: "Changes on this settings page are saved into the platform configuration." }),
+        saveButton
       ] }),
       !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
       error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
+    ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-bold text-cyan-100", children: "Platform Configuration" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-cyan-100/70", children: "Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default." })
+          ] }),
+          saveButton
+        ] }),
+        !canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100", children: "Read-only. Super Admin or Admin permission is required to change platform configuration." }),
+        error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100", children: error })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Organisations", value: config.organisations.length }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Locations", value: config.locations.length }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Units", value: config.units.length }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Active Licences", value: activeLicenseCount })
+      ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3 md:grid-cols-5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Organisations", value: config.organisations.length }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Locations", value: config.locations.length }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Units", value: config.units.length }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Enabled Modules", value: enabledModuleCount }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Metric, { label: "Active Licences", value: activeLicenseCount })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-configuration-health", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-configuration-health", className: getSectionClass("platform-configuration-health"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58049,7 +58062,7 @@ const PlatformConfigurationSettings = ({
         }) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation-locations", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-organisation-locations", className: getSectionClass("platform-organisation-locations"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Organisation & Locations", subtitle: "The top of the hierarchy: customer, base, timezone, and training areas." }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
         config.organisations.map((org, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
@@ -58066,7 +58079,7 @@ const PlatformConfigurationSettings = ({
         ] }, location.id || location.code || index))
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-units", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-units", className: getSectionClass("platform-units"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58083,7 +58096,7 @@ const PlatformConfigurationSettings = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Status", value: unit.status || "ACTIVE", disabled: !canEdit, options: ["ACTIVE", "INACTIVE"], onChange: (value) => updateRow("units", index, { status: value }) })
       ] }, unit.id || unit.code || index)) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
@@ -58117,7 +58130,7 @@ const PlatformConfigurationSettings = ({
         ] }, pool.id || pool.code || index)) })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: getSectionClass("platform-unit-modules"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Unit Modules", subtitle: "Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-left text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-950 text-xs uppercase tracking-wide text-gray-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -58152,7 +58165,7 @@ const PlatformConfigurationSettings = ({
         ] }, unit.code)) })
       ] }) })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-deployment-readiness", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-deployment-readiness", className: getSectionClass("platform-deployment-readiness"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58239,7 +58252,7 @@ const PlatformConfigurationSettings = ({
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-operational-runbook", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-operational-runbook", className: getSectionClass("platform-operational-runbook"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58372,7 +58385,7 @@ const PlatformConfigurationSettings = ({
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-licensing", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-licensing", className: getSectionClass("platform-licensing"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58576,7 +58589,7 @@ const PlatformConfigurationSettings = ({
         })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-permission-profiles", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-permission-profiles", className: getSectionClass("platform-permission-profiles"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58632,7 +58645,7 @@ const PlatformConfigurationSettings = ({
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-user-access", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-user-access", className: getSectionClass("platform-user-access"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
@@ -58786,7 +58799,7 @@ const PlatformConfigurationSettings = ({
         })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: sectionClass, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
@@ -59752,7 +59765,7 @@ const sectionGroups = [
     description: "Persistent scheduling policy, duty limits, turnarounds and enterprise rule sets. Daily build factors stay in NEO Build > Priorities.",
     accent: "amber",
     defaultSection: "scheduling-rules",
-    sections: ["scheduling-rules", "platform-scheduling-rule-sets"]
+    sections: ["scheduling-rules"]
   },
   {
     label: "Records & Data",
@@ -60522,7 +60535,16 @@ const SettingsViewWithMenu = (props) => {
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "event-limits" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "duty-turnaround" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "business-rules" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection: "business-rules" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PlatformConfigurationSettings,
+            {
+              currentUserPermission: props.currentUserPermission,
+              onShowSuccess: props.onShowSuccess,
+              scrollTarget: "platform-scheduling-rule-sets",
+              sectionOnly: true
+            }
+          )
         ] }),
         activeSection !== "scoring-matrix" && activeSection !== "locale-settings" && activeSection !== "scheduling-rules" && activeSection !== "user-list" && activeSection !== "staff-database" && activeSection !== "staff-mockdata" && activeSection !== "staff-combined-data" && activeSection !== "trainee-database" && activeSection !== "trainee-mockdata" && activeSection !== "data-sources" && activeSection !== "organisation" && !isPlatformConfigurationActive && activeSection !== "appearance" && activeSection !== "people-profile" && /* @__PURE__ */ jsxRuntimeExports.jsx(SettingsView, { ...props, hideHeader: true, activeSection }),
         activeSection === "user-list" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60592,7 +60614,8 @@ const SettingsViewWithMenu = (props) => {
           {
             currentUserPermission: props.currentUserPermission,
             onShowSuccess: props.onShowSuccess,
-            scrollTarget: activePlatformTarget
+            scrollTarget: activePlatformTarget,
+            sectionOnly: true
           }
         ),
         activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),

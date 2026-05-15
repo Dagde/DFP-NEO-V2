@@ -610,12 +610,14 @@ interface PlatformConfigurationSettingsProps {
   currentUserPermission: 'Super Admin' | 'Admin' | 'Staff' | 'Trainee' | 'Ops' | 'Scheduler' | 'Course Supervisor';
   onShowSuccess: (message: string) => void;
   scrollTarget?: string;
+  sectionOnly?: boolean;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
   currentUserPermission,
   onShowSuccess,
   scrollTarget,
+  sectionOnly = false,
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
@@ -1204,6 +1206,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     );
   }
 
+  const visibleSectionTarget = sectionOnly ? (scrollTarget || 'platform-configuration-health') : null;
+  const getSectionClass = (sectionId: string) =>
+    `${sectionClass}${visibleSectionTarget && visibleSectionTarget !== sectionId ? ' hidden' : ''}`;
+  const saveButton = (
+    <button
+      type="button"
+      onClick={save}
+      disabled={!canEdit || saving || applyingChanges}
+      className="ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {applyingChanges ? 'Applying...' : saving ? 'Saving...' : 'Save'}
+    </button>
+  );
+
   return (
     <div className="relative space-y-8">
       {applyingChanges && (
@@ -1214,44 +1230,60 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           </div>
         </div>
       )}
-      <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <h3 className="text-lg font-bold text-cyan-100">Platform Configuration</h3>
-            <p className="mt-1 text-sm text-cyan-100/70">
-              Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default.
+      {sectionOnly ? (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/80 px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm leading-relaxed text-gray-300">
+              Changes on this settings page are saved into the platform configuration.
             </p>
+            {saveButton}
           </div>
-          <button
-            type="button"
-            onClick={save}
-            disabled={!canEdit || saving || applyingChanges}
-            className="ml-auto rounded border border-gray-500 bg-gray-300 px-5 py-3 text-sm font-bold text-gray-900 shadow hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {applyingChanges ? 'Applying...' : saving ? 'Saving...' : 'Save'}
-          </button>
+          {!canEdit && (
+            <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
+              Read-only. Super Admin or Admin permission is required to change platform configuration.
+            </div>
+          )}
+          {error && (
+            <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
+              {error}
+            </div>
+          )}
         </div>
-        {!canEdit && (
-          <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
-            Read-only. Super Admin or Admin permission is required to change platform configuration.
+      ) : (
+        <>
+          <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <h3 className="text-lg font-bold text-cyan-100">Platform Configuration</h3>
+                <p className="mt-1 text-sm text-cyan-100/70">
+                  Commercial operating model. Resource pools can now be wired into V2 runtime by exception, while existing V2 behaviour remains the default.
+                </p>
+              </div>
+              {saveButton}
+            </div>
+            {!canEdit && (
+              <div className="mt-3 rounded border border-yellow-600/50 bg-yellow-900/30 px-3 py-2 text-sm text-yellow-100">
+                Read-only. Super Admin or Admin permission is required to change platform configuration.
+              </div>
+            )}
+            {error && (
+              <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
+                {error}
+              </div>
+            )}
           </div>
-        )}
-        {error && (
-          <div className="mt-3 rounded border border-red-600/50 bg-red-900/30 px-3 py-2 text-sm text-red-100">
-            {error}
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <Metric label="Organisations" value={config.organisations.length} />
+            <Metric label="Locations" value={config.locations.length} />
+            <Metric label="Units" value={config.units.length} />
+            <Metric label="Enabled Modules" value={enabledModuleCount} />
+            <Metric label="Active Licences" value={activeLicenseCount} />
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Metric label="Organisations" value={config.organisations.length} />
-        <Metric label="Locations" value={config.locations.length} />
-        <Metric label="Units" value={config.units.length} />
-        <Metric label="Enabled Modules" value={enabledModuleCount} />
-        <Metric label="Active Licences" value={activeLicenseCount} />
-      </div>
-
-      <section id="platform-configuration-health" className={sectionClass}>
+      <section id="platform-configuration-health" className={getSectionClass('platform-configuration-health')}>
         <SectionHeader
           title="Configuration Health"
           subtitle="Advisory checks for the commercial platform model. These checks highlight setup gaps without blocking the current app."
@@ -1314,7 +1346,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-organisation-locations" className={sectionClass}>
+      <section id="platform-organisation-locations" className={getSectionClass('platform-organisation-locations')}>
         <SectionHeader title="Organisation & Locations" subtitle="The top of the hierarchy: customer, base, timezone, and training areas." />
         <div className="space-y-4 p-4">
           {config.organisations.map((org, index) => (
@@ -1336,7 +1368,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-units" className={sectionClass}>
+      <section id="platform-units" className={getSectionClass('platform-units')}>
         <SectionHeader
           title="Units"
           subtitle="Unit is the centre of configuration: type, location, enabled modules and future UI behaviour."
@@ -1355,7 +1387,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-resource-pools" className={sectionClass}>
+      <section id="platform-resource-pools" className={getSectionClass('platform-resource-pools')}>
         <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
@@ -1395,7 +1427,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-unit-modules" className={sectionClass}>
+      <section id="platform-unit-modules" className={getSectionClass('platform-unit-modules')}>
         <SectionHeader title="Unit Modules" subtitle="Controls which functional modules each unit can use. This is the future licensing and role-aware UI switchboard." />
         <div className="overflow-x-auto p-4">
           <table className="min-w-full text-left text-sm">
@@ -1440,7 +1472,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-deployment-readiness" className={sectionClass}>
+      <section id="platform-deployment-readiness" className={getSectionClass('platform-deployment-readiness')}>
         <SectionHeader
           title="Deployment Readiness"
           subtitle="Commercial deployment posture for SaaS, defence networks, fully offline installs and hybrid sync. These settings are admin-editable and do not hard-block operations yet."
@@ -1525,7 +1557,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-operational-runbook" className={sectionClass}>
+      <section id="platform-operational-runbook" className={getSectionClass('platform-operational-runbook')}>
         <SectionHeader
           title="Operational Runbook"
           subtitle="Deployment evidence for support, backups, restore testing, updates and accreditation. This gives an on-prem or offline customer a clear administration record without exposing secrets."
@@ -1658,7 +1690,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-licensing" className={sectionClass}>
+      <section id="platform-licensing" className={getSectionClass('platform-licensing')}>
         <SectionHeader
           title="Licensing & Deployment"
           subtitle="Commercial licensing for online SaaS, private defence networks, hybrid sync and fully offline deployments. Development mode remains non-blocking while signed licence files can be tested end to end."
@@ -1865,7 +1897,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-permission-profiles" className={sectionClass}>
+      <section id="platform-permission-profiles" className={getSectionClass('platform-permission-profiles')}>
         <SectionHeader
           title="Permission Profiles"
           subtitle="Build reusable role profiles. Profiles define what a user can do; access scopes define where they can do it."
@@ -1925,7 +1957,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-user-access" className={sectionClass}>
+      <section id="platform-user-access" className={getSectionClass('platform-user-access')}>
         <SectionHeader
           title="User Access Context"
           subtitle="Search by user name, assign permission profiles, then define where those profiles apply."
@@ -2086,7 +2118,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         </div>
       </section>
 
-      <section id="platform-scheduling-rule-sets" className={sectionClass}>
+      <section id="platform-scheduling-rule-sets" className={getSectionClass('platform-scheduling-rule-sets')}>
         <SectionHeader title="Scheduling Rule Sets" subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." />
         <div className="space-y-3 p-4">
           {config.schedulingRuleSets.map((ruleSet, index) => (
