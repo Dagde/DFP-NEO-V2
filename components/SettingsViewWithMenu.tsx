@@ -189,7 +189,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'staff-mockdata': 'Staff MockData',
     'trainee-mockdata': 'Trainee MockData',
     'staff-combined-data': 'Staff Combined Data',
-    'validation': 'Aircraft Availability History',
+    'validation': 'AC Availability & Cancellations',
     'historical-data': 'Historical Data',
     'locale-settings': 'Locations & Timezones',
     'timezone': 'Timezone',
@@ -469,7 +469,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'staff-mockdata': 'Staff test data view',
   'trainee-mockdata': 'Trainee test data view',
   'staff-combined-data': 'Combined staff data overview',
-  'validation': 'Review fleet availability records and averages',
+  'validation': 'Availability history, cancellation analytics and cancellation code management',
   'historical-data': 'Seed & refresh historical training records',
   'locale-settings': 'Manage bases, unit assignment, timezones and training areas',
   'timezone': 'Configure timezone settings',
@@ -599,20 +599,20 @@ const sectionGroups: {
     sections: ['scoring-matrix', 'sct-events', 'currencies'],
   },
   {
-    label: 'Scheduling & DFP',
-    shortLabel: 'Scheduling',
-    description: 'DFP build rules, duty limits, turnaround timing, aircraft availability and enterprise rule sets.',
+    label: 'DFP Build Rules',
+    shortLabel: 'Rules',
+    description: 'Persistent scheduling policy, duty limits, turnarounds and enterprise rule sets. Daily build factors stay in NEO Build > Priorities.',
     accent: 'amber',
     defaultSection: 'scheduling-rules',
-    sections: ['scheduling-rules', 'platform-scheduling-rule-sets', 'validation'],
+    sections: ['scheduling-rules', 'platform-scheduling-rule-sets'],
   },
   {
     label: 'Records & Data',
     shortLabel: 'Data',
-    description: 'Operational runbook, evidence, data sources, imports and enduring historical records.',
+    description: 'Operational runbook, evidence, aircraft availability, cancellations, imports and enduring historical records.',
     accent: 'emerald',
     defaultSection: 'platform-operational-runbook',
-    sections: ['platform-operational-runbook', 'data-sources', 'data-loaders', 'historical-data'],
+    sections: ['platform-operational-runbook', 'validation', 'data-sources', 'data-loaders', 'historical-data'],
   },
   {
     label: 'Emergency',
@@ -1181,8 +1181,18 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
     const isPlatformConfigurationActive = Boolean(activePlatformTarget);
     const isSearchActive = settingsSearch.trim().length > 0;
     const openSettingsGroup = (group: typeof visibleSettingGroups[number]) => {
+        const groupActive = activeSection !== 'home' && group.sections.includes(activeSection as SettingsMenuSection);
+        const isOpen = expandedGroups[group.label] ?? groupActive;
+
+        if (isOpen) {
+            setExpandedGroups(previous => ({ ...previous, [group.label]: false }));
+            return;
+        }
+
         setExpandedGroups({ [group.label]: true });
-        setActiveSection(getDefaultSectionForGroup(group));
+        if (!groupActive) {
+            setActiveSection(getDefaultSectionForGroup(group));
+        }
     };
 
     return (
@@ -1216,7 +1226,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                     {visibleSettingGroups.map(group => {
                         const accent = getAccentClasses(group.accent);
                         const groupActive = activeSection !== 'home' && group.sections.includes(activeSection);
-                        const showSubmenu = isSearchActive || groupActive || expandedGroups[group.label];
+                        const showSubmenu = isSearchActive || (expandedGroups[group.label] ?? groupActive);
                         return (
                             <div key={group.label} className={`rounded-lg border ${groupActive ? accent.border : 'border-gray-800'} ${groupActive ? 'bg-gray-900/70' : 'bg-gray-900/45'} p-2`}>
                                 <button
@@ -1248,7 +1258,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                     </svg>
                                 </button>
                                 {showSubmenu && (
-                                <div id={getGroupId(group.label)} className="mt-1 space-y-0.5 border-t border-gray-800 pt-1">
+                                <div id={getGroupId(group.label)} className="ml-5 mt-1 space-y-0.5 border-l border-gray-800 pl-3 pt-1">
                                     {group.visibleSections.map(section => {
                                         const sectionAccent = getSectionAccent(section, group.accent);
                                         return (
