@@ -752,9 +752,12 @@ const PLATFORM_FIELD_LABELS = {
     name: 'Resource pool name',
     poolType: 'Resource pool type',
     status: 'Resource pool status',
+    'settings.aircraftLabel': 'Aircraft display name',
+    'settings.ftdLabel': 'Simulator display name',
+    'settings.cptLabel': 'Procedural trainer display name',
     'settings.aircraft': 'Aircraft rows',
-    'settings.ftd': 'FTD rows',
-    'settings.cpt': 'CPT rows',
+    'settings.ftd': 'Simulator rows',
+    'settings.cpt': 'Procedural trainer rows',
     'settings.standby': 'STBY rows',
     'settings.ground': 'Ground rows',
     'settings.applyToV2Runtime': 'Apply resource pool to V2 DFP',
@@ -6785,6 +6788,9 @@ async function seedCommercialConfigIfEmpty(db) {
       ON CONFLICT ("code") DO NOTHING
     `, locationCode, `${locationCode}-PC21-POOL`, `${locationName} PC-21 Resource Pool`, JSON.stringify({
       applyToV2Runtime: false,
+      aircraftLabel: 'PC-21',
+      ftdLabel: 'FTD',
+      cptLabel: 'CPT',
       aircraft: Number(settings.availableAircraftCount ?? 24),
       ftd: Number(settings.availableFtdCount ?? 5),
       cpt: Number(settings.availableCptCount ?? 5),
@@ -6797,7 +6803,7 @@ async function seedCommercialConfigIfEmpty(db) {
     ['DFP', 'Daily Flying Program', 'Core schedule, authorisation and publication workflow'],
     ['TRAINING', 'Training', 'Courses, trainees, syllabus progression and PT-051 records'],
     ['NEO_BUILD', 'NEO Build', 'Automated training build algorithm'],
-    ['RESOURCE_SCHEDULING', 'Resource Scheduling', 'Aircraft, simulator, CPT and ground resource allocation'],
+    ['RESOURCE_SCHEDULING', 'Resource Scheduling', 'Aircraft, simulator, procedural trainer and ground resource allocation'],
     ['REPORTING', 'Reporting & Analytics', 'Operational reports, history, audit and analytics'],
   ];
   for (const [code, name, description] of modules) {

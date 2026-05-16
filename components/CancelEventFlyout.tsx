@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PinEntryFlyout from './PinEntryFlyout';
 import { CancellationCode } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface CancelEventFlyoutProps {
   eventId: string;
@@ -8,6 +9,7 @@ interface CancelEventFlyoutProps {
   onConfirm: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
   onClose: () => void;
   cancellationCodes: CancellationCode[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
@@ -16,6 +18,7 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
   onConfirm,
   onClose,
   cancellationCodes,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [selectedCode, setSelectedCode] = useState<string>('');
   const [manualCode, setManualCode] = useState<string>('');
@@ -23,9 +26,9 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
   const [error, setError] = useState<string>('');
 
   // Filter codes based on event type
-  const availableCodes = cancellationCodes.filter(code => 
+  const availableCodes = cancellationCodes.filter(code =>
     code.isActive && (
-      code.appliesTo === 'Both' || 
+      code.appliesTo === 'Both' ||
       (eventType === 'flight' && code.appliesTo === 'Flight') ||
       (eventType === 'ftd' && code.appliesTo === 'FTD')
     )
@@ -77,6 +80,7 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
   };
 
   const isPinEnabled = selectedCode && (selectedCode !== 'OTHER' || manualCode.trim());
+  const eventTypeLabel = eventType === 'flight' ? 'Flight' : resourceDisplayNames.ftd;
 
   return (
     <>
@@ -93,7 +97,7 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
           {/* Body */}
           <div className="p-6 space-y-4">
             <p className="text-gray-300">
-              You are about to cancel this {eventType === 'flight' ? 'Flight' : 'FTD'} event. 
+              You are about to cancel this {eventTypeLabel} event.
               This action will move the event to the STBY line with a red cross.
             </p>
 
@@ -147,7 +151,7 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
             {/* Info Box */}
             <div className="bg-gray-700/30 border border-gray-600 rounded-md p-3">
               <p className="text-gray-400 text-sm">
-                <strong className="text-white">Note:</strong> After selecting a cancellation code, 
+                <strong className="text-white">Note:</strong> After selecting a cancellation code,
                 you will be prompted to enter your PIN to complete the cancellation.
               </p>
             </div>
@@ -155,13 +159,13 @@ const CancelEventFlyout: React.FC<CancelEventFlyoutProps> = ({
 
           {/* Footer */}
           <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3">
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
             >
               Cancel
             </button>
-            <button 
+            <button
               onClick={handleProceedToPin}
               disabled={!isPinEnabled}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"

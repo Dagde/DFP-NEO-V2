@@ -1,14 +1,17 @@
 import React, { useState, useMemo } from 'react';
 import { CancellationAnalytics, TimePeriod, CancellationRecord, CancellationCode } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface ACHistoryAnalyticsProps {
   cancellationRecords: CancellationRecord[];
   cancellationCodes: CancellationCode[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const ACHistoryAnalytics: React.FC<ACHistoryAnalyticsProps> = ({
   cancellationRecords,
   cancellationCodes,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('month');
   const [showAllCodes, setShowAllCodes] = useState(false);
@@ -294,7 +297,7 @@ const ACHistoryAnalytics: React.FC<ACHistoryAnalyticsProps> = ({
       </div>
 
       <div className="mt-4 text-sm text-gray-400">
-        <p>• Percentages are calculated relative to all Flight + FTD cancellations in the selected period.</p>
+        <p>• Percentages are calculated relative to all Flight + {resourceDisplayNames.ftd} cancellations in the selected period.</p>
         <p>• Trend indicators compare the selected period to the immediately preceding equivalent period.</p>
         <p>• Both active and inactive codes appear in analytics if used historically.</p>
       </div>

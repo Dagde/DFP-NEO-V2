@@ -3,6 +3,7 @@ import { ScheduleEvent, Instructor, Trainee, UnavailabilityPeriod, Score, Syllab
 import InteractiveStatCard from '../shared/InteractiveStatCard';
 import AvailabilityCard from '../shared/AvailabilityCard';
 import ListCard from '../shared/ListCard';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 
 interface PeopleTabProps {
   date: string;
@@ -13,6 +14,7 @@ interface PeopleTabProps {
   scores: Map<string, Score[]>;
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
   courseColors: { [key: string]: string };
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const PeopleTab: React.FC<PeopleTabProps> = ({
@@ -23,7 +25,8 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
   onNavigateAndSelectPerson,
   scores,
   traineeLMPs,
-  courseColors
+  courseColors,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   // State for availability filtering
   const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
@@ -606,12 +609,12 @@ const PeopleTab: React.FC<PeopleTabProps> = ({
         <div className={sectionBody}>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <ListCard title="Next Event – Flight" trainees={nextEventLists.flight} />
-          <ListCard title="Next Event – FTD" trainees={nextEventLists.ftd} />
-          <ListCard title="Next Event – CPT" trainees={nextEventLists.cpt} />
+          <ListCard title={`Next Event – ${resourceDisplayNames.ftd}`} trainees={nextEventLists.ftd} />
+          <ListCard title={`Next Event – ${resourceDisplayNames.cpt}`} trainees={nextEventLists.cpt} />
           <ListCard title="Next Event – Ground" trainees={nextEventLists.ground} />
           <ListCard title="Next +1 – Flight" trainees={nextPlusOneLists.flight} />
-          <ListCard title="Next +1 – FTD" trainees={nextPlusOneLists.ftd} />
-          <ListCard title="Next +1 – CPT" trainees={nextPlusOneLists.cpt} />
+          <ListCard title={`Next +1 – ${resourceDisplayNames.ftd}`} trainees={nextPlusOneLists.ftd} />
+          <ListCard title={`Next +1 – ${resourceDisplayNames.cpt}`} trainees={nextPlusOneLists.cpt} />
           <ListCard title="Next +1 – Ground School" trainees={nextPlusOneLists.ground} />
         </div>
         </div>

@@ -8,6 +8,7 @@ import { addFile } from '../utils/db';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -18,10 +19,11 @@ interface PostFlightViewProps {
   instructorsData: Instructor[];
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [] }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -55,7 +57,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const [aircraftNumber, setAircraftNumber] = useState('001');
     const [from, setFrom] = useState<string>(school);
     const [to, setTo] = useState<string>(school);
-    
+
     // Flight Mode State
     const [isFlightLog, setIsFlightLog] = useState(event.type === 'flight');
     const [isFtdLog, setIsFtdLog] = useState(event.type === 'ftd');
@@ -92,12 +94,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const getFormattedName = (name: string | undefined) => {
         if (!name) return '';
         const cleanName = name.split(' – ')[0];
-        
+
         const instructor = instructorsData.find(i => i.name === cleanName);
         if (instructor) {
             return `${instructor.rank} ${cleanName.split(',')[0]}`;
         }
-        
+
         const trainee = traineesData.find(t => t.name === cleanName || t.fullName === name);
         if (trainee) {
             return `${trainee.rank} ${cleanName.split(',')[0]}`;
@@ -134,7 +136,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
         return durationHours.toFixed(1);
     }, [takeoffTime, landTime]);
-    
+
     useEffect(() => {
         // Prefill times
         const takeoff = event.startTime;
@@ -142,7 +144,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         const takeoffM = String(Math.round((takeoff % 1) * 60)).padStart(2, '0');
         const initialTakeoff = `${takeoffH}:${takeoffM}`;
         setTakeoffTime(initialTakeoff);
-        
+
         const land = event.landTime || event.startTime + event.duration;
         const landH = String(Math.floor(land)).padStart(2, '0');
         const landM = String(Math.round((land % 1) * 60)).padStart(2, '0');
@@ -180,7 +182,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             };
         }
     }, [event, school]);
-    
+
     // ── Load previously saved FlightLogEntry on mount ────────────────────────
     // Fetch any existing saved data for this event from the DB and pre-populate
     // all form fields so reopening the form shows the last-saved values.
@@ -331,7 +333,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         const total = parseFloat(totalTime) || 0;
         const ifActual = parseFloat(ifActualTime) || 0;
         const ifSim = parseFloat(ifSimTime) || 0;
-        
+
         // 2D vs 3D Apps
         const app2D = (rnpChecked ? rnpCount : 0) + (tacanChecked ? tacanCount : 0) + (vorChecked ? vorCount : 0);
         const app3D = (ilsChecked ? ilsCount : 0);
@@ -341,14 +343,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         let dayDual = 0;
         let nightP1 = 0;
         let nightDual = 0;
-        
+
         let simP1 = 0;
         let simDual = 0;
         let simTotal = 0;
-        
+
         let logCaptTime = '';
         let logInstTime = '';
-        
+
         // Variable for the main "TOTAL" column (Flight Time)
         let flightTotal = 0;
 
@@ -360,7 +362,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 flightTotal = total;
                 const night = parseFloat(nightTime) || 0;
                 const day = Math.max(0, total - night);
-    
+
                 if (role === 'Captain') {
                     // Captain logs P1 in both Solo (Pilot) and Dual (Instructor) scenarios for flights
                     dayP1 = day;
@@ -391,7 +393,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 }
             }
         }
-        
+
         // Parsing Date
         const dateObj = new Date(event.date);
         const yearStr = dateObj.getFullYear().toString();
@@ -404,11 +406,11 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         return {
             year: yearStr,
             date: dateStr,
-            type: isFtdLog ? 'FTD' : 'PC-21',
+            type: isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
             tail: isFtdLog ? `FTD-${aircraftNumber}` : `A54-${aircraftNumber}`,
             captain: captainName,
             crew: crewName,
-            duty: duty, 
+            duty: duty,
             dayP1: dayP1 > 0 ? dayP1.toFixed(1) : '',
             dayP2: '',
             dayDual: dayDual > 0 ? dayDual.toFixed(1) : '',
@@ -509,18 +511,18 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             captainLog: captLogOverride,
             crewLog: crewLogOverride,
         };
-        
+
         // Flush any pending debounced logs before saving
         if (!isAutoSave) {
             flushPendingAudits();
-            
+
             // Log the save action
             const changes: string[] = [];
             changes.push(`Result: ${result}`);
             if (takeoffTime) changes.push(`Takeoff: ${takeoffTime}`);
             if (landTime) changes.push(`Land: ${landTime}`);
             if (totalTime) changes.push(`Total Time: ${totalTime}`);
-            
+
             logAudit({
                 action: 'Edit',
                 description: `Saved post-flight data for ${event.flightNumber}`,
@@ -528,19 +530,19 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 page: 'Post-Flight'
             });
         }
-        
+
         // 1. Notify parent (updates app state)
         // Only notify parent if NOT auto-saving, because parent closes the view.
         if (!isAutoSave) {
             onSave(saveData);
         }
-        
+
         // 2. Persist to Data Storage (Auto-Save to File)
-        // Determine the "User File" location. 
+        // Determine the "User File" location.
         // Priority: Student (for dual/solo trainee events), then Instructor.
         let targetFolderId = 'trainee_logbook';
         let userName = event.student;
-        
+
         if (!userName || userName === 'Multiple') {
              if (event.pilot) {
                  userName = event.pilot; // Solo trainee or pilot
@@ -549,12 +551,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                  targetFolderId = 'staff_logbook';
              }
         }
-        
+
         if (userName) {
             const cleanName = userName.split(' – ')[0].replace(/,\s/g, '_');
             // Deterministic filename to overwrite the same entry during edits
             const fileName = `Entry_${event.date}_${event.flightNumber.replace(/\s/g, '')}_${cleanName}.json`;
-            
+
             try {
                 const fileContent = JSON.stringify(saveData, null, 2);
                 const file = new File([fileContent], fileName, { type: "application/json" });
@@ -569,14 +571,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             setSaveStatus('Saved');
         }
     };
-    
+
     // Auto-save effect
     useEffect(() => {
         if (isFirstRender.current) {
             isFirstRender.current = false;
             return;
         }
-        
+
         if (isDirty) {
             const timer = setTimeout(() => {
                 handleSave(true);
@@ -594,7 +596,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             onReturn();
         }
     };
-    
+
     const handleManualSave = () => {
         handleSave(false);
     };
@@ -602,13 +604,13 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>, setter: (val: string) => void) => {
         let val = e.target.value.replace(/[^0-9]/g, '');
         if (val.length > 4) val = val.substring(0, 4);
-        
+
         if (val.length > 2) {
             val = val.slice(0, 2) + ':' + val.slice(2);
         }
         setter(val);
     };
-    
+
     const handleFlightLogChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setIsFlightLog(true);
@@ -650,25 +652,25 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     );
 
     const ApproachInput: React.FC<{
-        label: string, 
-        isChecked: boolean, 
-        setIsChecked: (val: boolean) => void, 
-        count: number, 
+        label: string,
+        isChecked: boolean,
+        setIsChecked: (val: boolean) => void,
+        count: number,
         setCount: (val: number) => void
     }> = ({ label, isChecked, setIsChecked, count, setCount }) => (
         <div className="flex-shrink-0 flex items-end space-x-1">
             <label className="flex items-center space-x-1 pb-2 cursor-pointer h-[38px]">
                 <span className="text-sm font-medium text-gray-400 w-10 text-right">{label}</span>
-                <input 
-                    type="checkbox" 
-                    checked={isChecked} 
+                <input
+                    type="checkbox"
+                    checked={isChecked}
                     onChange={e => {
                         const checked = e.target.checked;
                         setIsChecked(checked);
                         if (checked && count === 0) {
                             setCount(1);
                         }
-                    }} 
+                    }}
                     className="h-4 w-4 accent-sky-500 bg-gray-600 rounded border-gray-500"
                 />
             </label>
@@ -786,7 +788,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
                     {/* Simulator */}
                     <div className="flex flex-col">
-                        <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">Simulator</div>
+                        <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">{resourceDisplayNames.ftd}</div>
                         <div className="flex">
                             <EditableLogbookCell subLabel="P1"    fieldKey="simP1"    overrides={overrides} onChange={onChange} width="w-10" borderColor="border-gray-700" bgColor="bg-gray-800/50" />
                             <EditableLogbookCell subLabel="P2"    fieldKey="simP2"    overrides={overrides} onChange={onChange} width="w-10" borderColor="border-gray-700" bgColor="bg-gray-800/50" />
@@ -813,7 +815,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     <LogbookCell label="Captain" value={data.captain} width="w-24" />
                     <LogbookCell label="Co-Pilot /" subLabel="Crew" value={data.crew} width="w-24" />
                     <LogbookCell label="Duty" value={data.duty} width="w-24" customTextClass="text-[8px]" />
-                    
+
                     {/* Day Flying */}
                     <div className="flex flex-col border-r border-gray-600">
                         <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">Day Flying</div>
@@ -838,7 +840,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                     <LogbookCell label="TOTAL" value={data.total} width="w-12" bgColor="bg-gray-700/50" />
                     <LogbookCell label="Captain" value={data.captTime} width="w-12" />
                     <LogbookCell label="Instructor" value={data.instTime} width="w-12" />
-                    
+
                     {/* Instrument */}
                     <LogbookCell label="Sim" value={data.simIf ?? ''} width="w-10" />
                     <LogbookCell label="Actual" value={data.simActual} width="w-10" />
@@ -847,7 +849,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
                     {/* Simulator */}
                     <div className="flex flex-col">
-                        <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">Simulator</div>
+                        <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">{resourceDisplayNames.ftd}</div>
                         <div className="flex">
                             <LogbookCell subLabel="P1" value={data.simP1} width="w-10" borderColor="border-gray-700" bgColor="bg-gray-800/50" />
                             <LogbookCell subLabel="P2" value={data.simP2} width="w-10" borderColor="border-gray-700" bgColor="bg-gray-800/50" />
@@ -1032,10 +1034,10 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 {/* Main "Times" Window */}
                 <fieldset className="p-4 border border-gray-600 rounded-lg">
                     <legend className="px-2 text-lg font-semibold text-gray-300">Times</legend>
-                    
+
                     {/* Row 1: Flight, FTD, Solo, Dual, Date, AC, Number, Duty, Captain, Crew */}
                     <div className="mt-2 flex items-end space-x-4">
-                        
+
                         {/* Flight Checkbox */}
                         <div className="flex-shrink-0 flex flex-col items-center">
                             <label className="block text-sm font-medium text-gray-400">Flight</label>
@@ -1096,7 +1098,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         {/* Aircraft */}
                         <div className="flex-shrink-0">
                             <label className="block text-sm font-medium text-gray-400">Aircraft</label>
-                            <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center">PC-21</div>
+                            <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center">{resourceDisplayNames.aircraft}</div>
                         </div>
                          {/* Number */}
                         <div className="flex-shrink-0" style={{width: '6.75rem'}}>
@@ -1108,7 +1110,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                                 </select>
                             </div>
                         </div>
-                        
+
                         {/* Duty (New) */}
                         <div className="flex-shrink-0" style={{width: '12rem'}}>
                             <label className="block text-sm font-medium text-gray-400">Duty</label>
@@ -1133,7 +1135,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             </div>
                         </div>
                     </div>
-                    
+
                     {/* Row 2: Route, Takeoff, Land, Total, Night, IF Actual, IF Sim, Ineffective, Approaches */}
                     <div className="mt-4 flex items-end space-x-4 overflow-x-auto pb-2">
                         {/* Route */}
@@ -1284,7 +1286,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                                 <EditableLogbookCell label="2D App"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" readOnly />
                                 <EditableLogbookCell label="3D App"     fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" readOnly />
                                 <div className="flex flex-col">
-                                    <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">Simulator</div>
+                                    <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30">{resourceDisplayNames.ftd}</div>
                                     <div className="flex">
                                         <EditableLogbookCell subLabel="P1"    fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" borderColor="border-gray-700" bgColor="bg-gray-800/50" readOnly />
                                         <EditableLogbookCell subLabel="P2"    fieldKey="__hdr__" overrides={{}} onChange={() => {}} width="w-10" borderColor="border-gray-700" bgColor="bg-gray-800/50" readOnly />
@@ -1333,7 +1335,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 </div>
             </div>
             {showUnsavedWarning && (
-                <UnsavedChangesWarning 
+                <UnsavedChangesWarning
                     onSaveAndExit={() => { setShowUnsavedWarning(false); handleManualSave(); onReturn(); }}
                     onExitWithoutSaving={() => { setShowUnsavedWarning(false); onReturn(); }}
                     onCancel={() => setShowUnsavedWarning(false)}

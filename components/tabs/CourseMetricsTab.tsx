@@ -3,6 +3,7 @@ import { ScheduleEvent, Trainee } from '../../types';
 import InteractiveStatCard from '../shared/InteractiveStatCard';
 import CourseDistributionTable from '../shared/CourseDistributionTable';
 import PieChart from '../shared/PieChart';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 
 interface CourseAnalysis {
   courseName: string;
@@ -47,6 +48,7 @@ interface CourseMetricsTabProps {
   activeCourses: string[];
   onNavigateAndSelectPerson: (name: string) => void;
   analysis: BuildAnalysis | null;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
@@ -55,7 +57,8 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
   traineesData,
   activeCourses,
   onNavigateAndSelectPerson,
-  analysis
+  analysis,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   // Build a lookup map: trainee fullName/name → course
   const traineeCourseLookup = useMemo(() => {
@@ -167,7 +170,10 @@ const CourseMetricsTab: React.FC<CourseMetricsTabProps> = ({
       {/* Course Distribution Analysis - only show if analysis exists */}
       {analysis && analysis.courseAnalysis && (
         <>
-          <CourseDistributionTable courseAnalysis={analysis.courseAnalysis} />
+          <CourseDistributionTable
+            courseAnalysis={analysis.courseAnalysis}
+            resourceDisplayNames={resourceDisplayNames}
+          />
 
           {/* Pie Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

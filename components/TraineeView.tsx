@@ -2,6 +2,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState } from 'react';
 import CourseRosterView from './CourseRosterView';
 import TraineeScheduleView from './TraineeScheduleView';
+import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -46,7 +47,8 @@ interface TraineeViewProps {
   canViewTraineeLmp?: (trainee: any) => boolean;
   canAddRemedialPackageForTrainee?: (trainee: any) => boolean;
   onAccessDenied?: (actionLabel: string) => void;
-  
+  resourceDisplayNames?: ResourceDisplayNames;
+
   // Props for TraineeScheduleView
   date: string;
   onDateChange: (date: string) => void;
@@ -142,6 +144,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             currencyRequirements={props.currencyRequirements}
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
+            resourceDisplayNames={props.resourceDisplayNames}
             pt051Assessments={props.pt051Assessments}
             userProfile={props.userProfile}
             canViewTraineeProfile={props.canViewTraineeProfile}

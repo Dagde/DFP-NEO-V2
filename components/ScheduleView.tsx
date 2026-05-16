@@ -75,6 +75,7 @@ interface ScheduleViewProps {
   onPauseToggleCompleted?: (eventId: string) => void;
   // Alert status per event id
   alertsData?: Record<string, { responses?: Record<string, { status: string }> }>;
+  formatResourceLabel?: (resourceId: string) => string;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -159,6 +160,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     showAircraftAvailability, initialAvailability, apiBase, dayFlyingStart, dayFlyingEnd, onAvailabilityChange, onUserAvailabilityChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
+    formatResourceLabel,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -1097,6 +1099,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         ftdCount={ftdCount}
                         cptCount={cptCount}
                         events={events}
+                        formatResourceLabel={formatResourceLabel}
                     />
                 </div>
 

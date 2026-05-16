@@ -1,12 +1,14 @@
 import React from 'react';
 import { Conflict } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface CptConflictWarningFlyoutProps {
   conflict: Conflict;
+  resourceDisplayNames?: ResourceDisplayNames;
   onClose: () => void;
 }
 
-const CptConflictWarningFlyout: React.FC<CptConflictWarningFlyoutProps> = ({ conflict, onClose }) => {
+const CptConflictWarningFlyout: React.FC<CptConflictWarningFlyoutProps> = ({ conflict, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onClose }) => {
     
     const formatTime = (time: number) => {
         const hours = Math.floor(time);
@@ -25,7 +27,7 @@ const CptConflictWarningFlyout: React.FC<CptConflictWarningFlyoutProps> = ({ con
                 </div>
                 <div className="p-6">
                     <p className="text-gray-300">
-                        The CPT event <strong className="text-white">{conflict.newEvent.flightNumber}</strong> was scheduled, but conflicts with another event.
+                        The {resourceDisplayNames.cpt} event <strong className="text-white">{conflict.newEvent.flightNumber}</strong> was scheduled, but conflicts with another event.
                     </p>
                     <p className="text-gray-300 mt-2">
                         <strong className="text-white">{conflict.personName}</strong> is also scheduled for{' '}

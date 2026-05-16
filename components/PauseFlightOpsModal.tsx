@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ScheduleEvent } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ interface PauseFlightOpsModalProps {
     onPublish: (updatedEvents: ScheduleEvent[]) => void;
     onBuildPause: (config: PauseBuildConfig) => Promise<ScheduleEvent[]>;
     authUser?: { userId: string; displayName: string } | null;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 export interface PauseBuildConfig {
@@ -65,6 +67,7 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
     onPublish,
     onBuildPause,
     authUser,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     // ── Config state ─────────────────────────────────────────────────────────
     const [pauseStart, setPauseStart] = useState(decToHHMM(flyingStartTime + 2));
@@ -78,6 +81,8 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
     const [stagedEvents, setStagedEvents] = useState<ScheduleEvent[]>([]);
     const [buildProgress, setBuildProgress] = useState('');
     const [buildDone, setBuildDone] = useState(false);
+    const ftdLabel = resourceDisplayNames.ftd;
+    const cptLabel = resourceDisplayNames.cpt;
 
     // drag-select state
     const dragStartRef = useRef<string | null>(null);
@@ -97,9 +102,9 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
 
     const cannotReprogram = useMemo(() => {
         const hasReprogrammable = affectedTypes.has('flight') || affectedTypes.has('ftd');
-        if (!hasReprogrammable) return 'Reprogram only applies to Flight and/or FTD events. Select at least one to enable this option.';
+        if (!hasReprogrammable) return `Reprogram only applies to Flight and/or ${ftdLabel} events. Select at least one to enable this option.`;
         return null;
-    }, [affectedTypes]);
+    }, [affectedTypes, ftdLabel]);
 
     const impactedEvents = useMemo(() => {
         if (!pauseStartDec || !pauseEndDec) return [];
@@ -313,8 +318,8 @@ const PauseFlightOpsModal: React.FC<PauseFlightOpsModalProps> = ({
 
     const TYPES: { key: EventTypeKey; label: string }[] = [
         { key: 'flight', label: 'Flight' },
-        { key: 'ftd',    label: 'FTD' },
-        { key: 'cpt',    label: 'CPT' },
+        { key: 'ftd',    label: ftdLabel },
+        { key: 'cpt',    label: cptLabel },
         { key: 'ground', label: 'Ground School' },
     ];
 

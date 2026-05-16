@@ -3,6 +3,7 @@ import ACHistoryAnalytics from './ACHistoryAnalytics';
 import ACHistoryAircraftAvailability from './ACHistoryAircraftAvailability';
 import RecentCancellationsTable from './RecentCancellationsTable';
 import { CancellationCode, CancellationRecord } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface ACHistoryIntelligencePanelProps {
   cancellationRecords: CancellationRecord[];
@@ -13,6 +14,7 @@ interface ACHistoryIntelligencePanelProps {
   timezoneOffset?: number;
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
@@ -24,6 +26,7 @@ const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
   timezoneOffset = 0,
   dayFlyingStart = '08:00',
   dayFlyingEnd = '17:00',
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [codesLoading, setCodesLoading] = useState(true);
@@ -91,6 +94,7 @@ const ACHistoryIntelligencePanel: React.FC<ACHistoryIntelligencePanelProps> = ({
       <ACHistoryAnalytics
         cancellationRecords={cancellationRecords}
         cancellationCodes={cancellationCodes}
+        resourceDisplayNames={resourceDisplayNames}
       />
     </div>
   );

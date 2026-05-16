@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
@@ -16,6 +17,7 @@ interface TrainingRecordsExportViewProps {
     syllabusDetails: SyllabusItemDetail[];
     pt051Assessments: Map<string, Pt051Assessment>;
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 type RecordType = 'all' | 'trainees' | 'staff' | 'events';
@@ -53,7 +55,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     publishedSchedules,
     syllabusDetails,
     pt051Assessments,
-    onSavePT051Assessment
+    onSavePT051Assessment,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -93,6 +96,12 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     const [isCompleting, setIsCompleting] = useState(false);
     const [completionProgress, setCompletionProgress] = useState(0);
     const [completionStatus, setCompletionStatus] = useState('');
+
+    const getEventTypeLabel = (type: EventType): string => {
+        if (type === 'FTD') return resourceDisplayNames.ftd;
+        if (type === 'CPT') return resourceDisplayNames.cpt;
+        return type;
+    };
 
     // Format date as dd MMM yy
     const formatDate = (dateStr: string): string => {
@@ -1366,7 +1375,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                                     }}
                                                     className="w-4 h-4 text-sky-500"
                                                 />
-                                                <span className="text-gray-200">{type}</span>
+                                                <span className="text-gray-200">{getEventTypeLabel(type)}</span>
                                             </label>
                                         ))}
                                     </div>

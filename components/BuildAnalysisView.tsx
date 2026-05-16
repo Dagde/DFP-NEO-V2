@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 // Import types from App.tsx
 interface CourseAnalysis {
@@ -59,10 +60,14 @@ interface BuildAnalysis {
 interface BuildAnalysisViewProps {
     buildDate: string;
     analysis: BuildAnalysis | null;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // Course Distribution Table Component
-const CourseDistributionTable: React.FC<{ courseAnalysis: CourseAnalysis[] }> = ({ courseAnalysis }) => {
+const CourseDistributionTable: React.FC<{
+    courseAnalysis: CourseAnalysis[];
+    resourceDisplayNames: ResourceDisplayNames;
+}> = ({ courseAnalysis, resourceDisplayNames }) => {
     return (
         <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
             <h2 className="text-xl font-semibold text-sky-400 mb-4">Course Distribution Analysis</h2>
@@ -78,8 +83,8 @@ const CourseDistributionTable: React.FC<{ courseAnalysis: CourseAnalysis[] }> = 
                             <th className="text-right py-3 px-4 text-gray-300 font-semibold">Scheduled</th>
                             <th className="text-right py-3 px-4 text-gray-300 font-semibold">Efficiency</th>
                             <th className="text-right py-3 px-4 text-gray-300 font-semibold">Flight</th>
-                            <th className="text-right py-3 px-4 text-gray-300 font-semibold">FTD</th>
-                            <th className="text-right py-3 px-4 text-gray-300 font-semibold">CPT</th>
+                            <th className="text-right py-3 px-4 text-gray-300 font-semibold">{resourceDisplayNames.ftd}</th>
+                            <th className="text-right py-3 px-4 text-gray-300 font-semibold">{resourceDisplayNames.cpt}</th>
                             <th className="text-right py-3 px-4 text-gray-300 font-semibold">Ground</th>
                             <th className="text-center py-3 px-4 text-gray-300 font-semibold">Status</th>
                         </tr>
@@ -247,7 +252,10 @@ const TimeDistributionChart: React.FC<{ timeDistribution: TimeDistribution }> = 
 };
 
 // Limiting Factors Section Component
-const LimitingFactorsSection: React.FC<{ courseAnalysis: CourseAnalysis[] }> = ({ courseAnalysis }) => {
+const LimitingFactorsSection: React.FC<{
+    courseAnalysis: CourseAnalysis[];
+    resourceDisplayNames: ResourceDisplayNames;
+}> = ({ courseAnalysis, resourceDisplayNames }) => {
     // Aggregate limiting factors across all courses
     const totalLimitingFactors = {
         insufficientInstructors: 0,
@@ -287,17 +295,17 @@ const LimitingFactorsSection: React.FC<{ courseAnalysis: CourseAnalysis[] }> = (
                         )}
                         {totalLimitingFactors.noAircraftSlots > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">No Aircraft Slots:</strong> {totalLimitingFactors.noAircraftSlots} flight events could not be scheduled due to lack of available aircraft
+                                <strong className="text-white">No {resourceDisplayNames.aircraft} Slots:</strong> {totalLimitingFactors.noAircraftSlots} flight events could not be scheduled due to lack of available {resourceDisplayNames.aircraft} resources
                             </li>
                         )}
                         {totalLimitingFactors.noFtdSlots > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">No FTD Slots:</strong> {totalLimitingFactors.noFtdSlots} FTD events could not be scheduled due to lack of available simulators
+                                <strong className="text-white">No {resourceDisplayNames.ftd} Slots:</strong> {totalLimitingFactors.noFtdSlots} {resourceDisplayNames.ftd} events could not be scheduled due to lack of available simulator resources
                             </li>
                         )}
                         {totalLimitingFactors.noCptSlots > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">No CPT Slots:</strong> {totalLimitingFactors.noCptSlots} CPT events could not be scheduled due to lack of available simulators
+                                <strong className="text-white">No {resourceDisplayNames.cpt} Slots:</strong> {totalLimitingFactors.noCptSlots} {resourceDisplayNames.cpt} events could not be scheduled due to lack of available procedural trainer resources
                             </li>
                         )}
                         {totalLimitingFactors.traineeLimit > 0 && (
@@ -371,7 +379,11 @@ const InsightsSection: React.FC<{ insights: Insight[] }> = ({ insights }) => {
 };
 
 // Main BuildAnalysisView Component
-const BuildAnalysisView: React.FC<BuildAnalysisViewProps> = ({ buildDate, analysis }) => {
+const BuildAnalysisView: React.FC<BuildAnalysisViewProps> = ({
+    buildDate,
+    analysis,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+}) => {
     const formattedDate = React.useMemo(() => {
         if (!buildDate) return '';
         const [year, month, day] = buildDate.split('-').map(Number);
@@ -440,10 +452,10 @@ const BuildAnalysisView: React.FC<BuildAnalysisViewProps> = ({ buildDate, analys
                 </div>
                 
                 {/* Course Distribution Table */}
-                <CourseDistributionTable courseAnalysis={analysis.courseAnalysis} />
+                <CourseDistributionTable courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} />
                 
                 {/* Limiting Factors */}
-                <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} />
+                <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} />
                 
                 {/* Pie Charts - Flight Events and Total Events per Course */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

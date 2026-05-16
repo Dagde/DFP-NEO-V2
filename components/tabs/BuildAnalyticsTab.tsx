@@ -4,6 +4,7 @@ import StatCard from '../shared/StatCard';
 import LimitingFactorsSection from '../shared/LimitingFactorsSection';
 import TimeDistributionChart from '../shared/TimeDistributionChart';
 import InsightsSection from '../shared/InsightsSection';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 
 interface CourseAnalysis {
   courseName: string;
@@ -63,11 +64,19 @@ interface BuildAnalysis {
 interface BuildAnalyticsTabProps {
   events: ScheduleEvent[];
   analysis: BuildAnalysis | null;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis }) => {
+const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({
+  events,
+  analysis,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   const sectionClass = 'rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]';
   const legendClass = 'px-2 text-lg font-semibold text-white';
+  const aircraftLabel = resourceDisplayNames.aircraft;
+  const ftdLabel = resourceDisplayNames.ftd;
+  const aircraftNoun = aircraftLabel.toLowerCase();
 
   // Format build date to DD-Mmm-YY
   const formattedBuildDate = useMemo(() => {
@@ -104,8 +113,8 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
           <legend className={legendClass}>Tiles</legend>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             <StatCard title="Total Flight Tiles" value={tilesStats.flightTiles} />
-            <StatCard title="Total FTD Tiles" value={tilesStats.ftdTiles} />
-            <StatCard title="Combined Flight/FTD" value={tilesStats.combinedTiles} />
+            <StatCard title={`Total ${ftdLabel} Tiles`} value={tilesStats.ftdTiles} />
+            <StatCard title={`Combined Flight/${ftdLabel}`} value={tilesStats.combinedTiles} />
             <StatCard title="Standby Events" value={tilesStats.standbyEvents} description="Reason not specified." />
           </div>
         </fieldset>
@@ -121,7 +130,7 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
             Click "NEO - Build" in the Priorities page to generate a build and see detailed analytics including:
           </p>
           <ul className="text-sm text-slate-500 mt-4 space-y-1">
-            <li>Build Summary (events, aircraft, utilization)</li>
+            <li>Build Summary (events, {aircraftNoun}, utilization)</li>
             <li>Scheduling Bottlenecks</li>
             <li>Time Distribution Analysis</li>
             <li>Insights & Recommendations</li>
@@ -138,8 +147,8 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
         <legend className={legendClass}>Tiles</legend>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard title="Total Flight Tiles" value={tilesStats.flightTiles} />
-          <StatCard title="Total FTD Tiles" value={tilesStats.ftdTiles} />
-          <StatCard title="Combined Flight/FTD" value={tilesStats.combinedTiles} />
+          <StatCard title={`Total ${ftdLabel} Tiles`} value={tilesStats.ftdTiles} />
+          <StatCard title={`Combined Flight/${ftdLabel}`} value={tilesStats.combinedTiles} />
           <StatCard title="Standby Events" value={tilesStats.standbyEvents} description="Reason not specified." />
         </div>
       </fieldset>
@@ -150,16 +159,16 @@ const BuildAnalyticsTab: React.FC<BuildAnalyticsTabProps> = ({ events, analysis 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
           <StatCard title="Build Date" value={formattedBuildDate} />
           <StatCard title="Total Events" value={analysis.totalEvents} />
-          <StatCard title="Aircraft Available" value={analysis.availableAircraft} />
-          <StatCard 
-            title="Aircraft Utilization" 
-            value={`${analysis.resourceUtilization.aircraftUtilization.toFixed(0)}%`} 
+          <StatCard title={`${aircraftLabel} Available`} value={analysis.availableAircraft} />
+          <StatCard
+            title={`${aircraftLabel} Utilization`}
+            value={`${analysis.resourceUtilization.aircraftUtilization.toFixed(0)}%`}
           />
         </div>
       </fieldset>
 
       {/* Scheduling Bottlenecks */}
-      <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} />
+      <LimitingFactorsSection courseAnalysis={analysis.courseAnalysis} resourceDisplayNames={resourceDisplayNames} />
 
       {/* Time Distribution */}
       <TimeDistributionChart timeDistribution={analysis.timeDistribution} />

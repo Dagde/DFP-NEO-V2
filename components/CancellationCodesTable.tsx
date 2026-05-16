@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { CancellationCode, CancellationCodeCategory, CancellationCodeAppliesTo } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface CancellationCodesTableProps {
   codes: CancellationCode[];
@@ -10,6 +11,7 @@ interface CancellationCodesTableProps {
   canEdit: boolean; // Based on user role
   usedCodes: Set<string>; // Codes that have been used in cancellations
   isLoading?: boolean; // Loading state while fetching from DB
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
@@ -21,6 +23,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
   canEdit,
   usedCodes,
   isLoading = false,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
@@ -108,6 +111,12 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
     }
     return a.code.localeCompare(b.code);
   });
+
+  const formatAppliesToLabel = (value?: CancellationCodeAppliesTo) => {
+    if (value === 'FTD') return resourceDisplayNames.ftd;
+    if (value === 'Both') return `Flight + ${resourceDisplayNames.ftd}`;
+    return 'Flight';
+  };
 
   // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (isLoading) {
@@ -241,10 +250,10 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                     value={formData.appliesTo}
                     onChange={(e) => setFormData({ ...formData, appliesTo: e.target.value as CancellationCodeAppliesTo })}
                     className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
-                  >
-                    <option value="Flight">Flight</option>
-                    <option value="FTD">FTD</option>
-                    <option value="Both">Both</option>
+                    >
+                      <option value="Flight">Flight</option>
+                    <option value="FTD">{resourceDisplayNames.ftd}</option>
+                    <option value="Both">Flight + {resourceDisplayNames.ftd}</option>
                   </select>
                 </td>
                 <td className="py-3 px-4 text-center">
@@ -314,8 +323,8 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                         className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm"
                       >
                         <option value="Flight">Flight</option>
-                        <option value="FTD">FTD</option>
-                        <option value="Both">Both</option>
+                        <option value="FTD">{resourceDisplayNames.ftd}</option>
+                        <option value="Both">Flight + {resourceDisplayNames.ftd}</option>
                       </select>
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -352,7 +361,7 @@ const CancellationCodesTable: React.FC<CancellationCodesTableProps> = ({
                   <td className="py-3 px-4 text-white font-mono font-semibold">{code.code}</td>
                   <td className="py-3 px-4 text-gray-300">{code.category}</td>
                   <td className="py-3 px-4 text-gray-300">{code.description}</td>
-                  <td className="py-3 px-4 text-gray-300">{code.appliesTo}</td>
+                  <td className="py-3 px-4 text-gray-300">{formatAppliesToLabel(code.appliesTo)}</td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
                       code.isActive

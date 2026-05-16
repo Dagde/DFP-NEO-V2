@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ScheduleEvent } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ interface PauseFlightOpsPanelProps {
     onPhaseChange: (phase: PausePhase) => void;
     stagedEvents: ScheduleEvent[];
     onStagedEventsChange: (events: ScheduleEvent[]) => void;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -86,6 +88,7 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     onPhaseChange,
     stagedEvents,
     onStagedEventsChange,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     // ── Config state ──────────────────────────────────────────────────────────
     const [pauseStart, setPauseStart] = useState(decToHHMM(flyingStartTime + 2));
@@ -99,6 +102,8 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
     // ── Derived ───────────────────────────────────────────────────────────────
     const pauseStartDec = useMemo(() => isValidHHMM(pauseStart) ? hhmmToDec(pauseStart) : null, [pauseStart]);
     const pauseEndDec   = useMemo(() => isValidHHMM(pauseEnd)   ? hhmmToDec(pauseEnd)   : null, [pauseEnd]);
+    const ftdLabel = resourceDisplayNames.ftd;
+    const cptLabel = resourceDisplayNames.cpt;
 
     const validationError = useMemo(() => {
         if (!pauseStartDec || !pauseEndDec) return 'Enter valid times (HH:MM).';
@@ -110,9 +115,9 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
 
     const cannotReprogram = useMemo(() => {
         const hasReprogrammable = affectedTypes.has('flight') || affectedTypes.has('ftd');
-        if (!hasReprogrammable) return 'Reprogram requires Flight or FTD selected.';
+        if (!hasReprogrammable) return `Reprogram requires Flight or ${ftdLabel} selected.`;
         return null;
-    }, [affectedTypes]);
+    }, [affectedTypes, ftdLabel]);
 
     const impactedEvents = useMemo(() => {
         if (!pauseStartDec || !pauseEndDec) return [];
@@ -258,8 +263,8 @@ const PauseFlightOpsPanel: React.FC<PauseFlightOpsPanelProps> = ({
 
     const TYPES: { key: EventTypeKey; label: string }[] = [
         { key: 'flight', label: 'Flight' },
-        { key: 'ftd',    label: 'FTD' },
-        { key: 'cpt',    label: 'CPT' },
+        { key: 'ftd',    label: ftdLabel },
+        { key: 'cpt',    label: cptLabel },
         { key: 'ground', label: 'Ground' },
     ];
 

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ScheduleEvent, Instructor, Trainee, UnavailabilityPeriod, Score, SyllabusItemDetail } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 
 interface ProgramDataViewProps {
@@ -15,6 +16,7 @@ interface ProgramDataViewProps {
   syllabusDetails: SyllabusItemDetail[];
   traineeLMPs: Map<string, SyllabusItemDetail[]>;
   courseColors: { [key: string]: string };
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // Helper component for stat cards
@@ -100,7 +102,8 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
     scores,
     syllabusDetails,
     traineeLMPs,
-    courseColors
+    courseColors,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
     // State for availability filtering
     const [availabilityFilter, setAvailabilityFilter] = useState<string>('all');
@@ -650,8 +653,8 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
               <legend className="px-2 text-xl font-semibold text-sky-400 mb-4">Tiles</legend>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <StatCard title="Total Flight Tiles" value={stats.flightTiles} />
-                  <StatCard title="Total FTD Tiles" value={stats.ftdTiles} />
-                  <StatCard title="Combined Flight/FTD" value={stats.combinedTiles} />
+                  <StatCard title={`Total ${resourceDisplayNames.ftd} Tiles`} value={stats.ftdTiles} />
+                  <StatCard title={`Combined Flight/${resourceDisplayNames.ftd}`} value={stats.combinedTiles} />
                   <StatCard title="Standby Events" value={stats.standbyEvents} description="Reason not specified." />
               </div>
           </fieldset>
@@ -869,12 +872,12 @@ const ProgramDataView: React.FC<ProgramDataViewProps> = ({
           <h2 className="text-xl font-semibold text-sky-400 mb-4">Next Event Lists</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <ListCard title="Next Event – Flight" trainees={nextEventLists.flight} />
-              <ListCard title="Next Event – FTD" trainees={nextEventLists.ftd} />
-              <ListCard title="Next Event – CPT" trainees={nextEventLists.cpt} />
+              <ListCard title={`Next Event – ${resourceDisplayNames.ftd}`} trainees={nextEventLists.ftd} />
+              <ListCard title={`Next Event – ${resourceDisplayNames.cpt}`} trainees={nextEventLists.cpt} />
               <ListCard title="Next Event – Ground" trainees={nextEventLists.ground} />
               <ListCard title="Next +1 – Flight" trainees={nextPlusOneLists.flight} />
-              <ListCard title="Next +1 – FTD" trainees={nextPlusOneLists.ftd} />
-              <ListCard title="Next +1 – CPT" trainees={nextPlusOneLists.cpt} />
+              <ListCard title={`Next +1 – ${resourceDisplayNames.ftd}`} trainees={nextPlusOneLists.ftd} />
+              <ListCard title={`Next +1 – ${resourceDisplayNames.cpt}`} trainees={nextPlusOneLists.cpt} />
               <ListCard title="Next +1 – Ground School" trainees={nextPlusOneLists.ground} />
           </div>
         </div>

@@ -4,6 +4,7 @@ import CoursesManagementView from './CoursesManagementView';
 import TrainingRecordsExportView from './TrainingRecordsExportView';
 import { Course, Trainee, Instructor, ScheduleEvent, Score, SyllabusItemDetail, Pt051Assessment } from '../types';
 import { NewCourseData } from './AddCourseFlyout';
+import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface TrainingRecordsViewProps {
     courses: Course[];
@@ -27,6 +28,7 @@ interface TrainingRecordsViewProps {
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
     locations?: string[];
     units?: string[];
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 type TabType = 'courses' | 'export';
@@ -53,6 +55,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     onSavePT051Assessment,
     locations = [],
     units = [],
+    resourceDisplayNames,
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
@@ -125,6 +128,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         syllabusDetails={syllabusDetails}
                         pt051Assessments={pt051Assessments}
                         onSavePT051Assessment={onSavePT051Assessment}
+                        resourceDisplayNames={resourceDisplayNames}
                     />
                 )}
             </div>

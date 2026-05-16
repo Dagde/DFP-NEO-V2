@@ -8,6 +8,7 @@ import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -31,6 +32,7 @@ interface InstructorProfileFlyoutProps {
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -137,6 +139,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   masterCurrencies = [], currencyRequirements = [],
   profileInitialTab, onProfileTabConsumed,
   currentUserId, currentUserName,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -260,7 +263,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   };
 
   useEffect(() => { resetState(); setIsEditing(isCreating); }, [instructor, isCreating]);
-  
+
   // Use ref to prevent double-logging in React StrictMode
   const hasLoggedViewRef = useRef(false);
   useEffect(() => {
@@ -343,7 +346,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       photoUrl: finalPhotoUrl,
     };
     flushPendingAudits();
-    
+
     if (isCreating) {
       logAudit({ action: 'Add', description: `Added new staff ${rank} ${name}`, changes: `Role: ${role}, Unit: ${unit}, Location: ${location}`, page: 'Staff' });
     } else {
@@ -371,11 +374,11 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
       if (instructor.isQFI !== isQFI) changes.push(`QFI: ${instructor.isQFI} → ${isQFI}`);
       if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
-      
+
       const changesStr = changes.length > 0 ? changes.join(', ') : 'No field changes';
       logAudit({ action: 'Edit', description: `Edited staff profile for ${rank} ${name}`, changes: changesStr, page: 'Staff' });
     }
-    
+
     onUpdateInstructor(updatedInstructor);
     try {
       const cleanName = name.replace(/,\s/g, '_');
@@ -626,7 +629,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                              <button onClick={() => setLogbookMonth(shiftMonth(logbookMonth, 1))} className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-white text-sm leading-none">›</button>
                            </div>
                          );
-                       })()} 
+                       })()}
                     </div>
                     {/* Right: print + entry count + close */}
                     <div className="flex items-center gap-2">
@@ -1110,7 +1113,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               {/* ── SECTION 3: LOGBOOK VIEW (always visible, not editing) ── */}
               {!isEditing && (
                 <div className={card3d + " p-3"} style={card3dStyle}>
-                  <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
+                  <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience ({resourceDisplayNames.aircraft} only)</h4>
                   <div className="flex gap-2">
                     <CircularGauge title="Day Flying" mainValue={exp.day.p1 + exp.day.p2 + exp.day.dual}
                       subItems={[{ label: 'P1', value: exp.day.p1 }, { label: 'P2', value: exp.day.p2 }, { label: 'Dual', value: exp.day.dual }]} />
@@ -1136,9 +1139,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         { label: 'Prior P2', value: exp.simulator.p2 },
                         { label: 'Prior Dual', value: exp.simulator.dual },
                         { label: 'Prior Total', value: exp.simulator.total },
-                        ...(ftdTotal > 0 ? [{ label: 'FTD', value: ftdTotal }] : []),
+                        ...(ftdTotal > 0 ? [{ label: resourceDisplayNames.ftd, value: ftdTotal }] : []),
                       ];
-                      return <CircularGauge title="Simulator" mainValue={simMainValue} subItems={simSubItems} />;
+                      return <CircularGauge title={resourceDisplayNames.ftd} mainValue={simMainValue} subItems={simSubItems} />;
                     })()}
                   </div>
                 </div>
@@ -1147,7 +1150,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
               {/* ── SECTION 3: LOGBOOK EDIT (always visible, editing) ── */}
               {isEditing && (
                 <div className={card3d + " p-3"} style={card3dStyle}>
-                  <h4 className="text-xs font-semibold text-sky-400 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
+                  <h4 className="text-xs font-semibold text-sky-400 mb-3">Logbook – Prior Experience ({resourceDisplayNames.aircraft} only)</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Day Flying</span>
                       <div className="flex justify-center space-x-2">
@@ -1176,7 +1179,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <ExperienceInput label="Actual" value={exp.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} />
                       </div>
                     </div>
-                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Simulator</span>
+                    <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">{resourceDisplayNames.ftd}</span>
                       <div className="flex justify-center space-x-2">
                         <ExperienceInput label="P1" value={exp.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} />
                         <ExperienceInput label="P2" value={exp.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} />

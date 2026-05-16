@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Instructor, Trainee, ScheduleEvent } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface LogbookViewProps {
   person: Instructor | Trainee;
   events: ScheduleEvent[];
   onBack: () => void;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 interface LogbookRowData {
@@ -58,7 +60,7 @@ const DataCell: React.FC<{ value: string; width: string; bgColor?: string; borde
 );
 
 // Column header row
-const HeaderRow: React.FC = () => (
+const HeaderRow: React.FC<{ resourceDisplayNames: ResourceDisplayNames }> = ({ resourceDisplayNames }) => (
   <div className="flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600">
     {/* Row label spacer */}
     <div className="w-24 flex-shrink-0 border-r border-gray-600 bg-gray-900/30" />
@@ -96,7 +98,7 @@ const HeaderRow: React.FC = () => (
     <HdrCell label="3D App"     width="w-10" />
     {/* Simulator group */}
     <div className="flex flex-col">
-      <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1">Simulator</div>
+      <div className="text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1">{resourceDisplayNames.ftd}</div>
       <div className="flex">
         <HdrCell label="P1"    width="w-10" bgColor="bg-gray-800/30" />
         <HdrCell label="P2"    width="w-10" bgColor="bg-gray-800/30" />
@@ -154,7 +156,7 @@ const DataRow: React.FC<{ row: LogbookRowData; isEven: boolean }> = ({ row, isEv
   );
 };
 
-const LogbookView: React.FC<LogbookViewProps> = ({ person, events, onBack }) => {
+const LogbookView: React.FC<LogbookViewProps> = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const [rows, setRows] = useState<LogbookRowData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,7 +188,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({ person, events, onBack }) => 
           logRows.push({
             year:      snap.year      || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : ''),
             date:      snap.date      || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : ''),
-            type:      snap.type      || (entry.isFtdLog ? 'FTD' : 'PC-21'),
+            type:      snap.type      || (entry.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft),
             tail:      snap.tail      || '',
             captain:   snap.captain   || '',
             crew:      snap.crew      || '',
@@ -267,7 +269,7 @@ const LogbookView: React.FC<LogbookViewProps> = ({ person, events, onBack }) => 
         {!loading && !error && rows.length > 0 && (
           <div className="overflow-x-auto">
             <div className="inline-flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max">
-              <HeaderRow />
+              <HeaderRow resourceDisplayNames={resourceDisplayNames} />
               {rows.map((row, idx) => (
                 <DataRow key={`${row._eventDate}-${row._role}-${idx}`} row={row} isEven={idx % 2 === 0} />
               ))}

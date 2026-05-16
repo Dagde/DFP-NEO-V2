@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trainee } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface NextFlightEventListFlyoutProps {
   onClose: () => void;
@@ -7,9 +8,17 @@ interface NextFlightEventListFlyoutProps {
   rankedNextPlusOneTrainees: { trainee: Trainee; nextEventId: string }[];
   rankedCptPlusOne: { trainee: Trainee; nextEventId: string }[];
   rankedGroundPlusOne: { trainee: Trainee; nextEventId: string }[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const NextFlightEventListFlyout: React.FC<NextFlightEventListFlyoutProps> = ({ onClose, rankedTrainees, rankedNextPlusOneTrainees, rankedCptPlusOne, rankedGroundPlusOne }) => {
+const NextFlightEventListFlyout: React.FC<NextFlightEventListFlyoutProps> = ({
+  onClose,
+  rankedTrainees,
+  rankedNextPlusOneTrainees,
+  rankedCptPlusOne,
+  rankedGroundPlusOne,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+}) => {
 
   const ListColumn: React.FC<{ title: string; items: { trainee: Trainee; nextEventId: string }[]; emptyMessage: string }> = ({ title, items, emptyMessage }) => (
     <div className="flex flex-col">
@@ -66,9 +75,9 @@ const NextFlightEventListFlyout: React.FC<NextFlightEventListFlyoutProps> = ({ o
                 emptyMessage="No trainees are due for a flight after a ground school event."
             />
             <ListColumn
-                title="Next +1 – CPT List"
+                title={`Next +1 – ${resourceDisplayNames.cpt} List`}
                 items={rankedCptPlusOne}
-                emptyMessage="No trainees are due for a CPT after their current event."
+                emptyMessage={`No trainees are due for a ${resourceDisplayNames.cpt} after their current event.`}
             />
             <ListColumn
                 title="Next +1 – Ground School List"

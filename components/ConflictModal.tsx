@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScheduleEvent } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface Conflict {
   conflictingEvent: ScheduleEvent;
@@ -12,9 +13,15 @@ interface ConflictModalProps {
   conflict: Conflict;
   onResolve: (resolution: 'changeTime' | 'changePerson') => void;
   onCancel: () => void;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const ConflictModal: React.FC<ConflictModalProps> = ({ conflict, onResolve, onCancel }) => {
+const ConflictModal: React.FC<ConflictModalProps> = ({
+  conflict,
+  onResolve,
+  onCancel,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+}) => {
   const formatTime = (time: number) => {
     const hours = Math.floor(time);
     const minutes = Math.round((time % 1) * 60);
@@ -23,8 +30,8 @@ const ConflictModal: React.FC<ConflictModalProps> = ({ conflict, onResolve, onCa
 
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
   const personTypeDisplay = conflict.conflictedPerson === 'instructor' ? 'Instructor' : 'Trainee';
-  const existingEventTypeDisplay = conflict.conflictingEvent.type === 'ftd' ? 'FTD session' : 'flight';
-  const newEventTypeDisplay = conflict.newEvent.type === 'ftd' ? 'FTD session' : 'flight';
+  const existingEventTypeDisplay = conflict.conflictingEvent.type === 'ftd' ? `${resourceDisplayNames.ftd} session` : 'flight';
+  const newEventTypeDisplay = conflict.newEvent.type === 'ftd' ? `${resourceDisplayNames.ftd} session` : 'flight';
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[70] flex items-center justify-center">

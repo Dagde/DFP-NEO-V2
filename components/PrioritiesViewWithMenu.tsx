@@ -3,6 +3,7 @@ import { PrioritiesView } from './PrioritiesView';
 import AuditButton from './AuditButton';
 import { Instructor, Trainee, ScheduleEvent, SctRequest, SyllabusItemDetail, Score, RemedialRequest } from '../types';
 import { InstructorPriorityConfig } from '../App';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface PrioritiesViewWithMenuProps {
   school: 'ESL' | 'PEA';
@@ -51,12 +52,14 @@ interface PrioritiesViewWithMenuProps {
   remedialRequests?: RemedialRequest[];
   onToggleRemedialRequest?: (traineeId: number, eventCode: string) => void;
   currencyNames: string[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 type PrioritiesSection = 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 
 export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (props) => {
     const [activeSection, setActiveSection] = useState<PrioritiesSection>('build-timeline');
+    const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
 
     const workflowItems = [
         {
@@ -64,7 +67,7 @@ export const PrioritiesViewWithMenu: React.FC<PrioritiesViewWithMenuProps> = (pr
             step: '01',
             label: 'Flying Windows & Capacity',
             shortLabel: 'Time & Resources',
-            description: 'Set the day, simulator and night windows, then declare aircraft, FTD and CPT capacity before anything else.',
+            description: `Set the day, ${resourceLabels.ftd} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} capacity before anything else.`,
         },
         {
             id: 'people-rules' as const,

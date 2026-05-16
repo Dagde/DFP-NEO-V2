@@ -9,6 +9,7 @@ interface AirframeColumnProps {
   ftdCount: number;
   cptCount: number;
   events?: any[]; // Add events prop to filter resources
+  formatResourceLabel?: (resourceId: string) => string;
 }
 
 // Helper to determine resource category
@@ -24,7 +25,7 @@ const getCategory = (res: string) => {
     return 'Other';
 };
 
-const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [] }) => {
+const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const handleDragStart = (index: number) => {
@@ -60,6 +61,7 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
         {displayResources.map((resource, index) => {
             // Resource is already the display text (PC-21 1-24, Duty Sup, STBY, FTD, CPT, Ground)
             let resourceText: string = resource;
+            const displayText = formatResourceLabel ? formatResourceLabel(resourceText) : resourceText;
             let textColorClass = 'text-gray-400';
             let isDraggable = true;
 
@@ -121,11 +123,11 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                       <span className="absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
                           {resource.match(/\d+$/)?.[0] || ''}
                       </span>
-                      <span>PC-21</span>
+                      <span>{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
                   </div>
               ) : (
                   <div className="w-full text-center">
-                      <span>{resourceText.replace(/\s+\d+$/, '')}</span>
+                      <span>{displayText.replace(/\s+\d+$/, '')}</span>
                   </div>
               )}
             </li>

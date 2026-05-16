@@ -9,6 +9,7 @@ import BulkUpdateFlyout from './BulkUpdateFlyout';
 import ArchiveConfirmationFlyout from './ArchiveConfirmationFlyout';
 import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 // Helper to generate a unique random ID for new instructors
 const generateRandomIdNumber = (): number => {
@@ -70,6 +71,7 @@ interface InstructorListViewProps {
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -98,13 +100,14 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     onProfileTabConsumed,
     currentUserId,
     currentUserName,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -119,13 +122,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const [selectedInstructor, setSelectedInstructor] = useState<Instructor | null>(null);
   const [originRect, setOriginRect] = useState<DOMRect | null>(null);
   const [isClosing, setIsClosing] = useState(false);
-  
+
   // State for adding new instructors
   const [showAddChoice, setShowAddChoice] = useState(false);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [showBulkUpdate, setShowBulkUpdate] = useState(false);
   const [newInstructorTemplate, setNewInstructorTemplate] = useState<Instructor | null>(null);
-  
+
   // State for archiving
   const [isArchiveMode, setIsArchiveMode] = useState(false);
   const [instructorToArchive, setInstructorToArchive] = useState<Instructor | null>(null);
@@ -133,7 +136,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
   useEffect(() => {
     if (selectedPersonForProfile) {
-        // Try to find element, though in grid it might be scrolled out. 
+        // Try to find element, though in grid it might be scrolled out.
         // If not found, originRect is null, which flyout handles gracefully (fades in center)
         const matchingElement = document.getElementById(`instructor-row-${selectedPersonForProfile.name}`);
         if (matchingElement) {
@@ -189,7 +192,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               // Filter by role/flag - include QFI and INSTRUCTOR roles
               const isQFI = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
               if (!isQFI) return false;
-              
+
               // Filter by location (not unit)
               // ESL = East Sale, PEA = Pearce
               // Also include staff with no location set (default to ESL)
@@ -200,7 +203,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
           .sort((a, b) => {
               const rankA = rankOrder[a.rank] || 99;
               const rankB = rankOrder[b.rank] || 99;
-              
+
               if (rankA !== rankB) {
                   return rankA - rankB;
               }
@@ -238,7 +241,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         const simIpCandidates = instructorsData.filter(i => {
             const isSimIp = i.role === 'SIM IP';
             if (!isSimIp) return false;
-            
+
             // Filter by location (not unit)
             // ESL = East Sale, PEA = Pearce
             // Also include staff with no location set (default to ESL)
@@ -251,7 +254,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             return isValid;
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
-        
+
         const rankOrder: { [key: string]: number } = {
             'WGCDR': 1,
             'SQNLDR': 2,
@@ -260,7 +263,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             'PLTOFF': 5,
             'Mr': 6
         };
-        
+
         return simIpCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -282,11 +285,11 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     const ofis = useMemo(() => {
         console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
         console.log('🔍 [OFI FILTER] All instructors:', instructorsData.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
-        
+
         const ofiCandidates = instructorsData.filter(i => {
             const isOfi = i.role === 'OFI' || i.isOFI === true;
             if (!isOfi) return false;
-            
+
             // Filter by location (not unit)
             // ESL = East Sale, PEA = Pearce
             const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
@@ -294,10 +297,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             console.log(`🔍 [OFI FILTER] ${school} - ${i.name}: role="${i.role}", isOFI=${i.isOFI}, location=${i.location}, isValid=${isValid}`);
             return isValid;
         });
-        
+
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
         console.log('🔍 [OFI FILTER] OFI candidates:', ofiCandidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
-        
+
         const rankOrder: { [key: string]: number } = {
             'WGCDR': 1,
             'SQNLDR': 2,
@@ -306,7 +309,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             'PLTOFF': 5,
             'Mr': 6
         };
-        
+
         const sorted = ofiCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -330,17 +333,17 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     // NEW: All other staff members who don't fit into QFI, SIM IP, or OFI categories
     const otherStaff = useMemo(() => {
         console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
-        
+
         const otherStaffCandidates = instructorsData.filter(i => {
             // Exclude QFIs, INSTRUCTORs, SIM IPs, and OFIs
             const isQfi = i.role === 'QFI' || i.isQFI === true || i.role === 'INSTRUCTOR';
             const isSimIp = i.role === 'SIM IP';
             const isOfi = i.role === 'OFI' || i.isOFI === true;
-            
+
             // Include everyone else
             const isOther = !isQfi && !isSimIp && !isOfi;
             if (!isOther) return false;
-            
+
             // Filter by location (not unit)
             // ESL = East Sale, PEA = Pearce
             const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
@@ -350,9 +353,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             }
             return isValid;
         });
-        
+
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
-        
+
         const rankOrder: { [key: string]: number } = {
             'WGCDR': 1,
             'SQNLDR': 2,
@@ -361,7 +364,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             'PLTOFF': 5,
             'Mr': 6
         };
-        
+
         return otherStaffCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -432,7 +435,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   [otherStaffByUnit]);
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, instructorName: string) => {
-    if (selectedInstructor || isArchiveMode) return; 
+    if (selectedInstructor || isArchiveMode) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setHoveredInstructor(instructorName);
     setFlyoutPosition({ top: rect.top, left: rect.right + 10 });
@@ -442,7 +445,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setHoveredInstructor(null);
     setFlyoutPosition(null);
   };
-  
+
   const handleInstructorClick = (e: React.MouseEvent<HTMLLIElement>, instructor: Instructor) => {
     if (selectedInstructor?.name === instructor.name) {
         handleCloseProfile();
@@ -461,7 +464,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
       setSelectedInstructor(null);
       setIsAddingNew(false);
       setNewInstructorTemplate(null);
-    }, 300); 
+    }, 300);
   };
 
   const handleShowAddChoice = () => {
@@ -482,7 +485,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     setIsClosing(false);
     setOriginRect(null); // Center animation for new
   };
-  
+
   const handleBulkUpload = () => {
       setShowAddChoice(false);
       setIsArchiveMode(false);
@@ -497,7 +500,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   const renderInstructorList = (instructors: Instructor[]) => (
     <ul className="space-y-2">
       {instructors.map((instructor, index) => (
-        <li 
+        <li
           id={`instructor-row-${instructor.name}`}
           key={instructor.name}
           className={`group p-2 rounded-md transition-all duration-200 cursor-pointer flex items-center justify-between space-x-3 text-sm ${selectedInstructor?.name === instructor.name ? 'bg-sky-700 text-white' : 'bg-gray-700/30 text-gray-300'} ${isArchiveMode ? 'hover:bg-red-900/70' : 'hover:bg-sky-800 hover:text-white'}`}
@@ -578,7 +581,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                             </div>
                         </div>
                     ))}
-                    
+
                     {/* SIM IPs - single combined card regardless of unit */}
                     {simIps.length > 0 && (
                         <div className="bg-gray-800 border border-teal-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
@@ -626,7 +629,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                  </div>
             </div>
       </div>
-      
+
       {/* Profile Overlay - Centred Modal (same as Trainee profile) */}
       {(selectedInstructor || (isAddingNew && newInstructorTemplate)) && (
                 <InstructorProfileFlyout
@@ -656,9 +659,10 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     onProfileTabConsumed={onProfileTabConsumed}
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
+                    resourceDisplayNames={resourceDisplayNames}
                 />
         )}
-      
+
       {/* Hover Flyout */}
       {hoveredInstructor && flyoutPosition && (
         <FlightInfoFlyout

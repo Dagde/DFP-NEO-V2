@@ -1,10 +1,12 @@
 
 import React, { useMemo } from 'react';
 import { NeoProblemTile, NeoRemedy, NeoInstructorRemedy, NeoTimeShiftRemedy, NeoTraineeRemedy } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface NeoRemedyFlyoutProps {
   problemTile: NeoProblemTile;
   remedies: NeoRemedy[];
+  resourceDisplayNames?: ResourceDisplayNames;
   onApplyRemedy: (remedy: NeoRemedy) => void;
   onCancel: () => void;
 }
@@ -15,7 +17,7 @@ const formatTime = (time: number): string => {
     return `${String(hours).padStart(2, '0')}${String(minutes).padStart(2, '0')}`;
 };
 
-const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies, onApplyRemedy, onCancel }) => {
+const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
     const { event, errors } = problemTile;
 
     const instructorSwapRemedies = remedies.filter((r): r is NeoInstructorRemedy => r.type === 'instructor');
@@ -75,8 +77,8 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
                                                     <span className="font-mono text-gray-500 text-right">{remedy.trainee.rank}</span>
                                                     <p className="font-semibold text-white truncate">{remedy.trainee.name.split(' – ')[0]}</p>
                                                     <div className="text-center w-10"><span className="text-gray-400 text-xs">FLT</span><br/><span className="font-mono">{remedy.trainee.flightsToday}</span></div>
-                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">FTD</span><br/><span className="font-mono">{remedy.trainee.ftdsToday}</span></div>
-                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">CPT</span><br/><span className="font-mono">{remedy.trainee.cptsToday}</span></div>
+                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">{resourceDisplayNames.ftd}</span><br/><span className="font-mono">{remedy.trainee.ftdsToday}</span></div>
+                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">{resourceDisplayNames.cpt}</span><br/><span className="font-mono">{remedy.trainee.cptsToday}</span></div>
                                                     <div className="text-center w-10"><span className="text-gray-400 text-xs">GRD</span><br/><span className="font-mono">{remedy.trainee.groundToday}</span></div>
                                                 </div>
                                             </button>
@@ -101,8 +103,8 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
                                                     <span className="font-mono text-gray-500 text-right">{remedy.instructor.rank}</span>
                                                     <p className="font-semibold text-white truncate">{remedy.instructor.name}</p>
                                                     <div className="text-center w-10"><span className="text-gray-400 text-xs">FLT</span><br/><span className="font-mono">{remedy.instructor.flightsToday}</span></div>
-                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">FTD</span><br/><span className="font-mono">{remedy.instructor.ftdsToday}</span></div>
-                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">CPT</span><br/><span className="font-mono">{remedy.instructor.cptsToday}</span></div>
+                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">{resourceDisplayNames.ftd}</span><br/><span className="font-mono">{remedy.instructor.ftdsToday}</span></div>
+                                                    <div className="text-center w-10"><span className="text-gray-400 text-xs">{resourceDisplayNames.cpt}</span><br/><span className="font-mono">{remedy.instructor.cptsToday}</span></div>
                                                     <div className="text-center w-10"><span className="text-gray-400 text-xs">GRD</span><br/><span className="font-mono">{remedy.instructor.groundToday}</span></div>
                                                 </div>
                                             </button>
@@ -132,8 +134,8 @@ const NeoRemedyFlyout: React.FC<NeoRemedyFlyoutProps> = ({ problemTile, remedies
                                                             <span className="font-mono text-gray-500 text-right text-xs">{remedy.instructor.rank}</span>
                                                             <p className="font-semibold text-white truncate text-sm">{remedy.instructor.name}</p>
                                                             <div className="text-center w-10"><span className="text-gray-500 text-[10px]">FLT</span><br/><span className="font-mono text-xs">{remedy.instructor.flightsToday}</span></div>
-                                                            <div className="text-center w-10"><span className="text-gray-500 text-[10px]">FTD</span><br/><span className="font-mono text-xs">{remedy.instructor.ftdsToday}</span></div>
-                                                            <div className="text-center w-10"><span className="text-gray-500 text-[10px]">CPT</span><br/><span className="font-mono text-xs">{remedy.instructor.cptsToday}</span></div>
+                                                            <div className="text-center w-10"><span className="text-gray-500 text-[10px]">{resourceDisplayNames.ftd}</span><br/><span className="font-mono text-xs">{remedy.instructor.ftdsToday}</span></div>
+                                                            <div className="text-center w-10"><span className="text-gray-500 text-[10px]">{resourceDisplayNames.cpt}</span><br/><span className="font-mono text-xs">{remedy.instructor.cptsToday}</span></div>
                                                             <div className="text-center w-10"><span className="text-gray-500 text-[10px]">GRD</span><br/><span className="font-mono text-xs">{remedy.instructor.groundToday}</span></div>
                                                         </div>
                                                     </button>

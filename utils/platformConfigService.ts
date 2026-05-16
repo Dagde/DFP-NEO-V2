@@ -29,8 +29,11 @@ export interface PlatformResourcePool {
   status?: string;
   settings?: {
     aircraft?: number;
+    aircraftLabel?: string;
     ftd?: number;
+    ftdLabel?: string;
     cpt?: number;
+    cptLabel?: string;
     ground?: number;
     standby?: number;
     applyToV2Runtime?: boolean;

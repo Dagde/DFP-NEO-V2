@@ -1,15 +1,17 @@
 
 import React from 'react';
 import { ScheduleEvent } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface FlightInfoFlyoutProps {
   events: ScheduleEvent[];
   position: { top: number; left: number };
   personName: string;
   personType: 'Instructor' | 'Trainee';
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const FlightInfoFlyout: React.FC<FlightInfoFlyoutProps> = ({ events, position, personName, personType }) => {
+const FlightInfoFlyout: React.FC<FlightInfoFlyoutProps> = ({ events, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime = (time: number) => {
     const hours = Math.floor(time);
     const minutes = Math.round((time % 1) * 60);
@@ -28,7 +30,7 @@ const FlightInfoFlyout: React.FC<FlightInfoFlyoutProps> = ({ events, position, p
           {events.sort((a,b) => a.startTime - b.startTime).map(event => (
             <li key={event.id} className={`p-2 rounded-md border-l-4 ${event.color.replace('bg-', 'border-')}`}>
               <div className="flex justify-between items-center font-semibold text-sm">
-                <span>{event.flightNumber}{event.type === 'ftd' && <span className="text-indigo-400 font-bold"> (FTD)</span>}</span>
+                <span>{event.flightNumber}{event.type === 'ftd' && <span className="text-indigo-400 font-bold"> ({resourceDisplayNames.ftd})</span>}</span>
                 <span>{formatTime(event.startTime)}</span>
               </div>
               <div className="text-xs text-gray-400 mt-1">

@@ -6,6 +6,7 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { createSyllabusItem, updateSyllabusItem, retireSyllabusItem } from '../lib/syllabusService';
 import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface SyllabusViewProps {
   syllabusDetails: SyllabusItemDetail[];
@@ -13,6 +14,7 @@ interface SyllabusViewProps {
   initialSelectedId?: string;
   onUpdateItem: (item: SyllabusItemDetail) => void;
   onAddItem?: (item: SyllabusItemDetail) => void;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // Reusable components for view mode
@@ -72,7 +74,8 @@ const DetailView: React.FC<{
     editedItem: SyllabusItemDetail | null;
     onItemChange: (newItem: SyllabusItemDetail) => void;
     onDeleteEvent?: (item: SyllabusItemDetail) => void;
-}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }) => {
+    resourceDisplayNames?: ResourceDisplayNames;
+}> = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
     
     const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'CPT' | 'Ground' | 'Academics' => {
         if (syllabusItem.type === 'Flight') return 'Flight';
@@ -83,6 +86,12 @@ const DetailView: React.FC<{
             return 'Ground';
         }
         return 'Flight'; // Fallback
+    };
+
+    const formatDisplayType = (displayType: ReturnType<typeof getDisplayType>) => {
+        if (displayType === 'FTD') return resourceDisplayNames.ftd;
+        if (displayType === 'CPT') return resourceDisplayNames.cpt;
+        return displayType;
     };
 
     const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -157,11 +166,11 @@ const DetailView: React.FC<{
                                 onChange={handleTypeChange}
                                 className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
                             >
-                                <option>Flight</option>
-                                <option>FTD</option>
-                                <option>CPT</option>
-                                <option>Ground</option>
-                                <option>Academics</option>
+                                <option value="Flight">Flight</option>
+                                <option value="FTD">{resourceDisplayNames.ftd}</option>
+                                <option value="CPT">{resourceDisplayNames.cpt}</option>
+                                <option value="Ground">Ground</option>
+                                <option value="Academics">Academics</option>
                             </select>
                         </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
@@ -268,7 +277,7 @@ const DetailView: React.FC<{
                     <>
                         <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
                         <DetailCard label="Day/Night" value={item.dayNight} />
-                        <DetailCard label="Type" value={getDisplayType(item)} />
+                        <DetailCard label="Type" value={formatDisplayType(getDisplayType(item))} />
                         <DetailCard label="Cct Only" value={item.cctOnly || (item.code === 'BGF10' ? 'YES' : 'NO')} />
                         <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || (item.code === 'BGF11' || item.code === 'BGF18' ? 'YES' : 'NO')} />
                         <DetailCard label="Total Event Hrs" value={<>{item.totalEventHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
@@ -367,7 +376,14 @@ const DetailView: React.FC<{
 
 const STATIC_COURSE_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 
-const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem, onAddItem }) => {
+const SyllabusView: React.FC<SyllabusViewProps> = ({
+    syllabusDetails,
+    onBack,
+    initialSelectedId,
+    onUpdateItem,
+    onAddItem,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+}) => {
     const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
   const [hoveredItem, setHoveredItem] = useState<SyllabusItemDetail | null>(null);
@@ -937,6 +953,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({ syllabusDetails, onBack, in
                     editedItem={editedItem}
                     onItemChange={setEditedItem}
                     onDeleteEvent={handleDeleteEventRequest}
+                    resourceDisplayNames={resourceDisplayNames}
                 />
             ) : (
               <div className="flex items-center justify-center h-full">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Trainee, SyllabusItemDetail, Score } from '../types';
 import AuditButton from './AuditButton';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -15,6 +16,7 @@ interface TraineeLmpViewProps {
   onOpenPt051ForLesson?: (trainee: Trainee, lessonCode: string) => void;
   canOpenPt051?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
@@ -61,7 +63,17 @@ const getDisplayType = (syllabusItem: SyllabusItemDetail): 'Flight' | 'FTD' | 'C
     return 'Flight';
 };
 
-const DetailView: React.FC<{ item: SyllabusItemDetail, score: Score | undefined }> = ({ item, score }) => (
+const formatDisplayType = (displayType: ReturnType<typeof getDisplayType>, resourceDisplayNames: ResourceDisplayNames) => {
+    if (displayType === 'FTD') return resourceDisplayNames.ftd;
+    if (displayType === 'CPT') return resourceDisplayNames.cpt;
+    return displayType;
+};
+
+const DetailView: React.FC<{
+    item: SyllabusItemDetail;
+    score: Score | undefined;
+    resourceDisplayNames?: ResourceDisplayNames;
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => (
     <div className="space-y-6">
         <div>
             <h2 className="text-3xl font-bold text-white">{item.code}</h2>
@@ -73,7 +85,7 @@ const DetailView: React.FC<{ item: SyllabusItemDetail, score: Score | undefined 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                 <DetailCard label="Phase" value={item.phase} />
                 <DetailCard label="Module" value={item.module} />
-                <DetailCard label="Type" value={getDisplayType(item)} />
+                <DetailCard label="Type" value={formatDisplayType(getDisplayType(item), resourceDisplayNames)} />
                 <DetailCard label="Day/Night" value={item.dayNight || 'Day'} />
                 <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
                 <DetailCard label="Total Event Hours" value={<>{item.totalEventHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
@@ -497,6 +509,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     syllabusDetails,
     allTraineesData,
     onOpenPt051ForLesson,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -611,6 +624,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                     <DetailView
                                         item={selectedItem}
                                         score={scores.find(s => s.event === selectedItem.code)}
+                                        resourceDisplayNames={resourceDisplayNames}
                                     />
                                 ) : (
                                     <div className="flex items-center justify-center h-full">

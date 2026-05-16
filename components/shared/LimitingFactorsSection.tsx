@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 
 interface CourseAnalysis {
   courseName: string;
@@ -28,9 +29,13 @@ interface CourseAnalysis {
 
 interface LimitingFactorsSectionProps {
   courseAnalysis: CourseAnalysis[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({ courseAnalysis }) => {
+const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({
+  courseAnalysis,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   // Aggregate limiting factors across all courses
   const totalLimitingFactors = {
     insufficientInstructors: 0,
@@ -72,17 +77,17 @@ const LimitingFactorsSection: React.FC<LimitingFactorsSectionProps> = ({ courseA
             )}
             {totalLimitingFactors.noAircraftSlots > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">No Aircraft Slots:</strong> {totalLimitingFactors.noAircraftSlots} flight events could not be scheduled due to lack of available aircraft
+                <strong className="text-white">No {resourceDisplayNames.aircraft} Slots:</strong> {totalLimitingFactors.noAircraftSlots} flight events could not be scheduled due to lack of available {resourceDisplayNames.aircraft.toLowerCase()}
               </li>
             )}
             {totalLimitingFactors.noFtdSlots > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">No FTD Slots:</strong> {totalLimitingFactors.noFtdSlots} FTD events could not be scheduled due to lack of available simulators
+                <strong className="text-white">No {resourceDisplayNames.ftd} Slots:</strong> {totalLimitingFactors.noFtdSlots} {resourceDisplayNames.ftd} events could not be scheduled due to lack of available {resourceDisplayNames.ftd.toLowerCase()} resources
               </li>
             )}
             {totalLimitingFactors.noCptSlots > 0 && (
               <li className="text-slate-300">
-                <strong className="text-white">No CPT Slots:</strong> {totalLimitingFactors.noCptSlots} CPT events could not be scheduled due to lack of available simulators
+                <strong className="text-white">No {resourceDisplayNames.cpt} Slots:</strong> {totalLimitingFactors.noCptSlots} {resourceDisplayNames.cpt} events could not be scheduled due to lack of available {resourceDisplayNames.cpt.toLowerCase()} resources
               </li>
             )}
             {totalLimitingFactors.traineeLimit > 0 && (

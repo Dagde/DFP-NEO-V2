@@ -16,6 +16,7 @@ import { HistoricalDataSeeder } from './HistoricalDataSeeder';
 import PeopleProfilePage from './PeopleProfilePage';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import { logAudit } from '../utils/auditLogger';
+import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -77,6 +78,7 @@ interface SettingsViewWithMenuProps {
     totalAircraft?: number;
     dayFlyingStart?: string;
     dayFlyingEnd?: string;
+    resourceDisplayNames?: ResourceDisplayNames;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;

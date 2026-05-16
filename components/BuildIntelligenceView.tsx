@@ -5,6 +5,7 @@ import CourseMetricsTab from './tabs/CourseMetricsTab';
 import BuildAnalyticsTab from './tabs/BuildAnalyticsTab';
 import TrainingIntelligenceTab from './tabs/TrainingIntelligenceTab';
 import ACHistoryIntelligencePanel from './ACHistoryIntelligencePanel';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface CourseAnalysis {
   courseName: string;
@@ -81,6 +82,7 @@ interface BuildIntelligenceViewProps {
   timezoneOffset?: number;
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
+  resourceDisplayNames?: ResourceDisplayNames;
   
   // From Build Analysis
   buildDate: string;
@@ -91,6 +93,7 @@ type TabType = 'people' | 'course-metrics' | 'build-analytics' | 'ac-history' | 
 
 const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
   const [activeTab, setActiveTab] = useState<TabType>('people');
+  const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
 
   const formattedDate = useMemo(() => {
     const [year, month, day] = props.date.split('-').map(Number);
@@ -167,6 +170,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 scores={props.scores}
                 traineeLMPs={props.traineeLMPs}
                 courseColors={props.courseColors}
+                resourceDisplayNames={resourceDisplayNames}
               />
             )}
 
@@ -178,6 +182,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 activeCourses={props.activeCourses}
                 onNavigateAndSelectPerson={props.onNavigateAndSelectPerson}
                 analysis={props.analysis}
+                resourceDisplayNames={resourceDisplayNames}
               />
             )}
 
@@ -185,6 +190,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
               <BuildAnalyticsTab
                 events={props.events}
                 analysis={props.analysis}
+                resourceDisplayNames={resourceDisplayNames}
               />
             )}
 
@@ -198,6 +204,7 @@ const BuildIntelligenceView: React.FC<BuildIntelligenceViewProps> = (props) => {
                 timezoneOffset={props.timezoneOffset}
                 dayFlyingStart={props.dayFlyingStart}
                 dayFlyingEnd={props.dayFlyingEnd}
+                resourceDisplayNames={resourceDisplayNames}
               />
             )}
 

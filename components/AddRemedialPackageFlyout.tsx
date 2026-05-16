@@ -2,12 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { Trainee, Score, SyllabusItemDetail, Instructor } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface AddRemedialPackageFlyoutProps {
   trainee: Trainee;
   instructors: Instructor[];
   scores: Score[];
   traineeLmp: SyllabusItemDetail[];
+  resourceDisplayNames?: ResourceDisplayNames;
   onClose: () => void;
   onSave: (
     trainee: Trainee,
@@ -21,6 +23,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   instructors,
   scores,
   traineeLmp,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   onClose,
   onSave
 }) => {
@@ -237,7 +240,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                 <legend className="px-2 text-sm font-semibold text-gray-300">Step 2: Build Remedial Package</legend>
                 <div className="mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3">
                     <InputRow label="Tutorials" state={tutState} setState={setTutState} />
-                    <InputRow label="FTDs" state={ftdState} setState={setFtdState} />
+                    <InputRow label={`${resourceDisplayNames.ftd}s`} state={ftdState} setState={setFtdState} />
                     <InputRow label="Flights" state={flightState} setState={setFlightState} />
                 </div>
                 <button onClick={handleAddEvents} className="w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add Events to Package</button>

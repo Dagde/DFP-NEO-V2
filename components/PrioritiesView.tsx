@@ -7,6 +7,7 @@ import UnavailabilitiesWindow from './UnavailabilitiesWindow';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface PrioritiesViewProps {
   school?: 'ESL' | 'PEA';
@@ -56,6 +57,7 @@ interface PrioritiesViewProps {
   remedialRequests?: RemedialRequest[];
   onToggleRemedialRequest?: (traineeId: number, eventCode: string) => void;
   currencyNames: string[];
+  resourceDisplayNames?: ResourceDisplayNames;
   activeSection?: 'build-timeline' | 'people-rules' | 'course-demand' | 'directed-events';
 }
 
@@ -108,7 +110,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   remedialRequests = [],
   onToggleRemedialRequest = (_traineeId: number, _eventCode: string) => {},
   currencyNames,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
+  const aircraftLabel = resourceDisplayNames.aircraft;
+  const ftdLabel = resourceDisplayNames.ftd;
+  const cptLabel = resourceDisplayNames.cpt;
+
   // State for Course Priorities
   const courseDragItem = useRef<number | null>(null);
   const courseDragOverItem = useRef<number | null>(null);
@@ -263,7 +270,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       
       return (
       <div>
-          <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : 'FTD'}</h3>
+          <h3 className="text-lg font-semibold text-sky-400 mb-2">{type === 'flight' ? 'Flights' : ftdLabel}</h3>
           <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                   <thead className="text-xs text-gray-400 uppercase">
@@ -512,7 +519,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Time Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Flying Windows</h2>
-                        <p className="mt-1 text-sm text-slate-300">Set the time boundaries that govern where flight, FTD and night events may be placed.</p>
+                        <p className="mt-1 text-sm text-slate-300">Set the time boundaries that govern where flight, {ftdLabel} and night events may be placed.</p>
                     </div>
                     <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3">
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
@@ -529,13 +536,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </div>
 
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label className="block text-sm font-medium text-slate-300">FTD Operating Window</label>
+                            <label className="block text-sm font-medium text-slate-300">{ftdLabel} Operating Window</label>
                             <div className="mt-2 flex items-center space-x-2">
-                                <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
+                                <select value={ftdStartTime} onChange={(e) => { logAudit("Priorities", "Edit", `Updated ${ftdLabel} start time`, `${ftdStartTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdStartTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
                                     {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                                 <span className="shrink-0 text-slate-400">to</span>
-                                <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
+                                <select value={ftdEndTime} onChange={(e) => { logAudit("Priorities", "Edit", `Updated ${ftdLabel} end time`, `${ftdEndTime} \u2192 ${parseFloat(e.target.value)}`); onUpdateFtdEndTime(parseFloat(e.target.value)); }} className="w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500">
                                     {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                 </select>
                             </div>
@@ -570,16 +577,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Available Aircraft</label>
-                            <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} \u2192 ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Available {aircraftLabel}</label>
+                            <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} \u2192 ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
                         </div>
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="ftd-count" className="block text-sm font-medium text-slate-300">FTD Available</label>
-                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} \u2192 ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <label htmlFor="ftd-count" className="block text-sm font-medium text-slate-300">{ftdLabel} Available</label>
+                            <input id="ftd-count" type="number" value={availableFtdCount} onChange={(e) => { logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} \u2192 ${parseInt(e.target.value)}`); onUpdateFtdCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
                         </div>
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
-                            <label htmlFor="cpt-count" className="block text-sm font-medium text-slate-300">CPT Available</label>
-                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} \u2192 ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <label htmlFor="cpt-count" className="block text-sm font-medium text-slate-300">{cptLabel} Available</label>
+                            <input id="cpt-count" type="number" value={availableCptCount} onChange={(e) => { logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} \u2192 ${parseInt(e.target.value)}`); onUpdateCptCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
                         </div>
                     </div>
                 </div>
@@ -590,7 +597,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="border-b border-cyan-500/20 bg-cyan-500/10 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70">Second Input</p>
                         <h2 className="mt-1 text-xl font-semibold text-white">Instructor Allocation Rules</h2>
-                        <p className="mt-1 text-sm text-slate-300">Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and FTD events.</p>
+                        <p className="mt-1 text-sm text-slate-300">Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and {ftdLabel} events.</p>
                     </div>
                     <div className="p-4 space-y-5">
 
@@ -610,7 +617,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <span className="font-semibold text-sky-400">Priority Mode</span>
                             </label>
                             <p className="text-xs text-gray-400 mt-1 ml-14">
-                                When on, flight and FTD events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected.
+                                When on, flight and {ftdLabel} events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected.
                             </p>
                         </div>
 
@@ -646,7 +653,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     )}
                                     {instructorPriority.mode === 'hard' && (
                                         <p className="text-xs text-gray-400 mt-1">
-                                            <span className="text-red-400 font-medium">Hard:</span> Flight and FTD events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. CPT and Ground are unaffected.
+                                            <span className="text-red-400 font-medium">Hard:</span> Flight and {ftdLabel} events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. {cptLabel} and Ground are unaffected.
                                         </p>
                                     )}
                                 </div>
@@ -692,10 +699,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     <div className="space-y-4">
                                         <div>
                                             <p className="text-sm font-medium text-gray-300 mb-1">Required Groups
-                                                <span className="text-xs text-gray-400 font-normal ml-2">(flight/FTD will go to STBY if none available)</span>
+                                                <span className="text-xs text-gray-400 font-normal ml-2">(flight/{ftdLabel} will go to STBY if none available)</span>
                                             </p>
                                             <p className="text-xs text-gray-400 mb-2">
-                                                Select which instructor groups are authorised for flight and FTD placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned.
+                                                Select which instructor groups are authorised for flight and {ftdLabel} placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned.
                                             </p>
                                             <div className="space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3">
                                                 {([
@@ -726,7 +733,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                             </div>
                                         </div>
                                         <div className="text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3">
-                                            <span className="font-semibold">Note:</span> CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal.
+                                            <span className="font-semibold">Note:</span> {cptLabel} and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal.
                                         </div>
                                     </div>
                                 )}
@@ -808,7 +815,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
               {/* SCT FTDs - MEDIUM/LOW */}
               {sctFtds.filter(r => r.priority !== 'High').length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT FTDs</h3>
+                  <h3 className="text-sm font-semibold text-sky-300 mb-2">SCT {ftdLabel}s</h3>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                         <thead className="text-xs text-gray-400 uppercase">

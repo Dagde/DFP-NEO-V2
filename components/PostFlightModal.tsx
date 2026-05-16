@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { ScheduleEvent, Trainee } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface PostFlightModalProps {
   event: ScheduleEvent;
@@ -8,9 +9,10 @@ interface PostFlightModalProps {
   onSave: (data: any) => void;
   school: 'ESL' | 'PEA';
   traineesData: Trainee[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSave, school, traineesData }) => {
+const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSave, school, traineesData, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
     // Find trainee or pilot for header
     const person = useMemo(() => {
         const personName = event.student || event.pilot;
@@ -28,7 +30,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
     const [takeoffMinute, setTakeoffMinute] = useState('00');
     const [landHour, setLandHour] = useState('09');
     const [landMinute, setLandMinute] = useState('30');
-    
+
     useEffect(() => {
         // Prefill times
         const takeoff = event.startTime;
@@ -36,7 +38,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
         const takeoffM = Math.round((takeoff % 1) * 60);
         setTakeoffHour(String(takeoffH).padStart(2, '0'));
         setTakeoffMinute(String(takeoffM).padStart(2, '0'));
-        
+
         const land = event.landTime || event.startTime + event.duration;
         const landH = Math.floor(land);
         const landM = Math.round((land % 1) * 60);
@@ -62,7 +64,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
         onSave(saveData);
         onClose();
     };
-    
+
     const ResultRadio: React.FC<{ value: string }> = ({ value }) => (
         <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -92,7 +94,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
                     <div className="grid grid-cols-2 gap-6">
                         {/* Aircraft/FTD Number (Top Left) */}
                         <div className="bg-gray-700/50 p-4 rounded-lg">
-                            <label className="block text-sm font-medium text-gray-400 mb-2">Aircraft Number</label>
+                            <label className="block text-sm font-medium text-gray-400 mb-2">{resourceDisplayNames.aircraft} Number</label>
                             <div className="flex items-center space-x-2">
                                 <span className="text-white font-semibold">A54-</span>
                                 <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
@@ -124,7 +126,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
                             {/* Aircraft */}
                             <div className="flex-shrink-0">
                                 <label className="block text-sm font-medium text-gray-400">Aircraft</label>
-                                <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center">PC-21</div>
+                                <div className="mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center">{resourceDisplayNames.aircraft}</div>
                             </div>
                              {/* Number - duplicate of top left as requested */}
                             <div className="flex-shrink-0">

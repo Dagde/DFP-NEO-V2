@@ -24,6 +24,7 @@ import { debouncedAuditLog } from '../utils/auditDebounce';
 import DutyTurnaroundSection from './DutyTurnaroundSection';
 import AircraftAvailabilitySettings from './AircraftAvailabilitySettings';
 import EmergencyPage from './EmergencyPage';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 
 declare var XLSX: any;
@@ -90,6 +91,7 @@ interface SettingsViewProps {
     totalAircraft?: number;
     dayFlyingStart?: string;
     dayFlyingEnd?: string;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 // ─── Inline Scoring Matrix Component ────────────────────────────────────────
@@ -471,7 +473,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     currentAircraftAvailable,
     totalAircraft,
     dayFlyingStart = '08:00',
-    dayFlyingEnd = '17:00'
+    dayFlyingEnd = '17:00',
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
     // --- STATE ---
     
@@ -867,7 +870,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         logAudit({
             page: 'Settings - Duty & Turnaround',
             action: 'update',
-            description: 'Updated FTD turnaround time',
+            description: `Updated ${resourceDisplayNames.ftd} turnaround time`,
             changes: `Set to: ${value} minutes`
         });
     };
@@ -877,7 +880,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         logAudit({
             page: 'Settings - Duty & Turnaround',
             action: 'update',
-            description: 'Updated CPT turnaround time',
+            description: `Updated ${resourceDisplayNames.cpt} turnaround time`,
             changes: `Set to: ${value} minutes`
         });
     };
@@ -1698,6 +1701,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                        timezoneOffset={timezoneOffset}
                        dayFlyingStart={dayFlyingStart}
                        dayFlyingEnd={dayFlyingEnd}
+                       resourceDisplayNames={resourceDisplayNames}
                    />
                 </div>
                 )}
@@ -2086,6 +2090,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         onUpdateFtdTurnaround={handleUpdateFtdTurnaround}
                         cptTurnaround={cptTurnaround}
                         onUpdateCptTurnaround={handleUpdateCptTurnaround}
+                        resourceDisplayNames={resourceDisplayNames}
                     />
                    )}
 
@@ -2414,7 +2419,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Execs</legend>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Flight/FTD:</span>
+                                        <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
                                         {isEditingLimits ? (
                                             <input type="number" value={tempLimits.exec.maxFlightFtd} onChange={e => setTempLimits({...tempLimits, exec: {...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                         ) : <span className="text-white font-mono">1</span>}
@@ -2438,7 +2443,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Staff</legend>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Flight/FTD:</span>
+                                        <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
                                         {isEditingLimits ? (
                                             <input type="number" value={tempLimits.instructor.maxFlightFtd || 2} onChange={e => setTempLimits({...tempLimits, instructor: {...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                         ) : <span className="text-white font-mono">2</span>}
@@ -2462,7 +2467,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">Trainees</legend>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max Flight/FTD:</span>
+                                        <span className="text-sm text-gray-400">Max Flight/{resourceDisplayNames.ftd}:</span>
                                         {isEditingLimits ? (
                                             <input type="number" value={tempLimits.trainee.maxFlightFtd || 1} onChange={e => setTempLimits({...tempLimits, trainee: {...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                         ) : <span className="text-white font-mono">1</span>}
@@ -2480,7 +2485,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <legend className="px-2 text-sm font-semibold text-gray-300">SIM IPs</legend>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-400">Max FTD:</span>
+                                        <span className="text-sm text-gray-400">Max {resourceDisplayNames.ftd}:</span>
                                         {isEditingLimits ? (
                                             <input type="number" value={tempLimits.simIp.maxFtd || 2} onChange={e => setTempLimits({...tempLimits, simIp: {...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0}})} className="w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" />
                                         ) : <span className="text-white font-mono">2</span>}

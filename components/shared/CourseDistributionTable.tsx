@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../../utils/resourceDisplayNames';
 
 interface CourseAnalysis {
   courseName: string;
@@ -28,9 +29,13 @@ interface CourseAnalysis {
 
 interface CourseDistributionTableProps {
   courseAnalysis: CourseAnalysis[];
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
-const CourseDistributionTable: React.FC<CourseDistributionTableProps> = ({ courseAnalysis }) => {
+const CourseDistributionTable: React.FC<CourseDistributionTableProps> = ({
+  courseAnalysis,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   return (
     <div className="overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
       <div className="border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4">
@@ -48,8 +53,8 @@ const CourseDistributionTable: React.FC<CourseDistributionTableProps> = ({ cours
               <th className="px-4 py-3 text-right font-semibold text-slate-300">Scheduled</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-300">Efficiency</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-300">Flight</th>
-              <th className="px-4 py-3 text-right font-semibold text-slate-300">FTD</th>
-              <th className="px-4 py-3 text-right font-semibold text-slate-300">CPT</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">{resourceDisplayNames.ftd}</th>
+              <th className="px-4 py-3 text-right font-semibold text-slate-300">{resourceDisplayNames.cpt}</th>
               <th className="px-4 py-3 text-right font-semibold text-slate-300">Ground</th>
               <th className="px-4 py-3 text-center font-semibold text-slate-300">Status</th>
             </tr>

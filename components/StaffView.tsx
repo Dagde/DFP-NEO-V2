@@ -2,6 +2,7 @@ import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
+import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -29,7 +30,8 @@ interface StaffViewProps {
   onProfileTabConsumed?: () => void;
   currentUserId?: string;
   currentUserName?: string;
-  
+  resourceDisplayNames?: ResourceDisplayNames;
+
   // Props for InstructorScheduleView
   date: string;
   onDateChange: (date: string) => void;
@@ -74,19 +76,19 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
       if (roleA !== roleB) {
         return roleA - roleB;
       }
-      
+
       // Then sort by Unit
       if (a.unit !== b.unit) {
         return a.unit.localeCompare(b.unit);
       }
-      
+
       // Then sort by Rank using defined order
       const rankA = rankOrder[a.rank] || 999;
       const rankB = rankOrder[b.rank] || 999;
       if (rankA !== rankB) {
         return rankA - rankB;
       }
-      
+
       // Finally sort alphabetically by surname
       // Extract surname (last word in name)
       const surnameA = a.name.split(' ').pop() || '';
@@ -150,6 +152,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             onProfileTabConsumed={props.onProfileTabConsumed}
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
+            resourceDisplayNames={props.resourceDisplayNames}
           />
         )}
         {activeTab === 'schedule' && (

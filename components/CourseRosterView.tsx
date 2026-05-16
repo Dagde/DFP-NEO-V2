@@ -10,6 +10,7 @@ import FlightInfoFlyout from './FlightInfoFlyout';
 import AuditButton from './AuditButton';
 import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
 import CourseEditFlyout from './CourseEditFlyout';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -54,6 +55,7 @@ interface CourseRosterViewProps {
     canViewTraineeLmp?: (trainee: Trainee) => boolean;
     canAddRemedialPackageForTrainee?: (trainee: Trainee) => boolean;
     onAccessDenied?: (actionLabel: string) => void;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -82,14 +84,14 @@ const generateNewTraineeTemplate = (): Trainee => ({
     }
 });
 
-const CourseRosterView: React.FC<CourseRosterViewProps> = ({ 
+const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     events,
     traineesData,
-    courseColors, 
-    archivedCourses, 
-    personnelData, 
-    onNavigateToHateSheet, 
-    onRestoreCourse, 
+    courseColors,
+    archivedCourses,
+    personnelData,
+    onNavigateToHateSheet,
+    onRestoreCourse,
     onUpdateTrainee,
     onAddTrainee,
     school,
@@ -124,6 +126,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     canViewTraineeLmp = () => true,
     canAddRemedialPackageForTrainee = () => true,
     onAccessDenied,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -133,7 +136,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
     const [hoveredTrainee, setHoveredTrainee] = useState<{ name: string; events: ScheduleEvent[] } | null>(null);
     const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
-    
+
     // Delete Trainee state
     const [selectedCourseForDeletion, setSelectedCourseForDeletion] = useState<string>('');
     const [selectedTraineeForDeletion, setSelectedTraineeForDeletion] = useState<Trainee | null>(null);
@@ -233,8 +236,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
     const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, traineeFullName: string) => {
         const rect = e.currentTarget.getBoundingClientRect();
-        const traineeEvents = events.filter(event => 
-            event.student === traineeFullName || 
+        const traineeEvents = events.filter(event =>
+            event.student === traineeFullName ||
             (event.flightType === 'Solo' && event.pilot === traineeFullName)
         );
         setHoveredTrainee({ name: traineeFullName.split(' – ')[0], events: traineeEvents });
@@ -254,37 +257,37 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
 
         // RULE 2: AMBER for recent non-remedial poor performance
         const traineeScores = scores.get(trainee.fullName) || [];
-        
+
         // Get all non-remedial Flight/FTD scores sorted by date (most recent first)
         const nonRemedialFlightFtdScores = traineeScores
             .filter(score => {
                 const syllabusItem = syllabusDetails.find(item => item.id === score.event);
                 // Include only Flight or FTD events that are NOT remedial
-                return syllabusItem && 
-                       (syllabusItem.type === 'Flight' || syllabusItem.type === 'FTD') && 
+                return syllabusItem &&
+                       (syllabusItem.type === 'Flight' || syllabusItem.type === 'FTD') &&
                        !syllabusItem.isRemedial;
             })
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        
+
         if (nonRemedialFlightFtdScores.length > 0) {
             const lastNonRemedialScore = nonRemedialFlightFtdScores[0];
-            
+
             // Check if last non-remedial Flight/FTD was a fail (score = 0)
             if (lastNonRemedialScore.score === 0) {
                 return 'text-amber-400 hover:text-amber-300';
             }
-            
+
             // Check if last TWO non-remedial Flight/FTD events both have score of 1
             if (nonRemedialFlightFtdScores.length >= 2) {
                 const secondLastNonRemedialScore = nonRemedialFlightFtdScores[1];
-                
+
                 // If both last two non-remedial Flight/FTD events have score = 1, mark as AMBER
                 if (lastNonRemedialScore.score === 1 && secondLastNonRemedialScore.score === 1) {
                     return 'text-amber-400 hover:text-amber-300';
                 }
             }
         }
-        
+
         // RULE 3: GREEN for everyone else (default)
         return 'text-green-400 hover:text-green-300';
     };
@@ -297,7 +300,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             {label}
         </button>
     );
-    
+
     const individualLmpForSelected = selectedTrainee ? traineeLMPs.get(selectedTrainee.fullName) : undefined;
 
     return (
@@ -342,7 +345,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                     const b = Math.round(parseInt(c.slice(5, 7), 16) * strength);
                                     return `rgb(${r}, ${g}, ${b})`;
                                 };
-                                
+
                                 // Calculate active and paused counts
                                 const activeCount = courseTrainees.filter(t => !t.isPaused).length;
                                 const pausedCount = courseTrainees.filter(t => t.isPaused).length;
@@ -350,7 +353,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                 const isHexColor = (c: string) => c && (c.startsWith('#') || c.startsWith('rgb'));
                                 return (
                                     <div key={courseName} className="bg-gray-800 rounded-lg shadow-lg flex flex-col overflow-hidden border border-gray-700">
-                                        <div 
+                                        <div
                                             data-course-color="true"
                                             className={`px-4 py-2 text-white font-bold text-lg ${isHexColor(color) ? '' : color} flex justify-between items-center`}
                                             style={isHexColor(color) ? { backgroundColor: darkenHexColor(color) } : {}}
@@ -361,9 +364,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 {view === 'active' && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => !isFrozen && setCourseToEdit(courseName)} disabled={isFrozen}
-                                                        className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group" 
+                                                        className="p-1.5 rounded-full bg-black/20 hover:bg-black/40 transition-colors group"
                                                         aria-label={`Edit course ${courseName}`}
                                                         title="Edit course"
                                                     >
@@ -373,9 +376,9 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                     </button>
                                                 )}
                                                 {view === 'archived' && (
-                                                    <button 
+                                                    <button
                                                         onClick={() => setCourseToRestore(courseName)}
-                                                        className="p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors" 
+                                                        className="p-1 rounded-full bg-black/20 hover:bg-black/40 transition-colors"
                                                         aria-label={`Restore course ${courseName}`}
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -395,14 +398,14 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                                                         const nameColorClass = getTraineeNameColorClass(trainee);
 
                                                         return (
-                                                            <li 
-                                                                key={trainee.fullName} 
+                                                            <li
+                                                                key={trainee.fullName}
                                                                 className="flex items-center text-sm"
                                                                 onMouseEnter={(e) => handleMouseEnter(e, trainee.fullName)}
                                                                 onMouseLeave={handleMouseLeave}
                                                             >
                                                                 <span className="font-mono text-gray-500 w-16 flex-shrink-0">{trainee.rank}</span>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         if (!canViewTraineeProfile(trainee)) {
                                                                             onAccessDenied?.('trainee profile');
@@ -479,6 +482,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     currencyRequirements={currencyRequirements}
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
+                    resourceDisplayNames={resourceDisplayNames}
                     pt051Assessments={pt051Assessments}
                     traineeLMPs={traineeLMPs}
                     userProfile={userProfile}

@@ -335,7 +335,7 @@ const getDefaultConfigurationHealthRemediation = (area: string, title: string): 
   }
   if (area === 'Resource Pools') {
     if (lowerTitle.includes('no usable resources')) {
-      return 'Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, FTD, CPT, STBY or Ground, then save.';
+      return 'Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, simulator, procedural trainer, STBY or Ground, then save.';
     }
     if (lowerTitle.includes('live dfp')) {
       return 'Open Resource Pools and enable Apply to V2 runtime on the pool that should drive the active DFP resource rows.';
@@ -849,6 +849,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           status: 'ACTIVE',
           settings: {
             applyToV2Runtime: false,
+            aircraftLabel: 'PC-21',
+            ftdLabel: 'FTD',
+            cptLabel: 'CPT',
             aircraft: 24,
             ftd: 5,
             cpt: 4,
@@ -1388,7 +1391,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       </section>
 
       <section id="platform-resource-pools" className={getSectionClass('platform-resource-pools')}>
-        <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
+        <SectionHeader title="Aircraft Types & Resource Pools" subtitle="Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources." action={canEdit ? <button type="button" onClick={addResourcePool} className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200">Add Pool</button> : null} />
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="space-y-3">
             {config.aircraftTypes.map((aircraft, index) => (
@@ -1408,6 +1411,14 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 <SelectField label="Owning Unit" value={pool.unitCode || ''} disabled={!canEdit} options={['', ...config.units.map((unit) => unit.code)]} onChange={(value) => updateRow('resourcePools', index, { unitCode: value || null })} />
                 <SelectField label="Aircraft Type" value={pool.aircraftTypeCode || ''} disabled={!canEdit} options={['', ...config.aircraftTypes.map((aircraft) => aircraft.code)]} onChange={(value) => updateRow('resourcePools', index, { aircraftTypeCode: value || null })} />
                 <SelectField label="Pool Type" value={pool.poolType || 'Dedicated'} disabled={!canEdit} options={['Dedicated', 'Shared']} onChange={(value) => updateRow('resourcePools', index, { poolType: value })} />
+                <div className="grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2 md:grid-cols-3">
+                  <div className="md:col-span-3 text-xs text-cyan-100/80">
+                    Display terminology only. Existing schedule records keep stable internal resource keys.
+                  </div>
+                  <Field label="Aircraft Display Name" value={pool.settings?.aircraftLabel || 'PC-21'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { aircraftLabel: value })} />
+                  <Field label="Simulator Display Name" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
+                  <Field label="Procedural Trainer Display Name" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
+                </div>
                 <ToggleField
                   label="Apply to V2 runtime"
                   checked={pool.settings?.applyToV2Runtime === true}
@@ -1415,9 +1426,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   onChange={(checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })}
                 />
                 <div className="grid grid-cols-2 gap-3">
-                  <NumberField label="Aircraft" value={pool.settings?.aircraft ?? 24} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
-                  <NumberField label="FTD" value={pool.settings?.ftd ?? 5} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
-                  <NumberField label="CPT" value={pool.settings?.cpt ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
+                  <NumberField label="Aircraft Rows" value={pool.settings?.aircraft ?? 24} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { aircraft: value })} />
+                  <NumberField label="Simulator Rows" value={pool.settings?.ftd ?? 5} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ftd: value })} />
+                  <NumberField label="Procedural Trainer Rows" value={pool.settings?.cpt ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { cpt: value })} />
                   <NumberField label="STBY" value={pool.settings?.standby ?? 4} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { standby: value })} />
                   <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                 </div>

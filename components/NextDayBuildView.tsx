@@ -50,6 +50,7 @@ interface NextDayBuildViewProps {
   // Pause window overlay — vertical lines + shaded region
   pauseWindowStart?: number | null;  // decimal hours, e.g. 10.0
   pauseWindowEnd?: number | null;    // decimal hours, e.g. 11.0
+  formatResourceLabel?: (resourceId: string) => string;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -98,6 +99,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     pauseWindowStart = null, pauseWindowEnd = null,
+    formatResourceLabel,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -895,6 +897,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         ftdCount={ftdCount}
                         cptCount={cptCount}
                         events={events}
+                        formatResourceLabel={formatResourceLabel}
                     />
                 </div>
 

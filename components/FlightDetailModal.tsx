@@ -10,6 +10,7 @@ import CancelEventFlyout from './CancelEventFlyout';
 import PinEntryFlyout from './PinEntryFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -378,6 +379,7 @@ interface EventDetailModalProps {
     alertData?: any | null;
     baselineEvent?: any | null;
     onClearAlert?: (eventId: string) => void;
+    resourceDisplayNames?: ResourceDisplayNames;
 }
 
 interface CrewMember {
@@ -415,7 +417,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -998,9 +1000,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
 
     const modalTitle = useMemo(() => {
         if (eventType === 'flight') return 'Flight Details';
-        if (eventType === 'ftd') return 'FTD Session Details';
+        if (eventType === 'ftd') return `${resourceDisplayNames.ftd} Session Details`;
         return 'Ground Event Details';
-    }, [eventType]);
+    }, [eventType, resourceDisplayNames.ftd]);
 
     useEffect(() => {
         setFlightNumber(event.flightNumber);
@@ -2100,7 +2102,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-400">Aircraft Number</label>
+                                            <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.aircraft} Number</label>
                                             <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
                                                 {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num}>{num}</option>)}
                                             </select>
@@ -2814,6 +2816,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                     }}
                     onClose={() => setShowCancelConfirm(false)}
                     cancellationCodes={cancellationCodes}
+                    resourceDisplayNames={resourceDisplayNames}
                 />
             )}
             {showMassBriefComplete && (

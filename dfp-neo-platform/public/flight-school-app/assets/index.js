@@ -1936,6 +1936,39 @@ const getResourcePoolCount = (pool, key, fallback) => {
   const value = Number(pool?.settings?.[key]);
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 };
+const DEFAULT_RESOURCE_DISPLAY_NAMES = {
+  aircraft: "PC-21",
+  ftd: "FTD",
+  cpt: "CPT"
+};
+const cleanLabel = (value, fallback) => {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+};
+const getResourceDisplayNames = (resourcePool) => {
+  const settings = resourcePool?.settings || {};
+  return {
+    aircraft: cleanLabel(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
+    ftd: cleanLabel(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
+    cpt: cleanLabel(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
+  };
+};
+const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES) => {
+  if (!resourceId || typeof resourceId !== "string") return resourceId;
+  if (resourceId === "PC-21") return names.aircraft;
+  if (resourceId === "FTD") return names.ftd;
+  if (resourceId === "CPT") return names.cpt;
+  const aircraftMatch = resourceId.match(/^PC-21(\s+\d+)$/);
+  if (aircraftMatch) return `${names.aircraft}${aircraftMatch[1]}`;
+  const deployedMatch = resourceId.match(/^Deployed(\s+\d+)$/);
+  if (deployedMatch) return `Deployed ${names.aircraft}${deployedMatch[1]}`;
+  const ftdMatch = resourceId.match(/^FTD(\s+\d+)$/);
+  if (ftdMatch) return `${names.ftd}${ftdMatch[1]}`;
+  const cptMatch = resourceId.match(/^CPT(\s+\d+)$/);
+  if (cptMatch) return `${names.cpt}${cptMatch[1]}`;
+  return resourceId;
+};
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
   const existing = pendingAudits.get(key);
@@ -2051,7 +2084,7 @@ const DataCell = ({
   bgColor = "bg-gray-800",
   borderColor = "border-gray-600"
 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex items-center justify-center ${width} flex-shrink-0 border-r ${borderColor} last:border-r-0 ${bgColor} h-7`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs font-mono truncate px-0.5", children: value || "" }) });
-const HeaderRow = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600", children: [
+const HeaderRow = ({ resourceDisplayNames: resourceDisplayNames2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 flex-shrink-0 border-r border-gray-600 bg-gray-900/30" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "Year", width: "w-12" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "Date", width: "w-16" }),
@@ -2084,7 +2117,7 @@ const HeaderRow = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { classNam
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "2D App", width: "w-10" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "3D App", width: "w-10" }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1", children: "Simulator" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1", children: resourceDisplayNames2.ftd }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "P1", width: "w-10", bgColor: "bg-gray-800/30" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "P2", width: "w-10", bgColor: "bg-gray-800/30" }),
@@ -2132,7 +2165,7 @@ const DataRow = ({ row, isEven }) => {
     ] })
   ] });
 };
-const LogbookView = ({ person, events, onBack }) => {
+const LogbookView = ({ person, events, onBack, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const [rows, setRows] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
@@ -2153,7 +2186,7 @@ const LogbookView = ({ person, events, onBack }) => {
         logRows.push({
           year: snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : ""),
           date: snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : ""),
-          type: snap2.type || (entry.isFtdLog ? "FTD" : "PC-21"),
+          type: snap2.type || (entry.isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft),
           tail: snap2.tail || "",
           captain: snap2.captain || "",
           crew: snap2.crew || "",
@@ -2224,7 +2257,7 @@ const LogbookView = ({ person, events, onBack }) => {
         "."
       ] }) }),
       !loading && !error && rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderRow, {}),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderRow, { resourceDisplayNames: resourceDisplayNames2 }),
         rows.map((row, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx(DataRow, { row, isEven: idx % 2 === 0 }, `${row._eventDate}-${row._role}-${idx}`))
       ] }) })
     ] })
@@ -4959,7 +4992,7 @@ const getCategory = (res) => {
   if (res.startsWith("Ground")) return "Ground";
   return "Other";
 };
-const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [] }) => {
+const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standbyCount, ftdCount, cptCount, events = [], formatResourceLabel: formatResourceLabel2 }) => {
   const [draggedIndex, setDraggedIndex] = reactExports.useState(null);
   const handleDragStart = (index) => {
     setDraggedIndex(index);
@@ -4981,6 +5014,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
   const displayResources = resources;
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-36 bg-gray-800 flex-shrink-0 h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { children: displayResources.map((resource, index) => {
     let resourceText = resource;
+    const displayText = formatResourceLabel2 ? formatResourceLabel2(resourceText) : resourceText;
     let textColorClass = "text-gray-400";
     let isDraggable = true;
     if (resource === "Duty Sup") {
@@ -5028,8 +5062,8 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         style: { height: rowHeight },
         children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: resource.match(/\d+$/)?.[0] || "" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "PC-21" })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: resourceText.replace(/\s+\d+$/, "") }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" })
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
       },
       `${resource}-${index}`
     );
@@ -5678,6 +5712,7 @@ const ScheduleView = ({
   pauseCompletedEventIds,
   onPauseToggleCompleted,
   alertsData,
+  formatResourceLabel: formatResourceLabel2,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -6462,7 +6497,8 @@ const ScheduleView = ({
             standbyCount,
             ftdCount,
             cptCount,
-            events
+            events,
+            formatResourceLabel: formatResourceLabel2
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -9234,7 +9270,12 @@ const getDisplayType = (syllabusItem) => {
   }
   return "Flight";
 };
-const DetailView$1 = ({ item, score }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const formatDisplayType = (displayType, resourceDisplayNames2) => {
+  if (displayType === "FTD") return resourceDisplayNames2.ftd;
+  if (displayType === "CPT") return resourceDisplayNames2.cpt;
+  return displayType;
+};
+const DetailView$1 = ({ item, score, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
@@ -9244,7 +9285,7 @@ const DetailView$1 = ({ item, score }) => /* @__PURE__ */ jsxRuntimeExports.jsxs
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Phase", value: item.phase }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Module", value: item.module }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: getDisplayType(item) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: formatDisplayType(getDisplayType(item), resourceDisplayNames2) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight || "Day" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Total Event Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -9578,7 +9619,8 @@ const TraineeLmpView = ({
   onBack,
   syllabusDetails,
   allTraineesData,
-  onOpenPt051ForLesson
+  onOpenPt051ForLesson,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -9661,7 +9703,8 @@ const TraineeLmpView = ({
             DetailView$1,
             {
               item: selectedItem,
-              score: scores.find((s) => s.event === selectedItem.code)
+              score: scores.find((s) => s.event === selectedItem.code),
+              resourceDisplayNames: resourceDisplayNames2
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
         ] })
@@ -9760,7 +9803,8 @@ const TraineeProfileFlyout = ({
   canEditPt051 = true,
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
-  onAccessDenied: onAccessDenied2
+  onAccessDenied: onAccessDenied2,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -10412,7 +10456,7 @@ const TraineeProfileFlyout = ({
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Simulator" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames2.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }),
@@ -10659,7 +10703,11 @@ const TraineeProfileFlyout = ({
             ] })
           ] }),
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Logbook – Prior Experience (PC-21 only)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
+              "Logbook – Prior Experience (",
+              resourceDisplayNames2.aircraft,
+              " only)"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Day Flying" }),
@@ -10732,7 +10780,7 @@ const TraineeProfileFlyout = ({
                 ] }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: "Simulator" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: resourceDisplayNames2.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-sm", children: exp.simulator.total.toFixed(1) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-[10px]", children: [
@@ -10800,7 +10848,7 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const FlightInfoFlyout = ({ events, position, personName, personType }) => {
+const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
@@ -10818,7 +10866,11 @@ const FlightInfoFlyout = ({ events, position, personName, personType }) => {
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center font-semibold text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { children: [
               event.flightNumber,
-              event.type === "ftd" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-indigo-400 font-bold", children: " (FTD)" })
+              event.type === "ftd" && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-indigo-400 font-bold", children: [
+                " (",
+                resourceDisplayNames2.ftd,
+                ")"
+              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatTime2(event.startTime) })
           ] }),
@@ -11375,7 +11427,8 @@ const CourseRosterView = ({
   canEditTraineePt051 = () => true,
   canViewTraineeLmp = () => true,
   canAddRemedialPackageForTrainee = () => true,
-  onAccessDenied: onAccessDenied2
+  onAccessDenied: onAccessDenied2,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -11660,6 +11713,7 @@ const CourseRosterView = ({
         currencyRequirements,
         currentUserId,
         currentUserName,
+        resourceDisplayNames: resourceDisplayNames2,
         pt051Assessments,
         traineeLMPs,
         userProfile,
@@ -11842,7 +11896,8 @@ const CancelEventFlyout = ({
   eventType,
   onConfirm,
   onClose,
-  cancellationCodes
+  cancellationCodes,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [selectedCode, setSelectedCode] = reactExports.useState("");
   const [manualCode, setManualCode] = reactExports.useState("");
@@ -11887,6 +11942,7 @@ const CancelEventFlyout = ({
     setShowPinEntry(false);
   };
   const isPinEnabled = selectedCode && (selectedCode !== "OTHER" || manualCode.trim());
+  const eventTypeLabel = eventType === "flight" ? "Flight" : resourceDisplayNames2.ftd;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-red-500/50", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3", children: [
@@ -11896,7 +11952,7 @@ const CancelEventFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
           "You are about to cancel this ",
-          eventType === "flight" ? "Flight" : "FTD",
+          eventTypeLabel,
           " event. This action will move the event to the STBY line with a red cross."
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -12497,7 +12553,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -12916,9 +12972,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   }, [courses, traineesData]);
   const modalTitle = reactExports.useMemo(() => {
     if (eventType === "flight") return "Flight Details";
-    if (eventType === "ftd") return "FTD Session Details";
+    if (eventType === "ftd") return `${resourceDisplayNames2.ftd} Session Details`;
     return "Ground Event Details";
-  }, [eventType]);
+  }, [eventType, resourceDisplayNames2.ftd]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
     if (isEditingDefault && !event.flightNumber) {
@@ -13782,7 +13838,10 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: area, onChange: (e) => setArea(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: areas.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: a, children: a }, a)) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft Number" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400", children: [
+                  resourceDisplayNames2.aircraft,
+                  " Number"
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num, children: num }, num)) })
               ] })
             ] }),
@@ -14400,7 +14459,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           setShowCancelConfirm(false);
         },
         onClose: () => setShowCancelConfirm(false),
-        cancellationCodes
+        cancellationCodes,
+        resourceDisplayNames: resourceDisplayNames2
       }
     ),
     showMassBriefComplete && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -16071,7 +16131,12 @@ const AddFlightTileModal = ({
     }
   );
 };
-const ConflictModal = ({ conflict, onResolve, onCancel }) => {
+const ConflictModal = ({
+  conflict,
+  onResolve,
+  onCancel,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
@@ -16079,8 +16144,8 @@ const ConflictModal = ({ conflict, onResolve, onCancel }) => {
   };
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
   const personTypeDisplay = conflict.conflictedPerson === "instructor" ? "Instructor" : "Trainee";
-  const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? "FTD session" : "flight";
-  const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? "FTD session" : "flight";
+  const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames2.ftd} session` : "flight";
+  const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames2.ftd} session` : "flight";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -17234,7 +17299,8 @@ const AddGroundEventFlyout = ({
   courseAcademicProgress,
   onUpdateCourseAcademicProgress,
   persistedAcademicLmp,
-  onUpdatePersistedAcademicLmp
+  onUpdatePersistedAcademicLmp,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const [flightNumber, setFlightNumber] = reactExports.useState(groundSyllabus[0]?.code || "");
@@ -17252,6 +17318,7 @@ const AddGroundEventFlyout = ({
   const availableTrainees = reactExports.useMemo(() => traineesData.filter((t) => !t.isPaused).map((t) => t.fullName), [traineesData]);
   const isCptEvent = reactExports.useMemo(() => flightNumber.includes("CPT"), [flightNumber]);
   const [selectedCpt, setSelectedCpt] = reactExports.useState("CPT 1");
+  const cptLabel = resourceDisplayNames2.cpt;
   reactExports.useEffect(() => {
     const selectedSyllabus = groundSyllabus.find((s) => s.code === flightNumber);
     if (selectedSyllabus) setDuration(selectedSyllabus.duration);
@@ -17455,8 +17522,11 @@ const AddGroundEventFlyout = ({
                     ] })
                   ] }),
                   isCptEvent ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "cpt-resource", className: "block text-sm font-medium text-gray-400", children: "CPT Resource" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c)) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "cpt-resource", className: "block text-sm font-medium text-gray-400", children: [
+                      cptLabel,
+                      " Resource"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames2) }, c)) })
                   ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-resource", className: "block text-sm font-medium text-gray-400", children: "Ground Resource" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-resource", value: selectedGround, onChange: (e) => setSelectedGround(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: g, children: g }, g)) })
@@ -18378,7 +18448,8 @@ const NextDayBuildView = ({
   pauseCompletedEventIds,
   onPauseToggleCompleted,
   pauseWindowStart = null,
-  pauseWindowEnd = null
+  pauseWindowEnd = null,
+  formatResourceLabel: formatResourceLabel2
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const scheduleGridRef = reactExports.useRef(null);
@@ -19066,7 +19137,8 @@ const NextDayBuildView = ({
             standbyCount,
             ftdCount,
             cptCount,
-            events
+            events,
+            formatResourceLabel: formatResourceLabel2
           }
         ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -19211,8 +19283,12 @@ const PrioritiesView = ({
   remedialRequests = [],
   onToggleRemedialRequest = (_traineeId, _eventCode) => {
   },
-  currencyNames
+  currencyNames,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
+  const aircraftLabel = resourceDisplayNames2.aircraft;
+  const ftdLabel = resourceDisplayNames2.ftd;
+  const cptLabel = resourceDisplayNames2.cpt;
   const courseDragItem = reactExports.useRef(null);
   const courseDragOverItem = reactExports.useRef(null);
   const [courseTimestamp, setCourseTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
@@ -19328,7 +19404,7 @@ const PrioritiesView = ({
       return times;
     }, []);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : "FTD" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-lg font-semibold text-sky-400 mb-2", children: type === "flight" ? "Flights" : ftdLabel }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
@@ -19514,7 +19590,11 @@ const PrioritiesView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Time Input" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Flying Windows" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Set the time boundaries that govern where flight, FTD and night events may be placed." })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
+            "Set the time boundaries that govern where flight, ",
+            ftdLabel,
+            " and night events may be placed."
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 lg:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
@@ -19532,15 +19612,18 @@ const PrioritiesView = ({
             ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-slate-300", children: "FTD Operating Window" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-slate-300", children: [
+              ftdLabel,
+              " Operating Window"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 flex items-center space-x-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdStartTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated FTD start time", `${ftdStartTime} → ${parseFloat(e.target.value)}`);
+                logAudit("Priorities", "Edit", `Updated ${ftdLabel} start time`, `${ftdStartTime} → ${parseFloat(e.target.value)}`);
                 onUpdateFtdStartTime(parseFloat(e.target.value));
               }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "shrink-0 text-slate-400", children: "to" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: ftdEndTime, onChange: (e) => {
-                logAudit("Priorities", "Edit", "Updated FTD end time", `${ftdEndTime} → ${parseFloat(e.target.value)}`);
+                logAudit("Priorities", "Edit", `Updated ${ftdLabel} end time`, `${ftdEndTime} → ${parseFloat(e.target.value)}`);
                 onUpdateFtdEndTime(parseFloat(e.target.value));
               }, className: "w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-center text-white focus:outline-none focus:ring-cyan-500", children: timeOptions.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: opt.value, children: opt.label }, opt.value)) })
             ] })
@@ -19578,23 +19661,32 @@ const PrioritiesView = ({
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-4 p-4 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: "Available Aircraft" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "aircraft-count", className: "block text-sm font-medium text-slate-300", children: [
+              "Available ",
+              aircraftLabel
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", value: availableAircraftCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated available aircraft count", `${availableAircraftCount} → ${parseInt(e.target.value)}`);
+              logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${parseInt(e.target.value)}`);
               onUpdateAircraftCount(parseInt(e.target.value));
             }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-slate-300", children: "FTD Available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-slate-300", children: [
+              ftdLabel,
+              " Available"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "ftd-count", type: "number", value: availableFtdCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated available FTD count", `${availableFtdCount} → ${parseInt(e.target.value)}`);
+              logAudit("Priorities", "Edit", `Updated available ${ftdLabel} count`, `${availableFtdCount} → ${parseInt(e.target.value)}`);
               onUpdateFtdCount(parseInt(e.target.value));
             }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-slate-300", children: "CPT Available" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "cpt-count", className: "block text-sm font-medium text-slate-300", children: [
+              cptLabel,
+              " Available"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "cpt-count", type: "number", value: availableCptCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", "Updated available CPT count", `${availableCptCount} → ${parseInt(e.target.value)}`);
+              logAudit("Priorities", "Edit", `Updated available ${cptLabel} count`, `${availableCptCount} → ${parseInt(e.target.value)}`);
               onUpdateCptCount(parseInt(e.target.value));
             }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
           ] })
@@ -19605,7 +19697,11 @@ const PrioritiesView = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 p-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-[0.22em] text-cyan-200/70", children: "Second Input" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "mt-1 text-xl font-semibold text-white", children: "Instructor Allocation Rules" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-300", children: "Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and FTD events." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-sm text-slate-300", children: [
+          "Set whether the build should prefer or require the trainee's assigned instructor chain before using a wider instructor pool for flight and ",
+          ftdLabel,
+          " events."
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 space-y-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -19624,7 +19720,11 @@ const PrioritiesView = ({
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: "Priority Mode" })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: "When on, flight and FTD events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected." })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1 ml-14", children: [
+            "When on, flight and ",
+            ftdLabel,
+            " events follow the instructor groups selected below. Primary Instructor tries to roster the trainee with their primary instructor first; fallback to the secondary instructor or an alternate instructor from the same flight only occurs when those options are also selected."
+          ] })
         ] }),
         instructorPriority.enabled && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5 pl-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -19648,7 +19748,11 @@ const PrioritiesView = ({
             ] }),
             instructorPriority.mode === "hard" && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mt-1", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-red-400 font-medium", children: "Hard:" }),
-              " Flight and FTD events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. CPT and Ground are unaffected."
+              " Flight and ",
+              ftdLabel,
+              " events are only placed when one of the selected instructor groups is available. If Primary Instructor is selected, the primary instructor must be used unless selected fallback groups are available. If no selected group is free, the event is placed on STBY with no instructor. ",
+              cptLabel,
+              " and Ground are unaffected."
             ] })
           ] }),
           instructorPriority.mode === "soft" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -19687,9 +19791,17 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-medium text-gray-300 mb-1", children: [
                 "Required Groups",
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-400 font-normal ml-2", children: "(flight/FTD will go to STBY if none available)" })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-gray-400 font-normal ml-2", children: [
+                  "(flight/",
+                  ftdLabel,
+                  " will go to STBY if none available)"
+                ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-400 mb-2", children: "Select which instructor groups are authorised for flight and FTD placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-gray-400 mb-2", children: [
+                "Select which instructor groups are authorised for flight and ",
+                ftdLabel,
+                " placement. With Primary Instructor selected, the build requires the trainee's primary instructor unless you also allow secondary or same-flight fallback. If no selected group is free, the event is placed on STBY with no instructor assigned."
+              ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2 bg-gray-750 rounded-lg border border-red-900/40 p-3", children: [
                 { key: "primary", label: "Primary Instructor", desc: "Require the trainee's primary instructor unless an authorised fallback group is also selected and available." },
                 { key: "secondary", label: "Secondary Instructor", desc: "Permit the trainee's secondary instructor as an authorised fallback." },
@@ -19719,7 +19831,9 @@ const PrioritiesView = ({
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-amber-400/80 bg-amber-900/20 border border-amber-800/40 rounded-lg p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "Note:" }),
-              " CPT and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal."
+              " ",
+              cptLabel,
+              " and Ground school events are not affected by Hard Priority — they will be scheduled with any available instructor as normal."
             ] })
           ] })
         ] })
@@ -19776,7 +19890,11 @@ const PrioritiesView = ({
           ] }) })
         ] }),
         sctFtds.filter((r) => r.priority !== "High").length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: "SCT FTDs" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("h3", { className: "text-sm font-semibold text-sky-300 mb-2", children: [
+            "SCT ",
+            ftdLabel,
+            "s"
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "text-xs text-gray-400 uppercase", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "py-2 px-2 text-left", children: "Name" }),
@@ -19842,13 +19960,14 @@ const PrioritiesView = ({
 };
 const PrioritiesViewWithMenu = (props) => {
   const [activeSection, setActiveSection] = reactExports.useState("build-timeline");
+  const resourceLabels = props.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const workflowItems = [
     {
       id: "build-timeline",
       step: "01",
       label: "Flying Windows & Capacity",
       shortLabel: "Time & Resources",
-      description: "Set the day, simulator and night windows, then declare aircraft, FTD and CPT capacity before anything else."
+      description: `Set the day, ${resourceLabels.ftd} and night windows, then declare ${resourceLabels.aircraft}, ${resourceLabels.ftd} and ${resourceLabels.cpt} capacity before anything else.`
     },
     {
       id: "people-rules",
@@ -20060,7 +20179,8 @@ const PeopleTab = ({
   onNavigateAndSelectPerson,
   scores,
   traineeLMPs,
-  courseColors
+  courseColors,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [availabilityFilter, setAvailabilityFilter] = reactExports.useState("all");
   const [searchTerm, setSearchTerm] = reactExports.useState("");
@@ -20571,18 +20691,21 @@ const PeopleTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Next Event Lists" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionBody, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Flight", trainees: nextEventLists.flight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – FTD", trainees: nextEventLists.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – CPT", trainees: nextEventLists.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames2.ftd}`, trainees: nextEventLists.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames2.cpt}`, trainees: nextEventLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Ground", trainees: nextEventLists.ground }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Flight", trainees: nextPlusOneLists.flight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – FTD", trainees: nextPlusOneLists.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – CPT", trainees: nextPlusOneLists.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames2.ftd}`, trainees: nextPlusOneLists.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames2.cpt}`, trainees: nextPlusOneLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Ground School", trainees: nextPlusOneLists.ground })
       ] }) })
     ] })
   ] });
 };
-const CourseDistributionTable = ({ courseAnalysis }) => {
+const CourseDistributionTable = ({
+  courseAnalysis,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-white", children: "Course Distribution Analysis" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto p-5", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "w-full text-sm", children: [
@@ -20595,8 +20718,8 @@ const CourseDistributionTable = ({ courseAnalysis }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Scheduled" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Efficiency" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Flight" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "FTD" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "CPT" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames2.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames2.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Ground" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-center font-semibold text-slate-300", children: "Status" })
       ] }) }),
@@ -20712,7 +20835,8 @@ const CourseMetricsTab = ({
   traineesData,
   activeCourses,
   onNavigateAndSelectPerson,
-  analysis
+  analysis,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const traineeCourseLookup = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
@@ -20794,7 +20918,13 @@ const CourseMetricsTab = ({
       )) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-center text-slate-400 py-8", children: "No events found for active courses." }) })
     ] }),
     analysis && analysis.courseAnalysis && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(CourseDistributionTable, { courseAnalysis: analysis.courseAnalysis }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CourseDistributionTable,
+        {
+          courseAnalysis: analysis.courseAnalysis,
+          resourceDisplayNames: resourceDisplayNames2
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           PieChart,
@@ -20833,7 +20963,10 @@ const StatCard$1 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntime
   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-2 whitespace-nowrap text-2xl font-bold text-white", children: value }),
   description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm text-slate-400", children: description })
 ] });
-const LimitingFactorsSection = ({ courseAnalysis }) => {
+const LimitingFactorsSection = ({
+  courseAnalysis,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   const totalLimitingFactors = {
     insufficientInstructors: 0,
     noAircraftSlots: 0,
@@ -20866,22 +20999,43 @@ const LimitingFactorsSection = ({ courseAnalysis }) => {
           " events could not be scheduled due to lack of available instructors"
         ] }),
         totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No Aircraft Slots:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
+            "No ",
+            resourceDisplayNames2.aircraft,
+            " Slots:"
+          ] }),
           " ",
           totalLimitingFactors.noAircraftSlots,
-          " flight events could not be scheduled due to lack of available aircraft"
+          " flight events could not be scheduled due to lack of available ",
+          resourceDisplayNames2.aircraft.toLowerCase()
         ] }),
         totalLimitingFactors.noFtdSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No FTD Slots:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
+            "No ",
+            resourceDisplayNames2.ftd,
+            " Slots:"
+          ] }),
           " ",
           totalLimitingFactors.noFtdSlots,
-          " FTD events could not be scheduled due to lack of available simulators"
+          " ",
+          resourceDisplayNames2.ftd,
+          " events could not be scheduled due to lack of available ",
+          resourceDisplayNames2.ftd.toLowerCase(),
+          " resources"
         ] }),
         totalLimitingFactors.noCptSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "No CPT Slots:" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
+            "No ",
+            resourceDisplayNames2.cpt,
+            " Slots:"
+          ] }),
           " ",
           totalLimitingFactors.noCptSlots,
-          " CPT events could not be scheduled due to lack of available simulators"
+          " ",
+          resourceDisplayNames2.cpt,
+          " events could not be scheduled due to lack of available ",
+          resourceDisplayNames2.cpt.toLowerCase(),
+          " resources"
         ] }),
         totalLimitingFactors.traineeLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { className: "text-white", children: "Trainee Daily Limit:" }),
@@ -20966,9 +21120,16 @@ const InsightsSection = ({ insights }) => {
     }) })
   ] });
 };
-const BuildAnalyticsTab = ({ events, analysis }) => {
+const BuildAnalyticsTab = ({
+  events,
+  analysis,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   const sectionClass2 = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
+  const aircraftLabel = resourceDisplayNames2.aircraft;
+  const ftdLabel = resourceDisplayNames2.ftd;
+  const aircraftNoun = aircraftLabel.toLowerCase();
   const formattedBuildDate = reactExports.useMemo(() => {
     if (!analysis?.buildDate) return "";
     const [year, month, day] = analysis.buildDate.split("-").map(Number);
@@ -20997,8 +21158,8 @@ const BuildAnalyticsTab = ({ events, analysis }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Tiles" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total FTD Tiles", value: tilesStats.ftdTiles }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Combined Flight/FTD", value: tilesStats.combinedTiles }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Total ${ftdLabel} Tiles`, value: tilesStats.ftdTiles }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Combined Flight/${ftdLabel}`, value: tilesStats.combinedTiles }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
         ] })
       ] }),
@@ -21008,7 +21169,11 @@ const BuildAnalyticsTab = ({ events, analysis }) => {
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-slate-400 mb-6", children: "Build analytics will appear here after you run a DFP build." }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-slate-500", children: 'Click "NEO - Build" in the Priorities page to generate a build and see detailed analytics including:' }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("ul", { className: "text-sm text-slate-500 mt-4 space-y-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Build Summary (events, aircraft, utilization)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { children: [
+            "Build Summary (events, ",
+            aircraftNoun,
+            ", utilization)"
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Scheduling Bottlenecks" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Time Distribution Analysis" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: "Insights & Recommendations" })
@@ -21021,8 +21186,8 @@ const BuildAnalyticsTab = ({ events, analysis }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: legendClass, children: "Tiles" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Flight Tiles", value: tilesStats.flightTiles }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total FTD Tiles", value: tilesStats.ftdTiles }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Combined Flight/FTD", value: tilesStats.combinedTiles }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Total ${ftdLabel} Tiles`, value: tilesStats.ftdTiles }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `Combined Flight/${ftdLabel}`, value: tilesStats.combinedTiles }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Standby Events", value: tilesStats.standbyEvents, description: "Reason not specified." })
       ] })
     ] }),
@@ -21031,17 +21196,17 @@ const BuildAnalyticsTab = ({ events, analysis }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 gap-6 md:grid-cols-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Build Date", value: formattedBuildDate }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Total Events", value: analysis.totalEvents }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: "Aircraft Available", value: analysis.availableAircraft }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(StatCard$1, { title: `${aircraftLabel} Available`, value: analysis.availableAircraft }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           StatCard$1,
           {
-            title: "Aircraft Utilization",
+            title: `${aircraftLabel} Utilization`,
             value: `${analysis.resourceUtilization.aircraftUtilization.toFixed(0)}%`
           }
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames: resourceDisplayNames2 }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(TimeDistributionChart, { timeDistribution: analysis.timeDistribution }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InsightsSection, { insights: analysis.insights })
   ] });
@@ -23034,7 +23199,8 @@ const TrainingIntelligenceTab = () => {
 };
 const ACHistoryAnalytics = ({
   cancellationRecords,
-  cancellationCodes
+  cancellationCodes,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
   const [showAllCodes, setShowAllCodes] = reactExports.useState(false);
@@ -23277,7 +23443,11 @@ const ACHistoryAnalytics = ({
       ] }, item.code)) })
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Percentages are calculated relative to all Flight + FTD cancellations in the selected period." }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
+        "• Percentages are calculated relative to all Flight + ",
+        resourceDisplayNames2.ftd,
+        " cancellations in the selected period."
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend indicators compare the selected period to the immediately preceding equivalent period." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Both active and inactive codes appear in analytics if used historically." })
     ] })
@@ -24577,7 +24747,8 @@ const ACHistoryIntelligencePanel = ({
   currentUserRole,
   timezoneOffset = 0,
   dayFlyingStart = "08:00",
-  dayFlyingEnd = "17:00"
+  dayFlyingEnd = "17:00",
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [codesLoading, setCodesLoading] = reactExports.useState(true);
@@ -24640,13 +24811,15 @@ const ACHistoryIntelligencePanel = ({
       ACHistoryAnalytics,
       {
         cancellationRecords,
-        cancellationCodes
+        cancellationCodes,
+        resourceDisplayNames: resourceDisplayNames2
       }
     )
   ] });
 };
 const BuildIntelligenceView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("people");
+  const resourceDisplayNames2 = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const formattedDate = reactExports.useMemo(() => {
     const [year, month, day] = props.date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -24701,7 +24874,8 @@ const BuildIntelligenceView = (props) => {
           onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
           scores: props.scores,
           traineeLMPs: props.traineeLMPs,
-          courseColors: props.courseColors
+          courseColors: props.courseColors,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       activeTab === "course-metrics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24712,14 +24886,16 @@ const BuildIntelligenceView = (props) => {
           traineesData: props.traineesData,
           activeCourses: props.activeCourses,
           onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
-          analysis: props.analysis
+          analysis: props.analysis,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       activeTab === "build-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         BuildAnalyticsTab,
         {
           events: props.events,
-          analysis: props.analysis
+          analysis: props.analysis,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       activeTab === "ac-history" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24732,7 +24908,8 @@ const BuildIntelligenceView = (props) => {
           currentUserRole: props.currentUserRole,
           timezoneOffset: props.timezoneOffset,
           dayFlyingStart: props.dayFlyingStart,
-          dayFlyingEnd: props.dayFlyingEnd
+          dayFlyingEnd: props.dayFlyingEnd,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       activeTab === "managerial-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, {})
@@ -25051,7 +25228,8 @@ const InstructorProfileFlyout = ({
   profileInitialTab,
   onProfileTabConsumed,
   currentUserId,
-  currentUserName
+  currentUserName,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -26019,7 +26197,11 @@ const InstructorProfileFlyout = ({
             ] })
           ] }),
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Logbook – Prior Experience (PC-21 only)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
+              "Logbook – Prior Experience (",
+              resourceDisplayNames2.aircraft,
+              " only)"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 CircularGauge,
@@ -26075,14 +26257,18 @@ const InstructorProfileFlyout = ({
                   { label: "Prior P2", value: exp.simulator.p2 },
                   { label: "Prior Dual", value: exp.simulator.dual },
                   { label: "Prior Total", value: exp.simulator.total },
-                  ...ftdTotal > 0 ? [{ label: "FTD", value: ftdTotal }] : []
+                  ...ftdTotal > 0 ? [{ label: resourceDisplayNames2.ftd, value: ftdTotal }] : []
                 ];
-                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: "Simulator", mainValue: simMainValue, subItems: simSubItems });
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: resourceDisplayNames2.ftd, mainValue: simMainValue, subItems: simSubItems });
               })()
             ] })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-sky-400 mb-3", children: "Logbook – Prior Experience (PC-21 only)" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-sky-400 mb-3", children: [
+              "Logbook – Prior Experience (",
+              resourceDisplayNames2.aircraft,
+              " only)"
+            ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Day Flying" }),
@@ -26116,7 +26302,7 @@ const InstructorProfileFlyout = ({
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: "Simulator" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames2.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }),
@@ -26524,13 +26710,14 @@ const InstructorListView = ({
   profileInitialTab,
   onProfileTabConsumed,
   currentUserId,
-  currentUserName
+  currentUserName,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames: resourceDisplayNames2 };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -26968,7 +27155,8 @@ const InstructorListView = ({
         profileInitialTab,
         onProfileTabConsumed,
         currentUserId,
-        currentUserName
+        currentUserName,
+        resourceDisplayNames: resourceDisplayNames2
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27096,7 +27284,8 @@ const StaffView = (props) => {
           profileInitialTab: props.profileInitialTab,
           onProfileTabConsumed: props.onProfileTabConsumed,
           currentUserId: props.currentUserId,
-          currentUserName: props.currentUserName
+          currentUserName: props.currentUserName,
+          resourceDisplayNames: props.resourceDisplayNames
         }
       ),
       activeTab === "schedule" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27188,6 +27377,7 @@ const TraineeView = (props) => {
           currencyRequirements: props.currencyRequirements,
           currentUserId: props.currentUserId,
           currentUserName: props.currentUserName,
+          resourceDisplayNames: props.resourceDisplayNames,
           pt051Assessments: props.pt051Assessments,
           userProfile: props.userProfile,
           canViewTraineeProfile: props.canViewTraineeProfile,
@@ -27480,7 +27670,7 @@ const EditableList = ({ title, items, onChange }) => /* @__PURE__ */ jsxRuntimeE
     }
   )
 ] });
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -27490,6 +27680,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }
       return "Ground";
     }
     return "Flight";
+  };
+  const formatDisplayType2 = (displayType) => {
+    if (displayType === "FTD") return resourceDisplayNames2.ftd;
+    if (displayType === "CPT") return resourceDisplayNames2.cpt;
+    return displayType;
   };
   const handleTypeChange = (e) => {
     if (!editedItem) return;
@@ -27554,11 +27749,11 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }
               onChange: handleTypeChange,
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]",
               children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "FTD" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "CPT" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Ground" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { children: "Academics" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CPT", children: resourceDisplayNames2.cpt }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ground", children: "Ground" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Academics", children: "Academics" })
               ]
             }
           )
@@ -27697,7 +27892,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }
       ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Day/Night", value: item.dayNight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Type", value: getDisplayType2(item) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Type", value: formatDisplayType2(getDisplayType2(item)) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Cct Only", value: item.cctOnly || (item.code === "BGF10" ? "YES" : "NO") }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "TWR DI Reqd", value: item.twrDiReqd || (item.code === "BGF11" || item.code === "BGF18" ? "YES" : "NO") }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Total Event Hrs", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -27776,7 +27971,14 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent }
   ] });
 };
 const STATIC_COURSE_LMPS = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
-const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem, onAddItem }) => {
+const SyllabusView = ({
+  syllabusDetails,
+  onBack,
+  initialSelectedId,
+  onUpdateItem,
+  onAddItem,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+}) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
   const [hoveredItem, setHoveredItem] = reactExports.useState(null);
@@ -28280,7 +28482,8 @@ const SyllabusView = ({ syllabusDetails, onBack, initialSelectedId, onUpdateItem
             isEditing,
             editedItem,
             onItemChange: setEditedItem,
-            onDeleteEvent: handleDeleteEventRequest
+            onDeleteEvent: handleDeleteEventRequest,
+            resourceDisplayNames: resourceDisplayNames2
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
       ] })
@@ -49654,7 +49857,8 @@ const CancellationCodesTable = ({
   onDeleteCode,
   canEdit,
   usedCodes,
-  isLoading = false
+  isLoading = false,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isAddingNew, setIsAddingNew] = reactExports.useState(false);
   const [editingCode, setEditingCode] = reactExports.useState(null);
@@ -49731,6 +49935,11 @@ const CancellationCodesTable = ({
     }
     return a.code.localeCompare(b.code);
   });
+  const formatAppliesToLabel = (value) => {
+    if (value === "FTD") return resourceDisplayNames2.ftd;
+    if (value === "Both") return `Flight + ${resourceDisplayNames2.ftd}`;
+    return "Flight";
+  };
   if (isLoading) {
     return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center mb-4", children: [
@@ -49835,8 +50044,11 @@ const CancellationCodesTable = ({
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: "FTD" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Both", children: "Both" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
+                  "Flight + ",
+                  resourceDisplayNames2.ftd
+                ] })
               ]
             }
           ) }),
@@ -49906,8 +50118,11 @@ const CancellationCodesTable = ({
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: "FTD" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Both", children: "Both" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
+                      "Flight + ",
+                      resourceDisplayNames2.ftd
+                    ] })
                   ]
                 }
               ) }),
@@ -49936,7 +50151,7 @@ const CancellationCodesTable = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-white font-mono font-semibold", children: code.code }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.category }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.description }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: code.appliesTo }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-gray-300", children: formatAppliesToLabel(code.appliesTo) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "py-3 px-4 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `inline-block px-2 py-1 rounded text-xs font-semibold ${code.isActive ? "bg-green-900/50 text-green-400" : "bg-red-900/50 text-red-400"}`, children: code.isActive ? "Active" : "Inactive" }) }),
             canEdit && /* @__PURE__ */ jsxRuntimeExports.jsxs("td", { className: "py-3 px-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
@@ -50020,7 +50235,8 @@ const CancellationCodesTable = ({
 const ACHistoryPage = ({
   currentUserRole,
   cancellationRecords,
-  currentUserId
+  currentUserId,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
@@ -50176,7 +50392,8 @@ const ACHistoryPage = ({
           onDeleteCode: handleDeleteCode,
           canEdit,
           usedCodes,
-          isLoading: codesLoading
+          isLoading: codesLoading,
+          resourceDisplayNames: resourceDisplayNames2
         }
       )
     ] })
@@ -50702,25 +50919,29 @@ const DutyTurnaroundSection = ({
   ftdTurnaround,
   onUpdateFtdTurnaround,
   cptTurnaround,
-  onUpdateCptTurnaround
+  onUpdateCptTurnaround,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
-  const TurnaroundInput = ({ label, value, onChange, options }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: `turnaround-${label}`, className: "block text-sm font-medium text-gray-400", children: label }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "select",
-      {
-        id: `turnaround-${label}`,
-        value,
-        onChange: (e) => onChange(parseFloat(e.target.value)),
-        className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center",
-        children: options.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: opt, children: [
-          opt.toFixed(1),
-          " hrs"
-        ] }, opt))
-      }
-    )
-  ] });
+  const TurnaroundInput = ({ label, value, onChange, options }) => {
+    const inputId = `turnaround-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: inputId, className: "block text-sm font-medium text-gray-400", children: label }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "select",
+        {
+          id: inputId,
+          value,
+          onChange: (e) => onChange(parseFloat(e.target.value)),
+          className: "w-full mt-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 text-center",
+          children: options.map((opt) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: opt, children: [
+            opt.toFixed(1),
+            " hrs"
+          ] }, opt))
+        }
+      )
+    ] });
+  };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 h-fit", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 flex justify-between items-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-gray-200", children: "Duty & Turnaround" }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-t border-gray-700 space-y-4", children: [
@@ -50777,10 +50998,10 @@ const DutyTurnaroundSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TurnaroundInput,
             {
-              label: "FTD",
+              label: resourceDisplayNames2.ftd,
               value: ftdTurnaround,
               onChange: (v) => {
-                logAudit("Settings", "Edit", "Updated FTD turnaround time", `${ftdTurnaround} → ${v}`);
+                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames2.ftd} turnaround time`, `${ftdTurnaround} → ${v}`);
                 onUpdateFtdTurnaround(v);
               },
               options: turnaroundOptions
@@ -50789,10 +51010,10 @@ const DutyTurnaroundSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TurnaroundInput,
             {
-              label: "CPT",
+              label: resourceDisplayNames2.cpt,
               value: cptTurnaround,
               onChange: (v) => {
-                logAudit("Settings", "Edit", "Updated CPT turnaround time", `${cptTurnaround} → ${v}`);
+                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames2.cpt} turnaround time`, `${cptTurnaround} → ${v}`);
                 onUpdateCptTurnaround(v);
               },
               options: turnaroundOptions
@@ -51381,7 +51602,8 @@ const SettingsView = ({
   currentAircraftAvailable,
   totalAircraft,
   dayFlyingStart = "08:00",
-  dayFlyingEnd = "17:00"
+  dayFlyingEnd = "17:00",
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const [isEditingLocations, setIsEditingLocations] = reactExports.useState(false);
@@ -51691,7 +51913,7 @@ const SettingsView = ({
     logAudit({
       page: "Settings - Duty & Turnaround",
       action: "update",
-      description: "Updated FTD turnaround time",
+      description: `Updated ${resourceDisplayNames2.ftd} turnaround time`,
       changes: `Set to: ${value} minutes`
     });
   };
@@ -51700,7 +51922,7 @@ const SettingsView = ({
     logAudit({
       page: "Settings - Duty & Turnaround",
       action: "update",
-      description: "Updated CPT turnaround time",
+      description: `Updated ${resourceDisplayNames2.cpt} turnaround time`,
       changes: `Set to: ${value} minutes`
     });
   };
@@ -52351,7 +52573,8 @@ const SettingsView = ({
           totalAircraft,
           timezoneOffset,
           dayFlyingStart,
-          dayFlyingEnd
+          dayFlyingEnd,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ) }),
       shouldShowSection("timezone") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 w-96", children: [
@@ -52649,7 +52872,8 @@ const SettingsView = ({
           ftdTurnaround,
           onUpdateFtdTurnaround: handleUpdateFtdTurnaround,
           cptTurnaround,
-          onUpdateCptTurnaround: handleUpdateCptTurnaround
+          onUpdateCptTurnaround: handleUpdateCptTurnaround,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
@@ -52856,7 +53080,11 @@ const SettingsView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Execs" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Flight/FTD:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max Flight/",
+                  resourceDisplayNames2.ftd,
+                  ":"
+                ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
@@ -52873,7 +53101,11 @@ const SettingsView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Staff" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Flight/FTD:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max Flight/",
+                  resourceDisplayNames2.ftd,
+                  ":"
+                ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
@@ -52890,7 +53122,11 @@ const SettingsView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Trainees" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max Flight/FTD:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max Flight/",
+                  resourceDisplayNames2.ftd,
+                  ":"
+                ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
@@ -52903,7 +53139,11 @@ const SettingsView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "SIM IPs" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-400", children: "Max FTD:" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
+                  "Max ",
+                  resourceDisplayNames2.ftd,
+                  ":"
+                ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
@@ -57315,7 +57555,7 @@ const getDefaultConfigurationHealthRemediation = (area, title) => {
   }
   if (area === "Resource Pools") {
     if (lowerTitle.includes("no usable resources")) {
-      return "Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, FTD, CPT, STBY or Ground, then save.";
+      return "Open the Resource Pools section, enter non-zero counts for the live resources such as aircraft, simulator, procedural trainer, STBY or Ground, then save.";
     }
     if (lowerTitle.includes("live dfp")) {
       return "Open Resource Pools and enable Apply to V2 runtime on the pool that should drive the active DFP resource rows.";
@@ -57755,6 +57995,9 @@ const PlatformConfigurationSettings = ({
           status: "ACTIVE",
           settings: {
             applyToV2Runtime: false,
+            aircraftLabel: "PC-21",
+            ftdLabel: "FTD",
+            cptLabel: "CPT",
             aircraft: 24,
             ftd: 5,
             cpt: 4,
@@ -58177,7 +58420,7 @@ const PlatformConfigurationSettings = ({
       ] }, unit.id || unit.code || index)) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-resource-pools", className: getSectionClass("platform-resource-pools"), children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, FTD, CPT and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Aircraft Types & Resource Pools", subtitle: "Aircraft type defines capability; resource pools define shared or dedicated aircraft, simulator, procedural trainer and ground resources.", action: canEdit ? /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addResourcePool, className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200", children: "Add Pool" }) : null }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-4 lg:grid-cols-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.aircraftTypes.map((aircraft, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Code", value: aircraft.code, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { code: value }) }),
@@ -58191,6 +58434,12 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2 md:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3 text-xs text-cyan-100/80", children: "Display terminology only. Existing schedule records keep stable internal resource keys." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Display Name", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator Display Name", value: pool.settings?.ftdLabel || "FTD", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer Display Name", value: pool.settings?.cptLabel || "CPT", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             ToggleField,
             {
@@ -58201,9 +58450,9 @@ const PlatformConfigurationSettings = ({
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft", value: pool.settings?.aircraft ?? 24, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "FTD", value: pool.settings?.ftd ?? 5, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "CPT", value: pool.settings?.cpt ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft Rows", value: pool.settings?.aircraft ?? 24, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator Rows", value: pool.settings?.ftd ?? 5, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Procedural Trainer Rows", value: pool.settings?.cpt ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
           ] })
@@ -60750,7 +60999,7 @@ const LocalityChangeFlyout = ({ locality }) => {
     ] })
   ] }) }) });
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [] }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -61079,7 +61328,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return {
       year: yearStr,
       date: dateStr,
-      type: isFtdLog ? "FTD" : "PC-21",
+      type: isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft,
       tail: isFtdLog ? `FTD-${aircraftNumber}` : `A54-${aircraftNumber}`,
       captain: captainName,
       crew: crewName,
@@ -61556,7 +61805,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: "PC-21" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: resourceDisplayNames2.aircraft })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "6.75rem" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Number" }),
@@ -61762,7 +62011,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "3D App", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-10", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: "Simulator" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: resourceDisplayNames2.ftd }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { subLabel: "P1", fieldKey: "__hdr__", overrides: {}, onChange: () => {
                 }, width: "w-10", borderColor: "border-gray-700", bgColor: "bg-gray-800/50", readOnly: true }),
@@ -61843,6 +62092,7 @@ const AddRemedialPackageFlyout = ({
   instructors,
   scores,
   traineeLmp,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
   onClose,
   onSave
 }) => {
@@ -62007,7 +62257,7 @@ const AddRemedialPackageFlyout = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 2: Build Remedial Package" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Tutorials", state: tutState, setState: setTutState }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "FTDs", state: ftdState, setState: setFtdState }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: `${resourceDisplayNames2.ftd}s`, state: ftdState, setState: setFtdState }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Flights", state: flightState, setState: setFlightState })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvents, className: "w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add Events to Package" }),
@@ -64048,7 +64298,8 @@ const TrainingRecordsExportView = ({
   publishedSchedules,
   syllabusDetails,
   pt051Assessments,
-  onSavePT051Assessment
+  onSavePT051Assessment,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
@@ -64079,6 +64330,11 @@ const TrainingRecordsExportView = ({
   const [isCompleting, setIsCompleting] = reactExports.useState(false);
   const [completionProgress, setCompletionProgress] = reactExports.useState(0);
   const [completionStatus, setCompletionStatus] = reactExports.useState("");
+  const getEventTypeLabel = (type) => {
+    if (type === "FTD") return resourceDisplayNames2.ftd;
+    if (type === "CPT") return resourceDisplayNames2.cpt;
+    return type;
+  };
   const formatDate2 = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -65076,7 +65332,7 @@ const TrainingRecordsExportView = ({
                     className: "w-4 h-4 text-sky-500"
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: type })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-200", children: getEventTypeLabel(type) })
               ] }, type)) })
             ] })
           ] }),
@@ -65601,7 +65857,8 @@ const TrainingRecordsView = ({
   pt051Assessments,
   onSavePT051Assessment,
   locations = [],
-  units = []
+  units = [],
+  resourceDisplayNames: resourceDisplayNames2
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("courses");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 h-full overflow-auto", children: [
@@ -65664,7 +65921,8 @@ const TrainingRecordsView = ({
           publishedSchedules,
           syllabusDetails,
           pt051Assessments,
-          onSavePT051Assessment
+          onSavePT051Assessment,
+          resourceDisplayNames: resourceDisplayNames2
         }
       )
     ] })
@@ -65836,7 +66094,7 @@ const formatTime = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
 };
-const NeoRemedyFlyout = ({ problemTile, remedies, onApplyRemedy, onCancel }) => {
+const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
   const { event, errors } = problemTile;
   const instructorSwapRemedies = remedies.filter((r) => r.type === "instructor");
   console.log("🔧 NeoRemedyFlyout: Received remedies:", remedies.length);
@@ -65886,12 +66144,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, onApplyRemedy, onCancel }) => 
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.flightsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: "FTD" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.ftd }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.ftdsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: "CPT" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.cpt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.cptsToday })
                 ] }),
@@ -65924,12 +66182,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, onApplyRemedy, onCancel }) => 
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.flightsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: "FTD" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.ftd }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.ftdsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: "CPT" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.cpt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.cptsToday })
                 ] }),
@@ -65966,12 +66224,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, onApplyRemedy, onCancel }) => 
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.flightsToday })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "FTD" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames2.ftd }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.ftdsToday })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "CPT" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames2.cpt }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.cptsToday })
                   ] }),
@@ -67260,7 +67518,8 @@ const PauseFlightOpsPanel = ({
   phase,
   onPhaseChange,
   stagedEvents,
-  onStagedEventsChange
+  onStagedEventsChange,
+  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [pauseStart, setPauseStart] = reactExports.useState(decToHHMM(flyingStartTime + 2));
   const [pauseEnd, setPauseEnd] = reactExports.useState(decToHHMM(flyingStartTime + 3));
@@ -67271,6 +67530,8 @@ const PauseFlightOpsPanel = ({
   const [buildProgress, setBuildProgress] = reactExports.useState("");
   const pauseStartDec = reactExports.useMemo(() => isValidHHMM(pauseStart) ? hhmmToDec(pauseStart) : null, [pauseStart]);
   const pauseEndDec = reactExports.useMemo(() => isValidHHMM(pauseEnd) ? hhmmToDec(pauseEnd) : null, [pauseEnd]);
+  const ftdLabel = resourceDisplayNames2.ftd;
+  const cptLabel = resourceDisplayNames2.cpt;
   const validationError = reactExports.useMemo(() => {
     if (!pauseStartDec || !pauseEndDec) return "Enter valid times (HH:MM).";
     if (pauseEndDec <= pauseStartDec) return "Pause end must be after pause start.";
@@ -67280,9 +67541,9 @@ const PauseFlightOpsPanel = ({
   }, [pauseStartDec, pauseEndDec, flyingStartTime, flyingEndTime]);
   const cannotReprogram = reactExports.useMemo(() => {
     const hasReprogrammable = affectedTypes.has("flight") || affectedTypes.has("ftd");
-    if (!hasReprogrammable) return "Reprogram requires Flight or FTD selected.";
+    if (!hasReprogrammable) return `Reprogram requires Flight or ${ftdLabel} selected.`;
     return null;
-  }, [affectedTypes]);
+  }, [affectedTypes, ftdLabel]);
   const impactedEvents = reactExports.useMemo(() => {
     if (!pauseStartDec || !pauseEndDec) return [];
     return eventsForDate.filter((e) => {
@@ -67411,8 +67672,8 @@ const PauseFlightOpsPanel = ({
   if (!isOpen) return null;
   const TYPES = [
     { key: "flight", label: "Flight" },
-    { key: "ftd", label: "FTD" },
-    { key: "cpt", label: "CPT" },
+    { key: "ftd", label: ftdLabel },
+    { key: "cpt", label: cptLabel },
     { key: "ground", label: "Ground" }
   ];
   const sectionHead = "text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2";
@@ -70662,8 +70923,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf);
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: "Scheduling FTD Events (Priority)...", percentage: 60 });
-  setProgress({ message: "Scheduling FTD Events (Next)...", percentage: 65 });
+  setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Priority)...`, percentage: 60 });
+  setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Next)...`, percentage: 65 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
     "ftd",
@@ -70673,8 +70934,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: "Scheduling CPT Events (Priority)...", percentage: 70 });
-  setProgress({ message: "Scheduling CPT Events (Next)...", percentage: 72 });
+  setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Priority)...`, percentage: 70 });
+  setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Next)...`, percentage: 72 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
     "cpt",
@@ -70713,7 +70974,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: "Scheduling FTD Events (Plus-One)...", percentage: 82 });
+  setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Plus-One)...`, percentage: 82 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
     "ftd",
@@ -70723,7 +70984,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     "STBY",
     false
   );
-  setProgress({ message: "Scheduling CPT Events (Plus-One)...", percentage: 84 });
+  setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Plus-One)...`, percentage: 84 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
     "cpt",
@@ -70918,7 +71179,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   }
-  setProgress({ message: "Scheduling STBY FTD events...", percentage: 90 });
+  setProgress({ message: `Scheduling STBY ${resourceDisplayNames.ftd} events...`, percentage: 90 });
   const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
@@ -72207,6 +72468,14 @@ const App = () => {
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
+  const resourceDisplayNames2 = reactExports.useMemo(
+    () => getResourceDisplayNames(activePlatformResourcePool),
+    [activePlatformResourcePool]
+  );
+  const formatResourceDisplayLabel = reactExports.useCallback(
+    (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames2),
+    [resourceDisplayNames2]
+  );
   const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24);
   const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount);
   const configuredCptCount = getResourcePoolCount(activePlatformResourcePool, "cpt", availableCptCount);
@@ -78318,6 +78587,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             detectConflictsForEvent,
             baselineEvents: baselineSchedules[activeBaselineKey],
             alertsData: alertsDataByDate[date] || {},
+            formatResourceLabel: formatResourceDisplayLabel,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,
@@ -78686,6 +78956,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
+            resourceDisplayNames: resourceDisplayNames2,
             pt051Assessments,
             userProfile: currentUser2
           }
@@ -78810,6 +79081,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
+            resourceDisplayNames: resourceDisplayNames2,
             pt051Assessments,
             userProfile: currentUser2
           }
@@ -79020,7 +79292,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               });
             },
             pauseWindowStart: showPausePanel ? pauseOverlayStart : null,
-            pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null
+            pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null,
+            formatResourceLabel: formatResourceDisplayLabel
           }
         );
       case "Priorities":
@@ -79205,7 +79478,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 return newRequests;
               });
             },
-            currencyNames
+            currencyNames,
+            resourceDisplayNames: resourceDisplayNames2
           }
         );
       case "CourseProgress":
@@ -79246,7 +79520,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             pt051Assessments,
             onSavePT051Assessment,
             locations,
-            units
+            units,
+            resourceDisplayNames: resourceDisplayNames2
           }
         );
       case "ArchivedCourses":
@@ -79288,7 +79563,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             dayFlyingStart: `${Math.floor(flyingStartTime).toString().padStart(2, "0")}:${Math.round(flyingStartTime % 1 * 60).toString().padStart(2, "0")}`,
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             buildDate: buildDfpDate,
-            analysis: lastBuildAnalysis
+            analysis: lastBuildAnalysis,
+            resourceDisplayNames: resourceDisplayNames2
           }
         );
       case "MyDashboard":
@@ -79533,7 +79809,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             profileInitialTab,
             onProfileTabConsumed: handleProfileTabConsumed,
             currentUserId: getCurrentUserId() ?? void 0,
-            currentUserName
+            currentUserName,
+            resourceDisplayNames: resourceDisplayNames2
           }
         );
       case "Instructors":
@@ -79641,7 +79918,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             masterCurrencies,
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
-            currentUserName
+            currentUserName,
+            resourceDisplayNames: resourceDisplayNames2
           }
         );
       case "Trainees":
@@ -79848,7 +80126,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             neoBuildCourse,
             onUpdateNeoBuildCourse: handleUpdateNeoBuildCourse,
             excludedCourses,
-            onUpdateExcludedCourses: handleUpdateExcludedCourses
+            onUpdateExcludedCourses: handleUpdateExcludedCourses,
+            resourceDisplayNames: resourceDisplayNames2
           }
         );
       case "CurrencyBuilder":
@@ -80317,7 +80596,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               traineesData,
               instructorsData,
               masterCurrencies,
-              currencyRequirements
+              currencyRequirements,
+              resourceDisplayNames: resourceDisplayNames2
             }
           );
         }
@@ -80329,6 +80609,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             {
               person: selectedPersonForLogbook,
               events,
+              resourceDisplayNames: resourceDisplayNames2,
               onBack: () => {
                 if ("role" in selectedPersonForLogbook) {
                   setSelectedPersonForProfile(selectedPersonForLogbook);
@@ -80570,7 +80851,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               onOverlayTimesChange: (start, end) => {
                 setPauseOverlayStart(start);
                 setPauseOverlayEnd(end);
-              }
+              },
+              resourceDisplayNames: resourceDisplayNames2
             }
           )
         ] })
@@ -80756,12 +81038,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           baselineEvent: selectedEvent ? baselineSchedules[activeBaselineKey]?.find((b) => b.id === selectedEvent.id) || null : null,
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
-          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule"
+          canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule",
+          resourceDisplayNames: resourceDisplayNames2
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
       conflict && /* @__PURE__ */ jsxRuntimeExports.jsx(ConflictModal, { conflict, onResolve: () => {
-      }, onCancel: () => setConflict(null) }),
+      }, onCancel: () => setConflict(null), resourceDisplayNames: resourceDisplayNames2 }),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
         NeoRemedyFlyout,
         {
@@ -80892,7 +81175,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           courseAcademicProgress,
           onUpdateCourseAcademicProgress: handleUpdateCourseAcademicProgress,
           persistedAcademicLmp,
-          onUpdatePersistedAcademicLmp: handleUpdatePersistedAcademicLmp
+          onUpdatePersistedAcademicLmp: handleUpdatePersistedAcademicLmp,
+          resourceDisplayNames: resourceDisplayNames2
         }
       ),
       showAuthFlyout && eventForAuth && /* @__PURE__ */ jsxRuntimeExports.jsx(

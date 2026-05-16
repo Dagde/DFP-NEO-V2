@@ -13,6 +13,7 @@ import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -52,6 +53,7 @@ interface TraineeProfileFlyoutProps {
   canViewIndividualLmp?: boolean;
   canAddRemedialPackage?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -280,6 +282,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
   onAccessDenied,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -326,7 +329,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     });
     const [showPauseConfirm, setShowPauseConfirm] = useState(false);
     const [showScheduleWarning, setShowScheduleWarning] = useState(false);
-    
+
     // Editable state
     const [name, setName] = useState(trainee.name);
     const [idNumber, setIdNumber] = useState(trainee.idNumber);
@@ -347,7 +350,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
-    
+
     const [priorExperience, setPriorExperience] = useState<LogbookExperience>(trainee.priorExperience || initialExperience);
     const exp = priorExperience;
 
@@ -356,16 +359,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const callsignData = useMemo(() => personnelData.get(trainee.fullName), [personnelData, trainee.fullName]);
 
-    const { 
-        lastFlight, 
-        lastEvent, 
-        daysSinceLastFlight, 
-        daysSinceLastEvent 
+    const {
+        lastFlight,
+        lastEvent,
+        daysSinceLastFlight,
+        daysSinceLastEvent
     } = useMemo(() => {
         const traineeScores = scores.get(trainee.fullName) || [];
         const today = new Date();
         today.setUTCHours(0, 0, 0, 0);
-        
+
         const calculateDays = (dateStr: string | undefined): number | null => {
             if (!dateStr) return null;
             const eventDate = new Date(dateStr + 'T00:00:00Z');
@@ -373,11 +376,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         };
 
         if (traineeScores.length === 0) {
-            return { 
-                lastFlight: null, 
-                lastEvent: null, 
-                daysSinceLastFlight: null, 
-                daysSinceLastEvent: null 
+            return {
+                lastFlight: null,
+                lastEvent: null,
+                daysSinceLastFlight: null,
+                daysSinceLastEvent: null
             };
         }
 
@@ -401,7 +404,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const { nextEvent, subsequentEvent, nextEventReason } = useMemo(() => {
         if (isCreating) return { nextEvent: null, subsequentEvent: null, nextEventReason: 'New Trainee' };
-        
+
         const traineeScores = scores.get(trainee.fullName) || [];
         const completedEventIds = new Set(traineeScores.map(s => s.event));
 
@@ -432,7 +435,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 }
             }
         }
-        
+
         if (!nextEvt) {
             const allStandardEvents = individualLmp.filter(item => !item.isRemedial && !item.code.includes(' MB'));
             if (allStandardEvents.every(item => completedEventIds.has(item.id))) {
@@ -470,7 +473,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         resetState();
         setIsEditing(isCreating);
     }, [trainee, isCreating]);
-    
+
     // Use ref to prevent double-logging in React StrictMode
     const hasLoggedViewRef = useRef(false);
     useEffect(() => {
@@ -489,7 +492,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const traineeHasEventsToday = useMemo(() => {
         return events.some(e => e.student === trainee.fullName || e.pilot === trainee.fullName);
     }, [events, trainee.fullName]);
-    
+
     const handlePauseToggle = () => {
         if (!isPaused && traineeHasEventsToday) {
             setShowScheduleWarning(true);
@@ -521,7 +524,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-    
+
     const handleRankChange = (newRank: TraineeRank) => {
         const oldRank = rank;
         setRank(newRank);
@@ -535,7 +538,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-    
+
     const handleCourseChange = (newCourse: string) => {
         const oldCourse = course;
         setCourse(newCourse);
@@ -563,7 +566,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-    
+
     const handleUnitChange = (newUnit: string) => {
         const oldUnit = unit;
         setUnit(newUnit);
@@ -577,7 +580,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             );
         }
     };
-    
+
     const handleLocationChange = (newLocation: string) => {
         const oldLocation = location;
         setLocation(newLocation);
@@ -622,10 +625,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             permissions,
             priorExperience
         };
-        
+
         // Flush any pending debounced logs before saving
         flushPendingAudits();
-        
+
         // Log the save action
         if (isCreating) {
             logAudit({
@@ -645,7 +648,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             if (trainee.location !== location) changes.push(`Location: ${trainee.location} → ${location}`);
             if (trainee.seatConfig !== seatConfig) changes.push(`Seat Config: ${trainee.seatConfig} → ${seatConfig}`);
             if (trainee.isPaused !== isPaused) changes.push(`Paused: ${trainee.isPaused} → ${isPaused}`);
-            
+
             if (changes.length > 0) {
                 logAudit({
                     action: 'Edit',
@@ -655,9 +658,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 });
             }
         }
-        
+
         onUpdateTrainee(updatedTrainee);
-        
+
         // Persist Logbook Data to Storage
         try {
             const cleanName = name.replace(/,\s/g, '_');
@@ -686,11 +689,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const handlePermissionChange = (permission: string, isChecked: boolean) => {
-        setPermissions(prev => 
+        setPermissions(prev =>
             isChecked ? [...prev, permission] : prev.filter(p => p !== permission)
         );
     };
-    
+
     const handleHateSheetClick = () => {
         if (!canViewPt051) {
             onAccessDenied?.('PT-051 performance history');
@@ -720,10 +723,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             onClose();
         }
     };
-    
+
     const handleExperienceChange = (
-        section: keyof LogbookExperience, 
-        field: string | null, 
+        section: keyof LogbookExperience,
+        field: string | null,
         value: number
     ) => {
         setPriorExperience(prev => {
@@ -777,26 +780,26 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
     const handleSaveCustomUnavailability = (periodData: Omit<UnavailabilityPeriod, 'id'>) => {
         console.log('handleSaveCustomUnavailability called', { periodData, isCreating, traineeName: trainee.name });
-        
+
         const newPeriod = {
             ...periodData,
             id: uuidv4(),
             startTime: periodData.allDay ? undefined : periodData.startTime,
             endTime: periodData.allDay ? undefined : periodData.endTime,
         };
-        
+
         console.log('Created new period', newPeriod);
-        
+
         if (isCreating) {
             console.log('Adding to creating trainee unavailability');
             setUnavailability(prev => [...prev, newPeriod]);
         } else {
             console.log('Updating existing trainee unavailability');
-            const dateRange = periodData.startDate === periodData.endDate 
-                ? periodData.startDate 
+            const dateRange = periodData.startDate === periodData.endDate
+                ? periodData.startDate
                 : `${periodData.startDate} to ${periodData.endDate}`;
             const timeRange = periodData.allDay ? 'All Day' : `${periodData.startTime} to ${periodData.endTime}`;
-            
+
             logAudit({
                 action: 'Add',
                 description: `Added unavailability for ${trainee.rank} ${trainee.name}`,
@@ -816,10 +819,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         } else {
             const periodToRemove = unavailability.find(p => p.id === idToRemove);
             if (periodToRemove) {
-                const dateRange = periodToRemove.startDate === periodToRemove.endDate 
-                    ? periodToRemove.startDate 
+                const dateRange = periodToRemove.startDate === periodToRemove.endDate
+                    ? periodToRemove.startDate
                     : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
-                
+
                 logAudit({
                     action: 'Delete',
                     description: `Removed unavailability for ${trainee.rank} ${trainee.name}`,
@@ -837,17 +840,17 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         console.log('🗑️ [TRAINEE] DELETE START - idToRemove:', idToRemove);
         console.log('🗑️ [TRAINEE] Current unavailability state:', unavailability);
         console.log('🗑️ [TRAINEE] isCreating:', isCreating);
-        
+
         const periodToRemove = unavailability?.find(p => p.id === idToRemove);
         console.log('🗑️ [TRAINEE] Period to remove:', periodToRemove);
-        
+
         if (periodToRemove) {
-            const dateRange = periodToRemove.startDate === periodToRemove.endDate 
-                ? periodToRemove.startDate 
+            const dateRange = periodToRemove.startDate === periodToRemove.endDate
+                ? periodToRemove.startDate
                 : `${periodToRemove.startDate} to ${periodToRemove.endDate}`;
-            
+
             console.log('🗑️ [TRAINEE] Logging audit for:', { trainee, dateRange, reason: periodToRemove.reason });
-            
+
             logAudit({
                 action: 'Delete',
                 description: `Removed unavailability for ${trainee.rank} ${trainee.name}`,
@@ -855,13 +858,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                 page: 'Trainee Profile'
             });
         }
-        
+
         const updatedUnavailability = unavailability.filter(p => p.id !== idToRemove);
         console.log('🗑️ [TRAINEE] Updated unavailability after filter:', updatedUnavailability);
         console.log('🗑️ [TRAINEE] Calling setUnavailability with filtered list');
-        
+
         setUnavailability(prev => prev.filter(p => p.id !== idToRemove));
-        
+
         console.log('🗑️ [TRAINEE] Calling onUpdateTrainee with trainee object');
         console.log('🗑️ [TRAINEE] Trainee object to update:', {
             id: (trainee as any).id,
@@ -869,9 +872,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             name: trainee.name,
             unavailability: updatedUnavailability
         });
-        
+
         onUpdateTrainee({ ...trainee, unavailability: updatedUnavailability });
-        
+
         console.log('🗑️ [TRAINEE] DELETE COMPLETE');
     };
 
@@ -891,11 +894,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className="grid grid-cols-3 gap-x-3 gap-y-2">
                             {allPermissions.map(perm => (
                                 <label key={perm} className="flex items-center space-x-3 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={permissions.includes(perm)} 
-                                        onChange={e => handlePermissionChange(perm, e.target.checked)} 
-                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                    <input
+                                        type="checkbox"
+                                        checked={permissions.includes(perm)}
+                                        onChange={e => handlePermissionChange(perm, e.target.checked)}
+                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded"
                                     />
                                     <span className="text-white text-[11px]">{perm}</span>
                                 </label>
@@ -919,10 +922,10 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <div className="grid grid-cols-3 gap-x-3 gap-y-2">
                             {allRoles.map(role => (
                                 <label key={role} className="flex items-center space-x-3 cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={false} 
-                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded" 
+                                    <input
+                                        type="checkbox"
+                                        checked={false}
+                                        className="h-4 w-4 accent-sky-500 bg-gray-600 rounded"
                                     />
                                     <span className="text-white text-[11px]">{role}</span>
                                 </label>
@@ -1101,7 +1104,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <ExperienceInput label="Actual" value={exp.instrument.actual} onChange={v => handleExperienceChange('instrument', 'actual', v)} />
                             </div>
                           </div>
-                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">Simulator</span>
+                          <div><span className="block text-xs font-bold text-gray-300 mb-2 text-center">{resourceDisplayNames.ftd}</span>
                             <div className="flex justify-center space-x-2">
                               <ExperienceInput label="P1" value={exp.simulator.p1} onChange={v => handleExperienceChange('simulator', 'p1', v)} />
                               <ExperienceInput label="P2" value={exp.simulator.p2} onChange={v => handleExperienceChange('simulator', 'p2', v)} />
@@ -1242,7 +1245,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
                               {/* Row 1 */}
                               <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{trainee.idNumber}</span></div>
-                              <div><span className="text-gray-400 block text-[10px]">Course</span><span 
+                              <div><span className="text-gray-400 block text-[10px]">Course</span><span
                                 data-course-color="true"
                                 className={`font-semibold px-1 rounded text-white text-[10px] ${(courseColors[trainee.course] || '').startsWith('#') ? '' : (courseColors[trainee.course] || 'bg-gray-500')}`}
                                 style={(courseColors[trainee.course] || '').startsWith('#') ? { backgroundColor: courseColors[trainee.course] } : {}}
@@ -1386,7 +1389,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       {/* ─── SECTION 3: LOGBOOK VIEW (always visible, not editing) ─── */}
                       {!isEditing && (
                         <div className={card3d + " p-3"} style={card3dStyle}>
-                          <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience (PC-21 only)</h4>
+                          <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience ({resourceDisplayNames.aircraft} only)</h4>
                           <div className="flex gap-2">
                             {/* Day Flying */}
                             <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
@@ -1446,7 +1449,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             </div>
                             {/* Simulator */}
                             <div className="flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center">
-                              <div className="text-[11px] font-semibold text-gray-200 mb-2">Simulator</div>
+                              <div className="text-[11px] font-semibold text-gray-200 mb-2">{resourceDisplayNames.ftd}</div>
                               <div className="w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2">
                                 <span className="text-white font-bold text-sm">{exp.simulator.total.toFixed(1)}</span>
                               </div>

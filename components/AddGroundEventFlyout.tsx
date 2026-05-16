@@ -2,6 +2,11 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { SyllabusItemDetail, Trainee, Score, ScheduleEvent } from '../types';
 import CourseTraineeSelectionFlyout from './CourseTraineeSelectionFlyout';
 import AcademicsTab, { AcademicSaveData } from './AcademicsTab';
+import {
+  DEFAULT_RESOURCE_DISPLAY_NAMES,
+  ResourceDisplayNames,
+  formatResourceLabel as formatConfiguredResourceLabel,
+} from '../utils/resourceDisplayNames';
 
 interface AddGroundEventFlyoutProps {
   onClose: () => void;
@@ -25,6 +30,7 @@ interface AddGroundEventFlyoutProps {
   onUpdateCourseAcademicProgress?: (courseCode: string, lessonCode: string, completed: boolean) => void;
   persistedAcademicLmp?: string;
   onUpdatePersistedAcademicLmp?: (lmp: string) => void;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 type TabKey = 'ground' | 'academics';
@@ -50,6 +56,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
     onUpdateCourseAcademicProgress,
     persistedAcademicLmp,
     onUpdatePersistedAcademicLmp,
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
     const [activeTab, setActiveTab] = useState<TabKey>('ground');
 
@@ -73,6 +80,7 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
 
     const isCptEvent = useMemo(() => flightNumber.includes('CPT'), [flightNumber]);
     const [selectedCpt, setSelectedCpt] = useState('CPT 1');
+    const cptLabel = resourceDisplayNames.cpt;
 
     useEffect(() => {
         const selectedSyllabus = groundSyllabus.find(s => s.code === flightNumber);
@@ -318,9 +326,11 @@ const AddGroundEventFlyout: React.FC<AddGroundEventFlyoutProps> = ({
 
                                 {isCptEvent ? (
                                     <div>
-                                        <label htmlFor="cpt-resource" className="block text-sm font-medium text-gray-400">CPT Resource</label>
+                                        <label htmlFor="cpt-resource" className="block text-sm font-medium text-gray-400">{cptLabel} Resource</label>
                                         <select id="cpt-resource" value={selectedCpt} onChange={e => setSelectedCpt(e.target.value)} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm">
-                                            {Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map(c => <option key={c} value={c}>{c}</option>)}
+                                            {Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map(c => (
+                                                <option key={c} value={c}>{formatConfiguredResourceLabel(c, resourceDisplayNames)}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 ) : (

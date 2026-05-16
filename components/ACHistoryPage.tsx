@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import CancellationCodesTable from './CancellationCodesTable';
 import { CancellationCode, CancellationRecord } from '../types';
+import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
 interface ACHistoryPageProps {
   currentUserRole: string;
@@ -11,12 +12,14 @@ interface ACHistoryPageProps {
   timezoneOffset?: number;
   dayFlyingStart?: string;
   dayFlyingEnd?: string;
+  resourceDisplayNames?: ResourceDisplayNames;
 }
 
 const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
   currentUserRole,
   cancellationRecords,
   currentUserId,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
 }) => {
   const [cancellationCodes, setCancellationCodes] = useState<CancellationCode[]>([]);
   const [usedCodes, setUsedCodes] = useState<Set<string>>(new Set());
@@ -191,6 +194,7 @@ const ACHistoryPage: React.FC<ACHistoryPageProps> = ({
           canEdit={canEdit}
           usedCodes={usedCodes}
           isLoading={codesLoading}
+          resourceDisplayNames={resourceDisplayNames}
         />
       </div>
     </div>
