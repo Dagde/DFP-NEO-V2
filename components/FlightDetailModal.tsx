@@ -11,6 +11,7 @@ import PinEntryFlyout from './PinEntryFlyout';
 import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBriefCompleteFlyout';
 import { VisualAdjustModal } from './VisualAdjustModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -380,6 +381,7 @@ interface EventDetailModalProps {
     baselineEvent?: any | null;
     onClearAlert?: (eventId: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
+    personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 interface CrewMember {
@@ -417,7 +419,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, personnelDisplaySettings }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -616,7 +618,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             return {
                 name,
                 unit: instructor?.unit || 'Unknown',
-                rank: instructor?.rank || 'FLGOFF'
+                rank: instructor?.rank || 'FLGOFF',
+                instructor
             };
         });
         
@@ -629,16 +632,30 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             return acc;
         }, {} as Record<string, typeof staffWithDetails>);
         
-        // Sort units by rank hierarchy
-        const rankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF'];
+        Object.keys(grouped).forEach(unit => {
+            grouped[unit].sort((a, b) =>
+                comparePeopleByConfiguredRank(a.instructor || a, b.instructor || b, personnelDisplaySettings, 'staff')
+            );
+        });
+
+        // Sort units by the senior displayed member in each group, then unit name.
         const sortedUnits = Object.keys(grouped).sort((a, b) => {
-            const aHighestRank = Math.min(...grouped[a].map(i => rankOrder.indexOf(i.rank)));
-            const bHighestRank = Math.min(...grouped[b].map(i => rankOrder.indexOf(i.rank)));
-            return aHighestRank - bHighestRank;
+            const firstA = grouped[a][0];
+            const firstB = grouped[b][0];
+            if (firstA && firstB) {
+                const rankComparison = comparePeopleByConfiguredRank(
+                    firstA.instructor || firstA,
+                    firstB.instructor || firstB,
+                    personnelDisplaySettings,
+                    'staff'
+                );
+                if (rankComparison !== 0) return rankComparison;
+            }
+            return a.localeCompare(b);
         });
         
         return { grouped, sortedUnits };
-    }, [instructorList, traineesData, instructorsData]);
+    }, [instructorList, traineesData, instructorsData, personnelDisplaySettings]);
 
     // Group trainees by course for dropdown
     const traineesByCourse = useMemo(() => {

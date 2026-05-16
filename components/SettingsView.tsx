@@ -830,7 +830,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             page: 'Settings - Event Limits',
             action: 'update',
             description: 'Updated event scheduling limits',
-            changes: 'Updated limits for QFI, Staff, Trainee, and SIM IP categories'
+            changes: 'Updated scheduling limit categories'
         });
     };
 

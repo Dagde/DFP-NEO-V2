@@ -31,6 +31,10 @@ import {
     getResourceDisplayNames,
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
+import {
+    comparePeopleByConfiguredRank,
+    getPersonnelDisplaySettings,
+} from './utils/personnelDisplaySettings';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -5635,6 +5639,11 @@ const App: React.FC = () => {
         () => getResourceDisplayNames(activePlatformResourcePool),
         [activePlatformResourcePool]
     );
+    const personnelDisplaySettings = useMemo(
+        () => getPersonnelDisplaySettings(platformConfig),
+        [platformConfig]
+    );
+    const instructorLabel = personnelDisplaySettings.instructorLabel;
     const formatResourceDisplayLabel = useCallback(
         (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
         [resourceDisplayNames]
@@ -13637,16 +13646,6 @@ updates.forEach(update => {
             case 'InstructorSchedule':
                 // Filter instructors by location (not unit) for Staff Schedule
                 // ESL = East Sale, PEA = Pearce
-                // Rank precedence for sorting (higher rank = lower number)
-                const rankPrecedence: Record<string, number> = {
-                    'WGCDR': 1,
-                    'SQNLDR': 2,
-                    'FLTLT': 3,
-                    'FLGOFF': 4,
-                    'PLTOFF': 5,
-                    'Mr': 6
-                };
-
                 const locationFilteredInstructorsForSchedule = instructorsData
                     .filter(i => {
                         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
@@ -13666,17 +13665,15 @@ updates.forEach(update => {
                         if (unitA !== unitB) {
                             return unitA.localeCompare(unitB);
                         }
-                        // Within same unit, sort by rank (higher rank first)
-                        const rankA = rankPrecedence[a.rank] || 99;
-                        const rankB = rankPrecedence[b.rank] || 99;
-                        return rankA - rankB;
+                        // Within same unit, sort using configured rank/name rules.
+                        return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
                     });
 
                 console.log('🔍 STAFF SCHEDULE - Location filtering and sorting applied');
                 console.log('🔍 School:', school);
                 console.log('👁 Total instructors:', instructorsData?.length);
                 console.log('🔍 Filtered instructors:', locationFilteredInstructorsForSchedule?.length);
-                console.log('🔍 Sorted instructors (unit then rank):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
+                console.log('🔍 Sorted instructors (unit then configured personnel sort):', locationFilteredInstructorsForSchedule.map(i => `${i.unit || 'No Unit'} - ${i.rank} ${i.name}`));
 
                 try {
                     return <InstructorScheduleView
@@ -13706,16 +13703,7 @@ updates.forEach(update => {
                     throw error;
                 }
             case 'NextDayInstructorSchedule':
-                // Apply same sorting for Next Day view: group by unit, sort by rank within unit
-                const nextDayRankPrecedence: Record<string, number> = {
-                    'WGCDR': 1,
-                    'SQNLDR': 2,
-                    'FLTLT': 3,
-                    'FLGOFF': 4,
-                    'PLTOFF': 5,
-                    'Mr': 6
-                };
-
+                // Apply same sorting for Next Day view: group by unit, then configured rank/name order within unit.
                 const sortedNextDayInstructors = instructorsData
                     .filter(i => {
                         const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
@@ -13734,9 +13722,7 @@ updates.forEach(update => {
                         if (unitA !== unitB) {
                             return unitA.localeCompare(unitB);
                         }
-                        const rankA = nextDayRankPrecedence[a.rank] || 99;
-                        const rankB = nextDayRankPrecedence[b.rank] || 99;
-                        return rankA - rankB;
+                        return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
                     });
 
                 return <NextDayInstructorScheduleView
@@ -13940,6 +13926,7 @@ updates.forEach(update => {
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             resourceDisplayNames={resourceDisplayNames}
+                            personnelDisplaySettings={personnelDisplaySettings}
                             pt051Assessments={pt051Assessments}
                             userProfile={currentUser}
                         />;
@@ -14081,6 +14068,7 @@ updates.forEach(update => {
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             resourceDisplayNames={resourceDisplayNames}
+                            personnelDisplaySettings={personnelDisplaySettings}
                             pt051Assessments={pt051Assessments}
                             userProfile={currentUser}
                         />;
@@ -14540,6 +14528,7 @@ updates.forEach(update => {
                     locations={locations}
                     units={units}
                     resourceDisplayNames={resourceDisplayNames}
+                    instructorLabel={instructorLabel}
                 />;
             case 'ArchivedCourses':
                 return <ArchivedCoursesView
@@ -14853,6 +14842,8 @@ updates.forEach(update => {
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             resourceDisplayNames={resourceDisplayNames}
+                            personnelDisplaySettings={personnelDisplaySettings}
+                            instructorLabel={instructorLabel}
                         />;
             case 'Instructors':
                 return <InstructorListView
@@ -14969,6 +14960,8 @@ updates.forEach(update => {
                             currentUserId={getCurrentUserId() ?? undefined}
                             currentUserName={currentUserName}
                             resourceDisplayNames={resourceDisplayNames}
+                            personnelDisplaySettings={personnelDisplaySettings}
+                            instructorLabel={instructorLabel}
                         />;
                 case 'Trainees':
                     return <TraineeListView
@@ -14996,6 +14989,7 @@ updates.forEach(update => {
                                     setTraineeForSct(trainee);
                                     setShowSctRequest(true);
                                 }}
+                                personnelDisplaySettings={personnelDisplaySettings}
                             />;
              case 'Syllabus':
                 return <SyllabusView
@@ -15179,6 +15173,8 @@ updates.forEach(update => {
                        excludedCourses={excludedCourses}
                        onUpdateExcludedCourses={handleUpdateExcludedCourses}
                        resourceDisplayNames={resourceDisplayNames}
+                       personnelDisplaySettings={personnelDisplaySettings}
+                       instructorLabel={instructorLabel}
 
                 />;
             case 'CurrencyBuilder':
@@ -15223,6 +15219,7 @@ updates.forEach(update => {
                         trainee={selectedTraineeForHateSheet}
                         event={eventForPt051}
                         initialAssessment={existingAssessment}
+                        instructorLabel={instructorLabel}
                         onBack={() => {
                             handleNavigation('HateSheet');
                         }}
@@ -16050,6 +16047,7 @@ updates.forEach(update => {
                     locationOpAreas={locationOpAreas}
                     formationCallsigns={formationCallsigns}
                     userId={getCurrentUserId() ?? undefined}
+                    personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}
             {selectedEvent && !isAddingTile && (
@@ -16076,6 +16074,7 @@ updates.forEach(update => {
                     school={school}
                     traineesData={traineesData}
                     instructorsData={instructorsData}
+                    personnelDisplaySettings={personnelDisplaySettings}
                     courseColors={courseColors}
                     eventsForDate={eventsForDate}
                     onNavigateToHateSheet={(trainee) => {

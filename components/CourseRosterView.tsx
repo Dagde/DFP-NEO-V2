@@ -11,6 +11,7 @@ import AuditButton from './AuditButton';
 import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
 import CourseEditFlyout from './CourseEditFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -56,6 +57,7 @@ interface CourseRosterViewProps {
     canAddRemedialPackageForTrainee?: (trainee: Trainee) => boolean;
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
+    personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -127,6 +129,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     canAddRemedialPackageForTrainee = () => true,
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    personnelDisplaySettings,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -168,13 +171,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
             groups[trainee.course].push(trainee);
         });
 
-        // Sort trainees within each group alphabetically by name
         for (const course in groups) {
-            groups[course].sort((a, b) => a.name.localeCompare(b.name));
+            groups[course].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee'));
         }
 
         return groups;
-    }, [traineesData]);
+    }, [traineesData, personnelDisplaySettings]);
 
     // This effect ensures that if the underlying trainee data (like pause status or unavailabilities) changes
     // while the profile flyout is open, the flyout will re-render with the latest data.

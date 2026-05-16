@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Instructor } from '../types';
 import { showDarkConfirm } from './DarkMessageModal';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface StaffCombinedDataTableProps {
     instructorsData: Instructor[];
+    instructorLabel?: string;
+    personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 interface CombinedStaffRecord {
@@ -20,7 +23,11 @@ interface CombinedStaffRecord {
     _dataSource?: 'mockdata' | 'database';
 }
 
-const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instructorsData }) => {
+const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({
+    instructorsData,
+    instructorLabel = 'QFI',
+    personnelDisplaySettings,
+}) => {
     const [combinedData, setCombinedData] = useState<CombinedStaffRecord[]>([]);
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deletedIds, setDeletedIds] = useState<Set<number>>(new Set());
@@ -39,10 +46,10 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
         });
 
         const combined = Array.from(allStaff.values())
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
 
         setCombinedData(combined);
-    }, [instructorsData, deletedIds]);
+    }, [instructorsData, deletedIds, personnelDisplaySettings]);
 
     const mockdataCount = combinedData.filter(s => s.dataSource === 'mockdata').length;
     const databaseCount = combinedData.filter(s => s.dataSource === 'database').length;
@@ -103,7 +110,7 @@ const StaffCombinedDataTable: React.FC<StaffCombinedDataTableProps> = ({ instruc
                             <th className="px-4 py-3 text-left">Unit</th>
                             <th className="px-4 py-3 text-left">Category</th>
                             <th className="px-4 py-3 text-left">Flight</th>
-                            <th className="px-4 py-3 text-left">QFI</th>
+                            <th className="px-4 py-3 text-left">{instructorLabel}</th>
                             <th className="px-4 py-3 text-left">Source</th>
                             <th className="px-4 py-3 text-left">Actions</th>
                         </tr>

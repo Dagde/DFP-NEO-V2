@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScheduleEvent, Trainee } from '../types';
 import FlightInfoFlyout from './FlightInfoFlyout';
 import TraineeProfileFlyout from './TraineeProfileFlyout';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface TraineeListViewProps {
   onClose: () => void;
   events: ScheduleEvent[];
   traineesData: Trainee[];
   onUpdateTrainee: (data: Trainee) => void;
+  personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
-const TraineeListView: React.FC<TraineeListViewProps> = ({ onClose, events, traineesData, onUpdateTrainee }) => {
+const TraineeListView: React.FC<TraineeListViewProps> = ({ onClose, events, traineesData, onUpdateTrainee, personnelDisplaySettings }) => {
   const [hoveredTrainee, setHoveredTrainee] = useState<string | null>(null);
   const [flyoutPosition, setFlyoutPosition] = useState<{ top: number; left: number } | null>(null);
   const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
+  const sortedTrainees = useMemo(
+    () => [...traineesData].sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee')),
+    [traineesData, personnelDisplaySettings]
+  );
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLLIElement>, traineeFullName: string) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -60,7 +66,7 @@ const TraineeListView: React.FC<TraineeListViewProps> = ({ onClose, events, trai
           </div>
           <div className="p-6 overflow-y-auto" aria-labelledby="trainee-list-title">
             <ul className="space-y-2">
-              {traineesData.map((trainee) => (
+              {sortedTrainees.map((trainee) => (
                 <li 
                   key={trainee.fullName}
                   className="p-3 bg-gray-700/50 rounded-md text-gray-300 hover:bg-sky-800 hover:text-white transition-colors cursor-pointer"

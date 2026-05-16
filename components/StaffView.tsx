@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import InstructorListView from './InstructorListView';
 import InstructorScheduleView from './InstructorScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface StaffViewProps {
   // Props for InstructorListView
@@ -31,6 +32,8 @@ interface StaffViewProps {
   currentUserId?: string;
   currentUserName?: string;
   resourceDisplayNames?: ResourceDisplayNames;
+  personnelDisplaySettings?: PersonnelDisplaySettings;
+  instructorLabel?: string;
 
   // Props for InstructorScheduleView
   date: string;
@@ -53,15 +56,6 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
   const { isFrozen } = useSystemFreeze();
   console.log(`🏫 [STAFFVIEW RENDER] school=${props.school}, instructorsData.length=${props.instructorsData.length}`);
 
-  // Define rank order for sorting
-  const rankOrder: { [key: string]: number } = {
-    'WGCDR': 1,
-    'SQNLDR': 2,
-    'FLTLT': 3,
-    'FLGOFF': 4,
-    'PLTOFF': 5
-  };
-
   // Filter and sort instructors by location for Staff Schedule
   // Filter by location field (not unit) - ESL = East Sale, PEA = Pearce
   const locationFilteredInstructorsForSchedule = props.instructorsData
@@ -82,18 +76,7 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
         return a.unit.localeCompare(b.unit);
       }
 
-      // Then sort by Rank using defined order
-      const rankA = rankOrder[a.rank] || 999;
-      const rankB = rankOrder[b.rank] || 999;
-      if (rankA !== rankB) {
-        return rankA - rankB;
-      }
-
-      // Finally sort alphabetically by surname
-      // Extract surname (last word in name)
-      const surnameA = a.name.split(' ').pop() || '';
-      const surnameB = b.name.split(' ').pop() || '';
-      return surnameA.localeCompare(surnameB);
+      return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, 'staff');
     });
 
   return (
@@ -153,6 +136,8 @@ const StaffView: React.FC<StaffViewProps> = (props) => {
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
             resourceDisplayNames={props.resourceDisplayNames}
+            personnelDisplaySettings={props.personnelDisplaySettings}
+            instructorLabel={props.instructorLabel}
           />
         )}
         {activeTab === 'schedule' && (

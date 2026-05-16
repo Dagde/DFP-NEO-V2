@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { loadUserPreferences, saveUserPreference } from '../utils/userPreferencesService';
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -20,6 +21,7 @@ interface AddFlightTileModalProps {
   locationOpAreas?: Record<string, string[]>;
   formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
   userId?: string;
+  personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -34,11 +36,6 @@ const formatDate = (dateStr: string): string => {
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const d = new Date(dateStr + 'T00:00:00');
   return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
-};
-
-// Rank sort order for instructors
-const RANK_ORDER: Record<string, number> = {
-  WGCDR: 1, SQNLDR: 2, FLTLT: 3, FLGOFF: 4, PLTOFF: 5, Mr: 6,
 };
 
 // ─── Scale constants for the large interactive tile ─────────────────────────
@@ -955,6 +952,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   locationOpAreas = {},
   formationCallsigns = [],
   userId,
+  personnelDisplaySettings,
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
   const [flightType,    setFlightType]    = useState<'Dual'|'Solo'>('Dual');
@@ -1141,17 +1139,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   };
 
   // ── Layer 3: Names for unit+selection ────────────────────────────────────
-  // Staff sorted by rank order then alphabetically; trainees coloured by course
+  // Staff and trainees use the configured organisation sort order.
   const getNames = (unit: string, selection: string): { name: string; label: string; color?: string }[] => {
     if (selection === 'STAFF') {
       return instructorsData
         .filter(i => (i.unit || 'Unassigned') === unit)
-        .sort((a, b) => {
-          const ra = RANK_ORDER[a.rank] ?? 99;
-          const rb = RANK_ORDER[b.rank] ?? 99;
-          if (ra !== rb) return ra - rb;
-          return a.name.localeCompare(b.name);
-        })
+        .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'))
         .map(i => ({
           name: i.name,
           label: `${i.rank ? i.rank + ' ' : ''}${i.name}`,
@@ -1161,7 +1154,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     // Trainee course — sort alphabetically, colour by course
     return traineesData
       .filter(t => (t.unit || 'Unassigned') === unit && t.course === selection)
-      .sort((a, b) => (a.fullName || a.name).localeCompare(b.fullName || b.name))
+      .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'trainee'))
       .map(t => {
         // courseColors stores Tailwind class like 'bg-sky-500'; extract a CSS colour hint
         const twClass = courseColors[t.course] || '';

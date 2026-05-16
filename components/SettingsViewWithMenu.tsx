@@ -17,6 +17,7 @@ import PeopleProfilePage from './PeopleProfilePage';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import { logAudit } from '../utils/auditLogger';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import type { PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface SettingsViewWithMenuProps {
     locations: string[];
@@ -79,6 +80,8 @@ interface SettingsViewWithMenuProps {
     dayFlyingStart?: string;
     dayFlyingEnd?: string;
     resourceDisplayNames?: ResourceDisplayNames;
+    personnelDisplaySettings?: PersonnelDisplaySettings;
+    instructorLabel?: string;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;
@@ -148,6 +151,7 @@ const platformConfigurationSections = [
     'platform-operational-runbook',
     'platform-licensing',
     'platform-permission-profiles',
+    'platform-rank-terminology',
     'platform-user-access',
     'platform-scheduling-rule-sets',
 ] as const;
@@ -166,6 +170,7 @@ const platformSectionTargets: Record<'platform-configuration' | PlatformConfigur
     'platform-operational-runbook': 'platform-operational-runbook',
     'platform-licensing': 'platform-licensing',
     'platform-permission-profiles': 'platform-permission-profiles',
+    'platform-rank-terminology': 'platform-rank-terminology',
     'platform-user-access': 'platform-user-access',
     'platform-scheduling-rule-sets': 'platform-scheduling-rule-sets',
 };
@@ -208,6 +213,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-operational-runbook': 'Operational Runbook',
     'platform-licensing': 'Licensing & Deployment',
     'platform-permission-profiles': 'Permission Profiles',
+    'platform-rank-terminology': 'Rank & Terminology',
     'platform-user-access': 'User Access Scopes',
     'platform-scheduling-rule-sets': 'Enterprise Rule Sets',
     'appearance': 'App Appearance',
@@ -488,6 +494,7 @@ const sectionDescriptions: Record<SettingsMenuSection, string> = {
   'platform-operational-runbook': 'Support, backup, restore, update and accreditation records',
   'platform-licensing': 'Licence model, entitlements and validation posture',
   'platform-permission-profiles': 'Reusable permission profiles for user roles',
+  'platform-rank-terminology': 'Rank ordering and local instructor terminology',
   'platform-user-access': 'Control where each user can work',
   'platform-scheduling-rule-sets': 'Commercial scheduling rule set records',
   'appearance': 'Choose dark or light display theme',
@@ -542,6 +549,7 @@ const sectionColors: Record<SettingsMenuSection, string> = {
   'platform-operational-runbook': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-licensing': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-permission-profiles': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
+  'platform-rank-terminology': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-user-access': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'platform-scheduling-rule-sets': 'from-cyan-500/20 to-cyan-600/10 border-cyan-500/30 text-cyan-400',
   'appearance':        'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400',
@@ -572,6 +580,7 @@ const sectionGroups: {
         'platform-unit-modules',
         'platform-deployment-readiness',
         'platform-licensing',
+        'platform-rank-terminology',
         'organisation',
         'locale-settings',
         'appearance',
@@ -1587,7 +1596,11 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                         />
                     )}
                     {activeSection === 'staff-combined-data' && (
-                        <StaffCombinedDataTable instructorsData={props.instructorsData} />
+                        <StaffCombinedDataTable
+                            instructorsData={props.instructorsData}
+                            instructorLabel={props.instructorLabel}
+                            personnelDisplaySettings={props.personnelDisplaySettings}
+                        />
                     )}
                     {activeSection === 'trainee-database' && (
                         <TraineeDatabaseTable 

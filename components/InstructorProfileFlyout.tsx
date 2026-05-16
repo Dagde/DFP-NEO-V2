@@ -33,6 +33,7 @@ interface InstructorProfileFlyoutProps {
   currentUserId?: string;
   currentUserName?: string;
   resourceDisplayNames?: ResourceDisplayNames;
+  instructorLabel?: string;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -140,6 +141,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   profileInitialTab, onProfileTabConsumed,
   currentUserId, currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  instructorLabel = 'QFI',
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -372,7 +374,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
       if (instructor.isDeputyFlightCommander !== isDeputyFlightCommander) changes.push(`Deputy FC: ${instructor.isDeputyFlightCommander} → ${isDeputyFlightCommander}`);
       if (instructor.isContractor !== isContractor) changes.push(`Contractor: ${instructor.isContractor} → ${isContractor}`);
       if (instructor.isAdminStaff !== isAdminStaff) changes.push(`Admin Staff: ${instructor.isAdminStaff} → ${isAdminStaff}`);
-      if (instructor.isQFI !== isQFI) changes.push(`QFI: ${instructor.isQFI} → ${isQFI}`);
+      if (instructor.isQFI !== isQFI) changes.push(`${instructorLabel}: ${instructor.isQFI} → ${isQFI}`);
       if (instructor.isOFI !== isOFI) changes.push(`OFI: ${instructor.isOFI} → ${isOFI}`);
 
       const changesStr = changes.length > 0 ? changes.join(', ') : 'No field changes';
@@ -493,7 +495,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   if (isFlyingSupervisor) roleBadges.push('Fly Sup');
   if (isTestingOfficer) roleBadges.push('TO');
   if (isIRE) roleBadges.push('IRE');
-  if (isQFI) roleBadges.push('QFI');
+  if (isQFI) roleBadges.push(instructorLabel);
   if (isOFI) roleBadges.push('OFI');
   if (isDeputyFlightCommander) roleBadges.push('DFC');
   if (isContractor) roleBadges.push('Contractor');
@@ -887,7 +889,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <option value="PLTOFF">PLTOFF</option><option value="Mr">Mr</option><option value="Mrs">Mrs</option>
                       </Dropdown>
                       <Dropdown label="Role" value={role} onChange={e => setRole(e.target.value as 'QFI' | 'SIM IP')}>
-                        <option value="QFI">QFI</option><option value="SIM IP">SIM IP</option>
+                        <option value="QFI">{instructorLabel}</option><option value="SIM IP">SIM IP</option>
                       </Dropdown>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -924,7 +926,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                           ['isFlyingSupervisor', 'Flying Supervisor', isFlyingSupervisor, setIsFlyingSupervisor],
                           ['isTestingOfficer', 'Testing Officer', isTestingOfficer, setIsTestingOfficer],
                           ['isIRE', 'IRE', isIRE, setIsIRE],
-                          ['isQFI', 'QFI', isQFI, setIsQFI],
+                          ['isQFI', instructorLabel, isQFI, setIsQFI],
                           ['isOFI', 'OFI', isOFI, setIsOFI],
                           ['isDeputyFlightCommander', 'DFC', isDeputyFlightCommander, setIsDeputyFlightCommander],
                           ['isContractor', 'Contractor', isContractor, setIsContractor],

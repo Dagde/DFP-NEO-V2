@@ -23,6 +23,7 @@ interface PT051ViewProps {
     phraseBank: PhraseBank;
     currentUserPin: string;
     canEditPt051?: boolean;
+    instructorLabel?: string;
 }
 
 const PT051_STRUCTURE = [
@@ -200,7 +201,7 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
 // FIX: Moved GoogleGenAI instance creation outside the component to prevent re-initialization on re-renders.
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true }) => {
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI' }) => {
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
     const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
@@ -1083,7 +1084,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                 <div className="space-y-6 mb-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="relative">
-                            <label className="block text-sm font-medium text-gray-400">QFI</label>
+                            <label className="block text-sm font-medium text-gray-400">{instructorLabel}</label>
                             <div className="mt-1">
                                 {/* Dropdown for unit instructors only */}
                                 <select

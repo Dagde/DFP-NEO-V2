@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import CourseRosterView from './CourseRosterView';
 import TraineeScheduleView from './TraineeScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -48,6 +49,7 @@ interface TraineeViewProps {
   canAddRemedialPackageForTrainee?: (trainee: any) => boolean;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  personnelDisplaySettings?: PersonnelDisplaySettings;
 
   // Props for TraineeScheduleView
   date: string;
@@ -75,8 +77,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
       if (a.course !== b.course) {
         return a.course.localeCompare(b.course);
       }
-      // Then sort alphabetically by name within the same course
-      return a.name.localeCompare(b.name);
+      return comparePeopleByConfiguredRank(a, b, props.personnelDisplaySettings, 'trainee');
     })
     .map(t => t.fullName);
 
@@ -145,6 +146,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             currentUserId={props.currentUserId}
             currentUserName={props.currentUserName}
             resourceDisplayNames={props.resourceDisplayNames}
+            personnelDisplaySettings={props.personnelDisplaySettings}
             pt051Assessments={props.pt051Assessments}
             userProfile={props.userProfile}
             canViewTraineeProfile={props.canViewTraineeProfile}

@@ -29,6 +29,7 @@ interface TrainingRecordsViewProps {
     locations?: string[];
     units?: string[];
     resourceDisplayNames?: ResourceDisplayNames;
+    instructorLabel?: string;
 }
 
 type TabType = 'courses' | 'export';
@@ -56,6 +57,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
     locations = [],
     units = [],
     resourceDisplayNames,
+    instructorLabel = 'QFI',
 }) => {
     const [activeTab, setActiveTab] = useState<TabType>('courses');
 
@@ -129,6 +131,7 @@ const TrainingRecordsView: React.FC<TrainingRecordsViewProps> = ({
                         pt051Assessments={pt051Assessments}
                         onSavePT051Assessment={onSavePT051Assessment}
                         resourceDisplayNames={resourceDisplayNames}
+                        instructorLabel={instructorLabel}
                     />
                 )}
             </div>

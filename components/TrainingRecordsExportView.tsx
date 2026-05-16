@@ -18,6 +18,7 @@ interface TrainingRecordsExportViewProps {
     pt051Assessments: Map<string, Pt051Assessment>;
     onSavePT051Assessment: (assessment: Pt051Assessment) => void;
     resourceDisplayNames?: ResourceDisplayNames;
+    instructorLabel?: string;
 }
 
 type RecordType = 'all' | 'trainees' | 'staff' | 'events';
@@ -26,6 +27,18 @@ type OutputFormat = 'pdf' | 'excel' | 'csv';
 type EventType = 'Flight' | 'FTD' | 'CPT' | 'Ground';
 type StatusFilter = 'all' | 'dco' | 'dnco' | 'pass' | 'fail';
 type RemedialFilter = 'all' | 'yes' | 'no';
+
+const escapeHtml = (value: string): string =>
+    value.replace(/[&<>"']/g, (char) => {
+        const entities: Record<string, string> = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        };
+        return entities[char] || char;
+    });
 
 interface ExportTemplate {
     name: string;
@@ -56,7 +69,8 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
     syllabusDetails,
     pt051Assessments,
     onSavePT051Assessment,
-    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+    resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    instructorLabel = 'QFI'
 }) => {
     // Core export settings
     const [recordType, setRecordType] = useState<RecordType>('all');
@@ -1013,7 +1027,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 
                 <!-- Comments Section - Compact -->
                 <div style="border: 1px solid black; padding: 6px;">
-                    <div style="margin-bottom: 4px;"><strong>QFI Comments:</strong></div>
+                    <div style="margin-bottom: 4px;"><strong>${escapeHtml(instructorLabel)} Comments:</strong></div>
                     <div style="border: 1px solid #d1d5db; padding: 4px; min-height: 30px; background: #f9fafb; font-size: 8px;">
                         ${eventScore?.comments || 'No comments provided'}
                     </div>

@@ -4,6 +4,12 @@ import {
   PLATFORM_PERMISSION_CATALOG,
   type PlatformPermissionProfile,
 } from '../utils/platformConfigService';
+import {
+  formatRankOrderText,
+  normalisePersonnelDisplaySettings,
+  parseRankOrderText,
+  type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
 
 type PlatformConfig = {
   organisations: any[];
@@ -711,6 +717,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     ...DEFAULT_OPERATIONAL_RUNBOOK,
     ...(primaryOrganisationSettings.operationalRunbook || {}),
   };
+  const personnelDisplaySettings = normalisePersonnelDisplaySettings(
+    primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null,
+  );
   const operationalSignals = [
     {
       label: 'Support owner',
@@ -781,6 +790,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...(settings.operationalRunbook || {}),
         ...changes,
       },
+    }));
+  };
+
+  const updatePersonnelDisplaySettings = (changes: Partial<PersonnelDisplaySettings>) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      personnelDisplaySettings: normalisePersonnelDisplaySettings({
+        ...(settings.personnelDisplaySettings || settings.personnelSettings || {}),
+        ...changes,
+      }),
     }));
   };
 
@@ -1965,6 +1984,79 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               </div>
             </div>
           )}
+        </div>
+      </section>
+
+      <section id="platform-rank-terminology" className={getSectionClass('platform-rank-terminology')}>
+        <SectionHeader
+          title="Rank & Terminology"
+          subtitle="Configure personnel display order and local instructor terminology without changing internal role codes."
+        />
+        <div className="space-y-4 p-4">
+          <div className="grid gap-3 lg:grid-cols-2">
+            <SelectField
+              label="Personnel Sort Mode"
+              value={personnelDisplaySettings.sortMode}
+              disabled={!canEdit}
+              options={['rank-then-name', 'alphabetical']}
+              onChange={(value) => updatePersonnelDisplaySettings({ sortMode: value === 'alphabetical' ? 'alphabetical' : 'rank-then-name' })}
+              info="Choose rank-then-name to sort by configured rank priority first, then surname and first name. Choose alphabetical to ignore rank and sort only by name."
+            />
+            <Field
+              label="Instructor Display Term"
+              value={personnelDisplaySettings.instructorLabel}
+              disabled={!canEdit}
+              onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
+              info="The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
+            />
+            <Field
+              label="Civilian Contractor Group"
+              value={personnelDisplaySettings.civilianContractorGroupName}
+              disabled={!canEdit}
+              onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
+              info="Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
+            />
+            <ToggleField
+              label="Use separate trainee rank order"
+              checked={personnelDisplaySettings.useSeparateTraineeRankOrder}
+              disabled={!canEdit}
+              onChange={(checked) => updatePersonnelDisplaySettings({
+                useSeparateTraineeRankOrder: checked,
+                traineeRankOrder: checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
+              })}
+            />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <TextAreaField
+              label="Staff Rank Order"
+              value={formatRankOrderText(personnelDisplaySettings.staffRankOrder)}
+              disabled={!canEdit}
+              onChange={(value) => {
+                const staffRankOrder = parseRankOrderText(value);
+                updatePersonnelDisplaySettings({
+                  staffRankOrder,
+                  ...(personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }),
+                });
+              }}
+              info="Enter one rank or title per line, highest display priority first. Unknown ranks appear after configured ranks and are then sorted alphabetically. Examples: AIRCDRE, GPCAPT, WGCDR, SQNLDR, FLTLT, Mr, Ms, CONTRACTOR."
+            />
+            {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
+              <TextAreaField
+                label="Trainee Rank Order"
+                value={formatRankOrderText(personnelDisplaySettings.traineeRankOrder)}
+                disabled={!canEdit}
+                onChange={(value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })}
+                info="Optional separate ordering for trainee ranks. Enter one rank or title per line, highest display priority first."
+              />
+            ) : (
+              <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90">
+                <div className="font-bold text-cyan-100">Trainees use the staff rank order</div>
+                <p className="mt-2 leading-relaxed text-cyan-50/75">
+                  Turn on separate trainee rank order if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

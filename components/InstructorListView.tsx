@@ -10,6 +10,7 @@ import ArchiveConfirmationFlyout from './ArchiveConfirmationFlyout';
 import ArchivedInstructorsFlyout from './ArchivedInstructorsFlyout';
 import AuditButton from './AuditButton';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 
 // Helper to generate a unique random ID for new instructors
 const generateRandomIdNumber = (): number => {
@@ -72,6 +73,8 @@ interface InstructorListViewProps {
   currentUserId?: string;
   currentUserName?: string;
   resourceDisplayNames?: ResourceDisplayNames;
+  personnelDisplaySettings?: PersonnelDisplaySettings;
+  instructorLabel?: string;
 }
 
 const InstructorListView: React.FC<InstructorListViewProps> = ({
@@ -101,13 +104,15 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
     currentUserId,
     currentUserName,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    personnelDisplaySettings,
+    instructorLabel = 'QFI',
 }) => {
   // Track which prop changed to diagnose render loop
   const prevPropsRef = React.useRef<any>({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps: string[] = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames, personnelDisplaySettings, instructorLabel };
   Object.keys(currentProps).forEach(key => {
     if (prevPropsRef.current[key] !== (currentProps as any)[key]) {
       changedProps.push(key);
@@ -178,15 +183,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
   }, [instructorsData]);
 
   const qfis = useMemo(() => {
-      const rankOrder: { [key: string]: number } = {
-          'WGCDR': 1,
-          'SQNLDR': 2,
-          'FLTLT': 3,
-          'FLGOFF': 4,
-          'PLTOFF': 5,
-          'Mr': 6
-      };
-
       return instructorsData
           .filter(i => {
               // Filter by role/flag - include QFI and INSTRUCTOR roles
@@ -200,16 +196,8 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
               const hasNoLocation = !i.location || i.location === '' || i.location === 'N/A';
               return i.location === locationFullName || (hasNoLocation && school === 'ESL');
           })
-          .sort((a, b) => {
-              const rankA = rankOrder[a.rank] || 99;
-              const rankB = rankOrder[b.rank] || 99;
-
-              if (rankA !== rankB) {
-                  return rankA - rankB;
-              }
-              return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
-          });
-  }, [instructorsData, school]);
+          .sort((a, b) => comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff'));
+  }, [instructorsData, school, personnelDisplaySettings]);
 
   const qfisByUnit = useMemo(() => {
       const groups: { [key: string]: Instructor[] } = {};
@@ -255,15 +243,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         });
         console.log('🔍 [SIM IP FILTER] Total SIM IPs found:', simIpCandidates.length);
 
-        const rankOrder: { [key: string]: number } = {
-            'WGCDR': 1,
-            'SQNLDR': 2,
-            'FLTLT': 3,
-            'FLGOFF': 4,
-            'PLTOFF': 5,
-            'Mr': 6
-        };
-
         return simIpCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -271,16 +250,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             if (unitA !== unitB) {
                 return unitA.localeCompare(unitB);
             }
-            // Then by Rank
-            const rankA = rankOrder[a.rank] || 99;
-            const rankB = rankOrder[b.rank] || 99;
-            if (rankA !== rankB) {
-                return rankA - rankB;
-            }
-            // Finally by Name
-            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+            return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, school]);
+    }, [instructorsData, school, personnelDisplaySettings]);
 
     const ofis = useMemo(() => {
         console.log('🔍 [OFI FILTER] instructorsData length:', instructorsData.length);
@@ -301,15 +273,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
         console.log('🔍 [OFI FILTER] OFI candidates found:', ofiCandidates.length);
         console.log('🔍 [OFI FILTER] OFI candidates:', ofiCandidates.map(i => ({ id: i.idNumber, name: i.name, role: i.role, isOFI: i.isOFI })));
 
-        const rankOrder: { [key: string]: number } = {
-            'WGCDR': 1,
-            'SQNLDR': 2,
-            'FLTLT': 3,
-            'FLGOFF': 4,
-            'PLTOFF': 5,
-            'Mr': 6
-        };
-
         const sorted = ofiCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -317,20 +280,13 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             if (unitA !== unitB) {
                 return unitA.localeCompare(unitB);
             }
-            // Then by Rank
-            const rankA = rankOrder[a.rank] || 99;
-            const rankB = rankOrder[b.rank] || 99;
-            if (rankA !== rankB) {
-                return rankA - rankB;
-            }
-            // Finally by Name
-            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+            return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
         console.log('🔍 [OFI FILTER] Final OFI list:', sorted.map(i => ({ id: i.idNumber, name: i.name, rank: i.rank })));
         return sorted;
-    }, [instructorsData, school]);
+    }, [instructorsData, school, personnelDisplaySettings]);
 
-    // NEW: All other staff members who don't fit into QFI, SIM IP, or OFI categories
+    // NEW: All other staff members who don't fit into instructor, SIM IP, or OFI categories
     const otherStaff = useMemo(() => {
         console.log('🔍 [OTHER STAFF] instructorsData length:', instructorsData.length);
 
@@ -356,15 +312,6 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
 
         console.log('🔍 [OTHER STAFF] Total other staff found:', otherStaffCandidates.length);
 
-        const rankOrder: { [key: string]: number } = {
-            'WGCDR': 1,
-            'SQNLDR': 2,
-            'FLTLT': 3,
-            'FLGOFF': 4,
-            'PLTOFF': 5,
-            'Mr': 6
-        };
-
         return otherStaffCandidates.sort((a, b) => {
             // First sort by Unit
             const unitA = a.unit || 'Unassigned';
@@ -372,16 +319,9 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             if (unitA !== unitB) {
                 return unitA.localeCompare(unitB);
             }
-            // Then by Rank
-            const rankA = rankOrder[a.rank] || 99;
-            const rankB = rankOrder[b.rank] || 99;
-            if (rankA !== rankB) {
-                return rankA - rankB;
-            }
-            // Finally by Name
-            return (a.name ?? 'Unknown').localeCompare(b.name ?? 'Unknown');
+            return comparePeopleByConfiguredRank(a, b, personnelDisplaySettings, 'staff');
         });
-    }, [instructorsData, school]);
+    }, [instructorsData, school, personnelDisplaySettings]);
 
   // SIM IPs are shown as a single combined section (not split by unit)
   // simIps is already sorted by unit → rank → name from the simIps useMemo above
@@ -569,7 +509,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
             {/* Grid Content */}
             <div className="flex-1 p-6 overflow-y-auto">
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 max-w-[1920px] mx-auto">
-                    {/* QFI Units */}
+                    {/* Instructor units */}
                     {sortedUnits.map(unit => (
                         <div key={unit} className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                             <div className="p-3 border-b border-gray-700 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
@@ -611,7 +551,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                        </div>
                        ))}
 
-                       {/* Other Staff - All staff who don't fit into QFI, SIM IP, or OFI categories */}
+                       {/* Other Staff - All staff who don't fit into instructor, SIM IP, or OFI categories */}
                        {sortedOtherStaffUnits.map(unit => (
                         <div key={`other-${unit}`} className="bg-gray-800 border border-orange-900/50 rounded-lg shadow-lg flex flex-col h-[fit-content] max-h-[80vh]">
                            <div className="p-3 border-b border-orange-900/50 bg-gray-800/80 flex justify-between items-center sticky top-0 z-10 rounded-t-lg backdrop-blur-sm">
@@ -660,6 +600,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
                     resourceDisplayNames={resourceDisplayNames}
+                    instructorLabel={instructorLabel}
                 />
         )}
 
