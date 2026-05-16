@@ -61764,7 +61764,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
               ) })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 flex flex-col items-center", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "FTD" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: resourceDisplayNames.ftd }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 h-[38px] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -62162,6 +62162,10 @@ const AddRemedialPackageFlyout = ({
   const handleRemoveEvent = (id) => {
     setRemedialEvents((prev) => prev.filter((e) => e.id !== id));
   };
+  const getRemedialEventDisplayType = (type) => {
+    if (type === "FTD") return resourceDisplayNames.ftd;
+    return type;
+  };
   const handleSavePackage = () => {
     if (!eventToRemediate || remedialEvents.length === 0) {
       alert("Please select an event to remediate and add at least one remedial event.");
@@ -62263,7 +62267,7 @@ const AddRemedialPackageFlyout = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvents, className: "w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add Events to Package" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-2", children: remedialEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded-md text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-sky-400 w-16", children: event.type }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-sky-400 w-16", children: getRemedialEventDisplayType(event.type) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
                 event.duration.toFixed(1),
                 " hrs with ",
@@ -69363,6 +69367,9 @@ window.__downloadFlightDiag = () => {
   console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON");
 };
 function generateDfpInternal(config, setProgress, publishedSchedules) {
+  const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
+  const ftdResourceLabel = buildResourceDisplayNames.ftd;
+  const cptResourceLabel = buildResourceDisplayNames.cpt;
   let _overlapRejCount = 0;
   const _traineeTotal = config.trainees.length;
   const _traineeDb = config.trainees.filter((t) => t._dataSource === "database").length;
@@ -70923,8 +70930,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf);
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: "Scheduling FTD Events (Priority)...", percentage: 60 });
-  setProgress({ message: "Scheduling FTD Events (Next)...", percentage: 65 });
+  setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+  setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
     "ftd",
@@ -70934,8 +70941,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: "Scheduling CPT Events (Priority)...", percentage: 70 });
-  setProgress({ message: "Scheduling CPT Events (Next)...", percentage: 72 });
+  setProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+  setProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
     "cpt",
@@ -70974,7 +70981,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: "Scheduling FTD Events (Plus-One)...", percentage: 82 });
+  setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
     "ftd",
@@ -70984,7 +70991,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     "STBY",
     false
   );
-  setProgress({ message: "Scheduling CPT Events (Plus-One)...", percentage: 84 });
+  setProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
     "cpt",
@@ -71179,7 +71186,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   }
-  setProgress({ message: "Scheduling STBY FTD events...", percentage: 90 });
+  setProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
   const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
@@ -76034,6 +76041,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       sctFlights,
       remedialRequests,
       sctEvents,
+      resourceDisplayNames,
       getEventDayNightClassification,
       staffSharingEnabled: organisationSettings.staffSharingEnabled,
       staffSharingUnits: organisationSettings.staffSharingUnits,
@@ -76089,7 +76097,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 "Next Day Build",
                 "Add",
                 `NEO-Build completed for ${buildDfpDate}`,
-                `Generated ${generated.length} events, Flight: ${generated.filter((e) => e.type === "flight").length}, FTD: ${generated.filter((e) => e.type === "ftd").length}, Ground: ${generated.filter((e) => e.type === "ground").length}`
+                `Generated ${generated.length} events, Flight: ${generated.filter((e) => e.type === "flight").length}, ${resourceDisplayNames.ftd}: ${generated.filter((e) => e.type === "ftd").length}, Ground: ${generated.filter((e) => e.type === "ground").length}`
               );
             }
           });
@@ -76659,7 +76667,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       "Next Day Build",
       "Edit",
       `Published schedule for ${buildDfpDate}`,
-      `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}, FTD: ${newEventsForDate.filter((e) => e.type === "ftd").length}, Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
+      `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter((e) => e.type === "flight").length}, ${resourceDisplayNames.ftd}: ${newEventsForDate.filter((e) => e.type === "ftd").length}, Ground: ${newEventsForDate.filter((e) => e.type === "ground").length}`
     );
     const hasSeedData = newEventsForDate.some((e) => e.isHistoricalSeed === true);
     if (!hasSeedData && newEventsForDate.length > 0) {

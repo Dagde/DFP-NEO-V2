@@ -300,12 +300,12 @@ const LimitingFactorsSection: React.FC<{
                         )}
                         {totalLimitingFactors.noFtdSlots > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">No {resourceDisplayNames.ftd} Slots:</strong> {totalLimitingFactors.noFtdSlots} {resourceDisplayNames.ftd} events could not be scheduled due to lack of available simulator resources
+                                <strong className="text-white">No {resourceDisplayNames.ftd} Slots:</strong> {totalLimitingFactors.noFtdSlots} {resourceDisplayNames.ftd} events could not be scheduled due to lack of available {resourceDisplayNames.ftd} resources
                             </li>
                         )}
                         {totalLimitingFactors.noCptSlots > 0 && (
                             <li className="text-gray-300">
-                                <strong className="text-white">No {resourceDisplayNames.cpt} Slots:</strong> {totalLimitingFactors.noCptSlots} {resourceDisplayNames.cpt} events could not be scheduled due to lack of available procedural trainer resources
+                                <strong className="text-white">No {resourceDisplayNames.cpt} Slots:</strong> {totalLimitingFactors.noCptSlots} {resourceDisplayNames.cpt} events could not be scheduled due to lack of available {resourceDisplayNames.cpt} resources
                             </li>
                         )}
                         {totalLimitingFactors.traineeLimit > 0 && (

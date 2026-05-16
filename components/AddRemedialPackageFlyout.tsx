@@ -128,6 +128,11 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
     setRemedialEvents(prev => prev.filter(e => e.id !== id));
   };
 
+  const getRemedialEventDisplayType = (type: 'TUT' | 'FTD' | 'Flight') => {
+    if (type === 'FTD') return resourceDisplayNames.ftd;
+    return type;
+  };
+
   const handleSavePackage = () => {
     if (!eventToRemediate || remedialEvents.length === 0) {
         alert("Please select an event to remediate and add at least one remedial event.");
@@ -249,7 +254,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                     {remedialEvents.map((event) => (
                         <div key={event.id} className="flex items-center justify-between p-2 bg-gray-700/50 rounded-md text-sm">
                             <div className="flex items-center space-x-3">
-                                <span className="font-bold text-sky-400 w-16">{event.type}</span>
+                                <span className="font-bold text-sky-400 w-16">{getRemedialEventDisplayType(event.type)}</span>
                                 <span className="text-gray-300">{event.duration.toFixed(1)} hrs with {(event.instructor || '').split(',')[0]}</span>
                             </div>
                             <button onClick={() => handleRemoveEvent(event.id)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>

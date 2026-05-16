@@ -25,7 +25,12 @@ import {
     loadPlatformConfigFromDB,
     PlatformConfig,
 } from './utils/platformConfigService';
-import { formatResourceLabel as formatConfiguredResourceLabel, getResourceDisplayNames } from './utils/resourceDisplayNames';
+import {
+    DEFAULT_RESOURCE_DISPLAY_NAMES,
+    formatResourceLabel as formatConfiguredResourceLabel,
+    getResourceDisplayNames,
+    type ResourceDisplayNames,
+} from './utils/resourceDisplayNames';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -429,6 +434,7 @@ interface DfpConfig {
   sctFtds: SctRequest[];
   remedialRequests: RemedialRequest[];
   sctEvents: string[];
+  resourceDisplayNames?: ResourceDisplayNames;
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
@@ -1200,6 +1206,10 @@ function generateDfpInternal(
     setProgress: (progress: { message: string, percentage: number }) => void,
     publishedSchedules: Record<string, ScheduleEvent[]>
 ): Omit<ScheduleEvent, 'date'>[] {
+    const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
+    const ftdResourceLabel = buildResourceDisplayNames.ftd;
+    const cptResourceLabel = buildResourceDisplayNames.cpt;
+
     // ── OVERLAP REJECTION DIAGNOSTIC ─────────────────────────────────────────
     // Tracks the first 10 instructor rejections caused by booking-window overlap.
     let _overlapRejCount = 0;
@@ -3329,10 +3339,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
-    setProgress({ message: 'Scheduling FTD Events (Priority)...', percentage: 60 });
+    setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
     // Highest Priority FTD Events are already added at the start
 
-    setProgress({ message: 'Scheduling FTD Events (Next)...', percentage: 65 });
+    setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
         'ftd',
@@ -3344,10 +3354,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
-    setProgress({ message: 'Scheduling CPT Events (Priority)...', percentage: 70 });
+    setProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
     // Highest Priority CPT Events are already added at the start
 
-    setProgress({ message: 'Scheduling CPT Events (Next)...', percentage: 72 });
+    setProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
         'cpt',
@@ -3397,7 +3407,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // 8. Schedule FTD Events: Plus-One
-    setProgress({ message: 'Scheduling FTD Events (Plus-One)...', percentage: 82 });
+    setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
         'ftd',
@@ -3409,7 +3419,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 9. Schedule CPT/Ground Events: Plus-One
-    setProgress({ message: 'Scheduling CPT Events (Plus-One)...', percentage: 84 });
+    setProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
         'cpt',
@@ -3762,7 +3772,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
     // Fill STBY lines sequentially with proper spacing
-    setProgress({ message: 'Scheduling STBY FTD events...', percentage: 90 });
+    setProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
 
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
@@ -10225,6 +10235,7 @@ const App: React.FC = () => {
             sctFlights: sctFlights,
             remedialRequests: remedialRequests,
             sctEvents: sctEvents,
+            resourceDisplayNames,
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
@@ -10292,7 +10303,7 @@ const App: React.FC = () => {
                        "Next Day Build",
                        "Add",
                        `NEO-Build completed for ${buildDfpDate}`,
-                       `Generated ${generated.length} events, Flight: ${generated.filter(e => e.type === 'flight').length}, FTD: ${generated.filter(e => e.type === 'ftd').length}, Ground: ${generated.filter(e => e.type === 'ground').length}`
+                       `Generated ${generated.length} events, Flight: ${generated.filter(e => e.type === 'flight').length}, ${resourceDisplayNames.ftd}: ${generated.filter(e => e.type === 'ftd').length}, Ground: ${generated.filter(e => e.type === 'ground').length}`
                    );
                         }
                     });
@@ -11045,7 +11056,7 @@ const App: React.FC = () => {
                "Next Day Build",
                "Edit",
                `Published schedule for ${buildDfpDate}`,
-               `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, FTD: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
+               `Total events: ${newEventsForDate.length}, Flight: ${newEventsForDate.filter(e => e.type === "flight").length}, ${resourceDisplayNames.ftd}: ${newEventsForDate.filter(e => e.type === "ftd").length}, Ground: ${newEventsForDate.filter(e => e.type === "ground").length}`
            );
 
         // ── SAVE DAILY SNAPSHOT TO DATABASE ──────────────────────────────────

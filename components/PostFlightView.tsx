@@ -1051,9 +1051,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                             </div>
                         </div>
 
-                        {/* FTD Checkbox */}
+                        {/* Simulator Checkbox */}
                         <div className="flex-shrink-0 flex flex-col items-center">
-                            <label className="block text-sm font-medium text-gray-400">FTD</label>
+                            <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.ftd}</label>
                             <div className="mt-1 h-[38px] flex items-center justify-center">
                                 <input
                                     type="checkbox"
