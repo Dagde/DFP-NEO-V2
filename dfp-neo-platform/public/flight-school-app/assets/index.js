@@ -2084,7 +2084,7 @@ const DataCell = ({
   bgColor = "bg-gray-800",
   borderColor = "border-gray-600"
 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `flex items-center justify-center ${width} flex-shrink-0 border-r ${borderColor} last:border-r-0 ${bgColor} h-7`, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs font-mono truncate px-0.5", children: value || "" }) });
-const HeaderRow = ({ resourceDisplayNames: resourceDisplayNames2 }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600", children: [
+const HeaderRow = ({ resourceDisplayNames }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-nowrap min-w-max bg-gray-900/60 border-b border-gray-600", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-24 flex-shrink-0 border-r border-gray-600 bg-gray-900/30" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "Year", width: "w-12" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "Date", width: "w-16" }),
@@ -2117,7 +2117,7 @@ const HeaderRow = ({ resourceDisplayNames: resourceDisplayNames2 }) => /* @__PUR
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "2D App", width: "w-10" }),
   /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "3D App", width: "w-10" }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1", children: resourceDisplayNames2.ftd }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30 px-1", children: resourceDisplayNames.ftd }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "P1", width: "w-10", bgColor: "bg-gray-800/30" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(HdrCell, { label: "P2", width: "w-10", bgColor: "bg-gray-800/30" }),
@@ -2165,7 +2165,7 @@ const DataRow = ({ row, isEven }) => {
     ] })
   ] });
 };
-const LogbookView = ({ person, events, onBack, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const LogbookView = ({ person, events, onBack, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const [rows, setRows] = reactExports.useState([]);
   const [loading, setLoading] = reactExports.useState(true);
   const [error, setError] = reactExports.useState(null);
@@ -2186,7 +2186,7 @@ const LogbookView = ({ person, events, onBack, resourceDisplayNames: resourceDis
         logRows.push({
           year: snap2.year || (entry.eventDate ? new Date(entry.eventDate).getFullYear().toString() : ""),
           date: snap2.date || (entry.eventDate ? new Date(entry.eventDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : ""),
-          type: snap2.type || (entry.isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft),
+          type: snap2.type || (entry.isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft),
           tail: snap2.tail || "",
           captain: snap2.captain || "",
           crew: snap2.crew || "",
@@ -2257,7 +2257,7 @@ const LogbookView = ({ person, events, onBack, resourceDisplayNames: resourceDis
         "."
       ] }) }),
       !loading && !error && rows.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "inline-flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderRow, { resourceDisplayNames: resourceDisplayNames2 }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderRow, { resourceDisplayNames }),
         rows.map((row, idx) => /* @__PURE__ */ jsxRuntimeExports.jsx(DataRow, { row, isEven: idx % 2 === 0 }, `${row._eventDate}-${row._role}-${idx}`))
       ] }) })
     ] })
@@ -9270,12 +9270,12 @@ const getDisplayType = (syllabusItem) => {
   }
   return "Flight";
 };
-const formatDisplayType = (displayType, resourceDisplayNames2) => {
-  if (displayType === "FTD") return resourceDisplayNames2.ftd;
-  if (displayType === "CPT") return resourceDisplayNames2.cpt;
+const formatDisplayType = (displayType, resourceDisplayNames) => {
+  if (displayType === "FTD") return resourceDisplayNames.ftd;
+  if (displayType === "CPT") return resourceDisplayNames.cpt;
   return displayType;
 };
-const DetailView$1 = ({ item, score, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
@@ -9285,7 +9285,7 @@ const DetailView$1 = ({ item, score, resourceDisplayNames: resourceDisplayNames2
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Phase", value: item.phase }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Module", value: item.module }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: formatDisplayType(getDisplayType(item), resourceDisplayNames2) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Type", value: formatDisplayType(getDisplayType(item), resourceDisplayNames) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Day/Night", value: item.dayNight || "Day" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Dual/Solo", value: item.sortieType || "Dual" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Total Event Hours", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -9620,7 +9620,7 @@ const TraineeLmpView = ({
   syllabusDetails,
   allTraineesData,
   onOpenPt051ForLesson,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -9704,7 +9704,7 @@ const TraineeLmpView = ({
             {
               item: selectedItem,
               score: scores.find((s) => s.event === selectedItem.code),
-              resourceDisplayNames: resourceDisplayNames2
+              resourceDisplayNames
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
         ] })
@@ -9804,7 +9804,7 @@ const TraineeProfileFlyout = ({
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
   onAccessDenied: onAccessDenied2,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -10456,7 +10456,7 @@ const TraineeProfileFlyout = ({
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput$1, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }),
@@ -10705,7 +10705,7 @@ const TraineeProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
               "Logbook – Prior Experience (",
-              resourceDisplayNames2.aircraft,
+              resourceDisplayNames.aircraft,
               " only)"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
@@ -10780,7 +10780,7 @@ const TraineeProfileFlyout = ({
                 ] }) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 rounded-lg border border-gray-600/70 bg-gray-800/50 p-2 flex flex-col items-center", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold text-gray-200 mb-2", children: resourceDisplayNames.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-14 h-14 rounded-full border-4 border-sky-500/60 flex items-center justify-center mb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-bold text-sm", children: exp.simulator.total.toFixed(1) }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full space-y-0.5", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between text-[10px]", children: [
@@ -10848,7 +10848,7 @@ const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
     ] })
   ] }) });
 };
-const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const FlightInfoFlyout = ({ events, position, personName, personType, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
     const minutes = Math.round(time % 1 * 60);
@@ -10868,7 +10868,7 @@ const FlightInfoFlyout = ({ events, position, personName, personType, resourceDi
               event.flightNumber,
               event.type === "ftd" && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-indigo-400 font-bold", children: [
                 " (",
-                resourceDisplayNames2.ftd,
+                resourceDisplayNames.ftd,
                 ")"
               ] })
             ] }),
@@ -11428,7 +11428,7 @@ const CourseRosterView = ({
   canViewTraineeLmp = () => true,
   canAddRemedialPackageForTrainee = () => true,
   onAccessDenied: onAccessDenied2,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -11713,7 +11713,7 @@ const CourseRosterView = ({
         currencyRequirements,
         currentUserId,
         currentUserName,
-        resourceDisplayNames: resourceDisplayNames2,
+        resourceDisplayNames,
         pt051Assessments,
         traineeLMPs,
         userProfile,
@@ -11897,7 +11897,7 @@ const CancelEventFlyout = ({
   onConfirm,
   onClose,
   cancellationCodes,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [selectedCode, setSelectedCode] = reactExports.useState("");
   const [manualCode, setManualCode] = reactExports.useState("");
@@ -11942,7 +11942,7 @@ const CancelEventFlyout = ({
     setShowPinEntry(false);
   };
   const isPinEnabled = selectedCode && (selectedCode !== "OTHER" || manualCode.trim());
-  const eventTypeLabel = eventType === "flight" ? "Flight" : resourceDisplayNames2.ftd;
+  const eventTypeLabel = eventType === "flight" ? "Flight" : resourceDisplayNames.ftd;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[80] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-red-500/50", onClick: (e) => e.stopPropagation(), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-red-900/20 flex items-center space-x-3", children: [
@@ -12553,7 +12553,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -12972,9 +12972,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   }, [courses, traineesData]);
   const modalTitle = reactExports.useMemo(() => {
     if (eventType === "flight") return "Flight Details";
-    if (eventType === "ftd") return `${resourceDisplayNames2.ftd} Session Details`;
+    if (eventType === "ftd") return `${resourceDisplayNames.ftd} Session Details`;
     return "Ground Event Details";
-  }, [eventType, resourceDisplayNames2.ftd]);
+  }, [eventType, resourceDisplayNames.ftd]);
   reactExports.useEffect(() => {
     setFlightNumber(event.flightNumber);
     if (isEditingDefault && !event.flightNumber) {
@@ -13839,7 +13839,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400", children: [
-                  resourceDisplayNames2.aircraft,
+                  resourceDisplayNames.aircraft,
                   " Number"
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num, children: num }, num)) })
@@ -14460,7 +14460,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         },
         onClose: () => setShowCancelConfirm(false),
         cancellationCodes,
-        resourceDisplayNames: resourceDisplayNames2
+        resourceDisplayNames
       }
     ),
     showMassBriefComplete && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -16135,7 +16135,7 @@ const ConflictModal = ({
   conflict,
   onResolve,
   onCancel,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const formatTime2 = (time) => {
     const hours = Math.floor(time);
@@ -16144,8 +16144,8 @@ const ConflictModal = ({
   };
   const conflictingEventEndTime = conflict.conflictingEvent.startTime + conflict.conflictingEvent.duration;
   const personTypeDisplay = conflict.conflictedPerson === "instructor" ? "Instructor" : "Trainee";
-  const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames2.ftd} session` : "flight";
-  const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames2.ftd} session` : "flight";
+  const existingEventTypeDisplay = conflict.conflictingEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
+  const newEventTypeDisplay = conflict.newEvent.type === "ftd" ? `${resourceDisplayNames.ftd} session` : "flight";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
     "div",
     {
@@ -17300,7 +17300,7 @@ const AddGroundEventFlyout = ({
   onUpdateCourseAcademicProgress,
   persistedAcademicLmp,
   onUpdatePersistedAcademicLmp,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("ground");
   const [flightNumber, setFlightNumber] = reactExports.useState(groundSyllabus[0]?.code || "");
@@ -17318,7 +17318,7 @@ const AddGroundEventFlyout = ({
   const availableTrainees = reactExports.useMemo(() => traineesData.filter((t) => !t.isPaused).map((t) => t.fullName), [traineesData]);
   const isCptEvent = reactExports.useMemo(() => flightNumber.includes("CPT"), [flightNumber]);
   const [selectedCpt, setSelectedCpt] = reactExports.useState("CPT 1");
-  const cptLabel = resourceDisplayNames2.cpt;
+  const cptLabel = resourceDisplayNames.cpt;
   reactExports.useEffect(() => {
     const selectedSyllabus = groundSyllabus.find((s) => s.code === flightNumber);
     if (selectedSyllabus) setDuration(selectedSyllabus.duration);
@@ -17526,7 +17526,7 @@ const AddGroundEventFlyout = ({
                       cptLabel,
                       " Resource"
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames2) }, c)) })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "cpt-resource", value: selectedCpt, onChange: (e) => setSelectedCpt(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 4 }, (_, i) => `CPT ${i + 1}`).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: formatResourceLabel(c, resourceDisplayNames) }, c)) })
                   ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-resource", className: "block text-sm font-medium text-gray-400", children: "Ground Resource" }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-resource", value: selectedGround, onChange: (e) => setSelectedGround(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Array.from({ length: 6 }, (_, i) => `Ground ${i + 1}`).map((g) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: g, children: g }, g)) })
@@ -19284,11 +19284,11 @@ const PrioritiesView = ({
   onToggleRemedialRequest = (_traineeId, _eventCode) => {
   },
   currencyNames,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
-  const aircraftLabel = resourceDisplayNames2.aircraft;
-  const ftdLabel = resourceDisplayNames2.ftd;
-  const cptLabel = resourceDisplayNames2.cpt;
+  const aircraftLabel = resourceDisplayNames.aircraft;
+  const ftdLabel = resourceDisplayNames.ftd;
+  const cptLabel = resourceDisplayNames.cpt;
   const courseDragItem = reactExports.useRef(null);
   const courseDragOverItem = reactExports.useRef(null);
   const [courseTimestamp, setCourseTimestamp] = reactExports.useState((/* @__PURE__ */ new Date()).toLocaleString());
@@ -20180,7 +20180,7 @@ const PeopleTab = ({
   scores,
   traineeLMPs,
   courseColors,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [availabilityFilter, setAvailabilityFilter] = reactExports.useState("all");
   const [searchTerm, setSearchTerm] = reactExports.useState("");
@@ -20691,12 +20691,12 @@ const PeopleTab = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionHeader, children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-white", children: "Next Event Lists" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: sectionBody, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Flight", trainees: nextEventLists.flight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames2.ftd}`, trainees: nextEventLists.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames2.cpt}`, trainees: nextEventLists.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames.ftd}`, trainees: nextEventLists.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next Event – ${resourceDisplayNames.cpt}`, trainees: nextEventLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next Event – Ground", trainees: nextEventLists.ground }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Flight", trainees: nextPlusOneLists.flight }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames2.ftd}`, trainees: nextPlusOneLists.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames2.cpt}`, trainees: nextPlusOneLists.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames.ftd}`, trainees: nextPlusOneLists.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: `Next +1 – ${resourceDisplayNames.cpt}`, trainees: nextPlusOneLists.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(ListCard, { title: "Next +1 – Ground School", trainees: nextPlusOneLists.ground })
       ] }) })
     ] })
@@ -20704,7 +20704,7 @@ const PeopleTab = ({
 };
 const CourseDistributionTable = ({
   courseAnalysis,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-hidden rounded-lg border border-cyan-500/20 bg-slate-900/80 shadow-[0_12px_30px_rgba(0,0,0,0.25)]", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "border-b border-cyan-500/20 bg-cyan-500/10 px-5 py-4", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-semibold text-white", children: "Course Distribution Analysis" }) }),
@@ -20718,8 +20718,8 @@ const CourseDistributionTable = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Scheduled" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Efficiency" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Flight" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames2.ftd }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames2.cpt }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames.ftd }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: resourceDisplayNames.cpt }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-right font-semibold text-slate-300", children: "Ground" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-4 py-3 text-center font-semibold text-slate-300", children: "Status" })
       ] }) }),
@@ -20836,7 +20836,7 @@ const CourseMetricsTab = ({
   activeCourses,
   onNavigateAndSelectPerson,
   analysis,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const traineeCourseLookup = reactExports.useMemo(() => {
     const map = /* @__PURE__ */ new Map();
@@ -20922,7 +20922,7 @@ const CourseMetricsTab = ({
         CourseDistributionTable,
         {
           courseAnalysis: analysis.courseAnalysis,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
@@ -20965,7 +20965,7 @@ const StatCard$1 = ({ title, value, description }) => /* @__PURE__ */ jsxRuntime
 ] });
 const LimitingFactorsSection = ({
   courseAnalysis,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const totalLimitingFactors = {
     insufficientInstructors: 0,
@@ -21001,40 +21001,40 @@ const LimitingFactorsSection = ({
         totalLimitingFactors.noAircraftSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
             "No ",
-            resourceDisplayNames2.aircraft,
+            resourceDisplayNames.aircraft,
             " Slots:"
           ] }),
           " ",
           totalLimitingFactors.noAircraftSlots,
           " flight events could not be scheduled due to lack of available ",
-          resourceDisplayNames2.aircraft.toLowerCase()
+          resourceDisplayNames.aircraft.toLowerCase()
         ] }),
         totalLimitingFactors.noFtdSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
             "No ",
-            resourceDisplayNames2.ftd,
+            resourceDisplayNames.ftd,
             " Slots:"
           ] }),
           " ",
           totalLimitingFactors.noFtdSlots,
           " ",
-          resourceDisplayNames2.ftd,
+          resourceDisplayNames.ftd,
           " events could not be scheduled due to lack of available ",
-          resourceDisplayNames2.ftd.toLowerCase(),
+          resourceDisplayNames.ftd.toLowerCase(),
           " resources"
         ] }),
         totalLimitingFactors.noCptSlots > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("strong", { className: "text-white", children: [
             "No ",
-            resourceDisplayNames2.cpt,
+            resourceDisplayNames.cpt,
             " Slots:"
           ] }),
           " ",
           totalLimitingFactors.noCptSlots,
           " ",
-          resourceDisplayNames2.cpt,
+          resourceDisplayNames.cpt,
           " events could not be scheduled due to lack of available ",
-          resourceDisplayNames2.cpt.toLowerCase(),
+          resourceDisplayNames.cpt.toLowerCase(),
           " resources"
         ] }),
         totalLimitingFactors.traineeLimit > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("li", { className: "text-slate-300", children: [
@@ -21123,12 +21123,12 @@ const InsightsSection = ({ insights }) => {
 const BuildAnalyticsTab = ({
   events,
   analysis,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const sectionClass2 = "rounded-lg border border-cyan-500/20 bg-slate-900/80 p-5 shadow-[0_12px_30px_rgba(0,0,0,0.25)]";
   const legendClass = "px-2 text-lg font-semibold text-white";
-  const aircraftLabel = resourceDisplayNames2.aircraft;
-  const ftdLabel = resourceDisplayNames2.ftd;
+  const aircraftLabel = resourceDisplayNames.aircraft;
+  const ftdLabel = resourceDisplayNames.ftd;
   const aircraftNoun = aircraftLabel.toLowerCase();
   const formattedBuildDate = reactExports.useMemo(() => {
     if (!analysis?.buildDate) return "";
@@ -21206,7 +21206,7 @@ const BuildAnalyticsTab = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames: resourceDisplayNames2 }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(LimitingFactorsSection, { courseAnalysis: analysis.courseAnalysis, resourceDisplayNames }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(TimeDistributionChart, { timeDistribution: analysis.timeDistribution }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(InsightsSection, { insights: analysis.insights })
   ] });
@@ -23200,7 +23200,7 @@ const TrainingIntelligenceTab = () => {
 const ACHistoryAnalytics = ({
   cancellationRecords,
   cancellationCodes,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [selectedPeriod, setSelectedPeriod] = reactExports.useState("month");
   const [showAllCodes, setShowAllCodes] = reactExports.useState(false);
@@ -23445,7 +23445,7 @@ const ACHistoryAnalytics = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 text-sm text-gray-400", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { children: [
         "• Percentages are calculated relative to all Flight + ",
-        resourceDisplayNames2.ftd,
+        resourceDisplayNames.ftd,
         " cancellations in the selected period."
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { children: "• Trend indicators compare the selected period to the immediately preceding equivalent period." }),
@@ -24748,7 +24748,7 @@ const ACHistoryIntelligencePanel = ({
   timezoneOffset = 0,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [codesLoading, setCodesLoading] = reactExports.useState(true);
@@ -24812,14 +24812,14 @@ const ACHistoryIntelligencePanel = ({
       {
         cancellationRecords,
         cancellationCodes,
-        resourceDisplayNames: resourceDisplayNames2
+        resourceDisplayNames
       }
     )
   ] });
 };
 const BuildIntelligenceView = (props) => {
   const [activeTab, setActiveTab] = reactExports.useState("people");
-  const resourceDisplayNames2 = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
+  const resourceDisplayNames = props.resourceDisplayNames || DEFAULT_RESOURCE_DISPLAY_NAMES;
   const formattedDate = reactExports.useMemo(() => {
     const [year, month, day] = props.date.split("-").map(Number);
     const dateObj = new Date(Date.UTC(year, month - 1, day));
@@ -24875,7 +24875,7 @@ const BuildIntelligenceView = (props) => {
           scores: props.scores,
           traineeLMPs: props.traineeLMPs,
           courseColors: props.courseColors,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       activeTab === "course-metrics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24887,7 +24887,7 @@ const BuildIntelligenceView = (props) => {
           activeCourses: props.activeCourses,
           onNavigateAndSelectPerson: props.onNavigateAndSelectPerson,
           analysis: props.analysis,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       activeTab === "build-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24895,7 +24895,7 @@ const BuildIntelligenceView = (props) => {
         {
           events: props.events,
           analysis: props.analysis,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       activeTab === "ac-history" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -24909,7 +24909,7 @@ const BuildIntelligenceView = (props) => {
           timezoneOffset: props.timezoneOffset,
           dayFlyingStart: props.dayFlyingStart,
           dayFlyingEnd: props.dayFlyingEnd,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       activeTab === "managerial-analytics" && /* @__PURE__ */ jsxRuntimeExports.jsx(TrainingIntelligenceTab, {})
@@ -25229,7 +25229,7 @@ const InstructorProfileFlyout = ({
   onProfileTabConsumed,
   currentUserId,
   currentUserName,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -26199,7 +26199,7 @@ const InstructorProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
               "Logbook – Prior Experience (",
-              resourceDisplayNames2.aircraft,
+              resourceDisplayNames.aircraft,
               " only)"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
@@ -26257,16 +26257,16 @@ const InstructorProfileFlyout = ({
                   { label: "Prior P2", value: exp.simulator.p2 },
                   { label: "Prior Dual", value: exp.simulator.dual },
                   { label: "Prior Total", value: exp.simulator.total },
-                  ...ftdTotal > 0 ? [{ label: resourceDisplayNames2.ftd, value: ftdTotal }] : []
+                  ...ftdTotal > 0 ? [{ label: resourceDisplayNames.ftd, value: ftdTotal }] : []
                 ];
-                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: resourceDisplayNames2.ftd, mainValue: simMainValue, subItems: simSubItems });
+                return /* @__PURE__ */ jsxRuntimeExports.jsx(CircularGauge, { title: resourceDisplayNames.ftd, mainValue: simMainValue, subItems: simSubItems });
               })()
             ] })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d + " p-3", style: card3dStyle, children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-sky-400 mb-3", children: [
               "Logbook – Prior Experience (",
-              resourceDisplayNames2.aircraft,
+              resourceDisplayNames.aircraft,
               " only)"
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-3 gap-4", children: [
@@ -26302,7 +26302,7 @@ const InstructorProfileFlyout = ({
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block text-xs font-bold text-gray-300 mb-2 text-center", children: resourceDisplayNames.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-center space-x-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput, { label: "P1", value: exp.simulator.p1, onChange: (v) => handleExperienceChange("simulator", "p1", v) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(ExperienceInput, { label: "P2", value: exp.simulator.p2, onChange: (v) => handleExperienceChange("simulator", "p2", v) }),
@@ -26711,13 +26711,13 @@ const InstructorListView = ({
   onProfileTabConsumed,
   currentUserId,
   currentUserName,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const prevPropsRef = React.useRef({});
   const renderCountRef = React.useRef(0);
   renderCountRef.current++;
   const changedProps = [];
-  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames: resourceDisplayNames2 };
+  const currentProps = { onClose, events, traineesData, instructorsData, archivedInstructorsData, school, personnelData, onUpdateInstructor, onNavigateToCurrency, onBulkUpdateInstructors, onArchiveInstructor, onRestoreInstructor, locations, units, selectedPersonForProfile, onProfileOpened, onViewLogbook, onRequestSct, masterCurrencies, currencyRequirements, profileInitialTab, onProfileTabConsumed, currentUserId, currentUserName, resourceDisplayNames };
   Object.keys(currentProps).forEach((key) => {
     if (prevPropsRef.current[key] !== currentProps[key]) {
       changedProps.push(key);
@@ -27156,7 +27156,7 @@ const InstructorListView = ({
         onProfileTabConsumed,
         currentUserId,
         currentUserName,
-        resourceDisplayNames: resourceDisplayNames2
+        resourceDisplayNames
       }
     ),
     hoveredInstructor && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -27670,7 +27670,7 @@ const EditableList = ({ title, items, onChange }) => /* @__PURE__ */ jsxRuntimeE
     }
   )
 ] });
-const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const getDisplayType2 = (syllabusItem) => {
     if (syllabusItem.type === "Flight") return "Flight";
     if (syllabusItem.type === "FTD") return "FTD";
@@ -27682,8 +27682,8 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
     return "Flight";
   };
   const formatDisplayType2 = (displayType) => {
-    if (displayType === "FTD") return resourceDisplayNames2.ftd;
-    if (displayType === "CPT") return resourceDisplayNames2.cpt;
+    if (displayType === "FTD") return resourceDisplayNames.ftd;
+    if (displayType === "CPT") return resourceDisplayNames.cpt;
     return displayType;
   };
   const handleTypeChange = (e) => {
@@ -27750,8 +27750,8 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
               className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CPT", children: resourceDisplayNames2.cpt }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "CPT", children: resourceDisplayNames.cpt }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ground", children: "Ground" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Academics", children: "Academics" })
               ]
@@ -27977,7 +27977,7 @@ const SyllabusView = ({
   initialSelectedId,
   onUpdateItem,
   onAddItem,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -28483,7 +28483,7 @@ const SyllabusView = ({
             editedItem,
             onItemChange: setEditedItem,
             onDeleteEvent: handleDeleteEventRequest,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center h-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-500 italic", children: "Select an item from the list to view its details." }) }) }) })
       ] })
@@ -49858,7 +49858,7 @@ const CancellationCodesTable = ({
   canEdit,
   usedCodes,
   isLoading = false,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [isAddingNew, setIsAddingNew] = reactExports.useState(false);
   const [editingCode, setEditingCode] = reactExports.useState(null);
@@ -49936,8 +49936,8 @@ const CancellationCodesTable = ({
     return a.code.localeCompare(b.code);
   });
   const formatAppliesToLabel = (value) => {
-    if (value === "FTD") return resourceDisplayNames2.ftd;
-    if (value === "Both") return `Flight + ${resourceDisplayNames2.ftd}`;
+    if (value === "FTD") return resourceDisplayNames.ftd;
+    if (value === "Both") return `Flight + ${resourceDisplayNames.ftd}`;
     return "Flight";
   };
   if (isLoading) {
@@ -50044,10 +50044,10 @@ const CancellationCodesTable = ({
               className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
                   "Flight + ",
-                  resourceDisplayNames2.ftd
+                  resourceDisplayNames.ftd
                 ] })
               ]
             }
@@ -50118,10 +50118,10 @@ const CancellationCodesTable = ({
                   className: "w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-sm",
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames2.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: resourceDisplayNames.ftd }),
                     /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: "Both", children: [
                       "Flight + ",
-                      resourceDisplayNames2.ftd
+                      resourceDisplayNames.ftd
                     ] })
                   ]
                 }
@@ -50236,7 +50236,7 @@ const ACHistoryPage = ({
   currentUserRole,
   cancellationRecords,
   currentUserId,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [cancellationCodes, setCancellationCodes] = reactExports.useState([]);
   const [usedCodes, setUsedCodes] = reactExports.useState(/* @__PURE__ */ new Set());
@@ -50393,7 +50393,7 @@ const ACHistoryPage = ({
           canEdit,
           usedCodes,
           isLoading: codesLoading,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       )
     ] })
@@ -50920,7 +50920,7 @@ const DutyTurnaroundSection = ({
   onUpdateFtdTurnaround,
   cptTurnaround,
   onUpdateCptTurnaround,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const turnaroundOptions = reactExports.useMemo(() => Array.from({ length: 30 }, (_, i) => parseFloat(((i + 1) * 0.1).toFixed(1))), []);
   const TurnaroundInput = ({ label, value, onChange, options }) => {
@@ -50998,10 +50998,10 @@ const DutyTurnaroundSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TurnaroundInput,
             {
-              label: resourceDisplayNames2.ftd,
+              label: resourceDisplayNames.ftd,
               value: ftdTurnaround,
               onChange: (v) => {
-                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames2.ftd} turnaround time`, `${ftdTurnaround} → ${v}`);
+                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames.ftd} turnaround time`, `${ftdTurnaround} → ${v}`);
                 onUpdateFtdTurnaround(v);
               },
               options: turnaroundOptions
@@ -51010,10 +51010,10 @@ const DutyTurnaroundSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TurnaroundInput,
             {
-              label: resourceDisplayNames2.cpt,
+              label: resourceDisplayNames.cpt,
               value: cptTurnaround,
               onChange: (v) => {
-                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames2.cpt} turnaround time`, `${cptTurnaround} → ${v}`);
+                logAudit("Settings", "Edit", `Updated ${resourceDisplayNames.cpt} turnaround time`, `${cptTurnaround} → ${v}`);
                 onUpdateCptTurnaround(v);
               },
               options: turnaroundOptions
@@ -51603,7 +51603,7 @@ const SettingsView = ({
   totalAircraft,
   dayFlyingStart = "08:00",
   dayFlyingEnd = "17:00",
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const canEditSettings = ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission);
   const [isEditingLocations, setIsEditingLocations] = reactExports.useState(false);
@@ -51913,7 +51913,7 @@ const SettingsView = ({
     logAudit({
       page: "Settings - Duty & Turnaround",
       action: "update",
-      description: `Updated ${resourceDisplayNames2.ftd} turnaround time`,
+      description: `Updated ${resourceDisplayNames.ftd} turnaround time`,
       changes: `Set to: ${value} minutes`
     });
   };
@@ -51922,7 +51922,7 @@ const SettingsView = ({
     logAudit({
       page: "Settings - Duty & Turnaround",
       action: "update",
-      description: `Updated ${resourceDisplayNames2.cpt} turnaround time`,
+      description: `Updated ${resourceDisplayNames.cpt} turnaround time`,
       changes: `Set to: ${value} minutes`
     });
   };
@@ -52574,7 +52574,7 @@ const SettingsView = ({
           timezoneOffset,
           dayFlyingStart,
           dayFlyingEnd,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ) }),
       shouldShowSection("timezone") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 p-6 w-96", children: [
@@ -52873,7 +52873,7 @@ const SettingsView = ({
           onUpdateFtdTurnaround: handleUpdateFtdTurnaround,
           cptTurnaround,
           onUpdateCptTurnaround: handleUpdateCptTurnaround,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       shouldShowSection("sct-events") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-lg border border-gray-700 w-80 h-fit", children: [
@@ -53082,7 +53082,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max Flight/",
-                  resourceDisplayNames2.ftd,
+                  resourceDisplayNames.ftd,
                   ":"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.exec.maxFlightFtd, onChange: (e) => setTempLimits({ ...tempLimits, exec: { ...tempLimits.exec, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
@@ -53103,7 +53103,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max Flight/",
-                  resourceDisplayNames2.ftd,
+                  resourceDisplayNames.ftd,
                   ":"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.instructor.maxFlightFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, instructor: { ...tempLimits.instructor, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
@@ -53124,7 +53124,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max Flight/",
-                  resourceDisplayNames2.ftd,
+                  resourceDisplayNames.ftd,
                   ":"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.trainee.maxFlightFtd || 1, onChange: (e) => setTempLimits({ ...tempLimits, trainee: { ...tempLimits.trainee, maxFlightFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "1" })
@@ -53141,7 +53141,7 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-sm text-gray-400", children: [
                   "Max ",
-                  resourceDisplayNames2.ftd,
+                  resourceDisplayNames.ftd,
                   ":"
                 ] }),
                 isEditingLimits ? /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", value: tempLimits.simIp.maxFtd || 2, onChange: (e) => setTempLimits({ ...tempLimits, simIp: { ...tempLimits.simIp, maxFtd: parseInt(e.target.value) || 0 } }), className: "w-12 bg-gray-700 border border-gray-600 rounded text-center text-white text-sm focus:outline-none focus:ring-sky-500" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-mono", children: "2" })
@@ -60999,7 +60999,7 @@ const LocalityChangeFlyout = ({ locality }) => {
     ] })
   ] }) }) });
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -61328,7 +61328,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     return {
       year: yearStr,
       date: dateStr,
-      type: isFtdLog ? resourceDisplayNames2.ftd : resourceDisplayNames2.aircraft,
+      type: isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
       tail: isFtdLog ? `FTD-${aircraftNumber}` : `A54-${aircraftNumber}`,
       captain: captainName,
       crew: crewName,
@@ -61805,7 +61805,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Aircraft" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: resourceDisplayNames2.aircraft })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 p-2 bg-gray-700 rounded-md text-white h-[38px] flex items-center", children: resourceDisplayNames.aircraft })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "6.75rem" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Number" }),
@@ -62011,7 +62011,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { label: "3D App", fieldKey: "__hdr__", overrides: {}, onChange: () => {
             }, width: "w-10", readOnly: true }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: resourceDisplayNames2.ftd }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[9px] font-bold text-gray-400 uppercase text-center border-b border-gray-700 bg-gray-900/30", children: resourceDisplayNames.ftd }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(EditableLogbookCell, { subLabel: "P1", fieldKey: "__hdr__", overrides: {}, onChange: () => {
                 }, width: "w-10", borderColor: "border-gray-700", bgColor: "bg-gray-800/50", readOnly: true }),
@@ -62092,7 +62092,7 @@ const AddRemedialPackageFlyout = ({
   instructors,
   scores,
   traineeLmp,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   onClose,
   onSave
 }) => {
@@ -62257,7 +62257,7 @@ const AddRemedialPackageFlyout = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 2: Build Remedial Package" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Tutorials", state: tutState, setState: setTutState }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: `${resourceDisplayNames2.ftd}s`, state: ftdState, setState: setFtdState }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: `${resourceDisplayNames.ftd}s`, state: ftdState, setState: setFtdState }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Flights", state: flightState, setState: setFlightState })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvents, className: "w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add Events to Package" }),
@@ -64299,7 +64299,7 @@ const TrainingRecordsExportView = ({
   syllabusDetails,
   pt051Assessments,
   onSavePT051Assessment,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [recordType, setRecordType] = reactExports.useState("all");
   const [timePeriod, setTimePeriod] = reactExports.useState("all-time");
@@ -64331,8 +64331,8 @@ const TrainingRecordsExportView = ({
   const [completionProgress, setCompletionProgress] = reactExports.useState(0);
   const [completionStatus, setCompletionStatus] = reactExports.useState("");
   const getEventTypeLabel = (type) => {
-    if (type === "FTD") return resourceDisplayNames2.ftd;
-    if (type === "CPT") return resourceDisplayNames2.cpt;
+    if (type === "FTD") return resourceDisplayNames.ftd;
+    if (type === "CPT") return resourceDisplayNames.cpt;
     return type;
   };
   const formatDate2 = (dateStr) => {
@@ -65858,7 +65858,7 @@ const TrainingRecordsView = ({
   onSavePT051Assessment,
   locations = [],
   units = [],
-  resourceDisplayNames: resourceDisplayNames2
+  resourceDisplayNames
 }) => {
   const [activeTab, setActiveTab] = reactExports.useState("courses");
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 h-full overflow-auto", children: [
@@ -65922,7 +65922,7 @@ const TrainingRecordsView = ({
           syllabusDetails,
           pt051Assessments,
           onSavePT051Assessment,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       )
     ] })
@@ -66094,7 +66094,7 @@ const formatTime = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}${String(minutes).padStart(2, "0")}`;
 };
-const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
+const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onApplyRemedy, onCancel }) => {
   const { event, errors } = problemTile;
   const instructorSwapRemedies = remedies.filter((r) => r.type === "instructor");
   console.log("🔧 NeoRemedyFlyout: Received remedies:", remedies.length);
@@ -66144,12 +66144,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames: resource
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.flightsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.ftd }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.ftd }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.ftdsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.cpt }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.cpt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.trainee.cptsToday })
                 ] }),
@@ -66182,12 +66182,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames: resource
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.flightsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.ftd }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.ftd }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.ftdsToday })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames2.cpt }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 text-xs", children: resourceDisplayNames.cpt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: remedy.instructor.cptsToday })
                 ] }),
@@ -66224,12 +66224,12 @@ const NeoRemedyFlyout = ({ problemTile, remedies, resourceDisplayNames: resource
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.flightsToday })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames2.ftd }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames.ftd }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.ftdsToday })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-center w-10", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames2.cpt }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: resourceDisplayNames.cpt }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs", children: remedy.instructor.cptsToday })
                   ] }),
@@ -67519,7 +67519,7 @@ const PauseFlightOpsPanel = ({
   onPhaseChange,
   stagedEvents,
   onStagedEventsChange,
-  resourceDisplayNames: resourceDisplayNames2 = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
 }) => {
   const [pauseStart, setPauseStart] = reactExports.useState(decToHHMM(flyingStartTime + 2));
   const [pauseEnd, setPauseEnd] = reactExports.useState(decToHHMM(flyingStartTime + 3));
@@ -67530,8 +67530,8 @@ const PauseFlightOpsPanel = ({
   const [buildProgress, setBuildProgress] = reactExports.useState("");
   const pauseStartDec = reactExports.useMemo(() => isValidHHMM(pauseStart) ? hhmmToDec(pauseStart) : null, [pauseStart]);
   const pauseEndDec = reactExports.useMemo(() => isValidHHMM(pauseEnd) ? hhmmToDec(pauseEnd) : null, [pauseEnd]);
-  const ftdLabel = resourceDisplayNames2.ftd;
-  const cptLabel = resourceDisplayNames2.cpt;
+  const ftdLabel = resourceDisplayNames.ftd;
+  const cptLabel = resourceDisplayNames.cpt;
   const validationError = reactExports.useMemo(() => {
     if (!pauseStartDec || !pauseEndDec) return "Enter valid times (HH:MM).";
     if (pauseEndDec <= pauseStartDec) return "Pause end must be after pause start.";
@@ -70923,8 +70923,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf);
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Priority)...`, percentage: 60 });
-  setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Next)...`, percentage: 65 });
+  setProgress({ message: "Scheduling FTD Events (Priority)...", percentage: 60 });
+  setProgress({ message: "Scheduling FTD Events (Next)...", percentage: 65 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
     "ftd",
@@ -70934,8 +70934,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Priority)...`, percentage: 70 });
-  setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Next)...`, percentage: 72 });
+  setProgress({ message: "Scheduling CPT Events (Priority)...", percentage: 70 });
+  setProgress({ message: "Scheduling CPT Events (Next)...", percentage: 72 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
     "cpt",
@@ -70974,7 +70974,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Plus-One)...`, percentage: 82 });
+  setProgress({ message: "Scheduling FTD Events (Plus-One)...", percentage: 82 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
     "ftd",
@@ -70984,7 +70984,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     "STBY",
     false
   );
-  setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Plus-One)...`, percentage: 84 });
+  setProgress({ message: "Scheduling CPT Events (Plus-One)...", percentage: 84 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
     "cpt",
@@ -71179,7 +71179,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   }
-  setProgress({ message: `Scheduling STBY ${resourceDisplayNames.ftd} events...`, percentage: 90 });
+  setProgress({ message: "Scheduling STBY FTD events...", percentage: 90 });
   const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
@@ -72468,13 +72468,13 @@ const App = () => {
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
-  const resourceDisplayNames2 = reactExports.useMemo(
+  const resourceDisplayNames = reactExports.useMemo(
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
   const formatResourceDisplayLabel = reactExports.useCallback(
-    (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames2),
-    [resourceDisplayNames2]
+    (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
+    [resourceDisplayNames]
   );
   const configuredAirframeCount = getResourcePoolCount(activePlatformResourcePool, "aircraft", 24);
   const configuredFtdCount = getResourcePoolCount(activePlatformResourcePool, "ftd", availableFtdCount);
@@ -78956,7 +78956,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
-            resourceDisplayNames: resourceDisplayNames2,
+            resourceDisplayNames,
             pt051Assessments,
             userProfile: currentUser2
           }
@@ -79081,7 +79081,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
-            resourceDisplayNames: resourceDisplayNames2,
+            resourceDisplayNames,
             pt051Assessments,
             userProfile: currentUser2
           }
@@ -79479,7 +79479,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               });
             },
             currencyNames,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         );
       case "CourseProgress":
@@ -79521,7 +79521,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onSavePT051Assessment,
             locations,
             units,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         );
       case "ArchivedCourses":
@@ -79564,7 +79564,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             dayFlyingEnd: `${Math.floor(flyingEndTime).toString().padStart(2, "0")}:${Math.round(flyingEndTime % 1 * 60).toString().padStart(2, "0")}`,
             buildDate: buildDfpDate,
             analysis: lastBuildAnalysis,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         );
       case "MyDashboard":
@@ -79810,7 +79810,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onProfileTabConsumed: handleProfileTabConsumed,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         );
       case "Instructors":
@@ -79919,7 +79919,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             currencyRequirements,
             currentUserId: getCurrentUserId() ?? void 0,
             currentUserName,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         );
       case "Trainees":
@@ -80127,7 +80127,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onUpdateNeoBuildCourse: handleUpdateNeoBuildCourse,
             excludedCourses,
             onUpdateExcludedCourses: handleUpdateExcludedCourses,
-            resourceDisplayNames: resourceDisplayNames2
+            resourceDisplayNames
           }
         );
       case "CurrencyBuilder":
@@ -80597,7 +80597,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               instructorsData,
               masterCurrencies,
               currencyRequirements,
-              resourceDisplayNames: resourceDisplayNames2
+              resourceDisplayNames
             }
           );
         }
@@ -80609,7 +80609,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             {
               person: selectedPersonForLogbook,
               events,
-              resourceDisplayNames: resourceDisplayNames2,
+              resourceDisplayNames,
               onBack: () => {
                 if ("role" in selectedPersonForLogbook) {
                   setSelectedPersonForProfile(selectedPersonForLogbook);
@@ -80852,7 +80852,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 setPauseOverlayStart(start);
                 setPauseOverlayEnd(end);
               },
-              resourceDisplayNames: resourceDisplayNames2
+              resourceDisplayNames
             }
           )
         ] })
@@ -81039,12 +81039,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule",
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),
       conflict && /* @__PURE__ */ jsxRuntimeExports.jsx(ConflictModal, { conflict, onResolve: () => {
-      }, onCancel: () => setConflict(null), resourceDisplayNames: resourceDisplayNames2 }),
+      }, onCancel: () => setConflict(null), resourceDisplayNames }),
       neoProblemTileForFlyout && !showTimeOnlyRemedyConfirm && !showNeoChoiceModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
         NeoRemedyFlyout,
         {
@@ -81176,7 +81176,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           onUpdateCourseAcademicProgress: handleUpdateCourseAcademicProgress,
           persistedAcademicLmp,
           onUpdatePersistedAcademicLmp: handleUpdatePersistedAcademicLmp,
-          resourceDisplayNames: resourceDisplayNames2
+          resourceDisplayNames
         }
       ),
       showAuthFlyout && eventForAuth && /* @__PURE__ */ jsxRuntimeExports.jsx(

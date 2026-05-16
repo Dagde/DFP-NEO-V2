@@ -3329,10 +3329,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
-    setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Priority)...`, percentage: 60 });
+    setProgress({ message: 'Scheduling FTD Events (Priority)...', percentage: 60 });
     // Highest Priority FTD Events are already added at the start
 
-    setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Next)...`, percentage: 65 });
+    setProgress({ message: 'Scheduling FTD Events (Next)...', percentage: 65 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
         'ftd',
@@ -3344,10 +3344,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
-    setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Priority)...`, percentage: 70 });
+    setProgress({ message: 'Scheduling CPT Events (Priority)...', percentage: 70 });
     // Highest Priority CPT Events are already added at the start
 
-    setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Next)...`, percentage: 72 });
+    setProgress({ message: 'Scheduling CPT Events (Next)...', percentage: 72 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
         'cpt',
@@ -3397,7 +3397,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // 8. Schedule FTD Events: Plus-One
-    setProgress({ message: `Scheduling ${resourceDisplayNames.ftd} Events (Plus-One)...`, percentage: 82 });
+    setProgress({ message: 'Scheduling FTD Events (Plus-One)...', percentage: 82 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
         'ftd',
@@ -3409,7 +3409,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 9. Schedule CPT/Ground Events: Plus-One
-    setProgress({ message: `Scheduling ${resourceDisplayNames.cpt} Events (Plus-One)...`, percentage: 84 });
+    setProgress({ message: 'Scheduling CPT Events (Plus-One)...', percentage: 84 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
         'cpt',
@@ -3762,7 +3762,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
     // Fill STBY lines sequentially with proper spacing
-    setProgress({ message: `Scheduling STBY ${resourceDisplayNames.ftd} events...`, percentage: 90 });
+    setProgress({ message: 'Scheduling STBY FTD events...', percentage: 90 });
 
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
