@@ -5634,6 +5634,7 @@ const App: React.FC = () => {
     });
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);
+    const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = useState(15);
     const [availableFtdCount, setAvailableFtdCount] = useState(school === 'ESL' ? 5 : 4);
     const [availableCptCount, setAvailableCptCount] = useState(4);
     const resourceDisplayNames = useMemo(
@@ -6411,6 +6412,11 @@ const App: React.FC = () => {
                 if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
                     setAvailableAircraftCount(saved.availableAircraftCount);
                 }
+                if (saved.neoAvailableAircraftCount != null) {
+                    setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
+                } else if (saved.availableAircraftCount != null) {
+                    setNeoAvailableAircraftCount(saved.availableAircraftCount);
+                }
                 if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
                 if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
                 if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
@@ -6512,6 +6518,7 @@ const App: React.FC = () => {
             commenceNightFlying,
             ceaseNightFlying,
             availableAircraftCount,
+            neoAvailableAircraftCount,
             availableFtdCount,
             availableCptCount,
             timezoneOffset,
@@ -6540,7 +6547,7 @@ const App: React.FC = () => {
         flightTurnaround, ftdTurnaround, cptTurnaround,
         flyingStartTime, flyingEndTime, ftdStartTime, ftdEndTime,
         allowNightFlying, commenceNightFlying, ceaseNightFlying,
-        availableAircraftCount, availableFtdCount, availableCptCount,
+        availableAircraftCount, neoAvailableAircraftCount, availableFtdCount, availableCptCount,
         timezoneOffset, showDepartureDensityOverlay,
         sctEvents, formationCallsigns, courseColors,
         phraseBank, cancellationCodes,
@@ -10224,7 +10231,7 @@ const App: React.FC = () => {
             scores,
             coursePriorities,
             coursePercentages,
-            availableAircraftCount,
+            availableAircraftCount: neoAvailableAircraftCount,
             ftdCount: availableFtdCount,
             cptCount: availableCptCount,
             courseColors,
@@ -10281,7 +10288,7 @@ const App: React.FC = () => {
                     generated,
                     coursePercentages,
                     coursePriorities,
-                    availableAircraftCount,
+                    neoAvailableAircraftCount,
                     buildDfpDate,
                     allTraineesData,
                     traineeLMPs,
@@ -14315,8 +14322,8 @@ updates.forEach(update => {
                     onUpdatePriorities={setCoursePriorities}
                     coursePercentages={coursePercentages}
                     onUpdatePercentages={setCoursePercentages}
-                    availableAircraftCount={availableAircraftCount}
-                    onUpdateAircraftCount={handleUpdateAircraftCount}
+                    availableAircraftCount={neoAvailableAircraftCount}
+                    onUpdateAircraftCount={setNeoAvailableAircraftCount}
                     availableFtdCount={availableFtdCount}
                     onUpdateFtdCount={setAvailableFtdCount}
                     availableCptCount={availableCptCount}

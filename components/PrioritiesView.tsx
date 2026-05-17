@@ -141,6 +141,12 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     setAircraftTimestamp(new Date().toLocaleString());
   }, [availableAircraftCount]);
 
+  const handleAircraftCapacityChange = (value: string) => {
+    const nextCount = Math.max(0, parseInt(value, 10) || 0);
+    logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${nextCount}`);
+    onUpdateAircraftCount(nextCount);
+  };
+
   useEffect(() => {
     setFlyingWindowTimestamp(new Date().toLocaleString());
   }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying]);
@@ -578,7 +584,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                             <label htmlFor="aircraft-count" className="block text-sm font-medium text-slate-300">Available {aircraftLabel}</label>
-                            <input id="aircraft-count" type="number" value={availableAircraftCount} onChange={(e) => { logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} \u2192 ${parseInt(e.target.value)}`); onUpdateAircraftCount(parseInt(e.target.value)); }} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
+                            <input id="aircraft-count" type="number" min={0} value={availableAircraftCount} onChange={(e) => handleAircraftCapacityChange(e.target.value)} className="mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500"/>
                         </div>
                         <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                             <label htmlFor="ftd-count" className="block text-sm font-medium text-slate-300">{ftdLabel} Available</label>

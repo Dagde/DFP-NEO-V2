@@ -1522,6 +1522,7 @@ const buildSettingsSnapshot = (state) => {
     courseColors: state.courseColors || {},
     coursePriorities: state.coursePriorities || [],
     coursePercentages: state.coursePercentages || {},
+    neoAvailableAircraftCount: state.neoAvailableAircraftCount ?? state.availableAircraftCount ?? 15,
     phraseBank: state.phraseBank || {},
     cancellationCodes: state.cancellationCodes || [],
     masterCurrencies: state.masterCurrencies || [],
@@ -19638,6 +19639,11 @@ const PrioritiesView = ({
   reactExports.useEffect(() => {
     setAircraftTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [availableAircraftCount]);
+  const handleAircraftCapacityChange = (value) => {
+    const nextCount = Math.max(0, parseInt(value, 10) || 0);
+    logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${nextCount}`);
+    onUpdateAircraftCount(nextCount);
+  };
   reactExports.useEffect(() => {
     setFlyingWindowTimestamp((/* @__PURE__ */ new Date()).toLocaleString());
   }, [flyingStartTime, flyingEndTime, commenceNightFlying, ceaseNightFlying, allowNightFlying]);
@@ -19999,10 +20005,7 @@ const PrioritiesView = ({
               "Available ",
               aircraftLabel
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", value: availableAircraftCount, onChange: (e) => {
-              logAudit("Priorities", "Edit", `Updated available ${aircraftLabel} count`, `${availableAircraftCount} → ${parseInt(e.target.value)}`);
-              onUpdateAircraftCount(parseInt(e.target.value));
-            }, className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("input", { id: "aircraft-count", type: "number", min: 0, value: availableAircraftCount, onChange: (e) => handleAircraftCapacityChange(e.target.value), className: "mt-2 w-full rounded-md border border-slate-600 bg-slate-950 py-2 px-3 text-white focus:outline-none focus:ring-cyan-500" })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-slate-700 bg-slate-950/70 p-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { htmlFor: "ftd-count", className: "block text-sm font-medium text-slate-300", children: [
@@ -73058,6 +73061,7 @@ const App = () => {
   });
   const [lastBuildAnalysis, setLastBuildAnalysis] = reactExports.useState(null);
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);
+  const [neoAvailableAircraftCount, setNeoAvailableAircraftCount] = reactExports.useState(15);
   const [availableFtdCount, setAvailableFtdCount] = reactExports.useState(school === "ESL" ? 5 : 4);
   const [availableCptCount, setAvailableCptCount] = reactExports.useState(4);
   const resourceDisplayNames = reactExports.useMemo(
@@ -73089,19 +73093,6 @@ const App = () => {
   const [allowNightFlying, setAllowNightFlying] = reactExports.useState(true);
   const [commenceNightFlying, setCommenceNightFlying] = reactExports.useState(18.5);
   const [ceaseNightFlying, setCeaseNightFlying] = reactExports.useState(23.5);
-  const handleUpdateAircraftCount = async (count) => {
-    const previousCount = availableAircraftCount;
-    setAvailableAircraftCount(count);
-    if (count !== previousCount && sessionUser?.userId) {
-      console.log(`[AV] ✈️ Aircraft count changed: ${previousCount} → ${count}, saving to database`);
-      await postAvailabilityEvent(
-        count,
-        "change",
-        void 0,
-        `Aircraft availability updated: ${count}`
-      );
-    }
-  };
   const [preferredDutyPeriod, setPreferredDutyPeriod] = reactExports.useState(8);
   const [maxCrewDutyPeriod, setMaxCrewDutyPeriod] = reactExports.useState(10);
   const [maxDispatchPerHour, setMaxDispatchPerHour] = reactExports.useState(8);
@@ -73715,6 +73706,11 @@ ${"=".repeat(60)}`);
         if (saved.availableAircraftCount != null && !availabilityLoadedFromEventsRef.current) {
           setAvailableAircraftCount(saved.availableAircraftCount);
         }
+        if (saved.neoAvailableAircraftCount != null) {
+          setNeoAvailableAircraftCount(saved.neoAvailableAircraftCount);
+        } else if (saved.availableAircraftCount != null) {
+          setNeoAvailableAircraftCount(saved.availableAircraftCount);
+        }
         if (saved.availableFtdCount != null) setAvailableFtdCount(saved.availableFtdCount);
         if (saved.availableCptCount != null) setAvailableCptCount(saved.availableCptCount);
         if (saved.timezoneOffset != null) setTimezoneOffset(saved.timezoneOffset);
@@ -73803,6 +73799,7 @@ ${"=".repeat(60)}`);
       commenceNightFlying,
       ceaseNightFlying,
       availableAircraftCount,
+      neoAvailableAircraftCount,
       availableFtdCount,
       availableCptCount,
       timezoneOffset,
@@ -73845,6 +73842,7 @@ ${"=".repeat(60)}`);
     commenceNightFlying,
     ceaseNightFlying,
     availableAircraftCount,
+    neoAvailableAircraftCount,
     availableFtdCount,
     availableCptCount,
     timezoneOffset,
@@ -76609,7 +76607,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       scores,
       coursePriorities,
       coursePercentages,
-      availableAircraftCount,
+      availableAircraftCount: neoAvailableAircraftCount,
       ftdCount: availableFtdCount,
       cptCount: availableCptCount,
       courseColors,
@@ -76662,7 +76660,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           generated,
           coursePercentages,
           coursePriorities,
-          availableAircraftCount,
+          neoAvailableAircraftCount,
           buildDfpDate,
           allTraineesData,
           traineeLMPs,
@@ -79889,8 +79887,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onUpdatePriorities: setCoursePriorities,
             coursePercentages,
             onUpdatePercentages: setCoursePercentages,
-            availableAircraftCount,
-            onUpdateAircraftCount: handleUpdateAircraftCount,
+            availableAircraftCount: neoAvailableAircraftCount,
+            onUpdateAircraftCount: setNeoAvailableAircraftCount,
             availableFtdCount,
             onUpdateFtdCount: setAvailableFtdCount,
             availableCptCount,
