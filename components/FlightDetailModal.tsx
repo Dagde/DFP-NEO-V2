@@ -587,6 +587,25 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map(t => t.trainee.fullName) : trainees;
     const [dynamicSyllabusOptions, setDynamicSyllabusOptions] = useState<string[]>(isOracleContext ? [] : syllabus);
 
+    const selectedTraineeNameForLmp = crew[0]?.student || crew[0]?.pilot || event.student || event.pilot || '';
+    const selectedIndividualLmp = useMemo(() => {
+        if (!traineeLMPs || !selectedTraineeNameForLmp) return null;
+        return traineeLMPs.get(selectedTraineeNameForLmp) || null;
+    }, [selectedTraineeNameForLmp, traineeLMPs]);
+
+    const getSyllabusItemForOption = (option: string): SyllabusItemDetail | undefined => (
+        selectedIndividualLmp?.find(item => item.id === option || item.code === option)
+        || syllabusDetails.find(item => item.id === option || item.code === option)
+    );
+
+    const formatSyllabusOptionLabel = (option: string): string => {
+        if (option === 'SCT FORM') return option;
+        const item = getSyllabusItemForOption(option);
+        if (!item) return option;
+        const code = item.code || item.id || option;
+        return item.eventDescription ? `${code} - ${item.eventDescription}` : code;
+    };
+
     // Filtered syllabus options based on event category
     const filteredSyllabusOptions = useMemo(() => {
         let options: string[] = [];
@@ -594,10 +613,10 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (eventCategory === 'sct') {
             options = sctEvents;
         } else if (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency') {
-            // Filter for Master LMP events only
-            options = syllabusDetails
-                .filter(item => item.lmpType === 'Master LMP' || !item.lmpType) // Include items without lmpType for backward compatibility
-                .map(item => item.id);
+            const lmpSource = selectedIndividualLmp?.length
+                ? selectedIndividualLmp
+                : syllabusDetails.filter(item => item.lmpType === 'Master LMP' || !item.lmpType);
+            options = lmpSource.map(item => item.id || item.code).filter(Boolean);
         } else if (eventCategory === 'staff_cat') {
             // Filter for Staff CAT LMP events only
             options = syllabusDetails
@@ -614,11 +633,15 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         if (isAddingTile && !options.includes('SCT FORM')) {
             options = [...options, 'SCT FORM'];
         }
+
+        if (flightNumber && !options.includes(flightNumber)) {
+            options = [flightNumber, ...options];
+        }
         
         
         
         return options;
-    }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile]);
+    }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
 
     // Get staff-only instructors (exclude trainees) grouped by unit
     const staffInstructorsByUnit = useMemo(() => {
@@ -910,12 +933,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     // IMPORTANT: SCT is explicitly excluded because SCT events default to Solo and should not be overridden by syllabus
     useEffect(() => {
         if (flightNumber && (eventCategory === 'lmp_event' || eventCategory === 'lmp_currency' || eventCategory === 'staff_cat' || eventCategory === 'twr_di') && eventCategory !== 'sct') {
-            const syllabusItem = syllabusDetails.find(item => item.id === flightNumber);
+            const syllabusItem = getSyllabusItemForOption(flightNumber);
             if (syllabusItem && syllabusItem.flightType) {
                 setCrew(prev => prev.map(c => ({ ...c, flightType: syllabusItem.flightType as 'Dual' | 'Solo' })));
             }
         }
-    }, [flightNumber, eventCategory, syllabusDetails]);
+    }, [flightNumber, eventCategory, syllabusDetails, selectedIndividualLmp]);
 
     // Effect to set Dual/Solo from Individual LMP when flight number changes (before pilot selection)
     useEffect(() => {
@@ -1304,7 +1327,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         const oldFlightNumber = flightNumber;
         setFlightNumber(newFlightNumber);
 
-        const detail = syllabusDetails.find(d => d.id === newFlightNumber);
+        const detail = getSyllabusItemForOption(newFlightNumber);
         if (detail) {
             setDuration(detail.duration);
         }
@@ -2121,7 +2144,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     {isOracleContext ? 'Select a crew member first' : 'Select an item'}
                                                 </option>
                                                 {isAddingTile && <option value="SCT FORM">SCT FORM</option>}
-                                                {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => <option key={item} value={item}>{item}</option>)}
+                                                {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => (
+                                                    <option key={item} value={item}>{formatSyllabusOptionLabel(item)}</option>
+                                                ))}
                                             </select>
                                             {syllabusSelectionError && (
                                                 <div className="absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in">Select a crew member first.</div>

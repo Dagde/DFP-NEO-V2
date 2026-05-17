@@ -12947,12 +12947,26 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const instructorList = oracleContextForModal?.availableInstructors || instructors;
   const traineeList = oracleContextForModal ? oracleContextForModal.availableTraineesAnalysis.map((t) => t.trainee.fullName) : trainees;
   const [dynamicSyllabusOptions, setDynamicSyllabusOptions] = reactExports.useState(isOracleContext ? [] : syllabus);
+  const selectedTraineeNameForLmp = crew[0]?.student || crew[0]?.pilot || event.student || event.pilot || "";
+  const selectedIndividualLmp = reactExports.useMemo(() => {
+    if (!traineeLMPs || !selectedTraineeNameForLmp) return null;
+    return traineeLMPs.get(selectedTraineeNameForLmp) || null;
+  }, [selectedTraineeNameForLmp, traineeLMPs]);
+  const getSyllabusItemForOption = (option) => selectedIndividualLmp?.find((item) => item.id === option || item.code === option) || syllabusDetails.find((item) => item.id === option || item.code === option);
+  const formatSyllabusOptionLabel = (option) => {
+    if (option === "SCT FORM") return option;
+    const item = getSyllabusItemForOption(option);
+    if (!item) return option;
+    const code = item.code || item.id || option;
+    return item.eventDescription ? `${code} - ${item.eventDescription}` : code;
+  };
   const filteredSyllabusOptions = reactExports.useMemo(() => {
     let options = [];
     if (eventCategory === "sct") {
       options = sctEvents;
     } else if (eventCategory === "lmp_event" || eventCategory === "lmp_currency") {
-      options = syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType).map((item) => item.id);
+      const lmpSource = selectedIndividualLmp?.length ? selectedIndividualLmp : syllabusDetails.filter((item) => item.lmpType === "Master LMP" || !item.lmpType);
+      options = lmpSource.map((item) => item.id || item.code).filter(Boolean);
     } else if (eventCategory === "staff_cat") {
       options = syllabusDetails.filter((item) => item.lmpType === "Staff CAT").map((item) => item.id);
     } else if (eventCategory === "twr_di") {
@@ -12963,8 +12977,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     if (isAddingTile && !options.includes("SCT FORM")) {
       options = [...options, "SCT FORM"];
     }
+    if (flightNumber && !options.includes(flightNumber)) {
+      options = [flightNumber, ...options];
+    }
     return options;
-  }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile]);
+  }, [eventCategory, sctEvents, syllabusDetails, dynamicSyllabusOptions, isAddingTile, selectedIndividualLmp, flightNumber]);
   const staffInstructorsByUnit = reactExports.useMemo(() => {
     const traineeNames = new Set(traineesData.map((t) => t.fullName));
     const staffOnly = instructorList.filter((name) => !traineeNames.has(name));
@@ -13163,12 +13180,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   }, [eventCategory]);
   reactExports.useEffect(() => {
     if (flightNumber && (eventCategory === "lmp_event" || eventCategory === "lmp_currency" || eventCategory === "staff_cat" || eventCategory === "twr_di") && eventCategory !== "sct") {
-      const syllabusItem = syllabusDetails.find((item) => item.id === flightNumber);
+      const syllabusItem = getSyllabusItemForOption(flightNumber);
       if (syllabusItem && syllabusItem.flightType) {
         setCrew((prev) => prev.map((c) => ({ ...c, flightType: syllabusItem.flightType })));
       }
     }
-  }, [flightNumber, eventCategory, syllabusDetails]);
+  }, [flightNumber, eventCategory, syllabusDetails, selectedIndividualLmp]);
   reactExports.useEffect(() => {
     if (isAddingTile || isEditingDefault && (!event.id || event.id.startsWith("2d1b6a22"))) {
       console.log(`📝 [Flight Number Change] isAddingTile: ${isAddingTile}, isEditingDefault: ${isEditingDefault}, event.id: ${event.id}, flightNumber: ${flightNumber}`);
@@ -13461,7 +13478,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const handleFlightNumberChange = (e) => {
     const newFlightNumber = e.target.value;
     setFlightNumber(newFlightNumber);
-    const detail = syllabusDetails.find((d) => d.id === newFlightNumber);
+    const detail = getSyllabusItemForOption(newFlightNumber);
     if (detail) {
       setDuration(detail.duration);
     }
@@ -14115,7 +14132,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: isOracleContext ? "Select a crew member first" : "Select an item" }),
                     isAddingTile && /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SCT FORM", children: "SCT FORM" }),
-                    filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: item }, item))
+                    filteredSyllabusOptions.filter((item) => item !== "SCT FORM").map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item, children: formatSyllabusOptionLabel(item) }, item))
                   ]
                 }
               ),
