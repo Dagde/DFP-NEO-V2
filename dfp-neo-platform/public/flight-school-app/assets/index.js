@@ -1,4 +1,4 @@
-import { r as reactExports, j as jsxRuntimeExports, R as ReactDOM, a as React, c as clientExports, b as reactDomExports, g as getDefaultExportFromCjs, d as ReactDOM$1 } from "./vendor-react.js";
+import { r as reactExports, j as jsxRuntimeExports, R as ReactDOM, c as clientExports, a as React, g as getDefaultExportFromCjs, b as ReactDOM$1 } from "./vendor-react.js";
 import { E } from "./vendor-pdf.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
@@ -3113,8 +3113,13 @@ const DarkMessageModal = ({
   confirmText = "OK",
   cancelText = "Cancel",
   variant = "info",
-  autoCloseDelay
+  autoCloseDelay,
+  inputLabel,
+  inputType = "text",
+  inputPlaceholder = "",
+  inputDefaultValue = ""
 }) => {
+  const [inputValue, setInputValue] = reactExports.useState(inputDefaultValue);
   const getVariantStyles = () => {
     switch (variant) {
       case "error":
@@ -3165,7 +3170,7 @@ const DarkMessageModal = ({
     }
   };
   const handleConfirm = () => {
-    onConfirm?.();
+    onConfirm?.(type === "prompt" ? inputValue : void 0);
   };
   reactExports.useEffect(() => {
     if (autoCloseDelay && autoCloseDelay > 0) {
@@ -3183,9 +3188,29 @@ const DarkMessageModal = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: styles.iconColor, children: getIcon() }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: `text-xl font-bold ${styles.titleColor}`, children: title })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-line", children: message }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300 whitespace-pre-line", children: message }),
+      type === "prompt" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4", children: [
+        inputLabel && /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400", children: inputLabel }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "input",
+          {
+            autoFocus: true,
+            type: inputType,
+            value: inputValue,
+            placeholder: inputPlaceholder,
+            onChange: (event) => setInputValue(event.target.value),
+            onKeyDown: (event) => {
+              if (event.key === "Enter") handleConfirm();
+              if (event.key === "Escape") handleCancel();
+            },
+            className: "w-full rounded-md border border-cyan-500/50 bg-gray-950 px-3 py-2 text-white outline-none transition placeholder:text-gray-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-500/30"
+          }
+        )
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      type === "confirm" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      (type === "confirm" || type === "prompt") && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           onClick: handleCancel,
@@ -3204,26 +3229,30 @@ const DarkMessageModal = ({
     ] })
   ] }) });
 };
-let modalRoot = null;
-const getModalRoot = () => {
-  if (!modalRoot) {
-    modalRoot = document.createElement("div");
-    modalRoot.id = "dark-modal-root";
-    document.body.appendChild(modalRoot);
-  }
-  return modalRoot;
+const mountModal = (renderModal) => {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root2 = clientExports.createRoot(host);
+  const cleanup = () => {
+    setTimeout(() => {
+      root2.unmount();
+      host.remove();
+    }, 300);
+  };
+  root2.render(renderModal(cleanup));
 };
 const showDarkAlert = (message, title = "Notice", variant = "info") => {
   return new Promise((resolve) => {
-    const Modal = () => {
-      const [isVisible, setIsVisible] = reactExports.useState(true);
-      const handleConfirm = () => {
-        setIsVisible(false);
-        setTimeout(resolve, 300);
-      };
-      if (!isVisible) return null;
-      return reactDomExports.createPortal(
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = reactExports.useState(true);
+        const handleConfirm = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(resolve, 300);
+        };
+        if (!isVisible) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
           DarkMessageModal,
           {
             type: "alert",
@@ -3232,30 +3261,29 @@ const showDarkAlert = (message, title = "Notice", variant = "info") => {
             onConfirm: handleConfirm,
             variant
           }
-        ),
-        getModalRoot()
-      );
-    };
-    const modalElement = React.createElement(Modal);
-    const root2 = clientExports.createRoot(getModalRoot());
-    root2.render(modalElement);
+        );
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
+    });
   });
 };
 const showDarkConfirm = (message, title = "Confirm Action", variant = "info") => {
   return new Promise((resolve) => {
-    const Modal = () => {
-      const [isVisible, setIsVisible] = reactExports.useState(true);
-      const handleConfirm = () => {
-        setIsVisible(false);
-        setTimeout(() => resolve(true), 300);
-      };
-      const handleCancel = () => {
-        setIsVisible(false);
-        setTimeout(() => resolve(false), 300);
-      };
-      if (!isVisible) return null;
-      return reactDomExports.createPortal(
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = reactExports.useState(true);
+        const handleConfirm = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(true), 300);
+        };
+        const handleCancel = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(false), 300);
+        };
+        if (!isVisible) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
           DarkMessageModal,
           {
             type: "confirm",
@@ -3265,13 +3293,58 @@ const showDarkConfirm = (message, title = "Confirm Action", variant = "info") =>
             onCancel: handleCancel,
             variant
           }
-        ),
-        getModalRoot()
-      );
-    };
-    const modalElement = React.createElement(Modal);
-    const root2 = clientExports.createRoot(getModalRoot());
-    root2.render(modalElement);
+        );
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
+    });
+  });
+};
+const showDarkPrompt = ({
+  title = "Input Required",
+  message,
+  variant = "info",
+  confirmText = "OK",
+  cancelText = "Cancel",
+  inputLabel,
+  inputType = "text",
+  inputPlaceholder = "",
+  inputDefaultValue = ""
+}) => {
+  return new Promise((resolve) => {
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = reactExports.useState(true);
+        const handleConfirm = (value) => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(value ?? ""), 300);
+        };
+        const handleCancel = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(null), 300);
+        };
+        if (!isVisible) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx(
+          DarkMessageModal,
+          {
+            type: "prompt",
+            title,
+            message,
+            onConfirm: handleConfirm,
+            onCancel: handleCancel,
+            confirmText,
+            cancelText,
+            variant,
+            inputLabel,
+            inputType,
+            inputPlaceholder,
+            inputDefaultValue
+          }
+        );
+      };
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Modal, {});
+    });
   });
 };
 const SystemFreezeBanner = () => {
@@ -57917,7 +57990,16 @@ const PlatformConfigurationSettings = ({
   const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
-    const password = window.prompt("Enter your password to edit Rank & Terminology");
+    const password = await showDarkPrompt({
+      title: "Edit Rank & Terminology",
+      message: "Enter your password to edit Rank & Terminology.",
+      inputLabel: "Password",
+      inputType: "password",
+      inputPlaceholder: "Enter password",
+      confirmText: "Unlock",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
     if (!password) return;
     setError("");
     try {

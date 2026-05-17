@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
+type DarkMessageVariant = 'error' | 'warning' | 'info' | 'success';
+type DarkMessageType = 'alert' | 'confirm' | 'prompt';
+
 export interface DarkMessageModalProps {
-  type: 'alert' | 'confirm';
+  type: DarkMessageType;
   title: string;
   message: string;
-  onConfirm?: () => void;
+  onConfirm?: (value?: string) => void;
   onCancel?: () => void;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'error' | 'warning' | 'info' | 'success';
+  variant?: DarkMessageVariant;
   autoCloseDelay?: number; // Auto-close delay in milliseconds
+  inputLabel?: string;
+  inputType?: string;
+  inputPlaceholder?: string;
+  inputDefaultValue?: string;
 }
 
 const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
@@ -23,8 +29,14 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   confirmText = 'OK',
   cancelText = 'Cancel',
   variant = 'info',
-  autoCloseDelay
+  autoCloseDelay,
+  inputLabel,
+  inputType = 'text',
+  inputPlaceholder = '',
+  inputDefaultValue = ''
 }) => {
+  const [inputValue, setInputValue] = useState(inputDefaultValue);
+
   const getVariantStyles = () => {
     switch (variant) {
       case 'error':
@@ -94,7 +106,7 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
   };
 
   const handleConfirm = () => {
-    onConfirm?.();
+    onConfirm?.(type === 'prompt' ? inputValue : undefined);
   };
 
     // Auto-close functionality
@@ -125,9 +137,30 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
           <p className="text-gray-300 whitespace-pre-line">
             {message}
           </p>
+          {type === 'prompt' && (
+            <div className="mt-4">
+              {inputLabel && (
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-400">
+                  {inputLabel}
+                </label>
+              )}
+              <input
+                autoFocus
+                type={inputType}
+                value={inputValue}
+                placeholder={inputPlaceholder}
+                onChange={(event) => setInputValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') handleConfirm();
+                  if (event.key === 'Escape') handleCancel();
+                }}
+                className="w-full rounded-md border border-cyan-500/50 bg-gray-950 px-3 py-2 text-white outline-none transition placeholder:text-gray-500 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-500/30"
+              />
+            </div>
+          )}
         </div>
         <div className="px-6 py-4 bg-gray-900/50 border-t border-gray-700 flex justify-end space-x-3">
-          {type === 'confirm' && (
+          {(type === 'confirm' || type === 'prompt') && (
             <button 
               onClick={handleCancel} 
               className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold"
@@ -148,67 +181,70 @@ const DarkMessageModal: React.FC<DarkMessageModalProps> = ({
 };
 
 // Utility functions for global use
-let modalRoot: HTMLElement | null = null;
-
-const getModalRoot = () => {
-  if (!modalRoot) {
-    modalRoot = document.createElement('div');
-    modalRoot.id = 'dark-modal-root';
-    document.body.appendChild(modalRoot);
-  }
-  return modalRoot;
+const mountModal = (renderModal: (cleanup: () => void) => React.ReactElement) => {
+  const host = document.createElement('div');
+  document.body.appendChild(host);
+  const root = createRoot(host);
+  const cleanup = () => {
+    setTimeout(() => {
+      root.unmount();
+      host.remove();
+    }, 300);
+  };
+  root.render(renderModal(cleanup));
 };
 
-export const showDarkAlert = (message: string, title: string = 'Notice', variant: 'error' | 'warning' | 'info' | 'success' = 'info'): Promise<void> => {
+export const showDarkAlert = (message: string, title: string = 'Notice', variant: DarkMessageVariant = 'info'): Promise<void> => {
   return new Promise((resolve) => {
-    const Modal = () => {
+    mountModal((cleanup) => {
+      const Modal = () => {
       const [isVisible, setIsVisible] = useState(true);
 
       const handleConfirm = () => {
         setIsVisible(false);
+        cleanup();
         setTimeout(resolve, 300);
       };
 
       if (!isVisible) return null;
 
-      return createPortal(
+      return (
         <DarkMessageModal
           type="alert"
           title={title}
           message={message}
           onConfirm={handleConfirm}
           variant={variant}
-        />,
-        getModalRoot()
+        />
       );
     };
 
-    const modalElement = React.createElement(Modal);
-    
-    // Create a temporary React root to render the modal
-    const root = createRoot(getModalRoot());
-    root.render(modalElement);
+      return <Modal />;
+    });
   });
 };
 
-export const showDarkConfirm = (message: string, title: string = 'Confirm Action', variant: 'error' | 'warning' | 'info' | 'success' = 'info'): Promise<boolean> => {
+export const showDarkConfirm = (message: string, title: string = 'Confirm Action', variant: DarkMessageVariant = 'info'): Promise<boolean> => {
   return new Promise((resolve) => {
-    const Modal = () => {
+    mountModal((cleanup) => {
+      const Modal = () => {
       const [isVisible, setIsVisible] = useState(true);
 
       const handleConfirm = () => {
         setIsVisible(false);
+        cleanup();
         setTimeout(() => resolve(true), 300);
       };
 
       const handleCancel = () => {
         setIsVisible(false);
+        cleanup();
         setTimeout(() => resolve(false), 300);
       };
 
       if (!isVisible) return null;
 
-      return createPortal(
+      return (
         <DarkMessageModal
           type="confirm"
           title={title}
@@ -216,16 +252,77 @@ export const showDarkConfirm = (message: string, title: string = 'Confirm Action
           onConfirm={handleConfirm}
           onCancel={handleCancel}
           variant={variant}
-        />,
-        getModalRoot()
+        />
       );
     };
 
-    const modalElement = React.createElement(Modal);
-    
-    // Create a temporary React root to render the modal
-    const root = createRoot(getModalRoot());
-    root.render(modalElement);
+      return <Modal />;
+    });
+  });
+};
+
+export interface DarkPromptOptions {
+  title?: string;
+  message: string;
+  variant?: DarkMessageVariant;
+  confirmText?: string;
+  cancelText?: string;
+  inputLabel?: string;
+  inputType?: string;
+  inputPlaceholder?: string;
+  inputDefaultValue?: string;
+}
+
+export const showDarkPrompt = ({
+  title = 'Input Required',
+  message,
+  variant = 'info',
+  confirmText = 'OK',
+  cancelText = 'Cancel',
+  inputLabel,
+  inputType = 'text',
+  inputPlaceholder = '',
+  inputDefaultValue = '',
+}: DarkPromptOptions): Promise<string | null> => {
+  return new Promise((resolve) => {
+    mountModal((cleanup) => {
+      const Modal = () => {
+        const [isVisible, setIsVisible] = useState(true);
+
+        const handleConfirm = (value?: string) => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(value ?? ''), 300);
+        };
+
+        const handleCancel = () => {
+          setIsVisible(false);
+          cleanup();
+          setTimeout(() => resolve(null), 300);
+        };
+
+        if (!isVisible) return null;
+
+        return (
+          <DarkMessageModal
+            type="prompt"
+            title={title}
+            message={message}
+            onConfirm={handleConfirm}
+            onCancel={handleCancel}
+            confirmText={confirmText}
+            cancelText={cancelText}
+            variant={variant}
+            inputLabel={inputLabel}
+            inputType={inputType}
+            inputPlaceholder={inputPlaceholder}
+            inputDefaultValue={inputDefaultValue}
+          />
+        );
+      };
+
+      return <Modal />;
+    });
   });
 };
 

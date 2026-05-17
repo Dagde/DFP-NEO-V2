@@ -10,6 +10,7 @@ import {
   parseRankOrderText,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
+import { showDarkPrompt } from './DarkMessageModal';
 
 type PlatformConfig = {
   organisations: any[];
@@ -650,7 +651,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
-    const password = window.prompt('Enter your password to edit Rank & Terminology');
+    const password = await showDarkPrompt({
+      title: 'Edit Rank & Terminology',
+      message: 'Enter your password to edit Rank & Terminology.',
+      inputLabel: 'Password',
+      inputType: 'password',
+      inputPlaceholder: 'Enter password',
+      confirmText: 'Unlock',
+      cancelText: 'Cancel',
+      variant: 'warning',
+    });
     if (!password) return;
     setError('');
     try {
