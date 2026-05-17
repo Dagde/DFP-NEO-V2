@@ -10,6 +10,7 @@ import {
   parseRankOrderText,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
+import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { showDarkPrompt } from './DarkMessageModal';
 
 type PlatformConfig = {
@@ -913,6 +914,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
           settings: {
             applyToV2Runtime: false,
             aircraftLabel: 'PC-21',
+            aircraftNumberUsePrefix: true,
+            aircraftNumberPrefixes: ['A54'],
+            aircraftNumberDefaultPrefix: 'A54',
             ftdLabel: 'FTD',
             cptLabel: 'CPT',
             aircraft: 24,
@@ -1152,6 +1156,40 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...currentSettings,
         ...changes,
       },
+    });
+  };
+
+  const updateAircraftNumberPrefix = (poolIndex: number, prefixIndex: number, value: string) => {
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const prefixes = settings.prefixes.map((prefix, index) => (
+      index === prefixIndex ? value.toUpperCase().trim() : prefix
+    )).filter(Boolean);
+    const uniquePrefixes = Array.from(new Set(prefixes));
+    updateResourcePoolSettings(poolIndex, {
+      aircraftNumberPrefixes: uniquePrefixes,
+      aircraftNumberDefaultPrefix: uniquePrefixes.includes(settings.defaultPrefix)
+        ? settings.defaultPrefix
+        : uniquePrefixes[0] || '',
+    });
+  };
+
+  const addAircraftNumberPrefix = (poolIndex: number) => {
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const nextPrefix = `PREFIX-${settings.prefixes.length + 1}`;
+    updateResourcePoolSettings(poolIndex, {
+      aircraftNumberPrefixes: [...settings.prefixes, nextPrefix],
+      aircraftNumberDefaultPrefix: settings.defaultPrefix || nextPrefix,
+    });
+  };
+
+  const removeAircraftNumberPrefix = (poolIndex: number, prefixIndex: number) => {
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const prefixes = settings.prefixes.filter((_, index) => index !== prefixIndex);
+    updateResourcePoolSettings(poolIndex, {
+      aircraftNumberPrefixes: prefixes,
+      aircraftNumberDefaultPrefix: prefixes.includes(settings.defaultPrefix)
+        ? settings.defaultPrefix
+        : prefixes[0] || '',
     });
   };
 
@@ -1466,7 +1504,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             ))}
           </div>
           <div className="space-y-3">
-            {config.resourcePools.map((pool, index) => (
+            {config.resourcePools.map((pool, index) => {
+              const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+              return (
               <div key={pool.id || pool.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2">
                 <Field label="Pool Code" value={pool.code} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { code: value })} />
                 <Field label="Pool Name" value={pool.name} disabled={!canEdit} onChange={(value) => updateRow('resourcePools', index, { name: value })} />
@@ -1482,6 +1522,61 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <Field label="Simulator Display Name" value={pool.settings?.ftdLabel || 'FTD'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { ftdLabel: value })} />
                   <Field label="Procedural Trainer Display Name" value={pool.settings?.cptLabel || 'CPT'} disabled={!canEdit} onChange={(value) => updateResourcePoolSettings(index, { cptLabel: value })} />
                 </div>
+                <div className="grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2">
+                  <div>
+                    <div className="text-sm font-bold text-cyan-100">{pool.settings?.aircraftLabel || 'Aircraft'} Number Format</div>
+                    <div className="mt-1 text-xs text-cyan-100/75">
+                      Controls how post-flight tail numbers are saved to completion records and logbooks.
+                    </div>
+                  </div>
+                  <ToggleField
+                    label="Use prefix with aircraft number"
+                    checked={aircraftNumberSettings.usePrefix}
+                    disabled={!canEdit}
+                    onChange={(checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })}
+                  />
+                  {aircraftNumberSettings.usePrefix && (
+                    <div className="space-y-2">
+                      <SelectField
+                        label="Default Prefix"
+                        value={aircraftNumberSettings.defaultPrefix}
+                        disabled={!canEdit}
+                        options={aircraftNumberSettings.prefixes}
+                        onChange={(value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })}
+                      />
+                      <div className="space-y-2">
+                        {aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => (
+                          <div key={`${prefix}-${prefixIndex}`} className="flex items-end gap-2">
+                            <div className="flex-1">
+                              <Field
+                                label={`Prefix ${prefixIndex + 1}`}
+                                value={prefix}
+                                disabled={!canEdit}
+                                onChange={(value) => updateAircraftNumberPrefix(index, prefixIndex, value)}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              disabled={!canEdit || aircraftNumberSettings.prefixes.length <= 1}
+                              onClick={() => removeAircraftNumberPrefix(index, prefixIndex)}
+                              className="h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => addAircraftNumberPrefix(index)}
+                        className="w-fit rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Add Prefix
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <ToggleField
                   label="Apply to V2 runtime"
                   checked={pool.settings?.applyToV2Runtime === true}
@@ -1496,7 +1591,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   <NumberField label="Ground" value={pool.settings?.ground ?? 6} disabled={!canEdit || pool.settings?.applyToV2Runtime !== true} onChange={(value) => updateResourcePoolSettings(index, { ground: value })} />
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         </div>
       </section>

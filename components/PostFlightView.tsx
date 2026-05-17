@@ -9,6 +9,12 @@ import { debouncedAuditLog, flushPendingAudits } from '../utils/auditDebounce';
 import { logAudit } from '../utils/auditLogger';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+    DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+    formatAircraftNumber,
+    parseAircraftNumber,
+    type AircraftNumberSettings,
+} from '../utils/aircraftNumberFormat';
 
 interface PostFlightViewProps {
   event: ScheduleEvent;
@@ -20,10 +26,11 @@ interface PostFlightViewProps {
   masterCurrencies?: MasterCurrency[];
   currencyRequirements?: CurrencyRequirement[];
   resourceDisplayNames?: ResourceDisplayNames;
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 // FIX: Changed to a named export to resolve module resolution errors.
-export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
     const { freezeState, checkAndWarn } = useSystemFreeze();
     // Find trainee or pilot for header
     const person = useMemo(() => {
@@ -55,8 +62,15 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     // State
     const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
     const [aircraftNumber, setAircraftNumber] = useState('001');
+    const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(aircraftNumberSettings.defaultPrefix);
     const [from, setFrom] = useState<string>(school);
     const [to, setTo] = useState<string>(school);
+
+    useEffect(() => {
+        if (!aircraftNumberSettings.prefixes.includes(aircraftNumberPrefix)) {
+            setAircraftNumberPrefix(aircraftNumberSettings.defaultPrefix);
+        }
+    }, [aircraftNumberPrefix, aircraftNumberSettings]);
 
     // Flight Mode State
     const [isFlightLog, setIsFlightLog] = useState(event.type === 'flight');
@@ -156,6 +170,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             initialFormState.current = {
                 result: '',
                 aircraftNumber: '001',
+                aircraftNumberPrefix: aircraftNumberSettings.defaultPrefix,
                 from: school,
                 to: school,
                 isFlightLog: event.type === 'flight',
@@ -226,8 +241,9 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
 
                 // Restore misc fields
                 if (row.aircraftNumber) {
-                    // Strip A54- prefix if present
-                    setAircraftNumber(row.aircraftNumber.replace(/^A54-/, ''));
+                    const parsedAircraftNumber = parseAircraftNumber(row.aircraftNumber, aircraftNumberSettings);
+                    setAircraftNumber(parsedAircraftNumber.number || '001');
+                    setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
                 }
                 if (row.fromIcao) setFrom(row.fromIcao);
                 if (row.toIcao)   setTo(row.toIcao);
@@ -247,7 +263,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 setIsDirty(false);
             })
             .catch(err => console.warn('[PostFlight] Could not load saved FlightLogEntry:', err));
-    }, [event?.id]);
+    }, [event?.id, aircraftNumberSettings]);
 
     // Also load the DCO result from EventCompletion on mount
     useEffect(() => {
@@ -311,7 +327,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     }, [totalTime, nightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
         isFlightLog, isFtdLog, isSolo, isDual,
         ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount,
-        aircraftNumber, duty]);
+        aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
 
     useEffect(() => {
         const crew = getLogbookData('Crew');
@@ -326,7 +342,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
     }, [totalTime, nightTime, ifActualTime, ifSimTime, captainTime, instructorTime,
         isFlightLog, isFtdLog, isSolo, isDual,
         ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount,
-        aircraftNumber, duty]);
+        aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, duty]);
 
     // --- LOGBOOK CALCULATION LOGIC ---
     const getLogbookData = (role: 'Captain' | 'Crew') => {
@@ -407,7 +423,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             year: yearStr,
             date: dateStr,
             type: isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
-            tail: isFtdLog ? `FTD-${aircraftNumber}` : `A54-${aircraftNumber}`,
+            tail: isFtdLog ? `FTD-${aircraftNumber}` : formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
             captain: captainName,
             crew: crewName,
             duty: duty,
@@ -437,7 +453,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (!initialFormState.current) return;
 
         const currentState = {
-            result, aircraftNumber, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0,
+            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0,
         };
         const initialStateForCompare = {
             ...initialFormState.current,
@@ -451,7 +467,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             setIsDirty(true);
             setSaveStatus('Saving...');
         }
-    }, [result, aircraftNumber, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
 
     const aircraftNumberOptions = useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')), []);
 
@@ -482,7 +498,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         }
         const saveData = {
             result,
-            aircraftNumber,
+            aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
             from,
             to,
             isFlightLog,
@@ -587,7 +603,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [isDirty, result, aircraftNumber, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+    }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
 
     const handleAttemptReturn = () => {
         if (isDirty) {
@@ -1104,10 +1120,25 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         <div className="flex-shrink-0" style={{width: '6.75rem'}}>
                             <label className="block text-sm font-medium text-gray-400">Number</label>
                             <div className="flex items-center space-x-1 mt-1">
-                                <span className="p-2 bg-gray-700 rounded-l-md text-white h-[38px] flex items-center">A54-</span>
-                                <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} className="block w-full bg-gray-700 border border-gray-600 rounded-r-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm appearance-none text-center">
-                                    {aircraftNumberOptions.map(num => <option key={num} value={num}>{num}</option>)}
-                                </select>
+                                {aircraftNumberSettings.usePrefix && (
+                                    <select
+                                        value={aircraftNumberPrefix}
+                                        onChange={e => setAircraftNumberPrefix(e.target.value)}
+                                        className="block w-20 bg-gray-700 border border-gray-600 rounded-l-md h-[38px] py-2 px-2 text-white focus:outline-none focus:ring-sky-500 sm:text-sm"
+                                    >
+                                        {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
+                                    </select>
+                                )}
+                                <input
+                                    type="text"
+                                    value={aircraftNumber}
+                                    onChange={e => setAircraftNumber(e.target.value.toUpperCase())}
+                                    list="aircraft-number-options"
+                                    className={`block w-full bg-gray-700 border border-gray-600 ${aircraftNumberSettings.usePrefix ? 'rounded-r-md' : 'rounded-md'} h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center`}
+                                />
+                                <datalist id="aircraft-number-options">
+                                    {aircraftNumberOptions.map(num => <option key={num} value={num} />)}
+                                </datalist>
                             </div>
                         </div>
 

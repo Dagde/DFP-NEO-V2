@@ -30,6 +30,9 @@ export interface PlatformResourcePool {
   settings?: {
     aircraft?: number;
     aircraftLabel?: string;
+    aircraftNumberUsePrefix?: boolean;
+    aircraftNumberPrefixes?: string[];
+    aircraftNumberDefaultPrefix?: string;
     ftd?: number;
     ftdLabel?: string;
     cpt?: number;

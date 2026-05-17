@@ -1970,6 +1970,44 @@ const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES)
   if (cptMatch) return `${names.cpt}${cptMatch[1]}`;
   return resourceId;
 };
+const DEFAULT_AIRCRAFT_NUMBER_SETTINGS = {
+  usePrefix: true,
+  prefixes: ["A54"],
+  defaultPrefix: "A54"
+};
+const cleanToken = (value) => typeof value === "string" ? value.trim() : "";
+const uniqueNonEmpty = (values) => Array.from(new Set(values.map(cleanToken).filter(Boolean)));
+const normaliseAircraftNumberSettings = (settings) => {
+  const prefixes = uniqueNonEmpty(Array.isArray(settings?.aircraftNumberPrefixes) ? settings?.aircraftNumberPrefixes : DEFAULT_AIRCRAFT_NUMBER_SETTINGS.prefixes);
+  const defaultPrefix = cleanToken(settings?.aircraftNumberDefaultPrefix) || prefixes[0] || DEFAULT_AIRCRAFT_NUMBER_SETTINGS.defaultPrefix;
+  const nextPrefixes = prefixes.includes(defaultPrefix) ? prefixes : [defaultPrefix, ...prefixes];
+  return {
+    usePrefix: settings?.aircraftNumberUsePrefix !== false,
+    prefixes: nextPrefixes,
+    defaultPrefix
+  };
+};
+const parseAircraftNumber = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
+  const raw = cleanToken(value);
+  const prefix = settings.defaultPrefix || settings.prefixes[0] || "";
+  if (!raw) return { prefix, number: "" };
+  for (const candidate of settings.prefixes) {
+    const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const match = raw.match(new RegExp(`^${escaped}(?:\\s+|-)?(.+)$`, "i"));
+    if (match) return { prefix: candidate, number: cleanToken(match[1]) };
+  }
+  const legacyMatch = raw.match(/^A54(?:\s+|-)?(.+)$/i);
+  if (legacyMatch) return { prefix: settings.prefixes.includes("A54") ? "A54" : prefix, number: cleanToken(legacyMatch[1]) };
+  return { prefix, number: raw };
+};
+const formatAircraftNumber = (number, prefix, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
+  const parsed = parseAircraftNumber(number, settings);
+  const cleanNumber = parsed.number || cleanToken(number);
+  if (!cleanNumber) return "";
+  if (!settings.usePrefix) return cleanNumber;
+  const cleanPrefix = cleanToken(prefix) || parsed.prefix || settings.defaultPrefix || settings.prefixes[0] || "";
+  return cleanPrefix ? `${cleanPrefix} ${cleanNumber}` : cleanNumber;
+};
 const DEFAULT_STAFF_RANK_ORDER = [
   "AIRMSHL",
   "AVM",
@@ -12781,7 +12819,7 @@ const convertTimeToDecimal = (timeStr) => {
   if (isNaN(hours) || isNaN(minutes)) return 0;
   return hours + minutes / 60;
 };
-const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, personnelDisplaySettings }) => {
+const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = "", isAddingTile = false, formationCallsigns = [], currentLocation = "", onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
   console.log("EventDetailModal opened - isAddingTile:", isAddingTile);
   console.log("Event data:", {
     eventCategory: event.eventCategory,
@@ -12807,7 +12845,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [eventType, setEventType] = reactExports.useState(event.type);
   const [startTime, setStartTime] = reactExports.useState(typeof event.startTime === "string" ? event.startTime : formatTime$4(event.startTime));
   const [area, setArea] = reactExports.useState(event.area || "A");
-  const [aircraftNumber, setAircraftNumber] = reactExports.useState(event.aircraftNumber || "001");
+  const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
+  const [aircraftNumber, setAircraftNumber] = reactExports.useState(initialAircraftNumber.number || "001");
+  const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
   const [aircraftCount, setAircraftCount] = reactExports.useState(1);
   const [isVisualAdjustMode, setIsVisualAdjustMode] = reactExports.useState(false);
   const [visualAdjustStartTime, setVisualAdjustStartTime] = reactExports.useState(event.startTime);
@@ -12818,6 +12858,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       setVisualAdjustEndTime(event.startTime + event.duration);
     }
   }, [event.startTime, event.duration, isVisualAdjustMode]);
+  reactExports.useEffect(() => {
+    if (!aircraftNumberSettings.prefixes.includes(aircraftNumberPrefix)) {
+      setAircraftNumberPrefix(aircraftNumberSettings.defaultPrefix);
+    }
+  }, [aircraftNumberPrefix, aircraftNumberSettings]);
   const [crew, setCrew] = reactExports.useState([{
     flightType: event.flightType,
     instructor: event.instructor || "",
@@ -13227,7 +13272,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setEventType(event.type);
     setStartTime(typeof event.startTime === "string" ? event.startTime : formatTime$4(event.startTime));
     setArea(event.area || "A");
-    setAircraftNumber(event.aircraftNumber || "001");
+    const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
+    setAircraftNumber(parsedAircraftNumber.number || "001");
+    setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     setAircraftCount(1);
     setCrew([{
       flightType: event.flightType,
@@ -13503,7 +13550,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         duration: typeof duration === "number" ? duration : 0,
         // Ensure duration is a number
         area: eventType === "flight" ? area : void 0,
-        aircraftNumber: eventType === "flight" ? aircraftNumber : void 0,
+        aircraftNumber: eventType === "flight" ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : void 0,
         color: eventColor,
         flightType: c.flightType,
         instructor: c.instructor,
@@ -14084,7 +14131,30 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   resourceDisplayNames.aircraft,
                   " Number"
                 ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num, children: num }, num)) })
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-center gap-1", children: [
+                  aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "select",
+                    {
+                      value: aircraftNumberPrefix,
+                      onChange: (e) => setAircraftNumberPrefix(e.target.value),
+                      disabled: isDeploy,
+                      className: "block w-24 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                      children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, children: prefix }, prefix))
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: aircraftNumber,
+                      onChange: (e) => setAircraftNumber(e.target.value.toUpperCase()),
+                      disabled: isDeploy,
+                      list: "flight-detail-aircraft-number-options",
+                      className: "block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "flight-detail-aircraft-number-options", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num }, num)) })
+                ] })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -15242,6 +15312,8 @@ const FlightTile = ({
   flightNumber,
   area,
   aircraftNumber,
+  aircraftNumberPrefix,
+  aircraftNumberSettings,
   callsign,
   color,
   timeOptions,
@@ -15266,6 +15338,7 @@ const FlightTile = ({
   onFlightNumberChange,
   onAreaChange,
   onAircraftChange,
+  onAircraftPrefixChange,
   onCallsignChange,
   editMode,
   layoutSaved,
@@ -15496,14 +15569,23 @@ const FlightTile = ({
   const aircraftContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 18, color: "rgba(255,255,255,0.55)", lineHeight: 1 }, children: [
       "#",
-      aircraftNumber || "001"
+      formatAircraftNumber(aircraftNumber || "001", aircraftNumberPrefix, aircraftNumberSettings)
     ] }),
+    aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "select",
+      {
+        value: aircraftNumberPrefix,
+        onChange: (e) => onAircraftPrefixChange(e.target.value),
+        style: { position: "absolute", top: 0, left: 0, width: "45%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
+        children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, style: { background: "#1a2f4a" }, children: prefix }, prefix))
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
         value: aircraftNumber,
         onChange: (e) => onAircraftChange(e.target.value),
-        style: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
+        style: { position: "absolute", top: 0, right: 0, width: aircraftNumberSettings.usePrefix ? "55%" : "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: zOverride ?? 10 },
         children: aircraftOptions.map((o) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: o.value, style: { background: "#1a2f4a" }, children: o.label }, o.value))
       }
     )
@@ -15667,6 +15749,7 @@ const AddFlightTileModal = ({
   locationOpAreas = {},
   formationCallsigns = [],
   userId,
+  aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   personnelDisplaySettings
 }) => {
   const [eventCategory, setEventCategory] = reactExports.useState("lmp_event");
@@ -15678,6 +15761,7 @@ const AddFlightTileModal = ({
   const [duration, setDuration] = reactExports.useState(1.2);
   const [area, setArea] = reactExports.useState("");
   const [aircraftNumber, setAircraftNumber] = reactExports.useState("001");
+  const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(aircraftNumberSettings.defaultPrefix);
   const [locationType, setLocationType] = reactExports.useState("Local");
   const [callsign, setCallsign] = reactExports.useState("");
   const [callsignOptions, setCallsignOptions] = reactExports.useState([]);
@@ -16020,7 +16104,7 @@ const AddFlightTileModal = ({
         startTime,
         duration,
         area,
-        aircraftNumber,
+        aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
         callsign,
         locationType,
         color: tileColor,
@@ -16153,6 +16237,8 @@ const AddFlightTileModal = ({
                     flightNumber,
                     area,
                     aircraftNumber,
+                    aircraftNumberPrefix,
+                    aircraftNumberSettings,
                     callsign,
                     color: tileColor,
                     timeOptions,
@@ -16184,6 +16270,7 @@ const AddFlightTileModal = ({
                     onFlightNumberChange: handleFlightNumberChange,
                     onAreaChange: setArea,
                     onAircraftChange: setAircraftNumber,
+                    onAircraftPrefixChange: setAircraftNumberPrefix,
                     onCallsignChange: setCallsign
                   }
                 ) }),
@@ -58226,6 +58313,9 @@ const PlatformConfigurationSettings = ({
           settings: {
             applyToV2Runtime: false,
             aircraftLabel: "PC-21",
+            aircraftNumberUsePrefix: true,
+            aircraftNumberPrefixes: ["A54"],
+            aircraftNumberDefaultPrefix: "A54",
             ftdLabel: "FTD",
             cptLabel: "CPT",
             aircraft: 24,
@@ -58416,6 +58506,31 @@ const PlatformConfigurationSettings = ({
         ...currentSettings,
         ...changes
       }
+    });
+  };
+  const updateAircraftNumberPrefix = (poolIndex, prefixIndex, value) => {
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const prefixes = settings.prefixes.map((prefix, index) => index === prefixIndex ? value.toUpperCase().trim() : prefix).filter(Boolean);
+    const uniquePrefixes = Array.from(new Set(prefixes));
+    updateResourcePoolSettings(poolIndex, {
+      aircraftNumberPrefixes: uniquePrefixes,
+      aircraftNumberDefaultPrefix: uniquePrefixes.includes(settings.defaultPrefix) ? settings.defaultPrefix : uniquePrefixes[0] || ""
+    });
+  };
+  const addAircraftNumberPrefix = (poolIndex) => {
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const nextPrefix = `PREFIX-${settings.prefixes.length + 1}`;
+    updateResourcePoolSettings(poolIndex, {
+      aircraftNumberPrefixes: [...settings.prefixes, nextPrefix],
+      aircraftNumberDefaultPrefix: settings.defaultPrefix || nextPrefix
+    });
+  };
+  const removeAircraftNumberPrefix = (poolIndex, prefixIndex) => {
+    const settings = normaliseAircraftNumberSettings(config.resourcePools[poolIndex]?.settings || {});
+    const prefixes = settings.prefixes.filter((_, index) => index !== prefixIndex);
+    updateResourcePoolSettings(poolIndex, {
+      aircraftNumberPrefixes: prefixes,
+      aircraftNumberDefaultPrefix: prefixes.includes(settings.defaultPrefix) ? settings.defaultPrefix : prefixes[0] || ""
     });
   };
   const save = async () => {
@@ -58657,36 +58772,100 @@ const PlatformConfigurationSettings = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: aircraft.name, disabled: !canEdit, onChange: (value) => updateRow("aircraftTypes", index, { name: value }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Category", value: aircraft.category || "Training", disabled: !canEdit, options: ["Training", "Fighter", "Airlift", "Maritime", "Rotary", "Other"], onChange: (value) => updateRow("aircraftTypes", index, { category: value }) })
         ] }, aircraft.id || aircraft.code || index)) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.resourcePools.map((pool, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2 md:grid-cols-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3 text-xs text-cyan-100/80", children: "Display terminology only. Existing schedule records keep stable internal resource keys." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Display Name", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator Display Name", value: pool.settings?.ftdLabel || "FTD", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer Display Name", value: pool.settings?.cptLabel || "CPT", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            ToggleField,
-            {
-              label: "Apply to V2 runtime",
-              checked: pool.settings?.applyToV2Runtime === true,
-              disabled: !canEdit,
-              onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft Rows", value: pool.settings?.aircraft ?? 24, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator Rows", value: pool.settings?.ftd ?? 5, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Procedural Trainer Rows", value: pool.settings?.cpt ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
-          ] })
-        ] }, pool.id || pool.code || index)) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: config.resourcePools.map((pool, index) => {
+          const aircraftNumberSettings = normaliseAircraftNumberSettings(pool.settings || {});
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Code", value: pool.code, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { code: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Pool Name", value: pool.name, disabled: !canEdit, onChange: (value) => updateRow("resourcePools", index, { name: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Location", value: pool.locationCode || "", disabled: !canEdit, options: ["", ...config.locations.map((location) => location.code)], onChange: (value) => updateRow("resourcePools", index, { locationCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Owning Unit", value: pool.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("resourcePools", index, { unitCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: pool.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("resourcePools", index, { aircraftTypeCode: value || null }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Pool Type", value: pool.poolType || "Dedicated", disabled: !canEdit, options: ["Dedicated", "Shared"], onChange: (value) => updateRow("resourcePools", index, { poolType: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2 md:grid-cols-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "md:col-span-3 text-xs text-cyan-100/80", children: "Display terminology only. Existing schedule records keep stable internal resource keys." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Aircraft Display Name", value: pool.settings?.aircraftLabel || "PC-21", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { aircraftLabel: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Simulator Display Name", value: pool.settings?.ftdLabel || "FTD", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { ftdLabel: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Procedural Trainer Display Name", value: pool.settings?.cptLabel || "CPT", disabled: !canEdit, onChange: (value) => updateResourcePoolSettings(index, { cptLabel: value }) })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3 md:col-span-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-sm font-bold text-cyan-100", children: [
+                  pool.settings?.aircraftLabel || "Aircraft",
+                  " Number Format"
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-cyan-100/75", children: "Controls how post-flight tail numbers are saved to completion records and logbooks." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                ToggleField,
+                {
+                  label: "Use prefix with aircraft number",
+                  checked: aircraftNumberSettings.usePrefix,
+                  disabled: !canEdit,
+                  onChange: (checked) => updateResourcePoolSettings(index, { aircraftNumberUsePrefix: checked })
+                }
+              ),
+              aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectField,
+                  {
+                    label: "Default Prefix",
+                    value: aircraftNumberSettings.defaultPrefix,
+                    disabled: !canEdit,
+                    options: aircraftNumberSettings.prefixes,
+                    onChange: (value) => updateResourcePoolSettings(index, { aircraftNumberDefaultPrefix: value })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: aircraftNumberSettings.prefixes.map((prefix, prefixIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Field,
+                    {
+                      label: `Prefix ${prefixIndex + 1}`,
+                      value: prefix,
+                      disabled: !canEdit,
+                      onChange: (value) => updateAircraftNumberPrefix(index, prefixIndex, value)
+                    }
+                  ) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      disabled: !canEdit || aircraftNumberSettings.prefixes.length <= 1,
+                      onClick: () => removeAircraftNumberPrefix(index, prefixIndex),
+                      className: "h-[38px] rounded border border-gray-600 bg-gray-950 px-3 text-xs font-bold text-gray-200 hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50",
+                      children: "Delete"
+                    }
+                  )
+                ] }, `${prefix}-${prefixIndex}`)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    type: "button",
+                    disabled: !canEdit,
+                    onClick: () => addAircraftNumberPrefix(index),
+                    className: "w-fit rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50",
+                    children: "Add Prefix"
+                  }
+                )
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              ToggleField,
+              {
+                label: "Apply to V2 runtime",
+                checked: pool.settings?.applyToV2Runtime === true,
+                disabled: !canEdit,
+                onChange: (checked) => updateResourcePoolSettings(index, { applyToV2Runtime: checked })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Aircraft Rows", value: pool.settings?.aircraft ?? 24, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { aircraft: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Simulator Rows", value: pool.settings?.ftd ?? 5, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ftd: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Procedural Trainer Rows", value: pool.settings?.cpt ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { cpt: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "STBY", value: pool.settings?.standby ?? 4, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { standby: value }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Ground", value: pool.settings?.ground ?? 6, disabled: !canEdit || pool.settings?.applyToV2Runtime !== true, onChange: (value) => updateResourcePoolSettings(index, { ground: value }) })
+            ] })
+          ] }, pool.id || pool.code || index);
+        }) })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-unit-modules", className: getSectionClass("platform-unit-modules"), children: [
@@ -61353,7 +61532,7 @@ const LocalityChangeFlyout = ({ locality }) => {
     ] })
   ] }) }) });
 };
-const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instructorsData, masterCurrencies = [], currencyRequirements = [], resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
   const { freezeState, checkAndWarn } = useSystemFreeze$1();
   reactExports.useMemo(() => {
     const personName = event.student || event.pilot;
@@ -61375,8 +61554,14 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
   };
   const [result, setResult] = reactExports.useState("");
   const [aircraftNumber, setAircraftNumber] = reactExports.useState("001");
+  const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(aircraftNumberSettings.defaultPrefix);
   const [from, setFrom] = reactExports.useState(school);
   const [to, setTo] = reactExports.useState(school);
+  reactExports.useEffect(() => {
+    if (!aircraftNumberSettings.prefixes.includes(aircraftNumberPrefix)) {
+      setAircraftNumberPrefix(aircraftNumberSettings.defaultPrefix);
+    }
+  }, [aircraftNumberPrefix, aircraftNumberSettings]);
   const [isFlightLog, setIsFlightLog] = reactExports.useState(event.type === "flight");
   const [isFtdLog, setIsFtdLog] = reactExports.useState(event.type === "ftd");
   const [isSolo, setIsSolo] = reactExports.useState(event.flightType === "Solo");
@@ -61452,6 +61637,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       initialFormState.current = {
         result: "",
         aircraftNumber: "001",
+        aircraftNumberPrefix: aircraftNumberSettings.defaultPrefix,
         from: school,
         to: school,
         isFlightLog: event.type === "flight",
@@ -61516,7 +61702,9 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         setVorCount(row.vorCount);
       }
       if (row.aircraftNumber) {
-        setAircraftNumber(row.aircraftNumber.replace(/^A54-/, ""));
+        const parsedAircraftNumber = parseAircraftNumber(row.aircraftNumber, aircraftNumberSettings);
+        setAircraftNumber(parsedAircraftNumber.number || "001");
+        setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
       }
       if (row.fromIcao) setFrom(row.fromIcao);
       if (row.toIcao) setTo(row.toIcao);
@@ -61531,7 +61719,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       if (crewSnap && typeof crewSnap === "object") setCrewLogOverride(crewSnap);
       setIsDirty(false);
     }).catch((err) => console.warn("[PostFlight] Could not load saved FlightLogEntry:", err));
-  }, [event?.id]);
+  }, [event?.id, aircraftNumberSettings]);
   reactExports.useEffect(() => {
     if (!event?.id) return;
     fetch(`/api/event-completions?scheduleEventId=${encodeURIComponent(event.id)}`, {
@@ -61593,6 +61781,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     vorChecked,
     vorCount,
     aircraftNumber,
+    aircraftNumberPrefix,
+    aircraftNumberSettings,
     duty
   ]);
   reactExports.useEffect(() => {
@@ -61624,6 +61814,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     vorChecked,
     vorCount,
     aircraftNumber,
+    aircraftNumberPrefix,
+    aircraftNumberSettings,
     duty
   ]);
   const getLogbookData = (role) => {
@@ -61683,7 +61875,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       year: yearStr,
       date: dateStr,
       type: isFtdLog ? resourceDisplayNames.ftd : resourceDisplayNames.aircraft,
-      tail: isFtdLog ? `FTD-${aircraftNumber}` : `A54-${aircraftNumber}`,
+      tail: isFtdLog ? `FTD-${aircraftNumber}` : formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
       captain: captainName,
       crew: crewName,
       duty,
@@ -61711,6 +61903,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const currentState = {
       result,
       aircraftNumber,
+      aircraftNumberPrefix,
       from,
       to,
       isFlightLog,
@@ -61746,7 +61939,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       setIsDirty(true);
       setSaveStatus("Saving...");
     }
-  }, [result, aircraftNumber, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
   const aircraftNumberOptions = reactExports.useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")), []);
   const handleResultChange = (newResult) => {
     const oldResult = result;
@@ -61770,7 +61963,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     }
     const saveData = {
       result,
-      aircraftNumber,
+      aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
       from,
       to,
       isFlightLog,
@@ -61855,7 +62048,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       }, 1e3);
       return () => clearTimeout(timer);
     }
-  }, [isDirty, result, aircraftNumber, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+  }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
   const handleAttemptReturn = () => {
     if (isDirty) {
       setShowUnsavedWarning(true);
@@ -62164,8 +62357,26 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "6.75rem" }, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Number" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-1 mt-1", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "p-2 bg-gray-700 rounded-l-md text-white h-[38px] flex items-center", children: "A54-" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: aircraftNumber, onChange: (e) => setAircraftNumber(e.target.value), className: "block w-full bg-gray-700 border border-gray-600 rounded-r-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm appearance-none text-center", children: aircraftNumberOptions.map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num, children: num }, num)) })
+                aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "select",
+                  {
+                    value: aircraftNumberPrefix,
+                    onChange: (e) => setAircraftNumberPrefix(e.target.value),
+                    className: "block w-20 bg-gray-700 border border-gray-600 rounded-l-md h-[38px] py-2 px-2 text-white focus:outline-none focus:ring-sky-500 sm:text-sm",
+                    children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, children: prefix }, prefix))
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
+                  {
+                    type: "text",
+                    value: aircraftNumber,
+                    onChange: (e) => setAircraftNumber(e.target.value.toUpperCase()),
+                    list: "aircraft-number-options",
+                    className: `block w-full bg-gray-700 border border-gray-600 ${aircraftNumberSettings.usePrefix ? "rounded-r-md" : "rounded-md"} h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm text-center`
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "aircraft-number-options", children: aircraftNumberOptions.map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num }, num)) })
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0", style: { width: "12rem" }, children: [
@@ -72836,6 +73047,10 @@ const App = () => {
     () => getResourceDisplayNames(activePlatformResourcePool),
     [activePlatformResourcePool]
   );
+  const aircraftNumberSettings = reactExports.useMemo(
+    () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
+    [activePlatformResourcePool]
+  );
   const personnelDisplaySettings = reactExports.useMemo(
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
@@ -80709,7 +80924,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                       traineeFullName: pfEvent.student ?? pfEvent.pilot ?? "Unknown",
                       instructorName: pfEvent.instructor ?? void 0,
                       dcoResult: data.result,
-                      aircraftNumber: data.aircraftNumber ? `A54-${data.aircraftNumber}` : void 0,
+                      aircraftNumber: data.aircraftNumber || void 0,
                       takeoffTime: data.takeoffTime ?? void 0,
                       landTime: data.landTime ?? void 0,
                       totalFlightTime,
@@ -80853,7 +81068,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                     eventCode: pfEvt.flightNumber || pfEvt.id,
                     eventDate: pfEvt.date,
                     eventType: pfEvt.type,
-                    aircraftNumber: data.aircraftNumber ? `A54-${data.aircraftNumber}` : void 0,
+                    aircraftNumber: data.aircraftNumber || void 0,
                     fromIcao: data.from || void 0,
                     toIcao: data.to || void 0,
                     duty: data.duty || void 0,
@@ -80959,7 +81174,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               instructorsData,
               masterCurrencies,
               currencyRequirements,
-              resourceDisplayNames
+              resourceDisplayNames,
+              aircraftNumberSettings
             }
           );
         }
@@ -81263,6 +81479,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           locationOpAreas,
           formationCallsigns,
           userId: getCurrentUserId() ?? void 0,
+          aircraftNumberSettings,
           personnelDisplaySettings
         }
       ),
@@ -81403,7 +81620,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           onSendAlert: handleSendAlert,
           onClearAlert: handleClearAlert,
           canSendAlert: ["Super Admin", "Admin", "Scheduler"].includes(currentUserPermission) && activeView === "Program Schedule",
-          resourceDisplayNames
+          resourceDisplayNames,
+          aircraftNumberSettings
         },
         `${selectedEvent.id}-${selectedEvent.instructor || "no-instructor"}`
       ),

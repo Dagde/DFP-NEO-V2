@@ -12,6 +12,12 @@ import MassBriefCompleteFlyout, { MassBriefConfirmationFlyout } from './MassBrie
 import { VisualAdjustModal } from './VisualAdjustModal';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import {
+    DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+    formatAircraftNumber,
+    parseAircraftNumber,
+    type AircraftNumberSettings,
+} from '../utils/aircraftNumberFormat';
 
 // ── Trainee Scores Modal (Grade Progression Chart) ───────────────────────────
 
@@ -381,6 +387,7 @@ interface EventDetailModalProps {
     baselineEvent?: any | null;
     onClearAlert?: (eventId: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
+    aircraftNumberSettings?: AircraftNumberSettings;
     personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
@@ -419,7 +426,7 @@ const convertTimeToDecimal = (timeStr: string): number => {
     return hours + (minutes / 60);
 };
 
-export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, personnelDisplaySettings }) => {
+export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClose, onSave, onDeleteRequest, isEditingDefault = false, instructors, trainees, syllabus, syllabusDetails, highlightedField, school, traineesData, instructorsData, courseColors, onNavigateToHateSheet, onNavigateToSyllabus, onOpenPt051, onOpenAuth, onOpenPostFlight, isConflict, onNeoClick, traineeLMPs, oracleContextForModal, sctRequests = [], sctEvents = [], eventsForDate = [], onScoresCreated, publishedSchedules = {}, nextDayBuildEvents = [], activeView = '', isAddingTile = false, formationCallsigns = [], currentLocation = '', onVisualAdjustStart, onVisualAdjustEnd, onSavePT051Assessment, cancellationCodes = [], onCancelEvent, onRestoreEvent, onSendAlert, canSendAlert = false, alertData = null, baselineEvent = null, onClearAlert, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS, personnelDisplaySettings }) => {
     
     console.log('EventDetailModal opened - isAddingTile:', isAddingTile);
     console.log('Event data:', {
@@ -450,7 +457,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [eventType, setEventType] = useState(event.type);
     const [startTime, setStartTime] = useState(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
     const [area, setArea] = useState(event.area || 'A');
-    const [aircraftNumber, setAircraftNumber] = useState(event.aircraftNumber || '001');
+    const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
+    const [aircraftNumber, setAircraftNumber] = useState(initialAircraftNumber.number || '001');
+    const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(initialAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
     const [aircraftCount, setAircraftCount] = useState(1);
     const [isVisualAdjustMode, setIsVisualAdjustMode] = useState(false);
     const [visualAdjustStartTime, setVisualAdjustStartTime] = useState(event.startTime);
@@ -463,6 +472,12 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             setVisualAdjustEndTime(event.startTime + event.duration);
         }
     }, [event.startTime, event.duration, isVisualAdjustMode]);
+
+    useEffect(() => {
+        if (!aircraftNumberSettings.prefixes.includes(aircraftNumberPrefix)) {
+            setAircraftNumberPrefix(aircraftNumberSettings.defaultPrefix);
+        }
+    }, [aircraftNumberPrefix, aircraftNumberSettings]);
     const [crew, setCrew] = useState<CrewMember[]>([{
         flightType: event.flightType,
         instructor: event.instructor || '',
@@ -1034,7 +1049,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setEventType(event.type);
         setStartTime(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
         setArea(event.area || 'A');
-        setAircraftNumber(event.aircraftNumber || '001');
+        const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
+        setAircraftNumber(parsedAircraftNumber.number || '001');
+        setAircraftNumberPrefix(parsedAircraftNumber.prefix || aircraftNumberSettings.defaultPrefix);
         setAircraftCount(1);
         setCrew([{ 
             flightType: event.flightType, 
@@ -1414,7 +1431,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 resourceId,
                 duration: typeof duration === 'number' ? duration : 0, // Ensure duration is a number
                 area: eventType === 'flight' ? area : undefined,
-                aircraftNumber: eventType === 'flight' ? aircraftNumber : undefined,
+                aircraftNumber: eventType === 'flight' ? formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings) : undefined,
                 color: eventColor,
                 flightType: c.flightType,
                 instructor: c.instructor,
@@ -2120,9 +2137,29 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.aircraft} Number</label>
-                                            <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
-                                                {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num}>{num}</option>)}
-                                            </select>
+                                            <div className="mt-1 flex items-center gap-1">
+                                                {aircraftNumberSettings.usePrefix && (
+                                                    <select
+                                                        value={aircraftNumberPrefix}
+                                                        onChange={e => setAircraftNumberPrefix(e.target.value)}
+                                                        disabled={isDeploy}
+                                                        className="block w-24 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
+                                                    </select>
+                                                )}
+                                                <input
+                                                    type="text"
+                                                    value={aircraftNumber}
+                                                    onChange={e => setAircraftNumber(e.target.value.toUpperCase())}
+                                                    disabled={isDeploy}
+                                                    list="flight-detail-aircraft-number-options"
+                                                    className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                />
+                                                <datalist id="flight-detail-aircraft-number-options">
+                                                    {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num} />)}
+                                                </datalist>
+                                            </div>
                                         </div>
                                         </>
                                         )}

@@ -4,6 +4,11 @@ import { loadUserPreferences, saveUserPreference } from '../utils/userPreference
 import { ScheduleEvent, SyllabusItemDetail, Trainee, Instructor, Score } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import {
+  DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+  formatAircraftNumber,
+  type AircraftNumberSettings,
+} from '../utils/aircraftNumberFormat';
 
 interface AddFlightTileModalProps {
   onClose: () => void;
@@ -21,6 +26,7 @@ interface AddFlightTileModalProps {
   locationOpAreas?: Record<string, string[]>;
   formationCallsigns?: { name: string; code: string; unit: string; location: string; locationCode: string }[];
   userId?: string;
+  aircraftNumberSettings?: AircraftNumberSettings;
   personnelDisplaySettings?: PersonnelDisplaySettings;
 }
 
@@ -503,6 +509,8 @@ interface TileProps {
   flightNumber: string;
   area: string;
   aircraftNumber: string;
+  aircraftNumberPrefix: string;
+  aircraftNumberSettings: AircraftNumberSettings;
   callsign: string;
   color: string;
   // options
@@ -531,6 +539,7 @@ interface TileProps {
   onFlightNumberChange: (code: string, durationHrs?: number) => void;
   onAreaChange: (v: string) => void;
   onAircraftChange: (v: string) => void;
+  onAircraftPrefixChange: (v: string) => void;
   onCallsignChange: (v: string) => void;
   // lifted layout state (owned by AddFlightTileModal)
   editMode: boolean;
@@ -544,13 +553,13 @@ interface TileProps {
 
 const FlightTile: React.FC<TileProps> = ({
   flightType, startTime, picName, studentName, duration, flightNumber,
-  area, aircraftNumber, callsign, color,
+  area, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, callsign, color,
   timeOptions, durationOptions, areaOptions, aircraftOptions, callsignOptions,
   formationCallsigns,
   allUnits, getLayer2, getNames, getDisplayLabel,
   courseOptions, getEventsForCourse, nextLMPEvent, eventCategory,
   onFlightTypeChange, onStartTimeChange, onPicNameChange, onStudentNameChange,
-  onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onCallsignChange,
+  onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onAircraftPrefixChange, onCallsignChange,
   editMode, layoutSaved, positions, savedPositions,
   onEnterEditMode, onExitEditMode, onDragPosition,
 }) => {
@@ -793,9 +802,15 @@ const FlightTile: React.FC<TileProps> = ({
 
   const aircraftContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <span style={{ fontFamily: monoFamily, fontSize: 18, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{aircraftNumber || '001'}</span>
+      <span style={{ fontFamily: monoFamily, fontSize: 18, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{formatAircraftNumber(aircraftNumber || '001', aircraftNumberPrefix, aircraftNumberSettings)}</span>
+      {aircraftNumberSettings.usePrefix && (
+        <select value={aircraftNumberPrefix} onChange={e => onAircraftPrefixChange(e.target.value)}
+          style={{ position: 'absolute', top: 0, left: 0, width: '45%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
+          {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix} style={{ background: '#1a2f4a' }}>{prefix}</option>)}
+        </select>
+      )}
       <select value={aircraftNumber} onChange={e => onAircraftChange(e.target.value)}
-        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
+        style={{ position: 'absolute', top: 0, right: 0, width: aircraftNumberSettings.usePrefix ? '55%' : '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {aircraftOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
       </select>
     </div>
@@ -952,6 +967,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   locationOpAreas = {},
   formationCallsigns = [],
   userId,
+  aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
   personnelDisplaySettings,
 }) => {
   const [eventCategory, setEventCategory] = useState<'lmp_event'|'lmp_currency'|'sct'|'staff_cat'|'twr_di'>('lmp_event');
@@ -963,6 +979,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [duration,      setDuration]      = useState(1.2);
   const [area,          setArea]          = useState('');
   const [aircraftNumber,setAircraftNumber]= useState('001');
+  const [aircraftNumberPrefix,setAircraftNumberPrefix]= useState(aircraftNumberSettings.defaultPrefix);
   const [locationType,  setLocationType]  = useState<'Local'|'Land Away'>('Local');
   const [callsign,      setCallsign]      = useState('');
   const [callsignOptions, setCallsignOptions] = useState<string[]>([]);
@@ -1374,7 +1391,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
         startTime,
         duration,
         area,
-        aircraftNumber,
+        aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
         callsign,
         locationType,
         color: tileColor,
@@ -1512,6 +1529,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   flightNumber={flightNumber}
                   area={area}
                   aircraftNumber={aircraftNumber}
+                  aircraftNumberPrefix={aircraftNumberPrefix}
+                  aircraftNumberSettings={aircraftNumberSettings}
                   callsign={callsign}
                   color={tileColor}
                   timeOptions={timeOptions}
@@ -1543,6 +1562,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   onFlightNumberChange={handleFlightNumberChange}
                   onAreaChange={setArea}
                   onAircraftChange={setAircraftNumber}
+                  onAircraftPrefixChange={setAircraftNumberPrefix}
                   onCallsignChange={setCallsign}
                 />
               </div>

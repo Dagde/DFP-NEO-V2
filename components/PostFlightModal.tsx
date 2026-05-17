@@ -2,6 +2,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ScheduleEvent, Trainee } from '../types';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+    DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+    formatAircraftNumber,
+    type AircraftNumberSettings,
+} from '../utils/aircraftNumberFormat';
 
 interface PostFlightModalProps {
   event: ScheduleEvent;
@@ -10,9 +15,10 @@ interface PostFlightModalProps {
   school: 'ESL' | 'PEA';
   traineesData: Trainee[];
   resourceDisplayNames?: ResourceDisplayNames;
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
-const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSave, school, traineesData, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => {
+const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSave, school, traineesData, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
     // Find trainee or pilot for header
     const person = useMemo(() => {
         const personName = event.student || event.pilot;
@@ -22,6 +28,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
     // State
     const [result, setResult] = useState<'DCO' | 'DPCO' | 'DNCO' | ''>('');
     const [aircraftNumber, setAircraftNumber] = useState('001');
+    const [aircraftNumberPrefix, setAircraftNumberPrefix] = useState(aircraftNumberSettings.defaultPrefix);
     // FIX: Explicitly type 'from' and 'to' as string to allow any airport code.
     const [from, setFrom] = useState<string>(school);
     const [to, setTo] = useState<string>(school);
@@ -55,7 +62,7 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
     const handleSave = () => {
         const saveData = {
             result,
-            aircraftNumber,
+            aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
             from,
             to,
             takeoffTime: `${takeoffHour}:${takeoffMinute}`,
@@ -96,10 +103,15 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
                         <div className="bg-gray-700/50 p-4 rounded-lg">
                             <label className="block text-sm font-medium text-gray-400 mb-2">{resourceDisplayNames.aircraft} Number</label>
                             <div className="flex items-center space-x-2">
-                                <span className="text-white font-semibold">A54-</span>
-                                <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
-                                    {aircraftNumberOptions.map(num => <option key={num} value={num}>{num}</option>)}
-                                </select>
+                                {aircraftNumberSettings.usePrefix && (
+                                    <select value={aircraftNumberPrefix} onChange={e => setAircraftNumberPrefix(e.target.value)} className="block w-24 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                        {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
+                                    </select>
+                                )}
+                                <input type="text" value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value.toUpperCase())} list="post-flight-modal-aircraft-number-options" className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" />
+                                <datalist id="post-flight-modal-aircraft-number-options">
+                                    {aircraftNumberOptions.map(num => <option key={num} value={num} />)}
+                                </datalist>
                             </div>
                         </div>
 
@@ -132,10 +144,12 @@ const PostFlightModal: React.FC<PostFlightModalProps> = ({ event, onClose, onSav
                             <div className="flex-shrink-0">
                                 <label className="block text-sm font-medium text-gray-400">Number</label>
                                 <div className="flex items-center space-x-1 mt-1">
-                                    <span className="p-2 bg-gray-700 rounded-l-md text-white h-[38px] flex items-center">A54-</span>
-                                    <select value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value)} className="block w-24 bg-gray-700 border border-gray-600 rounded-r-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
-                                        {aircraftNumberOptions.map(num => <option key={num} value={num}>{num}</option>)}
-                                    </select>
+                                    {aircraftNumberSettings.usePrefix && (
+                                        <select value={aircraftNumberPrefix} onChange={e => setAircraftNumberPrefix(e.target.value)} className="block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                            {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
+                                        </select>
+                                    )}
+                                    <input type="text" value={aircraftNumber} onChange={e => setAircraftNumber(e.target.value.toUpperCase())} list="post-flight-modal-aircraft-number-options" className="block w-24 bg-gray-700 border border-gray-600 rounded-md h-[38px] py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" />
                                 </div>
                             </div>
                             {/* Captain */}

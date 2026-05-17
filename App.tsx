@@ -31,6 +31,7 @@ import {
     getResourceDisplayNames,
     type ResourceDisplayNames,
 } from './utils/resourceDisplayNames';
+import { normaliseAircraftNumberSettings } from './utils/aircraftNumberFormat';
 import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
@@ -5637,6 +5638,11 @@ const App: React.FC = () => {
     const [availableCptCount, setAvailableCptCount] = useState(4);
     const resourceDisplayNames = useMemo(
         () => getResourceDisplayNames(activePlatformResourcePool),
+        [activePlatformResourcePool]
+    );
+
+    const aircraftNumberSettings = useMemo(
+        () => normaliseAircraftNumberSettings(activePlatformResourcePool?.settings || {}),
         [activePlatformResourcePool]
     );
     const personnelDisplaySettings = useMemo(
@@ -15432,9 +15438,7 @@ updates.forEach(update => {
                                                 traineeFullName: pfEvent.student ?? pfEvent.pilot ?? 'Unknown',
                                                 instructorName:  pfEvent.instructor ?? undefined,
                                                 dcoResult:       data.result as 'DCO' | 'DPCO' | 'DNCO',
-                                                aircraftNumber:  data.aircraftNumber
-                                                    ? `A54-${data.aircraftNumber}`
-                                                    : undefined,
+                                                aircraftNumber:  data.aircraftNumber || undefined,
                                                 takeoffTime:     data.takeoffTime     ?? undefined,
                                                 landTime:        data.landTime        ?? undefined,
                                                 totalFlightTime,
@@ -15618,7 +15622,7 @@ updates.forEach(update => {
                                             eventCode:       pfEvt.flightNumber || pfEvt.id,
                                             eventDate:       pfEvt.date,
                                             eventType:       pfEvt.type as string,
-                                            aircraftNumber:  data.aircraftNumber ? `A54-${data.aircraftNumber}` : undefined,
+                                            aircraftNumber:  data.aircraftNumber || undefined,
                                             fromIcao:        data.from    || undefined,
                                             toIcao:          data.to      || undefined,
                                             duty:            data.duty    || undefined,
@@ -15739,6 +15743,7 @@ updates.forEach(update => {
                                 masterCurrencies={masterCurrencies}
                                 currencyRequirements={currencyRequirements}
                                 resourceDisplayNames={resourceDisplayNames}
+                                aircraftNumberSettings={aircraftNumberSettings}
                            />;
                 }
                 return null;
@@ -16048,6 +16053,7 @@ updates.forEach(update => {
                     locationOpAreas={locationOpAreas}
                     formationCallsigns={formationCallsigns}
                     userId={getCurrentUserId() ?? undefined}
+                    aircraftNumberSettings={aircraftNumberSettings}
                     personnelDisplaySettings={personnelDisplaySettings}
                 />
             )}
@@ -16209,6 +16215,7 @@ updates.forEach(update => {
                     onClearAlert={handleClearAlert}
                     canSendAlert={['Super Admin', 'Admin', 'Scheduler'].includes(currentUserPermission) && activeView === 'Program Schedule'}
                     resourceDisplayNames={resourceDisplayNames}
+                    aircraftNumberSettings={aircraftNumberSettings}
                 />
             )}
 
