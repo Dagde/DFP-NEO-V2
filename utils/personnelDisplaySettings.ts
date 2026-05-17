@@ -163,6 +163,28 @@ export const getRankOrderForGroup = (
   return group === 'trainee' && safe.useSeparateTraineeRankOrder ? safe.traineeRankOrder : safe.staffRankOrder;
 };
 
+export const flattenRankOrder = (rankOrder: string[] = []): string[] => {
+  const seen = new Set<string>();
+  return rankOrder
+    .flatMap((entry) => splitRankGroup(entry))
+    .map((rank) => rank.trim())
+    .filter(Boolean)
+    .filter((rank) => {
+      const key = rankKey(rank);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
+
+export const getRankOptionsForGroup = (
+  settings?: Partial<PersonnelDisplaySettings>,
+  group: PersonnelGroup = 'staff',
+): string[] => {
+  const configuredRanks = flattenRankOrder(getRankOrderForGroup(settings, group));
+  return configuredRanks.length ? configuredRanks : flattenRankOrder(DEFAULT_STAFF_RANK_ORDER);
+};
+
 export const getRankSortIndex = (
   rank?: string | null,
   settings?: Partial<PersonnelDisplaySettings>,

@@ -9,6 +9,11 @@ import { logAudit } from '../utils/auditLogger';
 import CurrencyPanel from './CurrencyPanel';
 import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+  DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  getRankOptionsForGroup,
+  type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
 
 interface InstructorProfileFlyoutProps {
   instructor: Instructor;
@@ -34,6 +39,7 @@ interface InstructorProfileFlyoutProps {
   currentUserName?: string;
   resourceDisplayNames?: ResourceDisplayNames;
   instructorLabel?: string;
+  personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
 }
 
 const InputField: React.FC<{ label: string; value: string | number; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; readOnly?: boolean; type?: string }> = ({ label, value, onChange, readOnly, type = 'text' }) => (
@@ -142,6 +148,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   currentUserId, currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   instructorLabel = 'QFI',
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
 }) => {
   const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -150,6 +157,12 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   const [idNumber, setIdNumber] = useState(instructor.idNumber);
   const [name, setName] = useState(instructor.name);
   const [rank, setRank] = useState<InstructorRank>(instructor.rank);
+  const staffRankOptions = useMemo(() => {
+    const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || undefined, 'staff');
+    const currentRank = String(rank || '').trim();
+    const hasCurrentRank = Boolean(currentRank) && configuredRanks.some(option => option.toLowerCase() === currentRank.toLowerCase());
+    return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+  }, [personnelDisplaySettings, rank]);
   const [role, setRole] = useState<'QFI' | 'SIM IP'>(instructor.role);
   const [callsignNumber, setCallsignNumber] = useState(instructor.callsignNumber);
   const [service, setService] = useState<'RAAF' | 'RAN' | 'ARA' | undefined>(instructor.service);
@@ -884,9 +897,9 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       <InputField label="Name (Surname, Firstname)" value={name} onChange={e => setName(e.target.value)} />
                       <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
                       <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as InstructorRank)}>
-                        <option value="WGCDR">WGCDR</option><option value="SQNLDR">SQNLDR</option>
-                        <option value="FLTLT">FLTLT</option><option value="FLGOFF">FLGOFF</option>
-                        <option value="PLTOFF">PLTOFF</option><option value="Mr">Mr</option><option value="Mrs">Mrs</option>
+                        {staffRankOptions.map(option => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
                       </Dropdown>
                       <Dropdown label="Role" value={role} onChange={e => setRole(e.target.value as 'QFI' | 'SIM IP')}>
                         <option value="QFI">{instructorLabel}</option><option value="SIM IP">SIM IP</option>

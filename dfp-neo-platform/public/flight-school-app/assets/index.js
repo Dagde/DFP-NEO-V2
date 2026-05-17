@@ -1989,6 +1989,10 @@ const DEFAULT_STAFF_RANK_ORDER = [
   "APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR"
 ];
 const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
+  sortMode: "rank-then-name",
+  useSeparateTraineeRankOrder: false,
+  staffRankOrder: DEFAULT_STAFF_RANK_ORDER,
+  traineeRankOrder: DEFAULT_STAFF_RANK_ORDER,
   civilianContractorGroupName: "Civilian Contractors",
   instructorLabel: "QFI"
 };
@@ -2073,6 +2077,19 @@ const splitPersonName = (personOrName) => {
 const getRankOrderForGroup = (settings, group = "staff") => {
   const safe2 = normalisePersonnelDisplaySettings(settings);
   return group === "trainee" && safe2.useSeparateTraineeRankOrder ? safe2.traineeRankOrder : safe2.staffRankOrder;
+};
+const flattenRankOrder = (rankOrder = []) => {
+  const seen = /* @__PURE__ */ new Set();
+  return rankOrder.flatMap((entry) => splitRankGroup(entry)).map((rank) => rank.trim()).filter(Boolean).filter((rank) => {
+    const key = rankKey(rank);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+const getRankOptionsForGroup = (settings, group = "staff") => {
+  const configuredRanks = flattenRankOrder(getRankOrderForGroup(settings, group));
+  return configuredRanks.length ? configuredRanks : flattenRankOrder(DEFAULT_STAFF_RANK_ORDER);
 };
 const getRankSortIndex = (rank, settings, group = "staff") => {
   const targetKey = rankKey(rank);
@@ -9933,7 +9950,8 @@ const TraineeProfileFlyout = ({
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
   onAccessDenied: onAccessDenied2,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -9969,6 +9987,12 @@ const TraineeProfileFlyout = ({
   const [name, setName] = reactExports.useState(trainee.name);
   const [idNumber, setIdNumber] = reactExports.useState(trainee.idNumber);
   const [rank, setRank] = reactExports.useState(trainee.rank);
+  const traineeRankOptions = reactExports.useMemo(() => {
+    const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || void 0, "trainee");
+    const currentRank = String(rank || "").trim();
+    const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
+    return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+  }, [personnelDisplaySettings, rank]);
   const [service, setService] = reactExports.useState(trainee.service || "");
   const [course, setCourse] = reactExports.useState(trainee.course || activeCourses[0] || "");
   const [lmpType, setLmpType] = reactExports.useState(trainee.lmpType || "BPC+IPC");
@@ -10649,7 +10673,7 @@ const TraineeProfileFlyout = ({
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: ["FLTLT", "FLGOFF", "PLTOFF", "WOFF", "FSGT", "SGT", "CPL", "LAC", "AC", "OCdt", "CDT"].map((r) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: r, children: r }, r)) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
@@ -11844,6 +11868,7 @@ const CourseRosterView = ({
         currentUserId,
         currentUserName,
         resourceDisplayNames,
+        personnelDisplaySettings,
         pt051Assessments,
         traineeLMPs,
         userProfile,
@@ -25362,7 +25387,8 @@ const InstructorProfileFlyout = ({
   currentUserId,
   currentUserName,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  instructorLabel = "QFI"
+  instructorLabel = "QFI",
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -25370,6 +25396,12 @@ const InstructorProfileFlyout = ({
   const [idNumber, setIdNumber] = reactExports.useState(instructor.idNumber);
   const [name, setName] = reactExports.useState(instructor.name);
   const [rank, setRank] = reactExports.useState(instructor.rank);
+  const staffRankOptions = reactExports.useMemo(() => {
+    const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || void 0, "staff");
+    const currentRank = String(rank || "").trim();
+    const hasCurrentRank = Boolean(currentRank) && configuredRanks.some((option) => option.toLowerCase() === currentRank.toLowerCase());
+    return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+  }, [personnelDisplaySettings, rank]);
   const [role, setRole] = reactExports.useState(instructor.role);
   const [callsignNumber, setCallsignNumber] = reactExports.useState(instructor.callsignNumber);
   const [service, setService] = reactExports.useState(instructor.service);
@@ -26099,15 +26131,7 @@ const InstructorProfileFlyout = ({
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => setName(e.target.value) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "WGCDR", children: "WGCDR" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SQNLDR", children: "SQNLDR" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FLTLT", children: "FLTLT" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FLGOFF", children: "FLGOFF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "PLTOFF", children: "PLTOFF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mr", children: "Mr" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Mrs", children: "Mrs" })
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: staffRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Role", value: role, onChange: (e) => setRole(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "QFI", children: instructorLabel }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "SIM IP", children: "SIM IP" })
@@ -27238,6 +27262,7 @@ const InstructorListView = ({
         currentUserId,
         currentUserName,
         resourceDisplayNames,
+        personnelDisplaySettings,
         instructorLabel
       }
     ),
@@ -59157,15 +59182,20 @@ const PlatformConfigurationSettings = ({
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            ToggleField,
+            SelectField,
             {
-              label: "Use separate trainee rank order",
-              checked: personnelDisplaySettings.useSeparateTraineeRankOrder,
+              label: "Trainee Rank Source",
+              value: personnelDisplaySettings.useSeparateTraineeRankOrder ? "Use separate trainee rank order" : "Use staff rank order",
+              options: ["Use staff rank order", "Use separate trainee rank order"],
               disabled: !canEditRankTerminology,
-              onChange: (checked) => updatePersonnelDisplaySettings({
-                useSeparateTraineeRankOrder: checked,
-                traineeRankOrder: checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
-              })
+              onChange: (value) => {
+                const useSeparateTraineeRankOrder = value === "Use separate trainee rank order";
+                updatePersonnelDisplaySettings({
+                  useSeparateTraineeRankOrder,
+                  traineeRankOrder: useSeparateTraineeRankOrder ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
+                });
+              },
+              info: "Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             }
           )
         ] }),

@@ -600,6 +600,7 @@ const InstructorListView: React.FC<InstructorListViewProps> = ({
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
                     resourceDisplayNames={resourceDisplayNames}
+                    personnelDisplaySettings={personnelDisplaySettings}
                     instructorLabel={instructorLabel}
                 />
         )}

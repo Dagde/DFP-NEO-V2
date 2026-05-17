@@ -2078,14 +2078,19 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
               info="Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
             />
-            <ToggleField
-              label="Use separate trainee rank order"
-              checked={personnelDisplaySettings.useSeparateTraineeRankOrder}
+            <SelectField
+              label="Trainee Rank Source"
+              value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'Use separate trainee rank order' : 'Use staff rank order'}
+              options={['Use staff rank order', 'Use separate trainee rank order']}
               disabled={!canEditRankTerminology}
-              onChange={(checked) => updatePersonnelDisplaySettings({
-                useSeparateTraineeRankOrder: checked,
-                traineeRankOrder: checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
-              })}
+              onChange={(value) => {
+                const useSeparateTraineeRankOrder = value === 'Use separate trainee rank order';
+                updatePersonnelDisplaySettings({
+                  useSeparateTraineeRankOrder,
+                  traineeRankOrder: useSeparateTraineeRankOrder ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
+                });
+              }}
+              info="Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
             />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

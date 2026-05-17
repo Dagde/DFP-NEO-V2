@@ -485,6 +485,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     currentUserId={currentUserId}
                     currentUserName={currentUserName}
                     resourceDisplayNames={resourceDisplayNames}
+                    personnelDisplaySettings={personnelDisplaySettings}
                     pt051Assessments={pt051Assessments}
                     traineeLMPs={traineeLMPs}
                     userProfile={userProfile}

@@ -14,6 +14,11 @@ import CurrencyAuditFlyout from './CurrencyAuditFlyout';
 import HateSheetView from './HateSheetView';
 import TraineeLmpView from './TraineeLmpView';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+  DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  getRankOptionsForGroup,
+  type PersonnelDisplaySettings,
+} from '../utils/personnelDisplaySettings';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -54,6 +59,7 @@ interface TraineeProfileFlyoutProps {
   canAddRemedialPackage?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -283,6 +289,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   canAddRemedialPackage = true,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -334,6 +341,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [name, setName] = useState(trainee.name);
     const [idNumber, setIdNumber] = useState(trainee.idNumber);
     const [rank, setRank] = useState<TraineeRank>(trainee.rank);
+    const traineeRankOptions = useMemo(() => {
+      const configuredRanks = getRankOptionsForGroup(personnelDisplaySettings || undefined, 'trainee');
+      const currentRank = String(rank || '').trim();
+      const hasCurrentRank = Boolean(currentRank) && configuredRanks.some(option => option.toLowerCase() === currentRank.toLowerCase());
+      return currentRank && !hasCurrentRank ? [...configuredRanks, currentRank] : configuredRanks;
+    }, [personnelDisplaySettings, rank]);
     const [service, setService] = useState(trainee.service || '');
     const [course, setCourse] = useState(trainee.course || activeCourses[0] || '');
   const [lmpType, setLmpType] = useState(trainee.lmpType || 'BPC+IPC');
@@ -1183,7 +1196,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
-                              {(['FLTLT','FLGOFF','PLTOFF','WOFF','FSGT','SGT','CPL','LAC','AC','OCdt','CDT'] as TraineeRank[]).map(r => <option key={r} value={r}>{r}</option>)}
+                              {traineeRankOptions.map(option => (
+                                <option key={option} value={option}>{option}</option>
+                              ))}
                             </Dropdown>
                             <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
                               <option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
