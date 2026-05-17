@@ -2078,46 +2078,20 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
               info="Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
             />
-            <div>
-              <FieldLabel
-                label="Trainee Rank Source"
-                info="Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
-              />
-              <div className="grid gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  disabled={!canEditRankTerminology}
-                  onClick={() => updatePersonnelDisplaySettings({
-                    useSeparateTraineeRankOrder: false,
-                    traineeRankOrder: personnelDisplaySettings.staffRankOrder,
-                  })}
-                  className={`rounded border px-3 py-2 text-left transition-colors ${
-                    !personnelDisplaySettings.useSeparateTraineeRankOrder
-                      ? 'border-cyan-300 bg-cyan-500/20 text-white shadow-[0_0_0_1px_rgba(103,232,249,0.18)]'
-                      : 'border-gray-700 bg-gray-950 text-gray-300'
-                  } ${canEditRankTerminology ? 'hover:border-cyan-300' : 'cursor-not-allowed opacity-60'}`}
-                >
-                  <div className="text-sm font-bold">Use staff rank order</div>
-                  <div className="mt-1 text-xs leading-snug text-gray-300">Trainees follow the staff rank and title list.</div>
-                </button>
-                <button
-                  type="button"
-                  disabled={!canEditRankTerminology}
-                  onClick={() => updatePersonnelDisplaySettings({
-                    useSeparateTraineeRankOrder: true,
-                    traineeRankOrder: personnelDisplaySettings.traineeRankOrder,
-                  })}
-                  className={`rounded border px-3 py-2 text-left transition-colors ${
-                    personnelDisplaySettings.useSeparateTraineeRankOrder
-                      ? 'border-cyan-300 bg-cyan-500/20 text-white shadow-[0_0_0_1px_rgba(103,232,249,0.18)]'
-                      : 'border-gray-700 bg-gray-950 text-gray-300'
-                  } ${canEditRankTerminology ? 'hover:border-cyan-300' : 'cursor-not-allowed opacity-60'}`}
-                >
-                  <div className="text-sm font-bold">Use separate trainee rank order</div>
-                  <div className="mt-1 text-xs leading-snug text-gray-300">Show a separate trainee rank list below.</div>
-                </button>
-              </div>
-            </div>
+            <SelectField
+              label="Trainee Rank Source"
+              value={personnelDisplaySettings.useSeparateTraineeRankOrder ? 'Use separate trainee rank order' : 'Use staff rank order'}
+              options={['Use staff rank order', 'Use separate trainee rank order']}
+              disabled={!canEditRankTerminology}
+              onChange={(value) => {
+                const useSeparateTraineeRankOrder = value === 'Use separate trainee rank order';
+                updatePersonnelDisplaySettings({
+                  useSeparateTraineeRankOrder,
+                  traineeRankOrder: useSeparateTraineeRankOrder ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
+                });
+              }}
+              info="Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
+            />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
             <TextAreaField
@@ -2143,9 +2117,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               />
             ) : (
               <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90">
-                <div className="font-bold text-cyan-100">Current setting: trainees use the staff rank order</div>
+                <div className="font-bold text-cyan-100">Trainees use the staff rank order</div>
                 <p className="mt-2 leading-relaxed text-cyan-50/75">
-                  Edit the Staff Rank Order list above to change the display order for both staff and trainees.
+                  Turn on separate trainee rank order if trainees use a different rank structure or if the organisation wants trainees displayed differently from staff.
                 </p>
               </div>
             )}
