@@ -28,14 +28,7 @@ export const DEFAULT_STAFF_RANK_ORDER = [
   'CPL',
   'LAC',
   'AC',
-  'APS',
-  'Dr',
-  'Mr',
-  'Ms',
-  'Mrs',
-  'Mx',
-  'CIV',
-  'CONTRACTOR',
+  'APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR',
 ];
 
 export const DEFAULT_PERSONNEL_DISPLAY_SETTINGS: PersonnelDisplaySettings = {
@@ -51,6 +44,14 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
 
 const rankKey = (rank?: string | null) => String(rank || '').trim().toUpperCase();
 
+const splitRankGroup = (rankGroup?: string | null): string[] =>
+  String(rankGroup || '')
+    .split(/[=|]/)
+    .map((rank) => rank.trim())
+    .filter(Boolean);
+
+const normaliseRankGroup = (rankGroup: string): string => splitRankGroup(rankGroup).join(' = ');
+
 const uniqueRankList = (value: unknown, fallback: string[]): string[] => {
   const source = Array.isArray(value) ? value : fallback;
   const seen = new Set<string>();
@@ -58,17 +59,38 @@ const uniqueRankList = (value: unknown, fallback: string[]): string[] => {
     .map((rank) => String(rank || '').trim())
     .filter(Boolean)
     .filter((rank) => {
-      const key = rankKey(rank);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+      const keys = splitRankGroup(rank).map(rankKey).filter(Boolean);
+      const unseenKeys = keys.filter((key) => !seen.has(key));
+      unseenKeys.forEach((key) => seen.add(key));
+      return unseenKeys.length > 0;
+    })
+    .map(normaliseRankGroup)
+    .filter(Boolean);
   return ranks.length ? ranks : fallback;
 };
 
+const CIVILIAN_EQUAL_RANK_KEYS = new Set(['APS', 'DR', 'MR', 'MS', 'MRS', 'MX', 'CIV', 'CONTRACTOR']);
+
+const groupLegacyCivilianRanks = (rankOrder: string[]): string[] => {
+  const civilians: string[] = [];
+  const otherRanks: string[] = [];
+  rankOrder.forEach((entry) => {
+    const parts = splitRankGroup(entry);
+    const isCivilianOnly = parts.length > 0 && parts.every((part) => CIVILIAN_EQUAL_RANK_KEYS.has(rankKey(part)));
+    if (isCivilianOnly) {
+      parts.forEach((part) => civilians.push(part));
+    } else {
+      otherRanks.push(entry);
+    }
+  });
+
+  if (civilians.length <= 1) return rankOrder;
+  return uniqueRankList([...otherRanks, civilians.join(' = ')], DEFAULT_STAFF_RANK_ORDER);
+};
+
 export const normalisePersonnelDisplaySettings = (input?: Partial<PersonnelDisplaySettings> | null): PersonnelDisplaySettings => {
-  const staffRankOrder = uniqueRankList(input?.staffRankOrder, DEFAULT_STAFF_RANK_ORDER);
-  const traineeRankOrder = uniqueRankList(input?.traineeRankOrder, staffRankOrder);
+  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, DEFAULT_STAFF_RANK_ORDER));
+  const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
 
   return {
     sortMode: input?.sortMode === 'alphabetical' ? 'alphabetical' : 'rank-then-name',
@@ -93,14 +115,19 @@ export const getInstructorTerminology = (config?: PlatformConfig | null): string
 export const parseRankOrderText = (value: string): string[] => {
   const seen = new Set<string>();
   return String(value || '')
-    .split(/[\n,]/)
-    .map((rank) => rank.trim())
+    .split(/\n/)
+    .flatMap((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return [];
+      return /[=|]/.test(trimmed) ? [trimmed] : trimmed.split(',');
+    })
+    .map((rank) => normaliseRankGroup(rank.trim()))
     .filter(Boolean)
     .filter((rank) => {
-      const key = rankKey(rank);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      const keys = splitRankGroup(rank).map(rankKey).filter(Boolean);
+      const unseenKeys = keys.filter((key) => !seen.has(key));
+      unseenKeys.forEach((key) => seen.add(key));
+      return unseenKeys.length > 0;
     });
 };
 
@@ -141,9 +168,13 @@ export const getRankSortIndex = (
   settings?: Partial<PersonnelDisplaySettings>,
   group: PersonnelGroup = 'staff',
 ): number => {
-  const order = getRankOrderForGroup(settings, group).map(rankKey);
-  const index = order.indexOf(rankKey(rank));
-  return index >= 0 ? index : 10000;
+  const targetKey = rankKey(rank);
+  if (!targetKey) return 10000;
+  const order = getRankOrderForGroup(settings, group);
+  for (let index = 0; index < order.length; index += 1) {
+    if (splitRankGroup(order[index]).map(rankKey).includes(targetKey)) return index;
+  }
+  return 10000;
 };
 
 export const comparePeopleByConfiguredRank = <

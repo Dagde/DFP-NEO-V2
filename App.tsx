@@ -15175,6 +15175,7 @@ updates.forEach(update => {
                        resourceDisplayNames={resourceDisplayNames}
                        personnelDisplaySettings={personnelDisplaySettings}
                        instructorLabel={instructorLabel}
+                       canUsePlatformPermission={canUsePlatformPermission}
 
                 />;
             case 'CurrencyBuilder':

@@ -617,6 +617,7 @@ interface PlatformConfigurationSettingsProps {
   onShowSuccess: (message: string) => void;
   scrollTarget?: string;
   sectionOnly?: boolean;
+  canUsePlatformPermission?: (permissionId: string) => boolean;
 }
 
 const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps> = ({
@@ -624,6 +625,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   onShowSuccess,
   scrollTarget,
   sectionOnly = false,
+  canUsePlatformPermission,
 }) => {
   const [config, setConfig] = useState<PlatformConfig>(emptyConfig);
   const [loading, setLoading] = useState(true);
@@ -634,6 +636,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [userSearch, setUserSearch] = useState('');
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
+  const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
   const [licenseImportText, setLicenseImportText] = useState('');
   const [licenseImportMessage, setLicenseImportMessage] = useState('');
@@ -641,6 +644,37 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [licenseActionLoading, setLicenseActionLoading] = useState(false);
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
+  const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
+  const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
+  const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
+
+  const unlockRankTerminology = async () => {
+    if (!canUnlockRankTerminology) return;
+    const password = window.prompt('Enter your password to edit Rank & Terminology');
+    if (!password) return;
+    setError('');
+    try {
+      const sessionToken = localStorage.getItem('dfp_session_token') || '';
+      const verifyResp = await fetch('/api/auth/verify-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        },
+        body: JSON.stringify({ password }),
+      });
+      const verifyData = await verifyResp.json().catch(() => ({}));
+      if (!verifyResp.ok || !verifyData.valid) {
+        setError('Rank & Terminology editing was not unlocked. The password was not accepted.');
+        return;
+      }
+      setRankTerminologyUnlocked(true);
+      onShowSuccess('Rank & Terminology editing unlocked.');
+    } catch (err: any) {
+      setError(err?.message || 'Could not verify password for Rank & Terminology editing.');
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -1991,13 +2025,41 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <SectionHeader
           title="Rank & Terminology"
           subtitle="Configure personnel display order and local instructor terminology without changing internal role codes."
+          action={canUnlockRankTerminology ? (
+            rankTerminologyUnlocked ? (
+              <button
+                type="button"
+                onClick={() => setRankTerminologyUnlocked(false)}
+                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
+              >
+                Lock
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={unlockRankTerminology}
+                className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
+              >
+                Edit
+              </button>
+            )
+          ) : null}
         />
         <div className="space-y-4 p-4">
+          {!hasRankTerminologyEditPermission ? (
+            <div className="rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80">
+              Rank & Terminology is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited.
+            </div>
+          ) : !rankTerminologyUnlocked ? (
+            <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80">
+              Rank & Terminology is locked. Press Edit and confirm your password before changing rank order or terminology.
+            </div>
+          ) : null}
           <div className="grid gap-3 lg:grid-cols-2">
             <SelectField
               label="Personnel Sort Mode"
               value={personnelDisplaySettings.sortMode}
-              disabled={!canEdit}
+              disabled={!canEditRankTerminology}
               options={['rank-then-name', 'alphabetical']}
               onChange={(value) => updatePersonnelDisplaySettings({ sortMode: value === 'alphabetical' ? 'alphabetical' : 'rank-then-name' })}
               info="Choose rank-then-name to sort by configured rank priority first, then surname and first name. Choose alphabetical to ignore rank and sort only by name."
@@ -2005,21 +2067,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <Field
               label="Instructor Display Term"
               value={personnelDisplaySettings.instructorLabel}
-              disabled={!canEdit}
+              disabled={!canEditRankTerminology}
               onChange={(value) => updatePersonnelDisplaySettings({ instructorLabel: value })}
               info="The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
             />
             <Field
               label="Civilian Contractor Group"
               value={personnelDisplaySettings.civilianContractorGroupName}
-              disabled={!canEdit}
+              disabled={!canEditRankTerminology}
               onChange={(value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value })}
               info="Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
             />
             <ToggleField
               label="Use separate trainee rank order"
               checked={personnelDisplaySettings.useSeparateTraineeRankOrder}
-              disabled={!canEdit}
+              disabled={!canEditRankTerminology}
               onChange={(checked) => updatePersonnelDisplaySettings({
                 useSeparateTraineeRankOrder: checked,
                 traineeRankOrder: checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder,
@@ -2030,7 +2092,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             <TextAreaField
               label="Staff Rank Order"
               value={formatRankOrderText(personnelDisplaySettings.staffRankOrder)}
-              disabled={!canEdit}
+              disabled={!canEditRankTerminology}
               onChange={(value) => {
                 const staffRankOrder = parseRankOrderText(value);
                 updatePersonnelDisplaySettings({
@@ -2038,15 +2100,15 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                   ...(personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }),
                 });
               }}
-              info="Enter one rank or title per line, highest display priority first. Unknown ranks appear after configured ranks and are then sorted alphabetically. Examples: AIRCDRE, GPCAPT, WGCDR, SQNLDR, FLTLT, Mr, Ms, CONTRACTOR."
+              info="Enter one display level per line, highest priority first. Use = on the same line to give titles equal status. Example: Dr = Mr = Ms = Mrs = Mx = APS = CIV = CONTRACTOR. People with equal status are sorted by surname then first name."
             />
             {personnelDisplaySettings.useSeparateTraineeRankOrder ? (
               <TextAreaField
                 label="Trainee Rank Order"
                 value={formatRankOrderText(personnelDisplaySettings.traineeRankOrder)}
-                disabled={!canEdit}
+                disabled={!canEditRankTerminology}
                 onChange={(value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) })}
-                info="Optional separate ordering for trainee ranks. Enter one rank or title per line, highest display priority first."
+                info="Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
               />
             ) : (
               <div className="rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90">
@@ -2314,7 +2376,7 @@ const InfoHint = ({ text }: { text: string }) => (
     className="group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 normal-case outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white"
   >
     <span aria-hidden="true" className="font-serif text-[21px] font-bold italic leading-none normal-case">i</span>
-    <span className="pointer-events-none absolute left-1/2 top-8 z-20 hidden w-96 max-w-[min(24rem,80vw)] -translate-x-1/2 whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
+    <span className="pointer-events-none absolute left-0 top-8 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block">
       {text}
     </span>
   </span>

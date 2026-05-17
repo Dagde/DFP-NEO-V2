@@ -82,6 +82,7 @@ interface SettingsViewWithMenuProps {
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
     instructorLabel?: string;
+    canUsePlatformPermission?: (permissionId: string) => boolean;
     settingsLoaded?: boolean;
     organisationSettings?: {
         staffSharingEnabled: boolean;
@@ -1551,6 +1552,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                                 onShowSuccess={props.onShowSuccess}
                                 scrollTarget="platform-scheduling-rule-sets"
                                 sectionOnly={true}
+                                canUsePlatformPermission={props.canUsePlatformPermission}
                             />
                         </div>
                     )}
@@ -1641,6 +1643,7 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onShowSuccess={props.onShowSuccess}
                             scrollTarget={activePlatformTarget}
                             sectionOnly={true}
+                            canUsePlatformPermission={props.canUsePlatformPermission}
                         />
                     )}
                     {activeSection === 'appearance' && (

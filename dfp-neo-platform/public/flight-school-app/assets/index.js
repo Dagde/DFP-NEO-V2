@@ -1622,6 +1622,7 @@ const PLATFORM_PERMISSION_CATALOG = [
       ["settings.schedulingRules.edit", "Edit scheduling rules"],
       ["settings.userAccess.edit", "Edit user permissions"],
       ["settings.platform.edit", "Edit platform configuration"],
+      ["settings.rankTerminology.edit", "Edit rank and terminology settings"],
       ["settings.superAdmin", "Super Admin: unrestricted platform access"]
     ]
   }
@@ -1985,14 +1986,7 @@ const DEFAULT_STAFF_RANK_ORDER = [
   "CPL",
   "LAC",
   "AC",
-  "APS",
-  "Dr",
-  "Mr",
-  "Ms",
-  "Mrs",
-  "Mx",
-  "CIV",
-  "CONTRACTOR"
+  "APS = Dr = Mr = Ms = Mrs = Mx = CIV = CONTRACTOR"
 ];
 const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
   civilianContractorGroupName: "Civilian Contractors",
@@ -2000,20 +1994,38 @@ const DEFAULT_PERSONNEL_DISPLAY_SETTINGS = {
 };
 const collator = new Intl.Collator(void 0, { numeric: true, sensitivity: "base" });
 const rankKey = (rank) => String(rank || "").trim().toUpperCase();
+const splitRankGroup = (rankGroup) => String(rankGroup || "").split(/[=|]/).map((rank) => rank.trim()).filter(Boolean);
+const normaliseRankGroup = (rankGroup) => splitRankGroup(rankGroup).join(" = ");
 const uniqueRankList = (value, fallback) => {
   const source = Array.isArray(value) ? value : fallback;
   const seen = /* @__PURE__ */ new Set();
   const ranks = source.map((rank) => String(rank || "").trim()).filter(Boolean).filter((rank) => {
-    const key = rankKey(rank);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const keys = splitRankGroup(rank).map(rankKey).filter(Boolean);
+    const unseenKeys = keys.filter((key) => !seen.has(key));
+    unseenKeys.forEach((key) => seen.add(key));
+    return unseenKeys.length > 0;
+  }).map(normaliseRankGroup).filter(Boolean);
   return ranks.length ? ranks : fallback;
 };
+const CIVILIAN_EQUAL_RANK_KEYS = /* @__PURE__ */ new Set(["APS", "DR", "MR", "MS", "MRS", "MX", "CIV", "CONTRACTOR"]);
+const groupLegacyCivilianRanks = (rankOrder) => {
+  const civilians = [];
+  const otherRanks = [];
+  rankOrder.forEach((entry) => {
+    const parts = splitRankGroup(entry);
+    const isCivilianOnly = parts.length > 0 && parts.every((part) => CIVILIAN_EQUAL_RANK_KEYS.has(rankKey(part)));
+    if (isCivilianOnly) {
+      parts.forEach((part) => civilians.push(part));
+    } else {
+      otherRanks.push(entry);
+    }
+  });
+  if (civilians.length <= 1) return rankOrder;
+  return uniqueRankList([...otherRanks, civilians.join(" = ")], DEFAULT_STAFF_RANK_ORDER);
+};
 const normalisePersonnelDisplaySettings = (input) => {
-  const staffRankOrder = uniqueRankList(input?.staffRankOrder, DEFAULT_STAFF_RANK_ORDER);
-  const traineeRankOrder = uniqueRankList(input?.traineeRankOrder, staffRankOrder);
+  const staffRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.staffRankOrder, DEFAULT_STAFF_RANK_ORDER));
+  const traineeRankOrder = groupLegacyCivilianRanks(uniqueRankList(input?.traineeRankOrder, staffRankOrder));
   return {
     sortMode: input?.sortMode === "alphabetical" ? "alphabetical" : "rank-then-name",
     useSeparateTraineeRankOrder: Boolean(input?.useSeparateTraineeRankOrder),
@@ -2031,11 +2043,15 @@ const getPersonnelDisplaySettings = (config) => {
 };
 const parseRankOrderText = (value) => {
   const seen = /* @__PURE__ */ new Set();
-  return String(value || "").split(/[\n,]/).map((rank) => rank.trim()).filter(Boolean).filter((rank) => {
-    const key = rankKey(rank);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  return String(value || "").split(/\n/).flatMap((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return [];
+    return /[=|]/.test(trimmed) ? [trimmed] : trimmed.split(",");
+  }).map((rank) => normaliseRankGroup(rank.trim())).filter(Boolean).filter((rank) => {
+    const keys = splitRankGroup(rank).map(rankKey).filter(Boolean);
+    const unseenKeys = keys.filter((key) => !seen.has(key));
+    unseenKeys.forEach((key) => seen.add(key));
+    return unseenKeys.length > 0;
   });
 };
 const formatRankOrderText = (rankOrder = []) => rankOrder.join("\n");
@@ -2059,9 +2075,13 @@ const getRankOrderForGroup = (settings, group = "staff") => {
   return group === "trainee" && safe2.useSeparateTraineeRankOrder ? safe2.traineeRankOrder : safe2.staffRankOrder;
 };
 const getRankSortIndex = (rank, settings, group = "staff") => {
-  const order = getRankOrderForGroup(settings, group).map(rankKey);
-  const index = order.indexOf(rankKey(rank));
-  return index >= 0 ? index : 1e4;
+  const targetKey = rankKey(rank);
+  if (!targetKey) return 1e4;
+  const order = getRankOrderForGroup(settings, group);
+  for (let index = 0; index < order.length; index += 1) {
+    if (splitRankGroup(order[index]).map(rankKey).includes(targetKey)) return index;
+  }
+  return 1e4;
 };
 const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   const safe2 = normalisePersonnelDisplaySettings(settings);
@@ -57848,7 +57868,8 @@ const PlatformConfigurationSettings = ({
   currentUserPermission,
   onShowSuccess,
   scrollTarget,
-  sectionOnly = false
+  sectionOnly = false,
+  canUsePlatformPermission
 }) => {
   const [config, setConfig] = reactExports.useState(emptyConfig);
   const [loading, setLoading] = reactExports.useState(true);
@@ -57859,12 +57880,43 @@ const PlatformConfigurationSettings = ({
   const [userSearch, setUserSearch] = reactExports.useState("");
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
+  const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
   const [licenseStatus, setLicenseStatus] = reactExports.useState(null);
   const [licenseImportText, setLicenseImportText] = reactExports.useState("");
   const [licenseImportMessage, setLicenseImportMessage] = reactExports.useState("");
   const [licenseImportError, setLicenseImportError] = reactExports.useState("");
   const [licenseActionLoading, setLicenseActionLoading] = reactExports.useState(false);
   const canEdit = ["Super Admin", "Admin"].includes(currentUserPermission);
+  const hasRankTerminologyEditPermission = canUsePlatformPermission?.("settings.rankTerminology.edit") ?? canEdit;
+  const canUnlockRankTerminology = canEdit && hasRankTerminologyEditPermission;
+  const canEditRankTerminology = canUnlockRankTerminology && rankTerminologyUnlocked;
+  const unlockRankTerminology = async () => {
+    if (!canUnlockRankTerminology) return;
+    const password = window.prompt("Enter your password to edit Rank & Terminology");
+    if (!password) return;
+    setError("");
+    try {
+      const sessionToken = localStorage.getItem("dfp_session_token") || "";
+      const verifyResp = await fetch("/api/auth/verify-password", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
+        },
+        body: JSON.stringify({ password })
+      });
+      const verifyData = await verifyResp.json().catch(() => ({}));
+      if (!verifyResp.ok || !verifyData.valid) {
+        setError("Rank & Terminology editing was not unlocked. The password was not accepted.");
+        return;
+      }
+      setRankTerminologyUnlocked(true);
+      onShowSuccess("Rank & Terminology editing unlocked.");
+    } catch (err) {
+      setError(err?.message || "Could not verify password for Rank & Terminology editing.");
+    }
+  };
   reactExports.useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -59050,17 +59102,35 @@ const PlatformConfigurationSettings = ({
         SectionHeader,
         {
           title: "Rank & Terminology",
-          subtitle: "Configure personnel display order and local instructor terminology without changing internal role codes."
+          subtitle: "Configure personnel display order and local instructor terminology without changing internal role codes.",
+          action: canUnlockRankTerminology ? rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setRankTerminologyUnlocked(false),
+              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
+              children: "Lock"
+            }
+          ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: unlockRankTerminology,
+              className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
+              children: "Edit"
+            }
+          ) : null
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank & Terminology is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank & Terminology is locked. Press Edit and confirm your password before changing rank order or terminology." }) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SelectField,
             {
               label: "Personnel Sort Mode",
               value: personnelDisplaySettings.sortMode,
-              disabled: !canEdit,
+              disabled: !canEditRankTerminology,
               options: ["rank-then-name", "alphabetical"],
               onChange: (value) => updatePersonnelDisplaySettings({ sortMode: value === "alphabetical" ? "alphabetical" : "rank-then-name" }),
               info: "Choose rank-then-name to sort by configured rank priority first, then surname and first name. Choose alphabetical to ignore rank and sort only by name."
@@ -59071,7 +59141,7 @@ const PlatformConfigurationSettings = ({
             {
               label: "Instructor Display Term",
               value: personnelDisplaySettings.instructorLabel,
-              disabled: !canEdit,
+              disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ instructorLabel: value }),
               info: "The local term shown to users for instructional staff. Examples: QFI, Instructor, Flying Instructor, Flight Instructor."
             }
@@ -59081,7 +59151,7 @@ const PlatformConfigurationSettings = ({
             {
               label: "Civilian Contractor Group",
               value: personnelDisplaySettings.civilianContractorGroupName,
-              disabled: !canEdit,
+              disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ civilianContractorGroupName: value }),
               info: "Group or title family used for civilian and contractor personnel. Examples: Civilian Contractors, Contract Instructors, Industry Partners."
             }
@@ -59091,7 +59161,7 @@ const PlatformConfigurationSettings = ({
             {
               label: "Use separate trainee rank order",
               checked: personnelDisplaySettings.useSeparateTraineeRankOrder,
-              disabled: !canEdit,
+              disabled: !canEditRankTerminology,
               onChange: (checked) => updatePersonnelDisplaySettings({
                 useSeparateTraineeRankOrder: checked,
                 traineeRankOrder: checked ? personnelDisplaySettings.traineeRankOrder : personnelDisplaySettings.staffRankOrder
@@ -59105,7 +59175,7 @@ const PlatformConfigurationSettings = ({
             {
               label: "Staff Rank Order",
               value: formatRankOrderText(personnelDisplaySettings.staffRankOrder),
-              disabled: !canEdit,
+              disabled: !canEditRankTerminology,
               onChange: (value) => {
                 const staffRankOrder = parseRankOrderText(value);
                 updatePersonnelDisplaySettings({
@@ -59113,7 +59183,7 @@ const PlatformConfigurationSettings = ({
                   ...personnelDisplaySettings.useSeparateTraineeRankOrder ? {} : { traineeRankOrder: staffRankOrder }
                 });
               },
-              info: "Enter one rank or title per line, highest display priority first. Unknown ranks appear after configured ranks and are then sorted alphabetically. Examples: AIRCDRE, GPCAPT, WGCDR, SQNLDR, FLTLT, Mr, Ms, CONTRACTOR."
+              info: "Enter one display level per line, highest priority first. Use = on the same line to give titles equal status. Example: Dr = Mr = Ms = Mrs = Mx = APS = CIV = CONTRACTOR. People with equal status are sorted by surname then first name."
             }
           ),
           personnelDisplaySettings.useSeparateTraineeRankOrder ? /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59121,9 +59191,9 @@ const PlatformConfigurationSettings = ({
             {
               label: "Trainee Rank Order",
               value: formatRankOrderText(personnelDisplaySettings.traineeRankOrder),
-              disabled: !canEdit,
+              disabled: !canEditRankTerminology,
               onChange: (value) => updatePersonnelDisplaySettings({ traineeRankOrder: parseRankOrderText(value) }),
-              info: "Optional separate ordering for trainee ranks. Enter one rank or title per line, highest display priority first."
+              info: "Optional separate ordering for trainee ranks. Enter one display level per line, highest priority first. Use = on the same line to give ranks or titles equal status."
             }
           ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded border border-cyan-500/30 bg-cyan-500/10 p-4 text-sm text-cyan-50/90", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "font-bold text-cyan-100", children: "Trainees use the staff rank order" }),
@@ -59368,7 +59438,7 @@ const InfoHint = ({ text }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
     className: "group relative inline-flex h-7 w-7 shrink-0 cursor-help items-center justify-center rounded-full border-[3px] border-cyan-300 bg-transparent text-cyan-100 normal-case outline-none transition-colors hover:border-cyan-200 hover:text-white focus-visible:border-white focus-visible:text-white",
     children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { "aria-hidden": "true", className: "font-serif text-[21px] font-bold italic leading-none normal-case", children: "i" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-1/2 top-8 z-20 hidden w-96 max-w-[min(24rem,80vw)] -translate-x-1/2 whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "pointer-events-none absolute left-0 top-8 z-50 hidden w-96 max-w-[min(24rem,calc(100vw-2rem))] whitespace-pre-line rounded border border-cyan-500/30 bg-gray-950 p-3 text-left text-xs font-normal normal-case leading-relaxed tracking-normal text-gray-100 shadow-xl group-hover:block group-focus:block", children: text })
     ]
   }
 );
@@ -61034,7 +61104,8 @@ const SettingsViewWithMenu = (props) => {
               currentUserPermission: props.currentUserPermission,
               onShowSuccess: props.onShowSuccess,
               scrollTarget: "platform-scheduling-rule-sets",
-              sectionOnly: true
+              sectionOnly: true,
+              canUsePlatformPermission: props.canUsePlatformPermission
             }
           )
         ] }),
@@ -61114,7 +61185,8 @@ const SettingsViewWithMenu = (props) => {
             currentUserPermission: props.currentUserPermission,
             onShowSuccess: props.onShowSuccess,
             scrollTarget: activePlatformTarget,
-            sectionOnly: true
+            sectionOnly: true,
+            canUsePlatformPermission: props.canUsePlatformPermission
           }
         ),
         activeSection === "appearance" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg border border-gray-700 p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppearanceSettings, {}) }),
@@ -80303,7 +80375,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onUpdateExcludedCourses: handleUpdateExcludedCourses,
             resourceDisplayNames,
             personnelDisplaySettings,
-            instructorLabel
+            instructorLabel,
+            canUsePlatformPermission
           }
         );
       case "CurrencyBuilder":
