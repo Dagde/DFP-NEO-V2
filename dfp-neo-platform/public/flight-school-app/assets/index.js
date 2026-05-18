@@ -5887,6 +5887,7 @@ const getPersonnel$6 = (event) => {
   if (event.attendees) personnel.push(...event.attendees);
   return personnel;
 };
+const isStbyLineEvent$3 = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
 const checkIsChanged = (event, baselineEvents) => {
   if (!baselineEvents) return false;
   const baseline = baselineEvents.find((b) => b.id === event.id);
@@ -6558,7 +6559,7 @@ const ScheduleView = ({
       return resourceEvents.map((event) => {
         const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
         const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
-        const isConflicting = showValidation && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
+        const isConflicting = showValidation && !isStbyLineEvent$3(event) && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
         const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
         const isUnavailability = !!unavailabilityConflictData;
         const unavailablePeople = unavailabilityConflictData || [];
@@ -18734,6 +18735,7 @@ const getPersonnel$3 = (event) => {
   if (event.attendees) personnel.push(...event.attendees);
   return personnel;
 };
+const isStbyLineEvent$2 = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
 const getResourceCategory = (res) => {
   if (res.startsWith("PC-21")) return "PC-21";
   if (res.startsWith("STBY")) return "STBY";
@@ -19336,7 +19338,7 @@ const NextDayBuildView = ({
         const unavailabilityConflictData = unavailabilityConflicts?.get(event.id);
         const isUnavailability = !!unavailabilityConflictData;
         const unavailablePeople = unavailabilityConflictData || [];
-        const isConflicting = showValidation && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
+        const isConflicting = showValidation && !isStbyLineEvent$2(event) && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
         let personToHighlight = null;
         if (realtimeConflict) {
           const personnelOnThisTile = getPersonnel$3(event);
@@ -67168,6 +67170,7 @@ const getPersonnel$2 = (event) => {
   }
   return personnel;
 };
+const isStbyLineEvent$1 = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
 const NextDayInstructorScheduleView = ({
   events,
   instructors,
@@ -67537,7 +67540,7 @@ const NextDayInstructorScheduleView = ({
                   const eventTiles = instructorEvents.map((event) => {
                     const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                     const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                    const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                    const isConflicting = showValidation && !isStbyLineEvent$1(event) && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
                     let personToHighlight = null;
                     if (realtimeConflict) {
                       const personnelOnThisTile = getPersonnel$2(event);
@@ -67611,6 +67614,7 @@ const getPersonnel$1 = (event) => {
   }
   return personnel;
 };
+const isStbyLineEvent = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
 const NextDayTraineeScheduleView = ({
   events,
   trainees,
@@ -68024,7 +68028,7 @@ const NextDayTraineeScheduleView = ({
                   const eventTiles = traineeEvents.map((event) => {
                     const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                     const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                    const isConflicting = showValidation && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                    const isConflicting = showValidation && !isStbyLineEvent(event) && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
                     const isUnavailability = false;
                     const unavailablePeople = [];
                     let personToHighlight = null;
@@ -81627,7 +81631,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               }
             });
           },
-          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id),
+          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || !isStbyFlightLineEvent(selectedEvent) && (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id),
           onNeoClick: handleNeoClick,
           traineeLMPs,
           oracleContextForModal,

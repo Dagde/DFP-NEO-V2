@@ -16221,7 +16221,7 @@ updates.forEach(update => {
                             }
                         });
                     }}
-                    isConflict={(['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id)}
+                    isConflict={(['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (!isStbyFlightLineEvent(selectedEvent) && (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id))}
                     onNeoClick={handleNeoClick}
                     traineeLMPs={traineeLMPs}
                     oracleContextForModal={oracleContextForModal}

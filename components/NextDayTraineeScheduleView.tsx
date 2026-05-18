@@ -43,6 +43,10 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     return personnel;
 };
 
+const isStbyLineEvent = (event: ScheduleEvent): boolean =>
+    !!event.resourceId &&
+    (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+
 export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProps> = ({ 
     events, 
     trainees, 
@@ -553,7 +557,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
                 const isConflicting =
-                  (showValidation && conflictingEventIds.has(event.id)) ||
+                  (showValidation && !isStbyLineEvent(event) && conflictingEventIds.has(event.id)) ||
                   isStationaryConflictTile ||
                   (isDraggedTile && !!realtimeConflict);
                 
