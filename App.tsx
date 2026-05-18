@@ -255,6 +255,13 @@ const getEventDayNightClassification = (
     syllabusDetails: SyllabusItemDetail[],
     sctEvents?: string[]
 ): 'Day' | 'Night' | 'Day/Night' => {
+    if (event.flightNumber === 'Night Duty Sup') {
+        return 'Night';
+    }
+    if (event.flightNumber === 'Duty Sup') {
+        return 'Day';
+    }
+
     // Check for SCT events first (since they're not in Master LMP)
     if (sctEvents && sctEvents.includes(event.flightNumber)) {
         // Night SCT is specifically a night event
@@ -1542,13 +1549,23 @@ function generateDfpInternal(
     // Track staff who are intended for night assignments
     const intendedNightStaff = new Set<string>();
 
+    const getGeneratedEventDayNightClassification = (
+        event: Omit<ScheduleEvent, 'date'> | ScheduleEvent
+    ): 'Day' | 'Night' | 'Day/Night' => {
+        if (event.flightNumber === 'Night Duty Sup') return 'Night';
+        if (event.resourceId === 'Duty Sup') {
+            return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? 'Night' : 'Day';
+        }
+        return getEventDayNightClassification(event, syllabusDetails, sctEvents);
+    };
+
     // Check if a person has day events using Master LMP Day/Night field
     // NOTE: This includes Active DFP events since generatedEvents is initialized with them
     const isPersonScheduledForDayEvents = (personName: string): boolean => {
         const hasDayEvents = generatedEvents.some(e => {
             if (!getPersonnel(e).includes(personName)) return false;
-            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
-            const isDay = classification === 'Day' || classification === 'Day/Night';
+            const classification = getGeneratedEventDayNightClassification(e);
+            const isDay = classification === 'Day';
             return isDay;
         });
 
@@ -1559,13 +1576,11 @@ function generateDfpInternal(
     // OR is intended for night assignments
     // NOTE: This now includes Active DFP events since generatedEvents is initialized with them
     const isPersonScheduledForNightEvents = (personName: string): boolean => {
-        if (nextEventLists.bnf.length < 2) return false; // No night flying scheduled
-
         // Check both already scheduled night events AND intended night assignments using Master LMP Day/Night field
         const hasScheduledNightEvents = generatedEvents.some(e => {
             if (!getPersonnel(e).includes(personName)) return false;
-            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
-            const isNight = classification === 'Night' || classification === 'Day/Night';
+            const classification = getGeneratedEventDayNightClassification(e);
+            const isNight = classification === 'Night';
             return isNight;
         });
 
@@ -2310,8 +2325,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + syllabusItem.duration;
+        const proposedDayNight = isNightPass
+            ? 'Night'
+            : getEventDayNightClassification({ flightNumber: syllabusItem.code }, syllabusDetails, sctEvents);
+        const proposedIsDay = proposedDayNight === 'Day';
+        const proposedIsNight = proposedDayNight === 'Night';
 
         const traineeCounts = eventCounts.get(trainee.fullName)!;
+
+        if (proposedIsNight && isPersonScheduledForDayEvents(trainee.fullName)) {
+            console.log(`DAY/NIGHT BLOCK: ${trainee.fullName} already has day events; cannot schedule night ${syllabusItem.code}`);
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
+            return null;
+        }
+        if (proposedIsDay && isPersonScheduledForNightEvents(trainee.fullName)) {
+            console.log(`DAY/NIGHT BLOCK: ${trainee.fullName} already has night events; cannot schedule day ${syllabusItem.code}`);
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
+            return null;
+        }
 
         // CRITICAL FIX: For night flying BNF events, allow 2 flights per night
         const isBnfEvent = syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight';
@@ -2354,6 +2385,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
                 const instructor = instructors.find(i => i.name === pairedInstructorName);
                 if (!instructor) return null;
+
+                if (proposedIsNight && isPersonScheduledForDayEvents(instructor.name)) return null;
+                if (proposedIsDay && isPersonScheduledForNightEvents(instructor.name)) return null;
 
                 if (isPersonStaticallyUnavailable(instructor, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'flight')) return null;
 
@@ -2479,22 +2513,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (type === 'ftd') {
                 // FTD: SIM IPs first, then QFIs (role='QFI' OR isQFI=true)
                 const simIps = instructors.filter(i =>
-                    i.role === 'SIM IP' &&
-                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                    i.role === 'SIM IP'
                 );
                 const availableQfis = instructors.filter(i =>
-                    (i.role === 'QFI' || i.isQFI === true) &&
-                    !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+                    (i.role === 'QFI' || i.isQFI === true)
                 );
                 candidates = [...simIps, ...availableQfis];
             } else {
                 // FLIGHT = QFI only (role='QFI' OR isQFI=true); CPT/GROUND = any instructor
                 candidates = instructors.filter(ip => {
                     if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
-                    if (nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(ip.name)) return false;
                     return true;
                 });
             }
+
+            candidates = candidates.filter(ip => {
+                if (proposedIsNight && isPersonScheduledForDayEvents(ip.name)) return false;
+                if (proposedIsDay && isPersonScheduledForNightEvents(ip.name)) return false;
+                return true;
+            });
 
             // ── DIAGNOSTIC: after qualification filter ──
             const _afterQualFilter = candidates.length;
@@ -3056,7 +3093,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // NEW RULE: COMPLETE separation - NO day events for instructors with night events
     const dutySupEligible = instructors.filter(i =>
         (i.isFlyingSupervisor || i.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate)) &&
-        !(nextEventLists.bnf.length >= 2 && isPersonScheduledForNightEvents(i.name))
+        !isPersonScheduledForNightEvents(i.name)
     );
     const tmuffSupervisors = dutySupEligible.filter(i => i.unavailability.some(u => u.reason === 'TMUF - Ground Duties only' && buildDate >= u.startDate && buildDate < u.endDate));
     const normalSupervisors = dutySupEligible.filter(i => !tmuffSupervisors.find(t => t.idNumber === i.idNumber));
