@@ -18766,6 +18766,7 @@ const NextDayBuildView = ({
   daylightTimes,
   personnelConflicts,
   personnelConflictIds,
+  unavailabilityConflicts,
   onCptConflict,
   isMultiSelectMode,
   selectedEventIds,
@@ -19332,6 +19333,9 @@ const NextDayBuildView = ({
       return resourceEvents.map((event) => {
         const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
         const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
+        const unavailabilityConflictData = unavailabilityConflicts?.get(event.id);
+        const isUnavailability = !!unavailabilityConflictData;
+        const unavailablePeople = unavailabilityConflictData || [];
         const isConflicting = showValidation && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
         let personToHighlight = null;
         if (realtimeConflict) {
@@ -19388,7 +19392,8 @@ const NextDayBuildView = ({
             row: rowIndex,
             isDragging: isDraggedTile,
             isConflicting,
-            isUnavailabilityConflict: event.isUnavailabilityConflict,
+            isUnavailabilityConflict: isUnavailability || event.isUnavailabilityConflict,
+            unavailablePersonnel: unavailablePeople,
             conflictedPersonnelName: personToHighlight,
             personnelData,
             seatConfigs,
@@ -74518,14 +74523,13 @@ ${"=".repeat(60)}`);
     }
     return conflictingEventIds;
   }, [nextDayBuildEvents, detectConflictsForEvent, buildDfpDate, syllabusDetails]);
-  const unavailabilityConflicts = reactExports.useMemo(() => {
+  const calculateUnavailabilityConflictsForEvents = reactExports.useCallback((eventsToCheck) => {
     const newConflicts = /* @__PURE__ */ new Map();
     const allPersonnel = [...allInstructorsData, ...allTraineesData];
-    const personMap = /* @__PURE__ */ new Map();
+    const personMap2 = /* @__PURE__ */ new Map();
     allPersonnel.forEach((p) => {
-      personMap.set("fullName" in p ? p.fullName : p.name, p);
+      personMap2.set("fullName" in p ? p.fullName : p.name, p);
     });
-    const eventsToCheck = eventsForDate || [];
     for (const event of eventsToCheck) {
       if (event.type === "deployment") {
         continue;
@@ -74537,7 +74541,7 @@ ${"=".repeat(60)}`);
       const eventStartUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.start * 60));
       const eventEndUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.end * 60));
       for (const name of personnelNames) {
-        const person = personMap.get(name);
+        const person = personMap2.get(name);
         if (!person || !person.unavailability || person.unavailability.length === 0) continue;
         for (const period of person.unavailability) {
           const [startYear, startMonth, startDay] = period.startDate.split("-").map(Number);
@@ -74572,6 +74576,11 @@ ${"=".repeat(60)}`);
         newConflicts.set(event.id, [...new Set(conflictedNamesForEvent)]);
       }
     }
+    return newConflicts;
+  }, [allInstructorsData, allTraineesData, syllabusDetails]);
+  const unavailabilityConflicts = reactExports.useMemo(() => {
+    const eventsToCheck = eventsForDate || [];
+    const newConflicts = calculateUnavailabilityConflictsForEvents(eventsToCheck);
     if (newConflicts.size > 0) {
       console.group("[UnavailConflicts] " + newConflicts.size + " tile(s) are red on " + (eventsForDate?.[0]?.date || "unknown date"));
       newConflicts.forEach((names, eventId) => {
@@ -74595,7 +74604,14 @@ ${"=".repeat(60)}`);
       console.log("[UnavailConflicts] No conflicts on", eventsForDate?.[0]?.date || "unknown date");
     }
     return newConflicts;
-  }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
+  }, [eventsForDate, calculateUnavailabilityConflictsForEvents]);
+  const nextDayUnavailabilityConflicts = reactExports.useMemo(() => {
+    const eventsToCheck = (nextDayBuildEvents || []).map((event) => ({
+      ...event,
+      date: buildDfpDate
+    }));
+    return calculateUnavailabilityConflictsForEvents(eventsToCheck);
+  }, [nextDayBuildEvents, buildDfpDate, calculateUnavailabilityConflictsForEvents]);
   const registerDirtyCheck = reactExports.useCallback((isDirty, onSave, onDiscard) => {
     isDirtyRef.current = isDirty;
     onSaveRef.current = onSave;
@@ -79839,6 +79855,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             daylightTimes: { firstLight: "06:30", lastLight: "18:30" },
             personnelConflicts: [],
             personnelConflictIds: nextDayPersonnelAndResourceConflictIds,
+            unavailabilityConflicts: nextDayUnavailabilityConflicts,
             onCptConflict: setCptConflict,
             date: buildDfpDate,
             onDateChange: setBuildDfpDate,
@@ -81610,7 +81627,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               }
             });
           },
-          isConflict: unavailabilityConflicts.has(selectedEvent.id) || (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id),
+          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id),
           onNeoClick: handleNeoClick,
           traineeLMPs,
           oracleContextForModal,

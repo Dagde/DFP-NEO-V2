@@ -31,6 +31,7 @@ interface NextDayBuildViewProps {
   daylightTimes: { firstLight: string | null; lastLight: string | null };
   personnelConflicts: Conflict[];
   personnelConflictIds: Set<string>;
+  unavailabilityConflicts?: Map<string, string[]>;
   onCptConflict: (conflict: Conflict) => void;
   isMultiSelectMode: boolean;
   selectedEventIds: Set<string>;
@@ -93,7 +94,7 @@ const getResourceCategory = (res: string) => {
 export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     date, onDateChange, events, resources, instructors, airframeCount, standbyCount, ftdCount, cptCount,
     onUpdateEvent, onSelectEvent, onReorderResources, zoomLevel, showValidation, showPrePost, showDepartureDensityOverlay = false, syllabusDetails,
-    personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds,
+    personnelData, seatConfigs, daylightTimes, personnelConflicts, personnelConflictIds, unavailabilityConflicts,
     onCptConflict, isMultiSelectMode, selectedEventIds, setSelectedEventIds, traineesData,
     isOracleMode, oraclePreviewEvent, onOracleMouseDown, onOracleMouseMove, onOracleMouseUp,
     isVisualAdjustMode = false, visualAdjustEvent = null, onVisualAdjustTimeChange,
@@ -733,6 +734,9 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
             return resourceEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
+                const unavailabilityConflictData = unavailabilityConflicts?.get(event.id);
+                const isUnavailability = !!unavailabilityConflictData;
+                const unavailablePeople = unavailabilityConflictData || [];
                 const isConflicting = 
                     (showValidation && personnelConflictIds.has(event.id)) || 
                     isStationaryConflictTile ||
@@ -802,7 +806,8 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         row={rowIndex}
                         isDragging={isDraggedTile}
                         isConflicting={isConflicting}
-                        isUnavailabilityConflict={event.isUnavailabilityConflict}
+                        isUnavailabilityConflict={isUnavailability || event.isUnavailabilityConflict}
+                        unavailablePersonnel={unavailablePeople}
                         conflictedPersonnelName={personToHighlight}
                         personnelData={personnelData}
                         seatConfigs={seatConfigs}

@@ -7548,7 +7548,7 @@ const App: React.FC = () => {
     /**
      * Unavailability conflicts - personnel assigned during their unavailability periods
      */
-    const unavailabilityConflicts = useMemo(() => {
+    const calculateUnavailabilityConflictsForEvents = useCallback((eventsToCheck: ScheduleEvent[]) => {
         const newConflicts = new Map<string, string[]>();
         const allPersonnel: (Instructor | Trainee)[] = [...allInstructorsData, ...allTraineesData];
         const personMap = new Map<string, Instructor | Trainee>();
@@ -7556,8 +7556,6 @@ const App: React.FC = () => {
         allPersonnel.forEach(p => {
             personMap.set('fullName' in p ? p.fullName : p.name, p);
         });
-
-        const eventsToCheck = eventsForDate || [];
 
         for (const event of eventsToCheck) {
             // Skip deployment events
@@ -7617,6 +7615,13 @@ const App: React.FC = () => {
             }
         }
 
+        return newConflicts;
+    }, [allInstructorsData, allTraineesData, syllabusDetails]);
+
+    const unavailabilityConflicts = useMemo(() => {
+        const eventsToCheck = eventsForDate || [];
+        const newConflicts = calculateUnavailabilityConflictsForEvents(eventsToCheck);
+
         // ── DATA TRACKING: log what's causing red tiles ──────────────────────────────────
         if (newConflicts.size > 0) {
             console.group('[UnavailConflicts] ' + newConflicts.size + ' tile(s) are red on ' + (eventsForDate?.[0]?.date || 'unknown date'));
@@ -7646,7 +7651,15 @@ const App: React.FC = () => {
         // ─────────────────────────────────────────────────────────────────────────────────
 
         return newConflicts;
-    }, [eventsForDate, instructorsData, allTraineesData, syllabusDetails]);
+    }, [eventsForDate, calculateUnavailabilityConflictsForEvents]);
+
+    const nextDayUnavailabilityConflicts = useMemo(() => {
+        const eventsToCheck = (nextDayBuildEvents || []).map(event => ({
+            ...event,
+            date: buildDfpDate
+        })) as ScheduleEvent[];
+        return calculateUnavailabilityConflictsForEvents(eventsToCheck);
+    }, [nextDayBuildEvents, buildDfpDate, calculateUnavailabilityConflictsForEvents]);
 
 
 
@@ -14286,6 +14299,7 @@ updates.forEach(update => {
                             daylightTimes={{ firstLight: '06:30', lastLight: '18:30' }}
                             personnelConflicts={[]}
                             personnelConflictIds={nextDayPersonnelAndResourceConflictIds}
+                            unavailabilityConflicts={nextDayUnavailabilityConflicts}
                             onCptConflict={setCptConflict}
                             date={buildDfpDate}
                             onDateChange={setBuildDfpDate}
@@ -16207,7 +16221,7 @@ updates.forEach(update => {
                             }
                         });
                     }}
-                    isConflict={unavailabilityConflicts.has(selectedEvent.id) || (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id)}
+                    isConflict={(['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id)}
                     onNeoClick={handleNeoClick}
                     traineeLMPs={traineeLMPs}
                     oracleContextForModal={oracleContextForModal}
