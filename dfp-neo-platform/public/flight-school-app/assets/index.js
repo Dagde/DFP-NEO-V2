@@ -74447,6 +74447,11 @@ ${"=".repeat(60)}`);
     const syllabusItem = syllabusDetails.find((item) => item.id === event.flightNumber);
     return syllabusItem?.sortieType === "Solo";
   };
+  const isStbyFlightLineEvent = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+  const shouldRequireTwrDiCoverage = (event, options = {}) => {
+    if (!isSoloFlightNeedingTwrDi(event)) return false;
+    return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
+  };
   const hasTwrDiCoverageForSolo = (soloEvent, eventsToCheck) => {
     const soloStartTime = soloEvent.startTime;
     const soloEndTime = soloEvent.startTime + soloEvent.duration;
@@ -74507,7 +74512,7 @@ ${"=".repeat(60)}`);
       }
     }
     for (const event of nextDayBuildEvents) {
-      if (!isSoloFlightNeedingTwrDi(event)) {
+      if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
         continue;
       }
       if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
@@ -78550,14 +78555,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const isValidateFlagged = conflictingEventIds.has(event.id);
     let errors = [];
     if (showValidation && isValidateFlagged) {
-      errors = findHardErrors(event, allEvents);
+      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
       if (errors.length > 0) {
         errors.unshift("⚠️ VALIDATE MODE CONFLICTS DETECTED:");
         errors.push("");
         errors.push("This event is marked RED because Validate mode found the following rule violations:");
       }
     } else {
-      errors = findHardErrors(event, allEvents);
+      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
     }
     if (errors.length === 0) {
       if (showValidation && !isValidateFlagged) {
@@ -78681,7 +78686,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       setNeoRemediesForFlyout([]);
     }
   };
-  const findHardErrors = (event, allEventsForDate) => {
+  const findHardErrors = (event, allEventsForDate, options = {}) => {
     const errors = [];
     const conflictResult = detectConflictsForEvent(event, allEventsForDate, event.date);
     if (conflictResult.hasConflict) {
@@ -78724,7 +78729,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     if (event.flightType === "Dual" && (!event.instructor || event.instructor.trim() === "" || event.instructor === "TBD")) {
       errors.push("❌ No instructor assigned - Dual flights require an instructor.");
     }
-    if (isSoloFlightNeedingTwrDi(event) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
+    if (shouldRequireTwrDiCoverage(event, options) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
       errors.push("❌ TWR DI coverage missing - Solo flights require a TWR DI event that starts before or at the solo start time and finishes after or at the solo finish time.");
     }
     const eventWindow = getEventBookingWindow(event, syllabusDetails);
@@ -78853,7 +78858,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       pilot: updatedProblemTile.pilot
     });
     console.log("🟠 Running findHardErrors on updated tile...");
-    const newErrors = findHardErrors(updatedProblemTile, currentEvents);
+    const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
     console.log("🟠 Errors found:", newErrors.length);
     if (newErrors.length > 0) {
       console.log("🟠 Error details:", newErrors);

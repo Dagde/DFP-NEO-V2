@@ -7423,6 +7423,18 @@ const App: React.FC = () => {
         return syllabusItem?.sortieType === 'Solo';
     };
 
+    const isStbyFlightLineEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean =>
+        !!event.resourceId &&
+        (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+
+    const shouldRequireTwrDiCoverage = (
+        event: ScheduleEvent | Omit<ScheduleEvent, 'date'>,
+        options: { allowStbySoloWithoutTwrDi?: boolean } = {}
+    ): boolean => {
+        if (!isSoloFlightNeedingTwrDi(event)) return false;
+        return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
+    };
+
     const hasTwrDiCoverageForSolo = (
         soloEvent: ScheduleEvent | Omit<ScheduleEvent, 'date'>,
         eventsToCheck: (ScheduleEvent | Omit<ScheduleEvent, 'date'>)[]
@@ -7525,7 +7537,7 @@ const App: React.FC = () => {
 
         // TWR DI Validation Rule for Next Day Build: every trainee solo flight must be fully covered.
         for (const event of nextDayBuildEvents) {
-            if (!isSoloFlightNeedingTwrDi(event)) {
+            if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
                 continue;
             }
 
@@ -12693,7 +12705,7 @@ updates.forEach(update => {
 
         // If Validate mode is active and this event is flagged, emphasize the validation conflicts
         if (showValidation && isValidateFlagged) {
-            errors = findHardErrors(event, allEvents);
+            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
             // Add specific validation context
             if (errors.length > 0) {
                 errors.unshift("⚠️ VALIDATE MODE CONFLICTS DETECTED:");
@@ -12701,7 +12713,7 @@ updates.forEach(update => {
                 errors.push("This event is marked RED because Validate mode found the following rule violations:");
             }
         } else {
-            errors = findHardErrors(event, allEvents);
+            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
         }
 
         if (errors.length === 0) {
@@ -12850,7 +12862,11 @@ updates.forEach(update => {
         }
     };
 
-    const findHardErrors = (event: ScheduleEvent, allEventsForDate: ScheduleEvent[]): string[] => {
+    const findHardErrors = (
+        event: ScheduleEvent,
+        allEventsForDate: ScheduleEvent[],
+        options: { allowStbySoloWithoutTwrDi?: boolean } = {}
+    ): string[] => {
         const errors: string[] = [];
 
         // Use the SAME conflict detection logic as the automatic system
@@ -12907,7 +12923,7 @@ updates.forEach(update => {
             errors.push('❌ No instructor assigned - Dual flights require an instructor.');
         }
 
-        if (isSoloFlightNeedingTwrDi(event) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
+        if (shouldRequireTwrDiCoverage(event, options) && !hasTwrDiCoverageForSolo(event, allEventsForDate)) {
             errors.push('❌ TWR DI coverage missing - Solo flights require a TWR DI event that starts before or at the solo start time and finishes after or at the solo finish time.');
         }
 
@@ -13128,7 +13144,7 @@ updates.forEach(update => {
 
         // Re-run the error analysis on the updated tile and schedule.
         console.log('🟠 Running findHardErrors on updated tile...');
-        const newErrors = findHardErrors(updatedProblemTile, currentEvents);
+        const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
         console.log('🟠 Errors found:', newErrors.length);
         if (newErrors.length > 0) {
             console.log('🟠 Error details:', newErrors);
