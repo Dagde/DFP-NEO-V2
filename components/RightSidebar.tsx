@@ -74,7 +74,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
           onClick={onBuildDfpClick}
           disabled={!canBuild}
           title={canBuild ? 'Run NEO Build' : 'Access denied: NEO Build permission required'}
-          className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`}
+          className={`mt-[9px] w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`}
         >
           <span className="text-center leading-tight" style={{color: "#fb923c"}}>NEO Build</span>
         </button>

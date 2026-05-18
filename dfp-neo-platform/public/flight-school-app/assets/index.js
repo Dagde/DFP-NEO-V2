@@ -3896,7 +3896,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           ] })
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[1px] space-y-[1px] flex flex-col items-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[10px] space-y-[1px] flex flex-col items-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -4163,7 +4163,7 @@ const RightSidebar = ({
           onClick: onBuildDfpClick,
           disabled: !canBuild,
           title: canBuild ? "Run NEO Build" : "Access denied: NEO Build permission required",
-          className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`,
+          className: `mt-[9px] w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${actionButtonClass(canBuild)}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", style: { color: "#fb923c" }, children: "NEO Build" })
         }
       ),
