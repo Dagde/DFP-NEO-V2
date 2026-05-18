@@ -70911,35 +70911,39 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         let placed = false;
         const searchSpaces = (type === "cpt" || type === "ground") && !isNightPass && segments.length > 0 ? segmentSearchOrder.map((s) => ({ start: Math.max(searchStartTime, s.start), end: s.end })) : [{ start: searchStartTime, end: endTimeBoundary }];
         const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass ? [true, false] : [false];
-        for (const primaryOnly of passModes) {
+        const nightAircraftReuseModes = isNightPass && isPlusOne && type === "flight" ? [true, false] : [false];
+        for (const requireNightAircraftReuse of nightAircraftReuseModes) {
           if (placed) break;
-          for (const space of searchSpaces) {
+          for (const primaryOnly of passModes) {
             if (placed) break;
-            const earliestEventStart = isNightPass ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
-            const latestEventStart = isNightPass ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
-            for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
-              const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
-              if (result && typeof result === "object" && "id" in result) {
-                generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
-                const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-                const tCounts = eventCounts.get(trainee.fullName);
-                if (type === "flight" || type === "ftd") {
-                  tCounts.flightFtd++;
-                  if (ipCounts) ipCounts.flightFtd++;
-                } else if (type === "ground") {
-                  tCounts.ground++;
-                  if (ipCounts) ipCounts.ground++;
-                } else if (type === "cpt") {
-                  tCounts.cpt++;
-                  if (ipCounts) ipCounts.cpt++;
+            for (const space of searchSpaces) {
+              if (placed) break;
+              const earliestEventStart = isNightPass ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
+              const latestEventStart = isNightPass ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
+              for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
+                const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
+                if (result && typeof result === "object" && "id" in result) {
+                  generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                  const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+                  const tCounts = eventCounts.get(trainee.fullName);
+                  if (type === "flight" || type === "ftd") {
+                    tCounts.flightFtd++;
+                    if (ipCounts) ipCounts.flightFtd++;
+                  } else if (type === "ground") {
+                    tCounts.ground++;
+                    if (ipCounts) ipCounts.ground++;
+                  } else if (type === "cpt") {
+                    tCounts.cpt++;
+                    if (ipCounts) ipCounts.cpt++;
+                  }
+                  if (type === "cpt" || type === "ground") {
+                    const segment = segments.find((s) => time >= s.start && time < s.end);
+                    if (segment) segment.count++;
+                  }
+                  placed = true;
+                  placedThisPass = true;
+                  break;
                 }
-                if (type === "cpt" || type === "ground") {
-                  const segment = segments.find((s) => time >= s.start && time < s.end);
-                  if (segment) segment.count++;
-                }
-                placed = true;
-                placedThisPass = true;
-                break;
               }
             }
           }
@@ -70951,7 +70955,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       unplacedTrainees = remainingForNextPass;
     }
   };
-  const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false) => {
+  const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false) => {
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + syllabusItem.duration;
@@ -71357,9 +71361,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     let resourceId = null;
     const resourcePrefix = type === "flight" ? "PC-21 " : type === "ftd" ? "FTD " : type === "cpt" ? "CPT " : "Ground ";
     const resourceCount = type === "flight" ? availableAircraftCount : type === "ftd" ? ftdCount : type === "cpt" ? cptCount : 6;
+    const getPreferredNightAircraftResource = () => {
+      if (!isNightPass || !isPlusOne || type !== "flight") return null;
+      const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+      const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
+      const firstNightEvent = generatedEvents.find(
+        (e) => nextEventCodes.has(e.flightNumber) && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY") && getPersonnel(e).includes(trainee.fullName) && (!instructor?.name || getPersonnel(e).includes(instructor.name))
+      );
+      return firstNightEvent?.resourceId || null;
+    };
     let resourceSearchStart = 1;
-    for (let i = resourceSearchStart; i <= resourceCount; i++) {
-      const id = `${resourcePrefix}${i}`;
+    const preferredNightAircraft = getPreferredNightAircraftResource();
+    const resourceCandidates = Array.from({ length: Math.max(0, resourceCount - resourceSearchStart + 1) }, (_, index) => `${resourcePrefix}${resourceSearchStart + index}`);
+    const orderedResourceCandidates = preferredNightAircraft && resourceCandidates.includes(preferredNightAircraft) ? [
+      preferredNightAircraft,
+      ...requirePreferredNightAircraft ? [] : resourceCandidates.filter((id) => id !== preferredNightAircraft)
+    ] : resourceCandidates;
+    for (const id of orderedResourceCandidates) {
       const resourceIsOccupied = generatedEvents.some((e) => {
         if (e.resourceId !== id) return false;
         let turnaround = 0;

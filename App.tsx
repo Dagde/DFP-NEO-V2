@@ -2312,43 +2312,50 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     ? [true, false]   // priority-only pass first, then fallback
                     : [false];        // priority disabled or night pass — single pass only
 
-                for (const primaryOnly of passModes) {
+                const nightAircraftReuseModes: boolean[] = isNightPass && isPlusOne && type === 'flight'
+                    ? [true, false]   // wave two tries the same aircraft across the full window before falling back
+                    : [false];
+
+                for (const requireNightAircraftReuse of nightAircraftReuseModes) {
                     if (placed) break;
-                    for (const space of searchSpaces) {
+                    for (const primaryOnly of passModes) {
                         if (placed) break;
-                        const earliestEventStart = isNightPass
-                            ? space.start + (syllabusItem.preFlightTime || 0)
-                            : space.start;
-                        const latestEventStart = isNightPass
-                            ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0)
-                            : space.end - syllabusItem.duration;
+                        for (const space of searchSpaces) {
+                            if (placed) break;
+                            const earliestEventStart = isNightPass
+                                ? space.start + (syllabusItem.preFlightTime || 0)
+                                : space.start;
+                            const latestEventStart = isNightPass
+                                ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0)
+                                : space.end - syllabusItem.duration;
 
-                        for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
-                            const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly);
-                            if (result && typeof result === 'object' && 'id' in result) {
-                                generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
-                                // Only get instructor counts if not a solo flight
-                                   const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
-                                const tCounts = eventCounts.get(trainee.fullName)!;
-                                if (type === 'flight' || type === 'ftd') {
-                                    tCounts.flightFtd++;
-                                    if (ipCounts) ipCounts.flightFtd++;
-                                } else if (type === 'ground') {
-                                    tCounts.ground++;
-                                    if (ipCounts) ipCounts.ground++; // Count ground events for instructors
-                                } else if (type === 'cpt') {
-                                    tCounts.cpt++;
-                                    if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                            for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
+                                const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
+                                if (result && typeof result === 'object' && 'id' in result) {
+                                    generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                    // Only get instructor counts if not a solo flight
+                                       const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
+                                    const tCounts = eventCounts.get(trainee.fullName)!;
+                                    if (type === 'flight' || type === 'ftd') {
+                                        tCounts.flightFtd++;
+                                        if (ipCounts) ipCounts.flightFtd++;
+                                    } else if (type === 'ground') {
+                                        tCounts.ground++;
+                                        if (ipCounts) ipCounts.ground++; // Count ground events for instructors
+                                    } else if (type === 'cpt') {
+                                        tCounts.cpt++;
+                                        if (ipCounts) ipCounts.cpt++; // Count CPT events for instructors
+                                    }
+
+                                    if (type === 'cpt' || type === 'ground') {
+                                        const segment = segments.find(s => time >= s.start && time < s.end);
+                                        if (segment) segment.count++;
+                                    }
+
+                                    placed = true;
+                                    placedThisPass = true;
+                                    break;
                                 }
-
-                                if (type === 'cpt' || type === 'ground') {
-                                    const segment = segments.find(s => time >= s.start && time < s.end);
-                                    if (segment) segment.count++;
-                                }
-
-                                placed = true;
-                                placedThisPass = true;
-                                break;
                             }
                         }
                     }
@@ -2371,7 +2378,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         type: 'flight' | 'ftd' | 'ground' | 'cpt',
         isNightPass: boolean,
         isPlusOne: boolean,
-        primaryPreferOnly: boolean = false
+        primaryPreferOnly: boolean = false,
+        requirePreferredNightAircraft: boolean = false
     ): ScheduleEventResult => {
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
@@ -2929,6 +2937,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         const resourcePrefix = type === 'flight' ? 'PC-21 ' : type === 'ftd' ? 'FTD ' : type === 'cpt' ? 'CPT ' : 'Ground ';
         const resourceCount = type === 'flight' ? availableAircraftCount : type === 'ftd' ? ftdCount : type === 'cpt' ? cptCount : 6;
+        const getPreferredNightAircraftResource = (): string | null => {
+            if (!isNightPass || !isPlusOne || type !== 'flight') return null;
+            const { next } = traineeNextEventMap.get(trainee.fullName) || { next: null };
+            const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
+            const firstNightEvent = generatedEvents.find(e =>
+                nextEventCodes.has(e.flightNumber) &&
+                !e.resourceId.startsWith('STBY') &&
+                !e.resourceId.startsWith('BNF-STBY') &&
+                getPersonnel(e).includes(trainee.fullName) &&
+                (!instructor?.name || getPersonnel(e).includes(instructor.name))
+            );
+            return firstNightEvent?.resourceId || null;
+        };
 
         // SOLO RESOURCE PLACEMENT FIX:
         // Solo flights must be placed on the PC-21 row that matches their chronological
@@ -2936,9 +2957,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Solo flights compete for resources using the same sequential search as dual flights.
         // No special row offset — solos find the first free aircraft starting from row 1.
         let resourceSearchStart = 1;
+        const preferredNightAircraft = getPreferredNightAircraftResource();
+        const resourceCandidates = Array.from({ length: Math.max(0, resourceCount - resourceSearchStart + 1) }, (_, index) => `${resourcePrefix}${resourceSearchStart + index}`);
+        const orderedResourceCandidates = preferredNightAircraft && resourceCandidates.includes(preferredNightAircraft)
+            ? [
+                preferredNightAircraft,
+                ...(requirePreferredNightAircraft ? [] : resourceCandidates.filter(id => id !== preferredNightAircraft))
+            ]
+            : resourceCandidates;
 
-        for (let i = resourceSearchStart; i <= resourceCount; i++) {
-            const id = `${resourcePrefix}${i}`;
+        for (const id of orderedResourceCandidates) {
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
 
