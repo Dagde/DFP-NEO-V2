@@ -1586,6 +1586,16 @@ function generateDfpInternal(
         return hasScheduledNightEvents || intendedNightStaff.has(personName);
     };
 
+    const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' =>
+        startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
+
+    const canAssignPersonForScheduledWindow = (personName: string, startTime: number): boolean => {
+        const proposedDayNight = getScheduledDayNightForStart(startTime);
+        if (proposedDayNight === 'Night' && isPersonScheduledForDayEvents(personName)) return false;
+        if (proposedDayNight === 'Day' && isPersonScheduledForNightEvents(personName)) return false;
+        return true;
+    };
+
     // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
 
     setProgress({ message: 'Initializing DFP build...', percentage: 0 });
@@ -2039,6 +2049,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return false;
             }
 
+            if (isPersonScheduledForNightEvents(ip.name)) {
+                console.log(`🌙 ❌ ${ip.name} excluded - already has night commitment`);
+                return false;
+            }
+
             console.log(`🌙 ✅ ${ip.name} eligible for night flying`);
             return true;
         });
@@ -2324,19 +2339,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + syllabusItem.duration;
-        const proposedDayNight = startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
-        const proposedIsDay = proposedDayNight === 'Day';
-        const proposedIsNight = proposedDayNight === 'Night';
-
         const traineeCounts = eventCounts.get(trainee.fullName)!;
 
-        if (proposedIsNight && isPersonScheduledForDayEvents(trainee.fullName)) {
-            console.log(`DAY/NIGHT BLOCK: ${trainee.fullName} already has day events; cannot schedule night ${syllabusItem.code}`);
-            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
-            return null;
-        }
-        if (proposedIsDay && isPersonScheduledForNightEvents(trainee.fullName)) {
-            console.log(`DAY/NIGHT BLOCK: ${trainee.fullName} already has night events; cannot schedule day ${syllabusItem.code}`);
+        if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
+            console.log(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
             return null;
         }
@@ -2383,8 +2389,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const instructor = instructors.find(i => i.name === pairedInstructorName);
                 if (!instructor) return null;
 
-                if (proposedIsNight && isPersonScheduledForDayEvents(instructor.name)) return null;
-                if (proposedIsDay && isPersonScheduledForNightEvents(instructor.name)) return null;
+                if (!canAssignPersonForScheduledWindow(instructor.name, startTime)) return null;
 
                 if (isPersonStaticallyUnavailable(instructor, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, 'flight')) return null;
 
@@ -2525,9 +2530,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             }
 
             candidates = candidates.filter(ip => {
-                if (proposedIsNight && isPersonScheduledForDayEvents(ip.name)) return false;
-                if (proposedIsDay && isPersonScheduledForNightEvents(ip.name)) return false;
-                return true;
+                return canAssignPersonForScheduledWindow(ip.name, startTime);
             });
 
             // ── DIAGNOSTIC: after qualification filter ──
@@ -3232,13 +3235,32 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         setProgress({ message: 'Scheduling Night Duty Supervisor...', percentage: 42 });
         console.log(`Scheduling night duty supervisor: ${nightDutySup.name}`);
 
-        // Schedule Night Duty Sup using the pre-selected supervisor
-        generatedEvents.push({
-            id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
-            flightNumber: 'Night Duty Sup', duration: ceaseNightFlying - commenceNightFlying, startTime: commenceNightFlying, resourceId: 'Duty Sup',
-            color: 'bg-amber-700/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
+        const existingNightDutySup = generatedEvents.find(e => {
+            if (e.resourceId !== 'Duty Sup') return false;
+            const dutyStart = e.startTime;
+            const dutyEnd = e.startTime + e.duration;
+            return dutyStart < ceaseNightFlying && dutyEnd > commenceNightFlying;
         });
-        eventCounts.get(nightDutySup.name)!.dutySup++;
+
+        const nightDutySupHasOverlap = generatedEvents.some(e => {
+            if (!getPersonnel(e).includes(nightDutySup!.name)) return false;
+            const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+            return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
+        });
+
+        if (existingNightDutySup) {
+            console.log(`Night Duty Sup already covered by ${existingNightDutySup.instructor || 'unknown'} from ${existingNightDutySup.startTime} to ${existingNightDutySup.startTime + existingNightDutySup.duration}; skipping duplicate.`);
+        } else if (nightDutySupHasOverlap) {
+            console.log(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
+        } else {
+            // Schedule Night Duty Sup using the pre-selected supervisor
+            generatedEvents.push({
+                id: uuidv4(), type: 'ground', instructor: nightDutySup.name,
+                flightNumber: 'Night Duty Sup', duration: ceaseNightFlying - commenceNightFlying, startTime: commenceNightFlying, resourceId: 'Duty Sup',
+                color: 'bg-amber-700/50', flightType: 'Dual', locationType: 'Local', origin: school, destination: school, pilot: undefined, student: ''
+            });
+            eventCounts.get(nightDutySup.name)!.dutySup++;
+        }
     } else if (nextEventLists.bnf.length >= 2 && !nightDutySup) {
         console.log('WARNING: Night flying scheduled but no night duty supervisor available!');
     }
@@ -3629,6 +3651,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Filter to only available instructors using STBY-specific availability check.
         // Respects pre/post flight times of both the STBY event and all existing events.
         const available = candidates.filter(ip =>
+            canAssignPersonForScheduledWindow(ip.name, startTime) &&
             isInstructorAvailableForStby(ip.name, startTime, duration, syllabusItem, events)
         );
 
@@ -3779,6 +3802,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             // Try to find a slot with an instructor
             let placed = false;
             for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+                if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
                 if (hasFlightStartTime(time, generatedEvents)) continue;
                 const flightEndTime = time + next.duration;
                 if (flightEndTime > flyingEndTime) continue;
@@ -3848,6 +3872,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             for (const primaryOnly of passModes) {
                 if (placedOnFtd) break;
                 for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 0.001; time += ftdRecoveryIncrement) {
+                    if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
                     const result = scheduleEvent(trainee, next, time, 'ftd', false, false, primaryOnly);
                     if (result && result.resourceId?.startsWith('FTD ')) {
                         generatedEvents.push({ ...result, _source: 'generated', _isNext: true, _traineeName: trainee.fullName });
@@ -3900,6 +3925,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         let placedOnRealFtd = false;
 
         for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 0.001; time += recoveryIncrement) {
+            if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
             const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
             if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, 'ftd')) continue;
 
@@ -3973,6 +3999,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             while (!placed && currentStbyLine <= 20) {
                 // Check if event fits in current time slot on current STBY line
                 if (currentTime + next.duration <= ftdEndTime) {
+                    if (!canAssignPersonForScheduledWindow(trainee.fullName, currentTime)) {
+                        currentTime += minSpacing;
+                        continue;
+                    }
                     // Check for conflicts on this specific STBY line
                     const hasConflict = generatedEvents.some(e => {
                         if (e.resourceId !== `STBY ${currentStbyLine}`) return false;
