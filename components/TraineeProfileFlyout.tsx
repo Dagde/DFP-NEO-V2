@@ -520,6 +520,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             isPaused: !trainee.isPaused,
         };
         onUpdateTrainee(updatedTrainee);
+        setIsPaused(updatedTrainee.isPaused);
         setShowPauseConfirm(false);
     };
 
@@ -1179,59 +1180,77 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     {/* ── SECTION 1: MAIN PROFILE CARD ── */}
                     <div className={card3d + " p-3"} style={card3dStyle}>
                       {isEditing ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
-                            <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
-                            <Dropdown label="Course" value={course} onChange={e => handleCourseChange(e.target.value)}>
-                              {(activeCourses || []).length > 0 ? (activeCourses || []).map(c => <option key={c} value={c}>{c}</option>) : <option disabled>No courses</option>}
-                            </Dropdown>
-                            <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
-                              {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
-                            </Dropdown>
-                            <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
-                              <option value="">— None —</option>
-                              {academicLmpCourses.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
-                            </Dropdown>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between border-b border-gray-700/70 pb-2">
+                            <div>
+                              <h4 className="text-sm font-semibold text-white">Profile Details</h4>
+                              <p className="text-[11px] text-gray-400">Course, identity, contact and access settings.</p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+                              {isPaused ? 'Paused' : 'Active'}
+                            </span>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
-                              {traineeRankOptions.map(option => (
-                                <option key={option} value={option}>{option}</option>
-                              ))}
-                            </Dropdown>
-                            <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
-                              <option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
-                            </Dropdown>
-                            <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
-                              {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
-                            </Dropdown>
-                            <Dropdown label="Location" value={location} onChange={e => setLocation(e.target.value)}>
-                              {(locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                            </Dropdown>
+
+                          <div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2">Training</div>
+                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5">
+                              <div className="lg:col-span-2">
+                                <InputField label="Name (Surname, Firstname)" value={name} onChange={e => handleNameChange(e.target.value)} />
+                              </div>
+                              <InputField label="ID Number" value={idNumber} onChange={e => setIdNumber(parseInt(e.target.value) || 0)} />
+                              <Dropdown label="Rank" value={rank} onChange={e => setRank(e.target.value as TraineeRank)}>
+                                {traineeRankOptions.map(option => (
+                                  <option key={option} value={option}>{option}</option>
+                                ))}
+                              </Dropdown>
+                              <Dropdown label="Service" value={service} onChange={e => setService(e.target.value)}>
+                                <option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
+                              </Dropdown>
+                              <Dropdown label="Course" value={course} onChange={e => handleCourseChange(e.target.value)}>
+                                {(activeCourses || []).length > 0 ? (activeCourses || []).map(c => <option key={c} value={c}>{c}</option>) : <option disabled>No courses</option>}
+                              </Dropdown>
+                              <Dropdown label="LMP" value={lmpType} onChange={e => handleLmpTypeChange(e.target.value)}>
+                                {COURSE_MASTER_LMPS.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                              </Dropdown>
+                              <Dropdown label="Academic LMP" value={academicLmpType} onChange={e => setAcademicLmpType(e.target.value)}>
+                                <option value="">None</option>
+                                {academicLmpCourses.map(lmp => <option key={lmp} value={lmp}>{lmp}</option>)}
+                              </Dropdown>
+                              <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
+                                <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
+                              </Dropdown>
+                            </div>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <Dropdown label="Seat Config" value={seatConfig} onChange={e => setSeatConfig(e.target.value as SeatConfig)}>
-                              <option value="Normal">Normal</option><option value="FWD/SHORT">FWD/SHORT</option><option value="REAR/SHORT">REAR/SHORT</option><option value="FWD/LONG">FWD/LONG</option>
-                            </Dropdown>
+
+                          <div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2">Organisation & Contact</div>
+                            <div className="grid grid-cols-2 lg:grid-cols-6 gap-2.5">
+                              <Dropdown label="Unit" value={unit} onChange={e => setUnit(e.target.value)}>
+                                {(units || []).map(u => <option key={u} value={u}>{u}</option>)}
+                              </Dropdown>
+                              <Dropdown label="Location" value={location} onChange={e => setLocation(e.target.value)}>
+                                {(locations || []).map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                              </Dropdown>
+                              <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
+                              <InputField label="Callsign" value={traineeCallsign} onChange={e => setTraineeCallsign(e.target.value)} />
+                              <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
+                              <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
+                              <div className="lg:col-span-2">
+                                <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
+                              </div>
+                              <div className="lg:col-span-3">
+                                <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
+                              </div>
+                            </div>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <InputField label="Flight" value={flight} onChange={e => setFlight(e.target.value)} />
-                            <InputField label="Phone Number" value={phoneNumber} onChange={e => setPhoneNumber(e.target.value)} />
-                            <InputField label="Email" value={email} onChange={e => setEmail(e.target.value)} />
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <InputField label="Callsign" value={traineeCallsign} onChange={e => setTraineeCallsign(e.target.value)} />
-                            <InputField label="Secondary Callsign" value={secondaryCallsign} onChange={e => setSecondaryCallsign(e.target.value)} />
-                            <InputField label="Crew" value={crew} onChange={e => setCrew(e.target.value)} />
-                          </div>
-                          <div className="bg-gray-700/30 rounded p-3">
-                            <label className="block text-xs font-medium text-gray-400 mb-2">Permissions</label>
-                            <div className="grid grid-cols-4 gap-2">
+
+                          <div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2">Permissions</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-2">
                               {allPermissions.map(perm => (
-                                <label key={perm} className="flex items-center space-x-1 cursor-pointer">
+                                <label key={perm} className="flex items-center space-x-2 cursor-pointer text-xs text-white">
                                   <input type="checkbox" checked={permissions.includes(perm)} onChange={e => handlePermissionChange(perm, e.target.checked)} className="h-3 w-3 accent-sky-500" />
-                                  <span className="text-white text-xs">{perm}</span>
+                                  <span>{perm}</span>
                                 </label>
                               ))}
                             </div>
@@ -1288,29 +1307,19 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           </div>
 
                           {/* Permissions and Roles panels */}
-                          <div className="flex-shrink-0 w-40 flex flex-col gap-2">
-                            {/* Permissions panel */}
-                            <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                              <div className="text-[10px] text-gray-400 font-semibold mb-1">Permissions</div>
-                              <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
-                                {(trainee.permissions || []).length > 0
-                                  ? (trainee.permissions || []).map(p => (
-                                      <div key={p} className="text-white text-[10px]">• {p}</div>
-                                    ))
-                                  : <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
-                                }
-                              </div>
-                            </div>
-                            {/* Roles panel */}
-                            <div className={card3d + " p-2 flex-1"} style={{...card3dStyle, background:'linear-gradient(180deg, #1e2d42 0%, #192538 100%)'}}>
-                              <div className="text-[10px] text-gray-400 font-semibold mb-1">Roles</div>
-                              <div className="grid grid-cols-3 gap-x-1.5 gap-y-0.5">
-                                <div className="text-gray-500 text-[10px] italic col-span-3">None</div>
+                          <div className="w-40 flex-shrink-0 space-y-2">
+                            <div className="bg-gray-700/30 rounded p-2">
+                              <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
+                              <div className="flex flex-wrap gap-1">
+                                {(trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p: string) => (
+                                  <span key={p} className="px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]">{p}</span>
+                                )) : <span className="text-gray-500 text-[10px]">None</span>}
                               </div>
                             </div>
                           </div>
                         </div>
                       )}
+
                     </div>
 
 
@@ -1492,6 +1501,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>
+                          <button onClick={handlePauseToggle} disabled={isFrozen} className={btnClass}>{trainee.isPaused ? 'Unpause' : 'Pause'}</button>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>
@@ -1508,7 +1518,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
               </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
-            {showPauseConfirm && <PauseConfirmationFlyout onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
+            {showPauseConfirm && <PauseConfirmationFlyout isPaused={trainee.isPaused} onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
         </>
     );
 

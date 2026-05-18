@@ -8780,13 +8780,21 @@ const AddUnavailabilityFlyout = ({ onClose, onTodayOnly, onSave, unavailabilityP
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "Done" }) })
   ] }) });
 };
-const PauseConfirmationFlyout = ({ onConfirm, onCancel }) => {
+const PauseConfirmationFlyout = ({ onConfirm, onCancel, isPaused = false }) => {
+  const action = isPaused ? "unpause" : "pause";
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[70] flex items-center justify-center animate-fade-in", onClick: onCancel, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-sm border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Confirm Action" }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-300", children: "Are you sure you want to pause this trainee?" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-gray-300", children: [
+      "Are you sure you want to ",
+      action,
+      " this trainee?"
+    ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onCancel, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "No, Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold", children: "Yes, Pause" })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: onConfirm, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold", children: [
+        "Yes, ",
+        isPaused ? "Unpause" : "Pause"
+      ] })
     ] })
   ] }) });
 };
@@ -10292,15 +10300,23 @@ const TraineeProfileFlyout = ({
       });
     }
   }, []);
-  reactExports.useMemo(() => {
+  const traineeHasEventsToday = reactExports.useMemo(() => {
     return events.some((e) => e.student === trainee.fullName || e.pilot === trainee.fullName);
   }, [events, trainee.fullName]);
+  const handlePauseToggle = () => {
+    if (!isPaused && traineeHasEventsToday) {
+      setShowScheduleWarning(true);
+    } else {
+      setShowPauseConfirm(true);
+    }
+  };
   const confirmPause = () => {
     const updatedTrainee = {
       ...trainee,
       isPaused: !trainee.isPaused
     };
     onUpdateTrainee(updatedTrainee);
+    setIsPaused(updatedTrainee.isPaused);
     setShowPauseConfirm(false);
   };
   const handleNameChange = (newName) => {
@@ -10830,48 +10846,57 @@ const TraineeProfileFlyout = ({
               }
             ) });
           })(),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-3", style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Course", value: course, onChange: (e) => handleCourseChange(e.target.value), children: (activeCourses || []).length > 0 ? (activeCourses || []).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No courses" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: COURSE_MASTER_LMPS$1.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Academic LMP", value: academicLmpType, onChange: (e) => setAcademicLmpType(e.target.value), children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "— None —" }),
-                academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-3", style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700/70 pb-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Profile Details" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: "Course, identity, contact and access settings." })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-bold ${isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: isPaused ? "Paused" : "Active" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Training" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-6 gap-2.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Name (Surname, Firstname)", value: name, onChange: (e) => handleNameChange(e.target.value) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "ID Number", value: idNumber, onChange: (e) => setIdNumber(parseInt(e.target.value) || 0) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ARA", children: "ARA" })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Course", value: course, onChange: (e) => handleCourseChange(e.target.value), children: (activeCourses || []).length > 0 ? (activeCourses || []).map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No courses" }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "LMP", value: lmpType, onChange: (e) => handleLmpTypeChange(e.target.value), children: COURSE_MASTER_LMPS$1.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Academic LMP", value: academicLmpType, onChange: (e) => setAcademicLmpType(e.target.value), children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "None" }),
+                  academicLmpCourses.map((lmp) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: lmp, children: lmp }, lmp))
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Seat Config", value: seatConfig, onChange: (e) => setSeatConfig(e.target.value), children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Normal", children: "Normal" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FWD/SHORT", children: "FWD/SHORT" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "REAR/SHORT", children: "REAR/SHORT" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FWD/LONG", children: "FWD/LONG" })
+                ] })
               ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Rank", value: rank, onChange: (e) => setRank(e.target.value), children: traineeRankOptions.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option, children: option }, option)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Service", value: service, onChange: (e) => setService(e.target.value), children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAN", children: "RAN" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "ARA", children: "ARA" })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Unit", value: unit, onChange: (e) => setUnit(e.target.value), children: (units || []).map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u)) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Location", value: location, onChange: (e) => setLocation(e.target.value), children: (locations || []).map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc)) })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Organisation & Contact" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 lg:grid-cols-6 gap-2.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Unit", value: unit, onChange: (e) => setUnit(e.target.value), children: (units || []).map((u) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: u, children: u }, u)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Dropdown$1, { label: "Location", value: location, onChange: (e) => setLocation(e.target.value), children: (locations || []).map((loc) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: loc, children: loc }, loc)) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Flight", value: flight, onChange: (e) => setFlight(e.target.value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Callsign", value: traineeCallsign, onChange: (e) => setTraineeCallsign(e.target.value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Secondary Callsign", value: secondaryCallsign, onChange: (e) => setSecondaryCallsign(e.target.value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Crew", value: crew, onChange: (e) => setCrew(e.target.value) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "lg:col-span-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) }) })
+              ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown$1, { label: "Seat Config", value: seatConfig, onChange: (e) => setSeatConfig(e.target.value), children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Normal", children: "Normal" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FWD/SHORT", children: "FWD/SHORT" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "REAR/SHORT", children: "REAR/SHORT" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FWD/LONG", children: "FWD/LONG" })
-            ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Flight", value: flight, onChange: (e) => setFlight(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Phone Number", value: phoneNumber, onChange: (e) => setPhoneNumber(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Email", value: email, onChange: (e) => setEmail(e.target.value) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Callsign", value: traineeCallsign, onChange: (e) => setTraineeCallsign(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Secondary Callsign", value: secondaryCallsign, onChange: (e) => setSecondaryCallsign(e.target.value) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField$1, { label: "Crew", value: crew, onChange: (e) => setCrew(e.target.value) })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 mb-2", children: "Permissions" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-4 gap-2", children: allPermissions.map((perm) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-1 cursor-pointer", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Permissions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-3 gap-y-2", children: allPermissions.map((perm) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "flex items-center space-x-2 cursor-pointer text-xs text-white", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", checked: permissions.includes(perm), onChange: (e) => handlePermissionChange(perm, e.target.checked), className: "h-3 w-3 accent-sky-500" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-xs", children: perm })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: perm })
               ] }, perm)) })
             ] })
           ] }) : (
@@ -10958,19 +10983,10 @@ const TraineeProfileFlyout = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", {})
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 w-40 flex flex-col gap-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-2 flex-1", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-1", children: "Permissions" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: (trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-white text-[10px]", children: [
-                    "• ",
-                    p
-                  ] }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic col-span-3", children: "None" }) })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-2 flex-1", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 font-semibold mb-1", children: "Roles" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 gap-x-1.5 gap-y-0.5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-500 text-[10px] italic col-span-3", children: "None" }) })
-                ] })
-              ] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 flex-shrink-0 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: (trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
+              ] }) })
             ] })
           ) }),
           !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
@@ -11135,6 +11151,7 @@ const TraineeProfileFlyout = ({
             canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[1px]" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, children: trainee.isPaused ? "Unpause" : "Pause" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
@@ -11150,7 +11167,7 @@ const TraineeProfileFlyout = ({
       setShowScheduleWarning(false);
       setShowPauseConfirm(true);
     } }),
-    showPauseConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PauseConfirmationFlyout, { onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) })
+    showPauseConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PauseConfirmationFlyout, { isPaused: trainee.isPaused, onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) })
   ] });
 };
 const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
