@@ -18,8 +18,8 @@ const PauseConfirmationFlyout: React.FC<PauseConfirmationFlyoutProps> = ({ onCon
                     <p className="text-gray-300">Are you sure you want to {action} this trainee?</p>
                 </div>
                 <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
-                    <button onClick={onCancel} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold">No, Cancel</button>
-                    <button onClick={onConfirm} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold">Yes, {isPaused ? 'Unpause' : 'Pause'}</button>
+                    <button onClick={onCancel} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold">No</button>
+                    <button onClick={onConfirm} className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold">Yes</button>
                 </div>
             </div>
         </div>

@@ -8790,11 +8790,8 @@ const PauseConfirmationFlyout = ({ onConfirm, onCancel, isPaused = false }) => {
       " this trainee?"
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onCancel, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "No, Cancel" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("button", { onClick: onConfirm, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold", children: [
-        "Yes, ",
-        isPaused ? "Unpause" : "Pause"
-      ] })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onCancel, className: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-semibold", children: "No" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onConfirm, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold", children: "Yes" })
     ] })
   ] }) });
 };
