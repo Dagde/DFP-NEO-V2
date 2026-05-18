@@ -4660,7 +4660,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isSctEvent = event.eventCategory === "sct";
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
-  const aircraftNumberDisplay = event.aircraftNumber ? formatAircraftNumber(event.aircraftNumber, void 0, aircraftNumberSettings) : "";
+  const aircraftNumberDisplay = event.aircraftNumber ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number : "";
   const picName = isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const studentName = event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;

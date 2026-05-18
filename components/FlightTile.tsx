@@ -4,7 +4,7 @@ import { ScheduleEvent, Trainee, EventSegment } from '../types';
 import {
   AircraftNumberSettings,
   DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
-  formatAircraftNumber,
+  parseAircraftNumber,
 } from '../utils/aircraftNumberFormat';
 
 interface FlightTileProps {
@@ -308,7 +308,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
   const aircraftNumberDisplay = event.aircraftNumber
-    ? formatAircraftNumber(event.aircraftNumber, undefined, aircraftNumberSettings)
+    ? parseAircraftNumber(event.aircraftNumber, aircraftNumberSettings).number
     : '';
   
   
