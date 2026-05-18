@@ -31,7 +31,7 @@ interface ScheduleViewProps {
   showValidation: boolean;
   showPrePost: boolean;
   syllabusDetails: SyllabusItemDetail[];
-  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   seatConfigs: Map<string, string>;
   daylightTimes: { firstLight: string | null; lastLight: string | null };
   personnelConflicts: Conflict[];

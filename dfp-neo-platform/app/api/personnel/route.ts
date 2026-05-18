@@ -10,6 +10,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Credentials': 'true',
 };
 
+const asJsonObject = (value: any): Record<string, any> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
 // Handle OPTIONS preflight
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
@@ -94,6 +97,12 @@ export async function POST(request: NextRequest) {
       console.log('⚠️  [AUTO-LINK] No idNumber provided, cannot link to User');
     }
 
+    const preferences = {
+      ...asJsonObject(body.preferences),
+      ...(body.callsign !== undefined ? { callsign: body.callsign || null } : {}),
+      ...(body.secondaryCallsign !== undefined ? { secondaryCallsign: body.secondaryCallsign || null } : {}),
+    };
+
     // Create new personnel record
     const newPersonnel = await prisma.personnel.create({
       data: {
@@ -119,6 +128,7 @@ export async function POST(request: NextRequest) {
         isContractor: body.isContractor || false,
         isAdminStaff: body.isAdminStaff || false,
         isActive: true,
+        preferences,
         userId: linkedUserId,
       }
     });

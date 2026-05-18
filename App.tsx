@@ -36,6 +36,10 @@ import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
+import {
+    getStaffCallsignAssignments,
+    getStaffCallsignKey,
+} from './utils/staffCallsigns';
 import { debouncedAuditLog } from './utils/auditDebounce';
 import { seedTestAuditLogs } from './utils/seedAuditLogs';
 import LogbookView from './components/LogbookView';
@@ -78,7 +82,8 @@ import {
     EventSegment,
     FormationCallsign,
     CancellationCode,
-    CancellationRecord
+    CancellationRecord,
+    StaffCallsignInfo
 } from './types';
 import { NewCourseData } from './components/AddCourseFlyout';
 
@@ -146,6 +151,16 @@ import { DailyAvailabilityRecord } from './types/AircraftAvailability';
 import PauseFlightOpsPanel, { PausePhase, PauseBuildConfig } from './components/PauseFlightOpsPanel';
 import PropellerLoadingOverlay from './components/PropellerLoadingOverlay';
 
+const normalisePersonnelRecord = (person: any): any => {
+    const preferences = person?.preferences && typeof person.preferences === 'object' && !Array.isArray(person.preferences)
+        ? person.preferences
+        : {};
+    return {
+        ...person,
+        callsign: person?.callsign || preferences.callsign || '',
+        secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || '',
+    };
+};
 
 // --- MOCK DATA ---
 import { ESL_DATA } from './mockData';
@@ -7192,20 +7207,85 @@ const App: React.FC = () => {
         }
     }, [publishedSchedules, date, school, baselineSchedules]);
 
-    const personnelData = useMemo(() => {
-        const data = new Map<string, { callsignPrefix: string; callsignNumber: number }>();
-        const callsignPrefix = school === 'ESL' ? 'ROLR' : 'VIPR';
+    const staffCallsignAssignments = useMemo(
+        () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings),
+        [allInstructorsData, personnelDisplaySettings]
+    );
 
-        instructorsData.forEach(instructor => {
-            if (instructor.name && (instructor.role === 'QFI' || instructor.isQFI) && instructor.callsignNumber > 0) {
+    const personnelData = useMemo(() => {
+        const data = new Map<string, StaffCallsignInfo>();
+
+        allInstructorsData.forEach(instructor => {
+            if (!instructor.name) return;
+            const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
+            const savedCallsign = String(instructor.callsign || '').trim();
+            const callsign = savedCallsign || assigned?.callsign || '';
+            const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || (school === 'ESL' ? 'ROLR' : 'VIPR');
+            const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
+
+            if (callsign || callsignNumber > 0) {
                 data.set(instructor.name, {
                     callsignPrefix,
-                    callsignNumber: instructor.callsignNumber
+                    callsignNumber,
+                    callsign
                 });
             }
         });
         return data;
-    }, [allInstructorsData, school]);
+    }, [allInstructorsData, school, staffCallsignAssignments]);
+
+    const staffCallsignSyncHashRef = useRef('');
+    useEffect(() => {
+        const updates = allInstructorsData
+            .map((instructor) => {
+                const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
+                return assigned && (instructor as any).id && (
+                    instructor.callsign !== assigned.callsign ||
+                    instructor.callsignNumber !== assigned.callsignNumber
+                )
+                    ? { instructor, assigned }
+                    : null;
+            })
+            .filter(Boolean) as { instructor: Instructor; assigned: StaffCallsignInfo }[];
+
+        const hash = updates
+            .map(({ instructor, assigned }) => `${(instructor as any).id}:${assigned.callsign}:${assigned.callsignNumber}`)
+            .sort()
+            .join('|');
+
+        if (!hash || staffCallsignSyncHashRef.current === hash) return;
+        staffCallsignSyncHashRef.current = hash;
+
+        let cancelled = false;
+        Promise.allSettled(updates.map(async ({ instructor, assigned }) => {
+            const response = await fetch(`/api/personnel/${(instructor as any).id}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    callsign: assigned.callsign,
+                    callsignNumber: assigned.callsignNumber,
+                }),
+            });
+            if (!response.ok) throw new Error(`Failed to save callsign for ${instructor.name}: ${response.status}`);
+        })).then((results) => {
+            const failed = results.filter(result => result.status === 'rejected');
+            if (failed.length > 0) {
+                console.warn('[Staff Callsigns] Some callsigns could not be saved to database.', failed);
+            }
+            if (cancelled) return;
+            setInstructorsData(prev => prev.map(instructor => {
+                const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
+                return assigned
+                    ? { ...instructor, callsign: assigned.callsign, callsignNumber: assigned.callsignNumber }
+                    : instructor;
+            }));
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [allInstructorsData, staffCallsignAssignments]);
 
     const seatConfigs = useMemo(() => {
         const data = new Map<string, string>();
@@ -12123,7 +12203,7 @@ updates.forEach(update => {
             if (personnelRes.ok) {
                 const personnelData = await personnelRes.json();
                 const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
-                    ...p,
+                    ...normalisePersonnelRecord(p),
                     // Extract qualifications.currencyStatus to top-level so Post Flight
                     // and other in-memory reads can find it at person.currencyStatus
                     currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
@@ -12340,7 +12420,7 @@ updates.forEach(update => {
                 if (personnelRes.ok) {
                     const personnelData = await personnelRes.json();
                     const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
-                        ...p,
+                        ...normalisePersonnelRecord(p),
                         currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                         _dataSource: 'database' as const,
                         unavailability: Array.isArray(p.unavailability)

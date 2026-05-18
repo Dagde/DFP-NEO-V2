@@ -22,7 +22,7 @@ interface FlightTileProps {
   isDragging: boolean;
   isConflicting?: boolean;
   conflictedPersonnelName?: string | null;
-  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   seatConfigs: Map<string, string>;
   isDraggable?: boolean;
   currentTime: Date;
@@ -452,9 +452,10 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const storedCallsign = event.callsign || '';
   
   const callsignInfo = picName ? personnelData.get(picName) : undefined;
-  const pilotCallsign = callsignInfo && callsignInfo.callsignNumber > 0
-      ? `${callsignInfo.callsignPrefix} ${String(callsignInfo.callsignNumber).padStart(3, '0')}`
-      : '';
+  const pilotCallsign = callsignInfo?.callsign
+      || (callsignInfo && callsignInfo.callsignNumber > 0
+          ? `${callsignInfo.callsignPrefix}${callsignInfo.callsignNumber}`
+          : '');
   
   // For solo flights, use trainee callsign instead of instructor callsign
      const isSoloFlight = event.flightType === 'Solo';

@@ -4,6 +4,42 @@ import { auth } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
+const asJsonObject = (value: any): Record<string, any> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+
+const PERSONNEL_UPDATE_FIELDS = [
+  'name',
+  'rank',
+  'role',
+  'availability',
+  'isActive',
+  'callsignNumber',
+  'category',
+  'email',
+  'flight',
+  'idNumber',
+  'isAdminStaff',
+  'isCFI',
+  'isCommandingOfficer',
+  'isContractor',
+  'isDeputyFlightCommander',
+  'isExecutive',
+  'isFlyingSupervisor',
+  'isIRE',
+  'isOFI',
+  'isQFI',
+  'isTestingOfficer',
+  'location',
+  'permissions',
+  'phoneNumber',
+  'priorExperience',
+  'seatConfig',
+  'service',
+  'unavailability',
+  'unit',
+  'photoUrl',
+] as const;
+
 // GET /api/personnel/:id - Get specific personnel
 export async function GET(
   request: NextRequest,
@@ -136,9 +172,43 @@ export async function PATCH(
 
     console.log(`📝 [PATCH] Updating personnel with ID: ${id}`, body);
 
+    const existingPersonnel = await prisma.personnel.findUnique({
+      where: { id },
+      select: { preferences: true, qualifications: true },
+    });
+
+    if (!existingPersonnel) {
+      return NextResponse.json(
+        { error: 'Personnel not found' },
+        { status: 404 }
+      );
+    }
+
+    const data: any = {};
+    PERSONNEL_UPDATE_FIELDS.forEach((field) => {
+      if (body[field] !== undefined) data[field] = body[field];
+    });
+
+    if (body.callsign !== undefined || body.secondaryCallsign !== undefined || body.preferences !== undefined) {
+      data.preferences = {
+        ...asJsonObject(existingPersonnel.preferences),
+        ...asJsonObject(body.preferences),
+        ...(body.callsign !== undefined ? { callsign: body.callsign || null } : {}),
+        ...(body.secondaryCallsign !== undefined ? { secondaryCallsign: body.secondaryCallsign || null } : {}),
+      };
+    }
+
+    if (body.currencyStatus !== undefined || body.qualifications !== undefined) {
+      data.qualifications = {
+        ...asJsonObject(existingPersonnel.qualifications),
+        ...asJsonObject(body.qualifications),
+        ...(body.currencyStatus !== undefined ? { currencyStatus: body.currencyStatus || [] } : {}),
+      };
+    }
+
     const updatedPersonnel = await prisma.personnel.update({
       where: { id },
-      data: body,
+      data,
     });
 
     console.log(`✅ [PATCH] Successfully updated personnel: ${updatedPersonnel.name}`);

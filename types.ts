@@ -152,6 +152,12 @@ export interface Instructor {
   secondaryCallsign?: string;  // Secondary callsign string (e.g. "VIPR007")
 }
 
+export interface StaffCallsignInfo {
+  callsign: string;
+  callsignPrefix: string;
+  callsignNumber: number;
+}
+
 export interface ScheduleEvent {
   id: string;
   date: string;

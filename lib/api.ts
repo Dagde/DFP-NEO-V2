@@ -45,10 +45,17 @@ export async function fetchInstructors(): Promise<any[]> {
     // Extract qualifications.currencyStatus into top-level currencyStatus
     // so that in-memory instructor objects always have currencyStatus available
     // (the DB stores it nested inside the qualifications JSON field)
-    return result.data.personnel.map((p: any) => ({
-      ...p,
-      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
-    }));
+    return result.data.personnel.map((p: any) => {
+      const preferences = p.preferences && typeof p.preferences === 'object' && !Array.isArray(p.preferences)
+        ? p.preferences
+        : {};
+      return {
+        ...p,
+        callsign: p.callsign || preferences.callsign || '',
+        secondaryCallsign: p.secondaryCallsign || preferences.secondaryCallsign || '',
+        currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+      };
+    });
   }
   return [];
 }

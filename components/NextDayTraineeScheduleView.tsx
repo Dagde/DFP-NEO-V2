@@ -13,7 +13,7 @@ interface NextDayTraineeScheduleViewProps {
   onUpdateEvent: (updates: { eventId: string, newStartTime: number }[]) => void;
   zoomLevel: number;
   daylightTimes: { firstLight: string | null; lastLight: string | null };
-  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   seatConfigs: Map<string, string>;
   syllabusDetails: SyllabusItemDetail[];
   conflictingEventIds: Set<string>;

@@ -19,7 +19,7 @@ interface InstructorProfileFlyoutProps {
   instructor: Instructor;
   onClose: () => void;
   school: 'ESL' | 'PEA';
-  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
   onNavigateToCurrency: (person: Instructor) => void;
   originRect: DOMRect | null;
@@ -256,6 +256,14 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
   }, [traineesData, instructor.name]);
 
   const callsignData = useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
+  const displayCallsign = useMemo(() => {
+    if (callsignData?.callsign) return callsignData.callsign;
+    if (instructor.callsign) return instructor.callsign;
+    if (callsignData && (callsignData.callsignNumber || instructor.callsignNumber)) {
+      return `${callsignData.callsignPrefix || ''}${callsignData.callsignNumber || instructor.callsignNumber || ''}`;
+    }
+    return '';
+  }, [callsignData, instructor.callsign, instructor.callsignNumber]);
 
   const resetState = () => {
     setIdNumber(instructor.idNumber); setName(instructor.name); setRank(instructor.rank);
@@ -354,7 +362,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
     // ─────────────────────────────────────────────────────────────────────────
 
     const updatedInstructor: Instructor = {
-      ...instructor, idNumber, name, rank, role, callsignNumber, service, category, seatConfig,
+      ...instructor, idNumber, name, rank, role, callsignNumber, callsign: displayCallsign, service, category, seatConfig,
       unavailability: unavailabilityPeriods, location, unit, flight, phoneNumber, email, permissions,
       priorExperience, isTestingOfficer, isExecutive, isFlyingSupervisor, isIRE,
       isCommandingOfficer, isCFI, isDeputyFlightCommander, isContractor, isAdminStaff, isQFI, isOFI,
@@ -906,7 +914,7 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                       </Dropdown>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <InputField label="Callsign Number" value={callsignNumber} onChange={e => setCallsignNumber(parseInt(e.target.value) || 0)} type="number" />
+                      <InputField label="Callsign" value={displayCallsign || 'Auto assigned'} onChange={() => {}} readOnly />
                       <Dropdown label="Service" value={service || ''} onChange={e => setService(e.target.value as any)}>
                         <option value="">Select...</option><option value="RAAF">RAAF</option><option value="RAN">RAN</option><option value="ARA">ARA</option>
                       </Dropdown>
@@ -998,8 +1006,8 @@ export const InstructorProfileFlyout: React.FC<InstructorProfileFlyoutProps> = (
                         <div><span className="text-gray-400 block text-[10px]">ID Number</span><span className="text-white font-medium">{instructor.idNumber}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Role</span><span className="text-sky-300 font-medium">{instructor.role}</span></div>
                         <div><span className="text-gray-400 block text-[10px]">Category</span><span className="text-white font-medium">{instructor.category}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{callsignData?.callsignPrefix || ''}{instructor.callsignNumber || ''}</span></div>
-                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">[None]</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Callsign</span><span className="text-white font-medium">{displayCallsign || '[None]'}</span></div>
+                        <div><span className="text-gray-400 block text-[10px]">Secondary Callsign</span><span className="text-gray-300">{instructor.secondaryCallsign || '[None]'}</span></div>
                         <div></div>
                         {/* Row 2 */}
                         <div><span className="text-gray-400 block text-[10px]">Rank</span><span className="text-white font-medium">{instructor.rank}</span></div>

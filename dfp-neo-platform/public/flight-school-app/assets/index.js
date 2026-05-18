@@ -2154,6 +2154,52 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   }
   return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
 };
+const CALLSIGN_LIMIT = 50;
+const norm = (value) => String(value || "").trim().toUpperCase();
+const personKey = (person) => String(person.id || person.idNumber || person.name || "").trim();
+const isQfiStaff = (person) => person.role === "QFI" || person.isQFI === true || person.role === "INSTRUCTOR";
+const isSimIp = (person) => person.role === "SIM IP";
+const isEastSale = (person) => {
+  const location = norm(person.location);
+  const unit = norm(person.unit);
+  return location === "EAST SALE" || location === "ESL" || !location && (unit.startsWith("1FTS") || unit.startsWith("CFS"));
+};
+const isPearce = (person) => {
+  const location = norm(person.location);
+  const unit = norm(person.unit);
+  return location === "PEARCE" || location === "PEA" || !location && unit.startsWith("2FTS");
+};
+const sortedStaff = (people, settings) => [...people].sort((a, b) => comparePeopleByConfiguredRank(a, b, settings, "staff"));
+const assignSequence = (assignments, people, prefix, startingNumber = 1) => {
+  let nextNumber = startingNumber;
+  people.forEach((person) => {
+    const key = personKey(person);
+    if (!key || nextNumber > CALLSIGN_LIMIT) return;
+    assignments.set(key, {
+      callsign: `${prefix}${nextNumber}`,
+      callsignPrefix: prefix,
+      callsignNumber: nextNumber
+    });
+    nextNumber += 1;
+  });
+  return nextNumber;
+};
+const getStaffCallsignAssignments = (instructors, settings) => {
+  const assignments = /* @__PURE__ */ new Map();
+  const activeStaff = instructors.filter((person) => person.name && person.isActive !== false);
+  const oneFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("1FTS")), settings);
+  const cfs = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("CFS")), settings);
+  const twoFts = sortedStaff(activeStaff.filter((person) => isQfiStaff(person) && norm(person.unit).startsWith("2FTS")), settings);
+  const eslSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isEastSale(person)), settings);
+  const peaSimIp = sortedStaff(activeStaff.filter((person) => isSimIp(person) && isPearce(person)), settings);
+  const nextRolr = assignSequence(assignments, oneFts, "ROLR", 1);
+  assignSequence(assignments, eslSimIp, "ROLR", nextRolr);
+  assignSequence(assignments, cfs, "ALDN", 1);
+  const nextVipr = assignSequence(assignments, twoFts, "VIPR", 1);
+  assignSequence(assignments, peaSimIp, "VIPR", nextVipr);
+  return assignments;
+};
+const getStaffCallsignKey = personKey;
 const pendingAudits = /* @__PURE__ */ new Map();
 const debouncedAuditLog = (key, params, logFunction) => {
   const existing = pendingAudits.get(key);
@@ -4755,7 +4801,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const studentSeatConfig = getSeatConfigAbbr(typeof studentDisplay === "string" ? studentDisplay : "");
   const storedCallsign = event.callsign || "";
   const callsignInfo = picName ? personnelData.get(picName) : void 0;
-  const pilotCallsign = callsignInfo && callsignInfo.callsignNumber > 0 ? `${callsignInfo.callsignPrefix} ${String(callsignInfo.callsignNumber).padStart(3, "0")}` : "";
+  const pilotCallsign = callsignInfo?.callsign || (callsignInfo && callsignInfo.callsignNumber > 0 ? `${callsignInfo.callsignPrefix}${callsignInfo.callsignNumber}` : "");
   const isSoloFlight = event.flightType === "Solo";
   let callsign = storedCallsign || pilotCallsign;
   if (isSoloFlight && event.pilot) {
@@ -25686,6 +25732,14 @@ const InstructorProfileFlyout = ({
     return { primaryTrainees: primary, secondaryTrainees: secondary };
   }, [traineesData, instructor.name]);
   const callsignData = reactExports.useMemo(() => personnelData.get(instructor.name), [personnelData, instructor.name]);
+  const displayCallsign = reactExports.useMemo(() => {
+    if (callsignData?.callsign) return callsignData.callsign;
+    if (instructor.callsign) return instructor.callsign;
+    if (callsignData && (callsignData.callsignNumber || instructor.callsignNumber)) {
+      return `${callsignData.callsignPrefix || ""}${callsignData.callsignNumber || instructor.callsignNumber || ""}`;
+    }
+    return "";
+  }, [callsignData, instructor.callsign, instructor.callsignNumber]);
   const resetState = () => {
     setIdNumber(instructor.idNumber);
     setName(instructor.name);
@@ -25804,6 +25858,7 @@ const InstructorProfileFlyout = ({
       rank,
       role,
       callsignNumber,
+      callsign: displayCallsign,
       service,
       category,
       seatConfig,
@@ -26345,7 +26400,8 @@ const InstructorProfileFlyout = ({
               ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-5 gap-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign Number", value: callsignNumber, onChange: (e) => setCallsignNumber(parseInt(e.target.value) || 0), type: "number" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(InputField, { label: "Callsign", value: displayCallsign || "Auto assigned", onChange: () => {
+              }, readOnly: true }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(Dropdown, { label: "Service", value: service || "", onChange: (e) => setService(e.target.value), children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select..." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "RAAF", children: "RAAF" }),
@@ -26430,14 +26486,11 @@ const InstructorProfileFlyout = ({
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Callsign" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-white font-medium", children: [
-                      callsignData?.callsignPrefix || "",
-                      instructor.callsignNumber || ""
-                    ] })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white font-medium", children: displayCallsign || "[None]" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400 block text-[10px]", children: "Secondary Callsign" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: "[None]" })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-300", children: instructor.secondaryCallsign || "[None]" })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("div", {}),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -27169,12 +27222,12 @@ const InstructorListView = ({
   const simIps = reactExports.useMemo(() => {
     console.log("🔍 [SIM IP FILTER] instructorsData length:", instructorsData.length);
     const simIpCandidates = instructorsData.filter((i) => {
-      const isSimIp = i.role === "SIM IP";
-      if (!isSimIp) return false;
+      const isSimIp2 = i.role === "SIM IP";
+      if (!isSimIp2) return false;
       const locationFullName2 = school === "ESL" ? "East Sale" : "Pearce";
       const hasNoLocation = !i.location || i.location === "" || i.location === "N/A";
       const isValid = i.location === locationFullName2 || hasNoLocation && school === "ESL";
-      if (isSimIp && isValid) {
+      if (isSimIp2 && isValid) {
         console.log(`🔍 [SIM IP FILTER] Found ${school} SIM IP: ${i.name} (${i.rank}) - Location: ${i.location}`);
       }
       return isValid;
@@ -27217,9 +27270,9 @@ const InstructorListView = ({
     console.log("🔍 [OTHER STAFF] instructorsData length:", instructorsData.length);
     const otherStaffCandidates = instructorsData.filter((i) => {
       const isQfi = i.role === "QFI" || i.isQFI === true || i.role === "INSTRUCTOR";
-      const isSimIp = i.role === "SIM IP";
+      const isSimIp2 = i.role === "SIM IP";
       const isOfi = i.role === "OFI" || i.isOFI === true;
-      const isOther = !isQfi && !isSimIp && !isOfi;
+      const isOther = !isQfi && !isSimIp2 && !isOfi;
       if (!isOther) return false;
       const locationFullName2 = school === "ESL" ? "East Sale" : "Pearce";
       const isValid = i.location === locationFullName2;
@@ -54734,10 +54787,15 @@ async function fetchAPI(endpoint, options) {
 async function fetchInstructors() {
   const result = await fetchAPI("/personnel");
   if (result.success && result.data?.personnel) {
-    return result.data.personnel.map((p) => ({
-      ...p,
-      currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
-    }));
+    return result.data.personnel.map((p) => {
+      const preferences = p.preferences && typeof p.preferences === "object" && !Array.isArray(p.preferences) ? p.preferences : {};
+      return {
+        ...p,
+        callsign: p.callsign || preferences.callsign || "",
+        secondaryCallsign: p.secondaryCallsign || preferences.secondaryCallsign || "",
+        currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || []
+      };
+    });
   }
   return [];
 }
@@ -69435,6 +69493,14 @@ const initialCancellationCodes = [
 ];
 console.log("🟢🟢🟢 BUILD VERSION: 2024-APR-01-FIX-CURRENCY-RENDER-LOOP 🟢🟢🟢");
 console.log("🟢 If you see this, the NEW build is active. Currency render loop fix is deployed.");
+const normalisePersonnelRecord = (person) => {
+  const preferences = person?.preferences && typeof person.preferences === "object" && !Array.isArray(person.preferences) ? person.preferences : {};
+  return {
+    ...person,
+    callsign: person?.callsign || preferences.callsign || "",
+    secondaryCallsign: person?.secondaryCallsign || preferences.secondaryCallsign || ""
+  };
+};
 const PT051_STRUCTURE = [
   { category: "Core Dimensions", elements: ["Airmanship", "Preparation", "Technique"] },
   { category: "Procedural Framework", elements: ["Pre-Post Flight", "Walk Around", "Strap-in", "Ground Checks", "Airborne Checks"] },
@@ -70246,14 +70312,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").toLowerCase();
   const eventIncludesPerson = (event, personName) => {
-    const personKey = normalizeBuildPersonnelName(personName);
-    if (!personKey) return false;
-    return getPersonnel(event).some((p) => normalizeBuildPersonnelName(p) === personKey);
+    const personKey2 = normalizeBuildPersonnelName(personName);
+    if (!personKey2) return false;
+    return getPersonnel(event).some((p) => normalizeBuildPersonnelName(p) === personKey2);
   };
   const intendedNightStaff = /* @__PURE__ */ new Set();
   const markIntendedNightPerson = (personName) => {
-    const personKey = normalizeBuildPersonnelName(personName);
-    if (personKey) intendedNightStaff.add(personKey);
+    const personKey2 = normalizeBuildPersonnelName(personName);
+    if (personKey2) intendedNightStaff.add(personKey2);
   };
   const getGeneratedEventDayNightClassification = (event) => {
     if (typeof event.startTime === "number") {
@@ -72078,12 +72144,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const classification = getGeneratedEventDayNightClassification(event);
       if (classification === "Day/Night") return;
       getPersonnel(event).forEach((personName) => {
-        const personKey = normalizeBuildPersonnelName(personName);
-        if (!personKey) return;
-        if (!eventsByPerson.has(personKey)) {
-          eventsByPerson.set(personKey, { personName, day: [], night: [] });
+        const personKey2 = normalizeBuildPersonnelName(personName);
+        if (!personKey2) return;
+        if (!eventsByPerson.has(personKey2)) {
+          eventsByPerson.set(personKey2, { personName, day: [], night: [] });
         }
-        const entry = eventsByPerson.get(personKey);
+        const entry = eventsByPerson.get(personKey2);
         if (classification === "Night") entry.night.push(event);
         else entry.day.push(event);
       });
@@ -74364,19 +74430,65 @@ ${"=".repeat(60)}`);
       }));
     }
   }, [publishedSchedules, date, school, baselineSchedules]);
+  const staffCallsignAssignments = reactExports.useMemo(
+    () => getStaffCallsignAssignments(allInstructorsData, personnelDisplaySettings),
+    [allInstructorsData, personnelDisplaySettings]
+  );
   const personnelData = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
-    const callsignPrefix = school === "ESL" ? "ROLR" : "VIPR";
-    instructorsData.forEach((instructor) => {
-      if (instructor.name && (instructor.role === "QFI" || instructor.isQFI) && instructor.callsignNumber > 0) {
+    allInstructorsData.forEach((instructor) => {
+      if (!instructor.name) return;
+      const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
+      const savedCallsign = String(instructor.callsign || "").trim();
+      const callsign = savedCallsign || assigned?.callsign || "";
+      const callsignPrefix = assigned?.callsignPrefix || callsign.match(/^[A-Za-z]+/)?.[0] || (school === "ESL" ? "ROLR" : "VIPR");
+      const callsignNumber = assigned?.callsignNumber || instructor.callsignNumber || 0;
+      if (callsign || callsignNumber > 0) {
         data.set(instructor.name, {
           callsignPrefix,
-          callsignNumber: instructor.callsignNumber
+          callsignNumber,
+          callsign
         });
       }
     });
     return data;
-  }, [allInstructorsData, school]);
+  }, [allInstructorsData, school, staffCallsignAssignments]);
+  const staffCallsignSyncHashRef = reactExports.useRef("");
+  reactExports.useEffect(() => {
+    const updates = allInstructorsData.map((instructor) => {
+      const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
+      return assigned && instructor.id && (instructor.callsign !== assigned.callsign || instructor.callsignNumber !== assigned.callsignNumber) ? { instructor, assigned } : null;
+    }).filter(Boolean);
+    const hash = updates.map(({ instructor, assigned }) => `${instructor.id}:${assigned.callsign}:${assigned.callsignNumber}`).sort().join("|");
+    if (!hash || staffCallsignSyncHashRef.current === hash) return;
+    staffCallsignSyncHashRef.current = hash;
+    let cancelled = false;
+    Promise.allSettled(updates.map(async ({ instructor, assigned }) => {
+      const response = await fetch(`/api/personnel/${instructor.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          callsign: assigned.callsign,
+          callsignNumber: assigned.callsignNumber
+        })
+      });
+      if (!response.ok) throw new Error(`Failed to save callsign for ${instructor.name}: ${response.status}`);
+    })).then((results) => {
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length > 0) {
+        console.warn("[Staff Callsigns] Some callsigns could not be saved to database.", failed);
+      }
+      if (cancelled) return;
+      setInstructorsData((prev) => prev.map((instructor) => {
+        const assigned = staffCallsignAssignments.get(getStaffCallsignKey(instructor));
+        return assigned ? { ...instructor, callsign: assigned.callsign, callsignNumber: assigned.callsignNumber } : instructor;
+      }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [allInstructorsData, staffCallsignAssignments]);
   const seatConfigs = reactExports.useMemo(() => {
     const data = /* @__PURE__ */ new Map();
     instructorsData.forEach((instructor) => {
@@ -78149,7 +78261,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (personnelRes.ok) {
         const personnelData2 = await personnelRes.json();
         const dbPersonnel = (personnelData2.personnel || []).map((p) => ({
-          ...p,
+          ...normalisePersonnelRecord(p),
           // Extract qualifications.currencyStatus to top-level so Post Flight
           // and other in-memory reads can find it at person.currencyStatus
           currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
@@ -78309,7 +78421,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         if (personnelRes.ok) {
           const personnelData2 = await personnelRes.json();
           const dbPersonnel = (personnelData2.personnel || []).map((p) => ({
-            ...p,
+            ...normalisePersonnelRecord(p),
             currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
             _dataSource: "database",
             unavailability: Array.isArray(p.unavailability) ? p.unavailability.filter((u) => !u?.notes?.startsWith("__deploy__")) : p.unavailability
@@ -78603,8 +78715,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const eventWindow = getEventBookingWindow(eventAtNewTime, syllabusDetails);
     for (const instructor of instructorsData) {
       const isQFI = instructor.role === "QFI";
-      const isSimIp = instructor.role === "SIM IP";
-      const isQualified = conflictedEvent.type === "flight" && isQFI || conflictedEvent.type === "ftd" && (isQFI || isSimIp) || conflictedEvent.type === "ground";
+      const isSimIp2 = instructor.role === "SIM IP";
+      const isQualified = conflictedEvent.type === "flight" && isQFI || conflictedEvent.type === "ftd" && (isQFI || isSimIp2) || conflictedEvent.type === "ground";
       if (!isQualified) {
         qualificationFailures++;
         continue;

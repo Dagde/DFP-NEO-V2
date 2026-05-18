@@ -18,7 +18,7 @@ interface CourseRosterViewProps {
     traineesData: Trainee[];
     courseColors: { [key: string]: string };
     archivedCourses: { [key: string]: string };
-    personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+    personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
     onNavigateToHateSheet: (trainee: Trainee) => void;
     onRestoreCourse: (courseNumber: string) => void;
     onUpdateTrainee: (data: Trainee) => void;

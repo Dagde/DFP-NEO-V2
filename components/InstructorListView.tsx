@@ -53,7 +53,7 @@ interface InstructorListViewProps {
   instructorsData: Instructor[];
   archivedInstructorsData: Instructor[];
   school: 'ESL' | 'PEA';
-  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   onUpdateInstructor: (data: Instructor) => void;
   onNavigateToCurrency: (person: Instructor) => void;
   onBulkUpdateInstructors: (instructors: Instructor[]) => void;

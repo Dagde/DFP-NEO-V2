@@ -32,7 +32,7 @@ interface TraineeProfileFlyoutProps {
   onNavigateToHateSheet: (trainee: Trainee) => void;
   onViewIndividualLMP: (trainee: Trainee) => void;
   onAddRemedialPackage: (trainee: Trainee) => void;
-  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number }>;
+  personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   courseColors: { [key: string]: string };
   scores: Map<string, Score[]>;
   syllabusDetails: SyllabusItemDetail[];
