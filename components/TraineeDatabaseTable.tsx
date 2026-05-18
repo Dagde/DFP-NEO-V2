@@ -1,6 +1,7 @@
 import { useSystemFreeze } from "../hooks/useSystemFreeze";
 import React, { useState, useEffect, useMemo } from 'react';
 import { logAudit } from '../utils/auditLogger';
+import { getTraineeStatusLabel } from '../utils/traineeStatus';
 
 interface TraineeDatabaseTableProps {
   currentUserPermission?: string;
@@ -28,6 +29,7 @@ interface DatabaseTrainee {
   email?: string;
   primaryInstructor?: string | string[];
   secondaryInstructor?: string | string[];
+  permissions?: string[];
   isActive?: boolean;
   userId?: string;
   createdAt: string;
@@ -367,15 +369,11 @@ const TraineeDatabaseTable: React.FC<TraineeDatabaseTableProps> = ({ currentUser
                     })()}
                   </td>
                   <td className="px-4 py-3 text-sm">
-                    {trainee.isPaused ? (
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-amber-600 text-white">
-                        Paused
-                      </span>
-                    ) : (
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white">
-                        Active
-                      </span>
-                    )}
+                    {(() => {
+                      const status = getTraineeStatusLabel(trainee);
+                      const statusClass = status === 'Suspended' ? 'bg-red-600' : status === 'Paused' ? 'bg-amber-600' : 'bg-green-600';
+                      return <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusClass} text-white`}>{status}</span>;
+                    })()}
                   </td>
                   {isAdmin && (
                     <td className="px-4 py-3 text-sm">

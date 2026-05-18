@@ -3,6 +3,7 @@ import { Trainee, Instructor, ScheduleEvent, Course, Score, Pt051Assessment, Syl
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import { getTraineeStatusLabel } from '../utils/traineeStatus';
 
 interface TrainingRecordsExportViewProps {
     traineesData: Trainee[];
@@ -562,7 +563,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                 'Service': t.service || '',
                 'Unit': t.unit || '',
                 'Flight': t.flight || '',
-                'Status': t.isPaused ? 'Archived' : 'Active'
+                'Status': getTraineeStatusLabel(t)
             }));
             
             const wsTrainees = XLSX.utils.json_to_sheet(traineesData);
@@ -1534,7 +1535,7 @@ const TrainingRecordsExportView: React.FC<TrainingRecordsExportViewProps> = ({
                                     >
                                         {filteredTrainees.map(trainee => (
                                             <option key={trainee.name} value={trainee.name}>
-                                                {trainee.rank} {trainee.name} ({trainee.course}) {trainee.isPaused ? '(Archived)' : ''}
+                                                {trainee.rank} {trainee.name} ({trainee.course}) {trainee.isPaused ? `(${getTraineeStatusLabel(trainee)})` : ''}
                                             </option>
                                         ))}
                                     </select>

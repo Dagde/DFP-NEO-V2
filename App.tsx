@@ -8313,6 +8313,7 @@ const App: React.FC = () => {
                     secondaryInstructor: data.secondaryInstructor,
                     phoneNumber: data.phoneNumber,
                     email: data.email,
+                    permissions: data.permissions || [],
                     unavailability: data.unavailability || [],
                 };
 
@@ -8341,6 +8342,7 @@ const App: React.FC = () => {
                         secondaryInstructor: data.secondaryInstructor,
                         phoneNumber: data.phoneNumber,
                         email: data.email,
+                        permissions: data.permissions || [],
                         unavailability: data.unavailability || [],
                     })
                 });

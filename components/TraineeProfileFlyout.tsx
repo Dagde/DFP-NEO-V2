@@ -19,6 +19,11 @@ import {
   getRankOptionsForGroup,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
+import {
+  getVisiblePermissions,
+  isTraineeSuspended,
+  setTraineeSuspendedMarker,
+} from '../utils/traineeStatus';
 
 const COURSE_MASTER_LMPS = ['BPC+IPC', 'FIC', 'OFI', 'WSO', 'FIC(I)', 'PLT CONV', 'QFI CONV', 'PLT Refresh', 'Staff CAT'];
 // ACADEMIC_LMP_COURSES is derived dynamically from syllabusDetails (DB only, no hardcoded fallback)
@@ -363,6 +368,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [secondaryCallsign, setSecondaryCallsign] = useState(trainee.secondaryCallsign || '');
     const [crew, setCrew] = useState(trainee.crew || 'N/A');
     const [permissions, setPermissions] = useState<string[]>(trainee.permissions || []);
+    const isSuspended = useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
+    const traineeStatusLabel = isSuspended ? 'Suspended' : (isPaused ? 'Paused' : 'Active');
 
     const [priorExperience, setPriorExperience] = useState<LogbookExperience>(trainee.priorExperience || initialExperience);
     const exp = priorExperience;
@@ -515,13 +522,30 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     };
 
     const confirmPause = () => {
+        const nextIsPaused = !isPaused;
+        const nextPermissions = getVisiblePermissions(permissions);
         const updatedTrainee: Trainee = {
             ...trainee,
-            isPaused: !trainee.isPaused,
+            isPaused: nextIsPaused,
+            permissions: nextPermissions,
         };
         onUpdateTrainee(updatedTrainee);
         setIsPaused(updatedTrainee.isPaused);
+        setPermissions(nextPermissions);
         setShowPauseConfirm(false);
+    };
+
+    const handleSuspendToggle = () => {
+        const nextIsSuspended = !isSuspended;
+        const nextPermissions = setTraineeSuspendedMarker(permissions, nextIsSuspended);
+        const updatedTrainee: Trainee = {
+            ...trainee,
+            isPaused: nextIsSuspended ? true : false,
+            permissions: nextPermissions,
+        };
+        onUpdateTrainee(updatedTrainee);
+        setIsPaused(updatedTrainee.isPaused);
+        setPermissions(nextPermissions);
     };
 
     // Debounced field change handlers
@@ -625,7 +649,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             academicLmpType,
             rank,
             seatConfig,
-            isPaused,
+            isPaused: isSuspended ? true : isPaused,
             unavailability,
             location,
             unit,
@@ -920,8 +944,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         </div>
                     ) : (
                         <ul className="space-y-2 text-white list-disc list-inside">
-                            {(trainee.permissions && trainee.permissions.length > 0) ? (
-                                trainee.permissions.map(perm => <li key={perm}>{perm}</li>)
+                            {getVisiblePermissions(trainee.permissions).length > 0 ? (
+                                getVisiblePermissions(trainee.permissions).map(perm => <li key={perm}>{perm}</li>)
                             ) : (
                                 <li className="list-none italic text-gray-500">No permissions assigned.</li>
                             )}
@@ -1186,8 +1210,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                               <h4 className="text-sm font-semibold text-white">Profile Details</h4>
                               <p className="text-[11px] text-gray-400">Course, identity, contact and access settings.</p>
                             </div>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
-                              {isPaused ? 'Paused' : 'Active'}
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isSuspended ? 'bg-red-600 text-white' : isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+                              {traineeStatusLabel}
                             </span>
                           </div>
 
@@ -1272,8 +1296,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <h3 className="text-xl font-bold text-white">{trainee.name}</h3>
-                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${trainee.isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
-                                {trainee.isPaused ? 'Paused' : 'Active'}
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${isTraineeSuspended(trainee) ? 'bg-red-600 text-white' : trainee.isPaused ? 'bg-amber-500 text-white' : 'bg-green-500 text-white'}`}>
+                                {isTraineeSuspended(trainee) ? 'Suspended' : trainee.isPaused ? 'Paused' : 'Active'}
                               </span>
                             </div>
                             <div className="grid grid-cols-6 gap-x-4 gap-y-2 text-xs">
@@ -1311,7 +1335,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <div className="bg-gray-700/30 rounded p-2">
                               <div className="text-[10px] text-gray-400 mb-1 font-semibold">Permissions</div>
                               <div className="flex flex-wrap gap-1">
-                                {(trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p: string) => (
+                                {getVisiblePermissions(trainee.permissions).length > 0 ? getVisiblePermissions(trainee.permissions).map((p: string) => (
                                   <span key={p} className="px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]">{p}</span>
                                 )) : <span className="text-gray-500 text-[10px]">None</span>}
                               </div>
@@ -1501,13 +1525,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
                           <div className="mt-[1px]"></div>
-                          <button onClick={handlePauseToggle} disabled={isFrozen} className={btnClass}>{trainee.isPaused ? 'Unpause' : 'Pause'}</button>
                           <button onClick={() => setIsEditing(true)} disabled={isFrozen} className={btnClass}>Edit</button>
                           <button onClick={onClose} className={btnClass}>Close</button>
                         </>
                       )}
                       {isEditing && (
                         <>
+                          <button onClick={handlePauseToggle} disabled={isFrozen} className={btnClass} style={{ color: isPaused ? '#16a34a' : '#dc2626' }}>{isPaused ? 'UNPAUSE' : 'PAUSE'}</button>
+                          <button onClick={handleSuspendToggle} disabled={isFrozen} className={btnClass} style={{ color: isSuspended ? '#16a34a' : '#dc2626' }}>{isSuspended ? 'UNSUSPEND' : 'SUSPEND'}</button>
                           <button onClick={handleSave} className={btnClass}>Save</button>
                           <button onClick={handleCancel} className={btnClass}>Cancel</button>
                         </>
@@ -1518,7 +1543,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
               </div>
             {showAddUnavailability && (<AddUnavailabilityFlyout onClose={() => setShowAddUnavailability(false)} onTodayOnly={handleAddTodayOnlyUnavailability} onSave={handleSaveCustomUnavailability} unavailabilityPeriods={unavailability} onRemove={handleRemoveUnavailabilityFromFlyout} />)}
             {showScheduleWarning && <ScheduleWarningFlyout traineeName={trainee.name} onAcknowledge={() => {setShowScheduleWarning(false); setShowPauseConfirm(true); }} />}
-            {showPauseConfirm && <PauseConfirmationFlyout isPaused={trainee.isPaused} onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
+            {showPauseConfirm && <PauseConfirmationFlyout isPaused={isPaused} onConfirm={confirmPause} onCancel={() => setShowPauseConfirm(false)} />}
         </>
     );
 

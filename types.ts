@@ -293,7 +293,9 @@ export interface Trainee {
   lmpType?: string;
   academicLmpType?: string; // Academic LMP tab assignment
   
-     traineeCallsign?: string;
+  traineeCallsign?: string;
+  secondaryCallsign?: string;
+  crew?: string;
   permissions?: string[];
   priorExperience?: LogbookExperience;
 }

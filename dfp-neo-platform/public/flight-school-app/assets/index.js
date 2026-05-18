@@ -10035,6 +10035,17 @@ const TraineeLmpView = ({
     ] })
   ] });
 };
+const TRAINEE_SUSPENDED_MARKER = "__DFP_TRAINEE_SUSPENDED__";
+const getVisiblePermissions = (permissions) => (permissions || []).filter((permission) => permission !== TRAINEE_SUSPENDED_MARKER);
+const isTraineeSuspended = (trainee) => Boolean(trainee?.permissions?.includes(TRAINEE_SUSPENDED_MARKER));
+const getTraineeStatusLabel = (trainee) => {
+  if (isTraineeSuspended(trainee)) return "Suspended";
+  return trainee?.isPaused ? "Paused" : "Active";
+};
+const setTraineeSuspendedMarker = (permissions, isSuspended) => {
+  const visiblePermissions = getVisiblePermissions(permissions);
+  return isSuspended ? [...visiblePermissions, TRAINEE_SUSPENDED_MARKER] : visiblePermissions;
+};
 const COURSE_MASTER_LMPS$1 = ["BPC+IPC", "FIC", "OFI", "WSO", "FIC(I)", "PLT CONV", "QFI CONV", "PLT Refresh", "Staff CAT"];
 const InputField$1 = ({ label, value, onChange, readOnly }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: label }),
@@ -10186,6 +10197,8 @@ const TraineeProfileFlyout = ({
   const [secondaryCallsign, setSecondaryCallsign] = reactExports.useState(trainee.secondaryCallsign || "");
   const [crew, setCrew] = reactExports.useState(trainee.crew || "N/A");
   const [permissions, setPermissions] = reactExports.useState(trainee.permissions || []);
+  const isSuspended = reactExports.useMemo(() => isTraineeSuspended({ permissions }), [permissions]);
+  const traineeStatusLabel = isSuspended ? "Suspended" : isPaused ? "Paused" : "Active";
   const [priorExperience, setPriorExperience] = reactExports.useState(trainee.priorExperience || initialExperience$1);
   const exp = priorExperience;
   const allPermissions = reactExports.useMemo(() => ["Trainee", "Staff", "Ops", "Course Supervisor", "Admin", "Super Admin"], []);
@@ -10311,13 +10324,29 @@ const TraineeProfileFlyout = ({
     }
   };
   const confirmPause = () => {
+    const nextIsPaused = !isPaused;
+    const nextPermissions = getVisiblePermissions(permissions);
     const updatedTrainee = {
       ...trainee,
-      isPaused: !trainee.isPaused
+      isPaused: nextIsPaused,
+      permissions: nextPermissions
     };
     onUpdateTrainee(updatedTrainee);
     setIsPaused(updatedTrainee.isPaused);
+    setPermissions(nextPermissions);
     setShowPauseConfirm(false);
+  };
+  const handleSuspendToggle = () => {
+    const nextIsSuspended = !isSuspended;
+    const nextPermissions = setTraineeSuspendedMarker(permissions, nextIsSuspended);
+    const updatedTrainee = {
+      ...trainee,
+      isPaused: nextIsSuspended ? true : false,
+      permissions: nextPermissions
+    };
+    onUpdateTrainee(updatedTrainee);
+    setIsPaused(updatedTrainee.isPaused);
+    setPermissions(nextPermissions);
   };
   const handleNameChange = (newName) => {
     const oldName = name;
@@ -10368,7 +10397,7 @@ const TraineeProfileFlyout = ({
       academicLmpType,
       rank,
       seatConfig,
-      isPaused,
+      isPaused: isSuspended ? true : isPaused,
       unavailability,
       location,
       unit,
@@ -10610,7 +10639,7 @@ const TraineeProfileFlyout = ({
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-[11px]", children: perm })
-      ] }, perm)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 text-white list-disc list-inside", children: trainee.permissions && trainee.permissions.length > 0 ? trainee.permissions.map((perm) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: perm }, perm)) : /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "list-none italic text-gray-500", children: "No permissions assigned." }) }) })
+      ] }, perm)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-2 text-white list-disc list-inside", children: getVisiblePermissions(trainee.permissions).length > 0 ? getVisiblePermissions(trainee.permissions).map((perm) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: perm }, perm)) : /* @__PURE__ */ jsxRuntimeExports.jsx("li", { className: "list-none italic text-gray-500", children: "No permissions assigned." }) }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-3 border border-gray-600 rounded-lg", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Roles" }),
@@ -10852,7 +10881,7 @@ const TraineeProfileFlyout = ({
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Profile Details" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-gray-400", children: "Course, identity, contact and access settings." })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-bold ${isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: isPaused ? "Paused" : "Active" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-[10px] font-bold ${isSuspended ? "bg-red-600 text-white" : isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: traineeStatusLabel })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] font-semibold uppercase tracking-wide text-sky-300 mb-2", children: "Training" }),
@@ -10906,7 +10935,7 @@ const TraineeProfileFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-2 flex-wrap", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-xl font-bold text-white", children: trainee.name }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-xs font-bold ${trainee.isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: trainee.isPaused ? "Paused" : "Active" })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 py-0.5 rounded text-xs font-bold ${isTraineeSuspended(trainee) ? "bg-red-600 text-white" : trainee.isPaused ? "bg-amber-500 text-white" : "bg-green-500 text-white"}`, children: isTraineeSuspended(trainee) ? "Suspended" : trainee.isPaused ? "Paused" : "Active" })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-6 gap-x-4 gap-y-2 text-xs", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -10985,7 +11014,7 @@ const TraineeProfileFlyout = ({
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-40 flex-shrink-0 space-y-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/30 rounded p-2", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] text-gray-400 mb-1 font-semibold", children: "Permissions" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: (trainee.permissions || []).length > 0 ? (trainee.permissions || []).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1", children: getVisiblePermissions(trainee.permissions).length > 0 ? getVisiblePermissions(trainee.permissions).map((p) => /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1.5 py-0.5 bg-sky-800 text-sky-200 rounded text-[9px]", children: p }, p)) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 text-[10px]", children: "None" }) })
               ] }) })
             ] })
           ) }),
@@ -11151,11 +11180,12 @@ const TraineeProfileFlyout = ({
             canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-[1px]" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, children: trainee.isPaused ? "Unpause" : "Pause" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => setIsEditing(true), disabled: isFrozen, className: btnClass, children: "Edit" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: btnClass, children: "Close" })
           ] }),
           isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handlePauseToggle, disabled: isFrozen, className: btnClass, style: { color: isPaused ? "#16a34a" : "#dc2626" }, children: isPaused ? "UNPAUSE" : "PAUSE" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSuspendToggle, disabled: isFrozen, className: btnClass, style: { color: isSuspended ? "#16a34a" : "#dc2626" }, children: isSuspended ? "UNSUSPEND" : "SUSPEND" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSave, className: btnClass, children: "Save" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleCancel, className: btnClass, children: "Cancel" })
           ] })
@@ -11167,7 +11197,7 @@ const TraineeProfileFlyout = ({
       setShowScheduleWarning(false);
       setShowPauseConfirm(true);
     } }),
-    showPauseConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PauseConfirmationFlyout, { isPaused: trainee.isPaused, onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) })
+    showPauseConfirm && /* @__PURE__ */ jsxRuntimeExports.jsx(PauseConfirmationFlyout, { isPaused, onConfirm: confirmPause, onCancel: () => setShowPauseConfirm(false) })
   ] });
 };
 const RestoreCourseConfirmation = ({ courseNumber, onConfirm, onClose }) => {
@@ -54641,7 +54671,11 @@ const TraineeDatabaseTable = ({ currentUserPermission, onShowSuccess, onDataChan
                 const p = Array.isArray(trainee.primaryInstructor) ? trainee.primaryInstructor : trainee.primaryInstructor ? [trainee.primaryInstructor] : [];
                 return p.length > 0 ? p.join(", ") : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-500 italic", children: "Unassigned" });
               })() }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-sm", children: trainee.isPaused ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-3 py-1 rounded-full text-xs font-semibold bg-amber-600 text-white", children: "Paused" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-3 py-1 rounded-full text-xs font-semibold bg-green-600 text-white", children: "Active" }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-sm", children: (() => {
+                const status = getTraineeStatusLabel(trainee);
+                const statusClass = status === "Suspended" ? "bg-red-600" : status === "Paused" ? "bg-amber-600" : "bg-green-600";
+                return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-3 py-1 rounded-full text-xs font-semibold ${statusClass} text-white`, children: status });
+              })() }),
               isAdmin && /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-4 py-3 text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
@@ -65384,7 +65418,7 @@ const TrainingRecordsExportView = ({
         "Service": t.service || "",
         "Unit": t.unit || "",
         "Flight": t.flight || "",
-        "Status": t.isPaused ? "Archived" : "Active"
+        "Status": getTraineeStatusLabel(t)
       }));
       const wsTrainees = XLSX.utils.json_to_sheet(traineesData2);
       XLSX.utils.book_append_sheet(wb, wsTrainees, "Trainees");
@@ -66196,7 +66230,7 @@ const TrainingRecordsExportView = ({
                   " (",
                   trainee.course,
                   ") ",
-                  trainee.isPaused ? "(Archived)" : ""
+                  trainee.isPaused ? `(${getTraineeStatusLabel(trainee)})` : ""
                 ] }, trainee.name))
               }
             ),
@@ -75239,6 +75273,7 @@ ${"=".repeat(60)}`);
           secondaryInstructor: data.secondaryInstructor,
           phoneNumber: data.phoneNumber,
           email: data.email,
+          permissions: data.permissions || [],
           unavailability: data.unavailability || []
         };
         console.log("📝 [APP] PATCH body to send:", patchBody);
@@ -75265,6 +75300,7 @@ ${"=".repeat(60)}`);
             secondaryInstructor: data.secondaryInstructor,
             phoneNumber: data.phoneNumber,
             email: data.email,
+            permissions: data.permissions || [],
             unavailability: data.unavailability || []
           })
         });
