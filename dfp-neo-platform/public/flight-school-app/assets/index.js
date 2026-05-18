@@ -69462,6 +69462,7 @@ const getPersonnel = (event) => {
   return Array.from(personnel);
 };
 const isDutySupervisorEvent = (event) => event.flightNumber === "Duty Sup" || event.flightNumber === "Night Duty Sup" || event.resourceId === "Duty Sup";
+const isStbyResource = (resourceId) => !!resourceId && (resourceId.startsWith("STBY") || resourceId.startsWith("BNF-STBY"));
 const getEventBookingWindow = (event, syllabusDetails) => {
   const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   if (syllabusItem) {
@@ -74258,9 +74259,10 @@ ${"=".repeat(60)}`);
     return start1 < end2 && end1 > start2;
   }, []);
   const detectConflictsForEvent = reactExports.useCallback((targetEvent, allEvents, checkDate) => {
-    if (targetEvent.resourceId.startsWith("STBY") || targetEvent.resourceId.startsWith("BNF-STBY") || targetEvent.type === "deployment") {
+    if (targetEvent.type === "deployment") {
       return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
     }
+    const targetIsStby = isStbyResource(targetEvent.resourceId);
     if (targetEvent.flightNumber === "SCT FORM" && targetEvent.pilot) {
       const baseId = targetEvent.id.split("-")[0];
       const formationEvents = allEvents.filter(
@@ -74279,7 +74281,7 @@ ${"=".repeat(60)}`);
       }
     }
     const validEvents = allEvents.filter(
-      (e) => e.id !== targetEvent.id && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY") && e.type !== "deployment"
+      (e) => e.id !== targetEvent.id && e.type !== "deployment"
     );
     if (targetEvent.flightNumber === "SCT FORM") {
       console.log(`🔍 Checking conflicts for SCT FORM event ${targetEvent.id}`);
@@ -74290,7 +74292,9 @@ ${"=".repeat(60)}`);
     if (targetEvent.type === "flight") requiredTurnaround = flightTurnaround;
     else if (targetEvent.type === "ftd") requiredTurnaround = ftdTurnaround;
     else if (targetEvent.type === "cpt" || targetEvent.type === "ground" && targetEvent.flightNumber.includes("CPT")) requiredTurnaround = cptTurnaround;
-    const sameResourceEvents = validEvents.filter((e) => e.resourceId === targetEvent.resourceId);
+    const sameResourceEvents = validEvents.filter(
+      (e) => e.resourceId === targetEvent.resourceId && !targetIsStby && !isStbyResource(e.resourceId)
+    );
     sameResourceEvents.sort((a, b) => a.startTime - b.startTime);
     for (let i = 0; i < sameResourceEvents.length; i++) {
       const event = sameResourceEvents[i];
@@ -74484,7 +74488,7 @@ ${"=".repeat(60)}`);
     const syllabusItem = syllabusDetails.find((item) => item.id === event.flightNumber);
     return syllabusItem?.sortieType === "Solo";
   };
-  const isStbyFlightLineEvent = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+  const isStbyFlightLineEvent = (event) => isStbyResource(event.resourceId);
   const getValidationEventKey2 = (event) => [
     event.id,
     "date" in event ? event.date : "",
@@ -74496,6 +74500,24 @@ ${"=".repeat(60)}`);
   const shouldRequireTwrDiCoverage = (event, options = {}) => {
     if (!isSoloFlightNeedingTwrDi(event)) return false;
     return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
+  };
+  const logValidationTrace = (context, event, outcome, details = {}) => {
+    if (!isStbyFlightLineEvent(event) && outcome === "clear") return;
+    console.log("[ValidationTrace]", {
+      context,
+      outcome,
+      key: getValidationEventKey2(event),
+      id: event.id,
+      resourceId: event.resourceId,
+      flightNumber: event.flightNumber,
+      flightType: event.flightType,
+      instructor: event.instructor,
+      student: event.student,
+      pilot: event.pilot,
+      startTime: event.startTime,
+      duration: event.duration,
+      ...details
+    });
   };
   const hasTwrDiCoverageForSolo = (soloEvent, eventsToCheck) => {
     const soloStartTime = soloEvent.startTime;
@@ -74529,14 +74551,28 @@ ${"=".repeat(60)}`);
       const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
       if (result.hasConflict) {
         conflictingEventIds.add(getValidationEventKey2(event));
+        logValidationTrace("Active DFP", event, "conflict", {
+          conflictType: result.conflictType,
+          conflictingEventId: result.conflictingEventId,
+          conflictedPersonnel: result.conflictedPersonnel,
+          reason: result.reason
+        });
+      } else if (isStbyFlightLineEvent(event)) {
+        logValidationTrace("Active DFP", event, "clear");
       }
     }
     for (const event of eventsForDate) {
       if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+        if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+          logValidationTrace("Active DFP", event, "twr-di-exempt", {
+            reason: "Solo STBY events do not require TWR DI until moved to an active aircraft line"
+          });
+        }
         continue;
       }
       if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
         conflictingEventIds.add(getValidationEventKey2(event));
+        logValidationTrace("Active DFP", event, "twr-di-missing");
       }
     }
     return conflictingEventIds;
@@ -74551,14 +74587,27 @@ ${"=".repeat(60)}`);
       const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
       if (result.hasConflict) {
         conflictingEventIds.add(getValidationEventKey2(event));
+        logValidationTrace("Next Day Build", event, "conflict", {
+          conflictType: result.conflictType,
+          conflictingEventId: result.conflictingEventId,
+          conflictedPersonnel: result.conflictedPersonnel
+        });
+      } else if (isStbyFlightLineEvent(event)) {
+        logValidationTrace("Next Day Build", event, "clear");
       }
     }
     for (const event of nextDayBuildEvents) {
       if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+        if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+          logValidationTrace("Next Day Build", event, "twr-di-exempt", {
+            reason: "Solo STBY events do not require TWR DI until moved to an active aircraft line"
+          });
+        }
         continue;
       }
       if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
         conflictingEventIds.add(getValidationEventKey2(event));
+        logValidationTrace("Next Day Build", event, "twr-di-missing");
       }
     }
     return conflictingEventIds;
@@ -76366,16 +76415,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     activeDfpEvents.forEach((event) => {
       const isDutySup = event?.flightNumber?.includes("Duty Sup");
       const isStbyFlightNumber = event?.flightNumber?.toUpperCase().includes("STBY");
-      const isStbyResource = event?.resourceId?.startsWith("STBY") || event?.resourceId?.startsWith("BNF-STBY");
+      const isStbyResource2 = event?.resourceId?.startsWith("STBY") || event?.resourceId?.startsWith("BNF-STBY");
       const isDeployment = event?.type === "deployment";
       const isValidEventType = event?.type === "flight" || event?.type === "ftd" || event?.type === "ground" || event?.type === "cpt";
-      if (isDutySup || isStbyFlightNumber || isStbyResource || isDeployment || !isValidEventType) {
+      if (isDutySup || isStbyFlightNumber || isStbyResource2 || isDeployment || !isValidEventType) {
         console.log("⏭️ Skipping event:", {
           flightNumber: event?.flightNumber,
           type: event?.type,
           resourceId: event?.resourceId,
           date: event?.date,
-          reason: isDutySup ? "DUTY SUP" : isStbyFlightNumber || isStbyResource ? "STBY allocation" : isDeployment ? "Deployment" : "Invalid event type"
+          reason: isDutySup ? "DUTY SUP" : isStbyFlightNumber || isStbyResource2 ? "STBY allocation" : isDeployment ? "Deployment" : "Invalid event type"
         });
         return;
       }

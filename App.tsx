@@ -215,6 +215,9 @@ const isDutySupervisorEvent = (event: Omit<ScheduleEvent, 'date'> | ScheduleEven
     event.flightNumber === 'Night Duty Sup' ||
     event.resourceId === 'Duty Sup';
 
+const isStbyResource = (resourceId?: string): boolean =>
+    !!resourceId && (resourceId.startsWith('STBY') || resourceId.startsWith('BNF-STBY'));
+
 const getEventBookingWindow = (
     event: ScheduleEvent,
     syllabusDetails: SyllabusItemDetail[]
@@ -7090,12 +7093,12 @@ const App: React.FC = () => {
         checkDate?: string
     ): { hasConflict: boolean; conflictingEventId: string | null; conflictType: 'turnaround' | 'resource' | 'personnel' | 'day-night' | null; conflictedPersonnel: string | null } => {
 
-        // Skip conflict detection for STBY and deployment events
-        if (targetEvent.resourceId.startsWith('STBY') ||
-            targetEvent.resourceId.startsWith('BNF-STBY') ||
-            targetEvent.type === 'deployment') {
+        // Deployment events are non-scheduling overlays.
+        if (targetEvent.type === 'deployment') {
             return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
         }
+
+        const targetIsStby = isStbyResource(targetEvent.resourceId);
 
         // CRITICAL: Check for duplicate pilots within the same formation
         // This must be checked FIRST before other conflicts
@@ -7122,11 +7125,8 @@ const App: React.FC = () => {
             }
         }
 
-        // Filter out STBY and deployment events from comparison
         const validEvents = allEvents.filter(e =>
             e.id !== targetEvent.id &&
-            !e.resourceId.startsWith('STBY') &&
-            !e.resourceId.startsWith('BNF-STBY') &&
             e.type !== 'deployment'
         );
 
@@ -7144,7 +7144,11 @@ const App: React.FC = () => {
         else if (targetEvent.type === 'cpt' || (targetEvent.type === 'ground' && targetEvent.flightNumber.includes('CPT'))) requiredTurnaround = cptTurnaround;
 
         // Check turnaround conflicts - only with events on same resource
-        const sameResourceEvents = validEvents.filter(e => e.resourceId === targetEvent.resourceId);
+        const sameResourceEvents = validEvents.filter(e =>
+            e.resourceId === targetEvent.resourceId &&
+            !targetIsStby &&
+            !isStbyResource(e.resourceId)
+        );
         sameResourceEvents.sort((a, b) => a.startTime - b.startTime);
 
         for (let i = 0; i < sameResourceEvents.length; i++) {
@@ -7424,8 +7428,7 @@ const App: React.FC = () => {
     };
 
     const isStbyFlightLineEvent = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): boolean =>
-        !!event.resourceId &&
-        (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+        isStbyResource(event.resourceId);
 
     const getValidationEventKey = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): string =>
         [
@@ -7443,6 +7446,30 @@ const App: React.FC = () => {
     ): boolean => {
         if (!isSoloFlightNeedingTwrDi(event)) return false;
         return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
+    };
+
+    const logValidationTrace = (
+        context: 'Active DFP' | 'Next Day Build',
+        event: ScheduleEvent | Omit<ScheduleEvent, 'date'>,
+        outcome: 'conflict' | 'clear' | 'twr-di-missing' | 'twr-di-exempt',
+        details: Record<string, any> = {}
+    ) => {
+        if (!isStbyFlightLineEvent(event) && outcome === 'clear') return;
+        console.log('[ValidationTrace]', {
+            context,
+            outcome,
+            key: getValidationEventKey(event),
+            id: event.id,
+            resourceId: event.resourceId,
+            flightNumber: event.flightNumber,
+            flightType: event.flightType,
+            instructor: event.instructor,
+            student: event.student,
+            pilot: event.pilot,
+            startTime: event.startTime,
+            duration: event.duration,
+            ...details
+        });
     };
 
     const hasTwrDiCoverageForSolo = (
@@ -7502,6 +7529,14 @@ const App: React.FC = () => {
             if (result.hasConflict) {
                 // UI conflict logger silenced - focused build-algorithm diagnostic active
                 conflictingEventIds.add(getValidationEventKey(event));
+                logValidationTrace('Active DFP', event, 'conflict', {
+                    conflictType: result.conflictType,
+                    conflictingEventId: result.conflictingEventId,
+                    conflictedPersonnel: result.conflictedPersonnel,
+                    reason: result.reason
+                });
+            } else if (isStbyFlightLineEvent(event)) {
+                logValidationTrace('Active DFP', event, 'clear');
             }
         }
 
@@ -7512,11 +7547,17 @@ const App: React.FC = () => {
         // Solo events parked on STBY lines are exempt until moved onto an active aircraft line.
         for (const event of eventsForDate) {
             if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+                if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+                    logValidationTrace('Active DFP', event, 'twr-di-exempt', {
+                        reason: 'Solo STBY events do not require TWR DI until moved to an active aircraft line'
+                    });
+                }
                 continue;
             }
 
             if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
                 conflictingEventIds.add(getValidationEventKey(event));
+                logValidationTrace('Active DFP', event, 'twr-di-missing');
             }
         }
 
@@ -7539,17 +7580,30 @@ const App: React.FC = () => {
             const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
             if (result.hasConflict) {
                 conflictingEventIds.add(getValidationEventKey(event));
+                logValidationTrace('Next Day Build', event, 'conflict', {
+                    conflictType: result.conflictType,
+                    conflictingEventId: result.conflictingEventId,
+                    conflictedPersonnel: result.conflictedPersonnel
+                });
+            } else if (isStbyFlightLineEvent(event)) {
+                logValidationTrace('Next Day Build', event, 'clear');
             }
         }
 
         // TWR DI Validation Rule for Next Day Build: every trainee solo flight must be fully covered.
         for (const event of nextDayBuildEvents) {
             if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
+                if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
+                    logValidationTrace('Next Day Build', event, 'twr-di-exempt', {
+                        reason: 'Solo STBY events do not require TWR DI until moved to an active aircraft line'
+                    });
+                }
                 continue;
             }
 
             if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
                 conflictingEventIds.add(getValidationEventKey(event));
+                logValidationTrace('Next Day Build', event, 'twr-di-missing');
             }
         }
         return conflictingEventIds;
