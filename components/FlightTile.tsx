@@ -784,7 +784,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                         opacity: 0.8,
                     }}
                 >
-                    #{aircraftNumberDisplay}
+                    {aircraftNumberDisplay}
                 </div>
             )}
             <div className="absolute bottom-0.5 right-3 flex items-center gap-1">

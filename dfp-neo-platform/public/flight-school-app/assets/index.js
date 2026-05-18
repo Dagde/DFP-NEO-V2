@@ -5056,7 +5056,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           isTwrDiEvent ? "TWR DI" : event.flightNumber
         ] }) }) })
       ] }),
-      aircraftNumberDisplay && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      aircraftNumberDisplay && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",
         {
           className: "absolute bottom-0.5 left-1 font-mono text-white/80",
@@ -5065,10 +5065,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
             lineHeight: "1",
             opacity: 0.8
           },
-          children: [
-            "#",
-            aircraftNumberDisplay
-          ]
+          children: aircraftNumberDisplay
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute bottom-0.5 right-3 flex items-center gap-1", children: [
