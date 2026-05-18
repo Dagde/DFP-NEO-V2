@@ -70233,7 +70233,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return totalDutyHours;
   };
+  const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const eventIncludesPerson = (event, personName) => {
+    const personKey = normalizeBuildPersonnelName(personName);
+    if (!personKey) return false;
+    return getPersonnel(event).some((p) => normalizeBuildPersonnelName(p) === personKey);
+  };
   const intendedNightStaff = /* @__PURE__ */ new Set();
+  const markIntendedNightPerson = (personName) => {
+    const personKey = normalizeBuildPersonnelName(personName);
+    if (personKey) intendedNightStaff.add(personKey);
+  };
   const getGeneratedEventDayNightClassification = (event) => {
     if (typeof event.startTime === "number") {
       return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
@@ -70242,7 +70252,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const isPersonScheduledForDayEvents = (personName) => {
     const hasDayEvents = generatedEvents.some((e) => {
-      if (!getPersonnel(e).includes(personName)) return false;
+      if (!eventIncludesPerson(e, personName)) return false;
       const classification = getGeneratedEventDayNightClassification(e);
       const isDay = classification === "Day";
       return isDay;
@@ -70251,12 +70261,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const isPersonScheduledForNightEvents = (personName) => {
     const hasScheduledNightEvents = generatedEvents.some((e) => {
-      if (!getPersonnel(e).includes(personName)) return false;
+      if (!eventIncludesPerson(e, personName)) return false;
       const classification = getGeneratedEventDayNightClassification(e);
       const isNight = classification === "Night";
       return isNight;
     });
-    return hasScheduledNightEvents || intendedNightStaff.has(personName);
+    return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
   };
   const getScheduledDayNightForStart = (startTime) => startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
   const canAssignPersonForScheduledWindow = (personName, startTime) => {
@@ -70576,6 +70586,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   let instructors = [...originalInstructors.map((i) => ({ ...i, unavailability: [...i.unavailability || []] }))];
   _diagInitInstructors(buildDate, instructors);
   if (nextEventLists.bnf.length >= 2) {
+    nextEventLists.bnf.forEach((trainee) => markIntendedNightPerson(trainee.fullName));
     const bnfTraineeCount = nextEventLists.bnf.length;
     const instructorsNeeded = bnfTraineeCount;
     const nightDutyStartTime = commenceNightFlying;
@@ -70604,7 +70615,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const trainee = bnfTrainees[index];
       if (trainee) {
         nightPairings.set(trainee.fullName, nfi.name);
-        intendedNightStaff.add(nfi.name);
+        markIntendedNightPerson(nfi.name);
         const instructorToUpdate = instructors.find((i) => i.name === nfi.name);
         if (instructorToUpdate) {
           const reservationPeriod = {
@@ -71370,7 +71381,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return true;
     }) || null;
     if (nightDutySup) {
-      intendedNightStaff.add(nightDutySup.name);
+      markIntendedNightPerson(nightDutySup.name);
       console.log(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
     } else {
       console.log(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
@@ -72050,7 +72061,48 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   resourceOrder.forEach((resource, index) => {
     resourceOrderMap.set(resource, index);
   });
-  const sortedEvents = [...generatedEvents].sort((a, b) => {
+  const enforceBuildDayNightSeparation = (events) => {
+    const eventsByPerson = /* @__PURE__ */ new Map();
+    events.forEach((event) => {
+      const classification = getGeneratedEventDayNightClassification(event);
+      if (classification === "Day/Night") return;
+      getPersonnel(event).forEach((personName) => {
+        const personKey = normalizeBuildPersonnelName(personName);
+        if (!personKey) return;
+        if (!eventsByPerson.has(personKey)) {
+          eventsByPerson.set(personKey, { personName, day: [], night: [] });
+        }
+        const entry = eventsByPerson.get(personKey);
+        if (classification === "Night") entry.night.push(event);
+        else entry.day.push(event);
+      });
+    });
+    const removeEventIds = /* @__PURE__ */ new Set();
+    eventsByPerson.forEach(({ personName, day, night }) => {
+      if (day.length === 0 || night.length === 0) return;
+      const lockedDay = day.some((event) => event._source !== "generated");
+      const lockedNight = night.some((event) => event._source !== "generated");
+      const eventsToRemove = lockedDay ? night.filter((event) => event._source === "generated") : lockedNight ? day.filter((event) => event._source === "generated") : day.filter((event) => event._source === "generated");
+      eventsToRemove.forEach((event) => removeEventIds.add(event.id));
+      if (eventsToRemove.length > 0) {
+        console.warn(
+          `[DAY/NIGHT GUARD] Removed ${eventsToRemove.length} generated event(s) for ${personName} to enforce one window only.`,
+          eventsToRemove.map((event) => `${event.flightNumber}@${event.startTime.toFixed(2)}`)
+        );
+      } else {
+        console.warn(
+          `[DAY/NIGHT GUARD] ${personName} still has locked day and night events; generated build cannot remove locked events.`,
+          {
+            day: day.map((event) => `${event.flightNumber}@${event.startTime.toFixed(2)}`),
+            night: night.map((event) => `${event.flightNumber}@${event.startTime.toFixed(2)}`)
+          }
+        );
+      }
+    });
+    return events.filter((event) => !removeEventIds.has(event.id));
+  };
+  const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+  const sortedEvents = [...dayNightSeparatedEvents].sort((a, b) => {
     const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
     const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
     if (orderA !== orderB) {

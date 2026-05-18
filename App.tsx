@@ -1546,8 +1546,24 @@ function generateDfpInternal(
         return totalDutyHours;
     };
 
-    // Track staff who are intended for night assignments
+    const normalizeBuildPersonnelName = (name?: string): string =>
+        (name || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+    const eventIncludesPerson = (
+        event: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
+        personName: string
+    ): boolean => {
+        const personKey = normalizeBuildPersonnelName(personName);
+        if (!personKey) return false;
+        return getPersonnel(event).some(p => normalizeBuildPersonnelName(p) === personKey);
+    };
+
+    // Track people who are intended for night assignments before the night event exists.
     const intendedNightStaff = new Set<string>();
+    const markIntendedNightPerson = (personName?: string) => {
+        const personKey = normalizeBuildPersonnelName(personName);
+        if (personKey) intendedNightStaff.add(personKey);
+    };
 
     const getGeneratedEventDayNightClassification = (
         event: Omit<ScheduleEvent, 'date'> | ScheduleEvent
@@ -1562,7 +1578,7 @@ function generateDfpInternal(
     // NOTE: This includes Active DFP events since generatedEvents is initialized with them
     const isPersonScheduledForDayEvents = (personName: string): boolean => {
         const hasDayEvents = generatedEvents.some(e => {
-            if (!getPersonnel(e).includes(personName)) return false;
+            if (!eventIncludesPerson(e, personName)) return false;
             const classification = getGeneratedEventDayNightClassification(e);
             const isDay = classification === 'Day';
             return isDay;
@@ -1577,13 +1593,13 @@ function generateDfpInternal(
     const isPersonScheduledForNightEvents = (personName: string): boolean => {
         // Check both already scheduled night events AND intended night assignments using Master LMP Day/Night field
         const hasScheduledNightEvents = generatedEvents.some(e => {
-            if (!getPersonnel(e).includes(personName)) return false;
+            if (!eventIncludesPerson(e, personName)) return false;
             const classification = getGeneratedEventDayNightClassification(e);
             const isNight = classification === 'Night';
             return isNight;
         });
 
-        return hasScheduledNightEvents || intendedNightStaff.has(personName);
+        return hasScheduledNightEvents || intendedNightStaff.has(normalizeBuildPersonnelName(personName));
     };
 
     const getScheduledDayNightForStart = (startTime: number): 'Day' | 'Night' =>
@@ -2029,6 +2045,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // NEW LOGIC: If there are 2+ trainees waiting for night flying, then night flying is programmed
     if (nextEventLists.bnf.length >= 2) {
+        nextEventLists.bnf.forEach(trainee => markIntendedNightPerson(trainee.fullName));
         const bnfTraineeCount = nextEventLists.bnf.length;
         const instructorsNeeded = bnfTraineeCount;
 
@@ -2069,7 +2086,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (trainee) {
                 nightPairings.set(trainee.fullName, nfi.name);
                 // Track this instructor for night assignments
-                intendedNightStaff.add(nfi.name);
+                markIntendedNightPerson(nfi.name);
 
                 const instructorToUpdate = instructors.find(i => i.name === nfi.name);
                 if (instructorToUpdate) {
@@ -3083,7 +3100,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         if (nightDutySup) {
             // CRITICAL: Mark this instructor as intended for night duty BEFORE day scheduling
-            intendedNightStaff.add(nightDutySup.name);
+            markIntendedNightPerson(nightDutySup.name);
             console.log(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
         } else {
             console.log(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
@@ -4170,8 +4187,64 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         resourceOrderMap.set(resource, index);
     });
 
+    const enforceBuildDayNightSeparation = (
+        events: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[]
+    ): (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] => {
+        const eventsByPerson = new Map<string, { personName: string; day: typeof events; night: typeof events }>();
+
+        events.forEach(event => {
+            const classification = getGeneratedEventDayNightClassification(event);
+            if (classification === 'Day/Night') return;
+
+            getPersonnel(event).forEach(personName => {
+                const personKey = normalizeBuildPersonnelName(personName);
+                if (!personKey) return;
+                if (!eventsByPerson.has(personKey)) {
+                    eventsByPerson.set(personKey, { personName, day: [], night: [] });
+                }
+                const entry = eventsByPerson.get(personKey)!;
+                if (classification === 'Night') entry.night.push(event);
+                else entry.day.push(event);
+            });
+        });
+
+        const removeEventIds = new Set<string>();
+
+        eventsByPerson.forEach(({ personName, day, night }) => {
+            if (day.length === 0 || night.length === 0) return;
+
+            const lockedDay = day.some(event => event._source !== 'generated');
+            const lockedNight = night.some(event => event._source !== 'generated');
+            const eventsToRemove = lockedDay
+                ? night.filter(event => event._source === 'generated')
+                : lockedNight
+                    ? day.filter(event => event._source === 'generated')
+                    : day.filter(event => event._source === 'generated');
+
+            eventsToRemove.forEach(event => removeEventIds.add(event.id));
+            if (eventsToRemove.length > 0) {
+                console.warn(
+                    `[DAY/NIGHT GUARD] Removed ${eventsToRemove.length} generated event(s) for ${personName} to enforce one window only.`,
+                    eventsToRemove.map(event => `${event.flightNumber}@${event.startTime.toFixed(2)}`)
+                );
+            } else {
+                console.warn(
+                    `[DAY/NIGHT GUARD] ${personName} still has locked day and night events; generated build cannot remove locked events.`,
+                    {
+                        day: day.map(event => `${event.flightNumber}@${event.startTime.toFixed(2)}`),
+                        night: night.map(event => `${event.flightNumber}@${event.startTime.toFixed(2)}`)
+                    }
+                );
+            }
+        });
+
+        return events.filter(event => !removeEventIds.has(event.id));
+    };
+
+    const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+
     // Sort events by resource order, then by start time
-    const sortedEvents = [...generatedEvents].sort((a, b) => {
+    const sortedEvents = [...dayNightSeparatedEvents].sort((a, b) => {
         const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
         const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
 
