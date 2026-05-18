@@ -210,6 +210,11 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
     return Array.from(personnel);
 };
 
+const isDutySupervisorEvent = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): boolean =>
+    event.flightNumber === 'Duty Sup' ||
+    event.flightNumber === 'Night Duty Sup' ||
+    event.resourceId === 'Duty Sup';
+
 const getEventBookingWindow = (
     event: ScheduleEvent,
     syllabusDetails: SyllabusItemDetail[]
@@ -2386,16 +2391,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
-                // Ground↔flight cross-type pairs are NOT blocking: instructor can ground-brief
-                // AND fly on the same day. Only same-category overlaps are true conflicts.
+                // Ground↔flight cross-type pairs are NOT blocking unless Duty Sup is involved.
+                // Duty Sup is a higher-priority assignment and blocks all other instructor events.
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(instructor.name)) return false;
-                         // Skip ground↔flight/ftd cross-type: not a real double-booking
+                         const existingIsDutySup = isDutySupervisorEvent(e);
                          const existingIsGround = e.type === 'ground';
                          const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === 'ground';
-                         if (existingIsGround !== proposedIsGround) return false;
+                         if (!existingIsDutySup && existingIsGround !== proposedIsGround) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
                          if (overlaps) {
@@ -2654,17 +2659,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
-                // Ground↔flight/ftd cross-type pairs are NOT blocking: instructor can brief
-                // AND fly on the same day. Only same-category overlaps are true conflicts.
+                // Ground↔flight/ftd cross-type pairs are NOT blocking unless Duty Sup is involved.
+                // Duty Sup is a higher-priority assignment and blocks all other instructor events.
                 let _crossTypeSkipped = false;
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(ip.name)) return false;
-                         // Skip ground↔flight/ftd cross-type: not a real double-booking
+                         const existingIsDutySup = isDutySupervisorEvent(e);
                          const existingIsGround = e.type === 'ground';
                          const proposedIsGround = type === 'ground';
-                         if (existingIsGround !== proposedIsGround) {
+                         if (!existingIsDutySup && existingIsGround !== proposedIsGround) {
                              _crossTypeSkipped = true;
                              return false;
                          }

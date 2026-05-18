@@ -69424,6 +69424,7 @@ const getPersonnel = (event) => {
   if (event.groupTraineeIds && event.groupTraineeIds.length > 0) ;
   return Array.from(personnel);
 };
+const isDutySupervisorEvent = (event) => event.flightNumber === "Duty Sup" || event.flightNumber === "Night Duty Sup" || event.resourceId === "Duty Sup";
 const getEventBookingWindow = (event, syllabusDetails) => {
   const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   if (syllabusItem) {
@@ -70817,9 +70818,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
           if (!getPersonnel(e).includes(instructor2.name)) return false;
+          const existingIsDutySup = isDutySupervisorEvent(e);
           const existingIsGround = e.type === "ground";
           const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === "ground";
-          if (existingIsGround !== proposedIsGround) return false;
+          if (!existingIsDutySup && existingIsGround !== proposedIsGround) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
@@ -71017,9 +71019,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
           if (!getPersonnel(e).includes(ip.name)) return false;
+          const existingIsDutySup = isDutySupervisorEvent(e);
           const existingIsGround = e.type === "ground";
           const proposedIsGround = type === "ground";
-          if (existingIsGround !== proposedIsGround) {
+          if (!existingIsDutySup && existingIsGround !== proposedIsGround) {
             return false;
           }
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
