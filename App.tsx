@@ -7103,6 +7103,20 @@ const App: React.FC = () => {
     // ============================================================================
     // CONFLICT DETECTION SYSTEM
     // ============================================================================
+    const getScheduleEventDayNightClassification = useCallback((
+        event: { flightNumber: string; startTime?: number; resourceId?: string }
+    ): 'Day' | 'Night' | 'Day/Night' => {
+        if (event.flightNumber === 'Night Duty Sup') return 'Night';
+        if (event.flightNumber === 'Duty Sup' || event.resourceId === 'Duty Sup') {
+            return typeof event.startTime === 'number' &&
+                event.startTime >= commenceNightFlying &&
+                event.startTime < ceaseNightFlying
+                ? 'Night'
+                : 'Day';
+        }
+        return getEventDayNightClassification(event, syllabusDetails, sctEvents);
+    }, [commenceNightFlying, ceaseNightFlying, syllabusDetails, sctEvents]);
+
     // Detects three types of conflicts:
     // 1. Turnaround Conflicts - Insufficient gap between consecutive events on same resource
     // 2. Resource Conflicts - Two events overlapping on the same resource line
@@ -7290,7 +7304,7 @@ const App: React.FC = () => {
         // Check day/night separation using Master LMP Day/Night field
         // Personnel should only be scheduled for day OR night, not both
         const targetPersonnelForDayNight = getPersonnel(targetEvent);
-        const targetClassification = getEventDayNightClassification(targetEvent, syllabusDetails, sctEvents);
+        const targetClassification = getScheduleEventDayNightClassification(targetEvent);
 
         // Day/Night events never cause conflicts
         if (targetClassification === 'Day/Night') {
@@ -7302,7 +7316,7 @@ const App: React.FC = () => {
             const commonPersonnelForDayNight = targetPersonnelForDayNight.filter(p => eventPersonnel.includes(p));
 
             if (commonPersonnelForDayNight.length > 0) {
-                const eventClassification = getEventDayNightClassification(event, syllabusDetails, sctEvents);
+                const eventClassification = getScheduleEventDayNightClassification(event);
 
                 // Day/Night events never cause conflicts
                 if (eventClassification === 'Day/Night') {
@@ -7328,7 +7342,7 @@ const App: React.FC = () => {
         }
 
         return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
-    }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying]);
+    }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
 // HARD-WIRED DAY/NIGHT SEPARATION FUNCTION - Prevents day/night mixing FOR GOOD
     // NOW USES MASTER LMP DAY/NIGHT FIELD INSTEAD OF TIME-BASED CALCULATION
     const enforceDayNightSeparation = (
@@ -7352,14 +7366,14 @@ const App: React.FC = () => {
         // Check for PURE day events using Master LMP Day/Night field
         // Day/Night events don't count as conflicts
         const hasDayEvents = existingEvents.some(e => {
-            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+            const classification = getScheduleEventDayNightClassification(e);
             return classification === 'Day';
         });
 
         // Check for PURE night events using Master LMP Day/Night field
         // Day/Night events don't count as conflicts
         const hasNightEvents = existingEvents.some(e => {
-            const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+            const classification = getScheduleEventDayNightClassification(e);
             return classification === 'Night';
         });
 
@@ -7369,7 +7383,11 @@ const App: React.FC = () => {
         let proposedIsDayNight = false;
 
         if (proposedFlightNumber) {
-            const proposedClassification = getEventDayNightClassification({ flightNumber: proposedFlightNumber }, syllabusDetails, sctEvents);
+            const proposedClassification = getScheduleEventDayNightClassification({
+                flightNumber: proposedFlightNumber,
+                startTime: proposedStartTime,
+                resourceId: proposedFlightNumber.includes('Duty Sup') ? 'Duty Sup' : undefined
+            });
             proposedIsNight = proposedClassification === 'Night';
             proposedIsDay = proposedClassification === 'Day';
             proposedIsDayNight = proposedClassification === 'Day/Night';
@@ -13024,8 +13042,8 @@ updates.forEach(update => {
 
                 case 'day-night':
                     if (conflictingEvent && conflictResult.conflictedPersonnel) {
-                        const eventClassification = getEventDayNightClassification(event, syllabusDetails, sctEvents);
-                        const conflictingEventClassification = getEventDayNightClassification(conflictingEvent, syllabusDetails, sctEvents);
+                        const eventClassification = getScheduleEventDayNightClassification(event);
+                        const conflictingEventClassification = getScheduleEventDayNightClassification(conflictingEvent);
                         errors.push(`❌ Day/Night separation violation - ${conflictResult.conflictedPersonnel.split(',')[0]} cannot be scheduled for both ${eventClassification} event (${event.flightNumber}) and ${conflictingEventClassification} event (${conflictingEvent.flightNumber})`);
                     }
                     break;

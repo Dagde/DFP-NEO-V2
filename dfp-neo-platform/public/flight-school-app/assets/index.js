@@ -74282,6 +74282,13 @@ ${"=".repeat(60)}`);
     });
     return data;
   }, [allInstructorsData, allTraineesData]);
+  const getScheduleEventDayNightClassification = reactExports.useCallback((event) => {
+    if (event.flightNumber === "Night Duty Sup") return "Night";
+    if (event.flightNumber === "Duty Sup" || event.resourceId === "Duty Sup") {
+      return typeof event.startTime === "number" && event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
+    }
+    return getEventDayNightClassification(event, syllabusDetails, sctEvents);
+  }, [commenceNightFlying, ceaseNightFlying, syllabusDetails, sctEvents]);
   const checkTimeOverlap = reactExports.useCallback((event1, event2) => {
     const start1 = event1.startTime;
     const end1 = event1.startTime + event1.duration;
@@ -74406,7 +74413,7 @@ ${"=".repeat(60)}`);
       }
     }
     const targetPersonnelForDayNight = getPersonnel(targetEvent);
-    const targetClassification = getEventDayNightClassification(targetEvent, syllabusDetails, sctEvents);
+    const targetClassification = getScheduleEventDayNightClassification(targetEvent);
     if (targetClassification === "Day/Night") {
       return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
     }
@@ -74414,7 +74421,7 @@ ${"=".repeat(60)}`);
       const eventPersonnel = getPersonnel(event);
       const commonPersonnelForDayNight = targetPersonnelForDayNight.filter((p) => eventPersonnel.includes(p));
       if (commonPersonnelForDayNight.length > 0) {
-        const eventClassification = getEventDayNightClassification(event, syllabusDetails, sctEvents);
+        const eventClassification = getScheduleEventDayNightClassification(event);
         if (eventClassification === "Day/Night") {
           continue;
         }
@@ -74433,25 +74440,29 @@ ${"=".repeat(60)}`);
       }
     }
     return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
-  }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying]);
+  }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
   const enforceDayNightSeparation = (personName, proposedStartTime, proposedDuration = 1.5, eventType = "flight", checkDate, proposedFlightNumber, excludeEventId) => {
     const analysisDate = checkDate || date;
     const existingEvents = eventsForDate.filter(
       (e) => e.id !== excludeEventId && getPersonnel(e).includes(personName) && e.date === analysisDate
     );
     const hasDayEvents = existingEvents.some((e) => {
-      const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+      const classification = getScheduleEventDayNightClassification(e);
       return classification === "Day";
     });
     const hasNightEvents = existingEvents.some((e) => {
-      const classification = getEventDayNightClassification(e, syllabusDetails, sctEvents);
+      const classification = getScheduleEventDayNightClassification(e);
       return classification === "Night";
     });
     let proposedIsNight = false;
     let proposedIsDay = false;
     let proposedIsDayNight = false;
     if (proposedFlightNumber) {
-      const proposedClassification = getEventDayNightClassification({ flightNumber: proposedFlightNumber }, syllabusDetails, sctEvents);
+      const proposedClassification = getScheduleEventDayNightClassification({
+        flightNumber: proposedFlightNumber,
+        startTime: proposedStartTime,
+        resourceId: proposedFlightNumber.includes("Duty Sup") ? "Duty Sup" : void 0
+      });
       proposedIsNight = proposedClassification === "Night";
       proposedIsDay = proposedClassification === "Day";
       proposedIsDayNight = proposedClassification === "Day/Night";
@@ -78856,8 +78867,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           break;
         case "day-night":
           if (conflictingEvent && conflictResult.conflictedPersonnel) {
-            const eventClassification = getEventDayNightClassification(event, syllabusDetails, sctEvents);
-            const conflictingEventClassification = getEventDayNightClassification(conflictingEvent, syllabusDetails, sctEvents);
+            const eventClassification = getScheduleEventDayNightClassification(event);
+            const conflictingEventClassification = getScheduleEventDayNightClassification(conflictingEvent);
             errors.push(`❌ Day/Night separation violation - ${conflictResult.conflictedPersonnel.split(",")[0]} cannot be scheduled for both ${eventClassification} event (${event.flightNumber}) and ${conflictingEventClassification} event (${conflictingEvent.flightNumber})`);
           }
           break;
