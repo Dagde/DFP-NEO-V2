@@ -74613,8 +74613,12 @@ ${"=".repeat(60)}`);
     if (!nextDayBuildEvents || nextDayBuildEvents.length === 0) {
       return conflictingEventIds;
     }
-    for (const event of nextDayBuildEvents) {
-      const otherEvents = nextDayBuildEvents.filter((e) => e.id !== event.id);
+    const nextDayEventsWithDate = nextDayBuildEvents.map((event) => ({
+      ...event,
+      date: buildDfpDate
+    }));
+    for (const event of nextDayEventsWithDate) {
+      const otherEvents = nextDayEventsWithDate.filter((e) => e.id !== event.id);
       const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
       if (result.hasConflict) {
         conflictingEventIds.add(getValidationEventKey2(event));
@@ -74627,7 +74631,7 @@ ${"=".repeat(60)}`);
         logValidationTrace("Next Day Build", event, "clear");
       }
     }
-    for (const event of nextDayBuildEvents) {
+    for (const event of nextDayEventsWithDate) {
       if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
         if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
           logValidationTrace("Next Day Build", event, "twr-di-exempt", {
@@ -74636,7 +74640,7 @@ ${"=".repeat(60)}`);
         }
         continue;
       }
-      if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
+      if (!hasTwrDiCoverageForSolo(event, nextDayEventsWithDate)) {
         conflictingEventIds.add(getValidationEventKey2(event));
         logValidationTrace("Next Day Build", event, "twr-di-missing");
       }

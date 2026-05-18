@@ -7611,9 +7611,14 @@ const App: React.FC = () => {
             return conflictingEventIds;
         }
 
-        for (const event of nextDayBuildEvents) {
+        const nextDayEventsWithDate = nextDayBuildEvents.map(event => ({
+            ...event,
+            date: buildDfpDate
+        })) as ScheduleEvent[];
+
+        for (const event of nextDayEventsWithDate) {
             // Exclude current event from conflict check by filtering it out
-            const otherEvents = nextDayBuildEvents.filter(e => e.id !== event.id);
+            const otherEvents = nextDayEventsWithDate.filter(e => e.id !== event.id);
             const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
             if (result.hasConflict) {
                 conflictingEventIds.add(getValidationEventKey(event));
@@ -7628,7 +7633,7 @@ const App: React.FC = () => {
         }
 
         // TWR DI Validation Rule for Next Day Build: every trainee solo flight must be fully covered.
-        for (const event of nextDayBuildEvents) {
+        for (const event of nextDayEventsWithDate) {
             if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
                 if (isSoloFlightNeedingTwrDi(event) && isStbyFlightLineEvent(event)) {
                     logValidationTrace('Next Day Build', event, 'twr-di-exempt', {
@@ -7638,7 +7643,7 @@ const App: React.FC = () => {
                 continue;
             }
 
-            if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
+            if (!hasTwrDiCoverageForSolo(event, nextDayEventsWithDate)) {
                 conflictingEventIds.add(getValidationEventKey(event));
                 logValidationTrace('Next Day Build', event, 'twr-di-missing');
             }
