@@ -69451,6 +69451,7 @@ const getPersonnel = (event) => {
     if (event.crew) personnel.add(event.crew);
   } else {
     if (event.instructor) personnel.add(event.instructor);
+    if (event.pilot) personnel.add(event.pilot);
     if (event.flightType === "Solo") {
       if (event.pilot) personnel.add(event.pilot);
     } else {
@@ -70233,7 +70234,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return totalDutyHours;
   };
-  const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().toLowerCase();
+  const normalizeBuildPersonnelName = (name) => (name || "").replace(/\s+/g, " ").trim().replace(/^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i, "").toLowerCase();
   const eventIncludesPerson = (event, personName) => {
     const personKey = normalizeBuildPersonnelName(personName);
     if (!personKey) return false;
@@ -72082,16 +72083,39 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (day.length === 0 || night.length === 0) return;
       const lockedDay = day.some((event) => event._source !== "generated");
       const lockedNight = night.some((event) => event._source !== "generated");
-      const eventsToRemove = lockedDay ? night.filter((event) => event._source === "generated") : lockedNight ? day.filter((event) => event._source === "generated") : day.filter((event) => event._source === "generated");
+      let eventsToRemove = [];
+      if (lockedDay && !lockedNight) {
+        eventsToRemove = night.filter((event) => event._source === "generated");
+      } else if (!lockedDay && lockedNight) {
+        eventsToRemove = day.filter((event) => event._source === "generated");
+      } else {
+        const generatedDay = day.filter((event) => event._source === "generated");
+        const generatedNight = night.filter((event) => event._source === "generated");
+        if (generatedDay.length > 0) {
+          eventsToRemove = generatedDay;
+        } else if (generatedNight.length > 0) {
+          eventsToRemove = generatedNight;
+        } else {
+          const dayDutySup = day.filter(isDutySupervisorEvent);
+          const nightDutySup2 = night.filter(isDutySupervisorEvent);
+          if (dayDutySup.length > 0 && nightDutySup2.length === 0) {
+            eventsToRemove = night;
+          } else if (nightDutySup2.length > 0 && dayDutySup.length === 0) {
+            eventsToRemove = day;
+          } else {
+            eventsToRemove = day;
+          }
+        }
+      }
       eventsToRemove.forEach((event) => removeEventIds.add(event.id));
       if (eventsToRemove.length > 0) {
         console.warn(
-          `[DAY/NIGHT GUARD] Removed ${eventsToRemove.length} generated event(s) for ${personName} to enforce one window only.`,
+          `[DAY/NIGHT GUARD] Removed ${eventsToRemove.length} event(s) for ${personName} to enforce one window only.`,
           eventsToRemove.map((event) => `${event.flightNumber}@${event.startTime.toFixed(2)}`)
         );
       } else {
         console.warn(
-          `[DAY/NIGHT GUARD] ${personName} still has locked day and night events; generated build cannot remove locked events.`,
+          `[DAY/NIGHT GUARD] ${personName} still has day and night events; no removable event was found.`,
           {
             day: day.map((event) => `${event.flightNumber}@${event.startTime.toFixed(2)}`),
             night: night.map((event) => `${event.flightNumber}@${event.startTime.toFixed(2)}`)
