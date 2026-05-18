@@ -5887,7 +5887,14 @@ const getPersonnel$6 = (event) => {
   if (event.attendees) personnel.push(...event.attendees);
   return personnel;
 };
-const isStbyLineEvent$3 = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+const getValidationEventKey$3 = (event) => [
+  event.id,
+  event.date || "",
+  event.resourceId || "",
+  event.startTime,
+  event.duration,
+  event.flightNumber || ""
+].join("|");
 const checkIsChanged = (event, baselineEvents) => {
   if (!baselineEvents) return false;
   const baseline = baselineEvents.find((b) => b.id === event.id);
@@ -6559,7 +6566,7 @@ const ScheduleView = ({
       return resourceEvents.map((event) => {
         const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
         const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
-        const isConflicting = showValidation && !isStbyLineEvent$3(event) && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
+        const isConflicting = showValidation && personnelConflictIds.has(getValidationEventKey$3(event)) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
         const unavailabilityConflictData = unavailabilityConflicts.get(event.id);
         const isUnavailability = !!unavailabilityConflictData;
         const unavailablePeople = unavailabilityConflictData || [];
@@ -18735,7 +18742,14 @@ const getPersonnel$3 = (event) => {
   if (event.attendees) personnel.push(...event.attendees);
   return personnel;
 };
-const isStbyLineEvent$2 = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+const getValidationEventKey$2 = (event) => [
+  event.id,
+  event.date || "",
+  event.resourceId || "",
+  event.startTime,
+  event.duration,
+  event.flightNumber || ""
+].join("|");
 const getResourceCategory = (res) => {
   if (res.startsWith("PC-21")) return "PC-21";
   if (res.startsWith("STBY")) return "STBY";
@@ -19338,7 +19352,7 @@ const NextDayBuildView = ({
         const unavailabilityConflictData = unavailabilityConflicts?.get(event.id);
         const isUnavailability = !!unavailabilityConflictData;
         const unavailablePeople = unavailabilityConflictData || [];
-        const isConflicting = showValidation && !isStbyLineEvent$2(event) && personnelConflictIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
+        const isConflicting = showValidation && personnelConflictIds.has(getValidationEventKey$2(event)) || isStationaryConflictTile || isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId);
         let personToHighlight = null;
         if (realtimeConflict) {
           const personnelOnThisTile = getPersonnel$3(event);
@@ -67170,7 +67184,14 @@ const getPersonnel$2 = (event) => {
   }
   return personnel;
 };
-const isStbyLineEvent$1 = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+const getValidationEventKey$1 = (event) => [
+  event.id,
+  event.date || "",
+  event.resourceId || "",
+  event.startTime,
+  event.duration,
+  event.flightNumber || ""
+].join("|");
 const NextDayInstructorScheduleView = ({
   events,
   instructors,
@@ -67540,7 +67561,7 @@ const NextDayInstructorScheduleView = ({
                   const eventTiles = instructorEvents.map((event) => {
                     const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                     const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                    const isConflicting = showValidation && !isStbyLineEvent$1(event) && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                    const isConflicting = showValidation && conflictingEventIds.has(getValidationEventKey$1(event)) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
                     let personToHighlight = null;
                     if (realtimeConflict) {
                       const personnelOnThisTile = getPersonnel$2(event);
@@ -67614,7 +67635,14 @@ const getPersonnel$1 = (event) => {
   }
   return personnel;
 };
-const isStbyLineEvent = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+const getValidationEventKey = (event) => [
+  event.id,
+  event.date || "",
+  event.resourceId || "",
+  event.startTime,
+  event.duration,
+  event.flightNumber || ""
+].join("|");
 const NextDayTraineeScheduleView = ({
   events,
   trainees,
@@ -68028,7 +68056,7 @@ const NextDayTraineeScheduleView = ({
                   const eventTiles = traineeEvents.map((event) => {
                     const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                     const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                    const isConflicting = showValidation && !isStbyLineEvent(event) && conflictingEventIds.has(event.id) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
+                    const isConflicting = showValidation && conflictingEventIds.has(getValidationEventKey(event)) || isStationaryConflictTile || isDraggedTile && !!realtimeConflict;
                     const isUnavailability = false;
                     const unavailablePeople = [];
                     let personToHighlight = null;
@@ -74457,6 +74485,14 @@ ${"=".repeat(60)}`);
     return syllabusItem?.sortieType === "Solo";
   };
   const isStbyFlightLineEvent = (event) => !!event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+  const getValidationEventKey2 = (event) => [
+    event.id,
+    "date" in event ? event.date : "",
+    event.resourceId || "",
+    event.startTime,
+    event.duration,
+    event.flightNumber || ""
+  ].join("|");
   const shouldRequireTwrDiCoverage = (event, options = {}) => {
     if (!isSoloFlightNeedingTwrDi(event)) return false;
     return !(options.allowStbySoloWithoutTwrDi && isStbyFlightLineEvent(event));
@@ -74492,7 +74528,7 @@ ${"=".repeat(60)}`);
       const otherEvents = eventsForConflictCheck.filter((e) => e.id !== event.id);
       const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
       if (result.hasConflict) {
-        conflictingEventIds.add(event.id);
+        conflictingEventIds.add(getValidationEventKey2(event));
       }
     }
     for (const event of eventsForDate) {
@@ -74500,7 +74536,7 @@ ${"=".repeat(60)}`);
         continue;
       }
       if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
-        conflictingEventIds.add(event.id);
+        conflictingEventIds.add(getValidationEventKey2(event));
       }
     }
     return conflictingEventIds;
@@ -74514,7 +74550,7 @@ ${"=".repeat(60)}`);
       const otherEvents = nextDayBuildEvents.filter((e) => e.id !== event.id);
       const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
       if (result.hasConflict) {
-        conflictingEventIds.add(event.id);
+        conflictingEventIds.add(getValidationEventKey2(event));
       }
     }
     for (const event of nextDayBuildEvents) {
@@ -74522,7 +74558,7 @@ ${"=".repeat(60)}`);
         continue;
       }
       if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
-        conflictingEventIds.add(event.id);
+        conflictingEventIds.add(getValidationEventKey2(event));
       }
     }
     return conflictingEventIds;
@@ -78569,7 +78605,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
     const allEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate;
     const conflictingEventIds = isNextDayContext ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds;
-    const isValidateFlagged = conflictingEventIds.has(event.id);
+    const isValidateFlagged = conflictingEventIds.has(getValidationEventKey2(event));
     let errors = [];
     if (showValidation && isValidateFlagged) {
       errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
@@ -81631,7 +81667,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               }
             });
           },
-          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || !isStbyFlightLineEvent(selectedEvent) && (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id),
+          isConflict: (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (["NextDayBuild", "Priorities", "ProgramData"].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(getValidationEventKey2(selectedEvent)),
           onNeoClick: handleNeoClick,
           traineeLMPs,
           oracleContextForModal,

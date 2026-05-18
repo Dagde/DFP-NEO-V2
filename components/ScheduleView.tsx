@@ -106,9 +106,15 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     return personnel;
 };
 
-const isStbyLineEvent = (event: ScheduleEvent): boolean =>
-    !!event.resourceId &&
-    (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+const getValidationEventKey = (event: ScheduleEvent): string =>
+    [
+        event.id,
+        event.date || '',
+        event.resourceId || '',
+        event.startTime,
+        event.duration,
+        event.flightNumber || ''
+    ].join('|');
 
 const checkIsChanged = (event: ScheduleEvent, baselineEvents: ScheduleEvent[] | undefined): boolean => {
     if (!baselineEvents) return false;
@@ -884,7 +890,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                 const isDraggedTile = !!(draggingState && draggingState.initialPositions.has(event.id));
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId || event.id === realtimeResourceConflictId;
                 const isConflicting = 
-                    (showValidation && !isStbyLineEvent(event) && personnelConflictIds.has(event.id)) || 
+                    (showValidation && personnelConflictIds.has(getValidationEventKey(event))) || 
                     isStationaryConflictTile ||
                     (isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId));
                 

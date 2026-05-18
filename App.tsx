@@ -7427,6 +7427,16 @@ const App: React.FC = () => {
         !!event.resourceId &&
         (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
 
+    const getValidationEventKey = (event: ScheduleEvent | Omit<ScheduleEvent, 'date'>): string =>
+        [
+            event.id,
+            'date' in event ? event.date : '',
+            event.resourceId || '',
+            event.startTime,
+            event.duration,
+            event.flightNumber || ''
+        ].join('|');
+
     const shouldRequireTwrDiCoverage = (
         event: ScheduleEvent | Omit<ScheduleEvent, 'date'>,
         options: { allowStbySoloWithoutTwrDi?: boolean } = {}
@@ -7491,7 +7501,7 @@ const App: React.FC = () => {
             const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
             if (result.hasConflict) {
                 // UI conflict logger silenced - focused build-algorithm diagnostic active
-                conflictingEventIds.add(event.id);
+                conflictingEventIds.add(getValidationEventKey(event));
             }
         }
 
@@ -7506,7 +7516,7 @@ const App: React.FC = () => {
             }
 
             if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
-                conflictingEventIds.add(event.id);
+                conflictingEventIds.add(getValidationEventKey(event));
             }
         }
 
@@ -7528,7 +7538,7 @@ const App: React.FC = () => {
             const otherEvents = nextDayBuildEvents.filter(e => e.id !== event.id);
             const result = detectConflictsForEvent(event, otherEvents, buildDfpDate);
             if (result.hasConflict) {
-                conflictingEventIds.add(event.id);
+                conflictingEventIds.add(getValidationEventKey(event));
             }
         }
 
@@ -7539,7 +7549,7 @@ const App: React.FC = () => {
             }
 
             if (!hasTwrDiCoverageForSolo(event, nextDayBuildEvents)) {
-                conflictingEventIds.add(event.id);
+                conflictingEventIds.add(getValidationEventKey(event));
             }
         }
         return conflictingEventIds;
@@ -12709,7 +12719,7 @@ updates.forEach(update => {
 
         // Check if this event is flagged by Validate mode
         const conflictingEventIds = isNextDayContext ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds;
-        const isValidateFlagged = conflictingEventIds.has(event.id);
+        const isValidateFlagged = conflictingEventIds.has(getValidationEventKey(event));
 
         let errors: string[] = [];
 
@@ -16221,7 +16231,7 @@ updates.forEach(update => {
                             }
                         });
                     }}
-                    isConflict={(['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (!isStbyFlightLineEvent(selectedEvent) && (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(selectedEvent.id))}
+                    isConflict={(['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayUnavailabilityConflicts : unavailabilityConflicts).has(selectedEvent.id) || (['NextDayBuild', 'Priorities', 'ProgramData'].includes(activeView) ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds).has(getValidationEventKey(selectedEvent))}
                     onNeoClick={handleNeoClick}
                     traineeLMPs={traineeLMPs}
                     oracleContextForModal={oracleContextForModal}

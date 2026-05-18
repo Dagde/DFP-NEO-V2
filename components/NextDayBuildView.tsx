@@ -81,9 +81,15 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     return personnel;
 };
 
-const isStbyLineEvent = (event: ScheduleEvent): boolean =>
-    !!event.resourceId &&
-    (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+const getValidationEventKey = (event: ScheduleEvent): string =>
+    [
+        event.id,
+        event.date || '',
+        event.resourceId || '',
+        event.startTime,
+        event.duration,
+        event.flightNumber || ''
+    ].join('|');
 
 const getResourceCategory = (res: string) => {
     if (res.startsWith('PC-21')) return 'PC-21';
@@ -742,7 +748,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                 const isUnavailability = !!unavailabilityConflictData;
                 const unavailablePeople = unavailabilityConflictData || [];
                 const isConflicting = 
-                    (showValidation && !isStbyLineEvent(event) && personnelConflictIds.has(event.id)) || 
+                    (showValidation && personnelConflictIds.has(getValidationEventKey(event))) || 
                     isStationaryConflictTile ||
                     (isDraggedTile && !!(realtimeConflict || realtimeResourceConflictId));
                 

@@ -43,9 +43,15 @@ const getPersonnel = (event: ScheduleEvent): string[] => {
     return personnel;
 };
 
-const isStbyLineEvent = (event: ScheduleEvent): boolean =>
-    !!event.resourceId &&
-    (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+const getValidationEventKey = (event: ScheduleEvent): string =>
+    [
+        event.id,
+        event.date || '',
+        event.resourceId || '',
+        event.startTime,
+        event.duration,
+        event.flightNumber || ''
+    ].join('|');
 
 const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps> = ({ 
     events, 
@@ -481,7 +487,7 @@ const NextDayInstructorScheduleView: React.FC<NextDayInstructorScheduleViewProps
               const eventTiles = instructorEvents.map(event => {
                 const isDraggedTile = !!(draggingState && draggingState.mainEventId === event.id);
                 const isStationaryConflictTile = event.id === realtimeConflict?.conflictingEventId;
-                const isConflicting = (showValidation && !isStbyLineEvent(event) && conflictingEventIds.has(event.id)) || isStationaryConflictTile || (isDraggedTile && !!realtimeConflict);
+                const isConflicting = (showValidation && conflictingEventIds.has(getValidationEventKey(event))) || isStationaryConflictTile || (isDraggedTile && !!realtimeConflict);
                 let personToHighlight = null;
                 if (realtimeConflict) {
                     const personnelOnThisTile = getPersonnel(event);
