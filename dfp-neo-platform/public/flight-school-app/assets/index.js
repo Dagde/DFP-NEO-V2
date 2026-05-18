@@ -70235,8 +70235,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const intendedNightStaff = /* @__PURE__ */ new Set();
   const getGeneratedEventDayNightClassification = (event) => {
-    if (event.flightNumber === "Night Duty Sup") return "Night";
-    if (event.resourceId === "Duty Sup") {
+    if (typeof event.startTime === "number") {
       return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
     }
     return getEventDayNightClassification2(event, syllabusDetails, sctEvents);
@@ -70811,7 +70810,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const _isFlight = type === "flight" && !isNightPass;
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + syllabusItem.duration;
-    const proposedDayNight = isNightPass ? "Night" : getEventDayNightClassification2({ flightNumber: syllabusItem.code }, syllabusDetails, sctEvents);
+    const proposedDayNight = startTime >= commenceNightFlying && startTime < ceaseNightFlying ? "Night" : "Day";
     const proposedIsDay = proposedDayNight === "Day";
     const proposedIsNight = proposedDayNight === "Night";
     const traineeCounts = eventCounts.get(trainee.fullName);
@@ -74283,9 +74282,8 @@ ${"=".repeat(60)}`);
     return data;
   }, [allInstructorsData, allTraineesData]);
   const getScheduleEventDayNightClassification = reactExports.useCallback((event) => {
-    if (event.flightNumber === "Night Duty Sup") return "Night";
-    if (event.flightNumber === "Duty Sup" || event.resourceId === "Duty Sup") {
-      return typeof event.startTime === "number" && event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
+    if (typeof event.startTime === "number") {
+      return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
     }
     return getEventDayNightClassification(event, syllabusDetails, sctEvents);
   }, [commenceNightFlying, ceaseNightFlying, syllabusDetails, sctEvents]);

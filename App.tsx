@@ -1552,8 +1552,7 @@ function generateDfpInternal(
     const getGeneratedEventDayNightClassification = (
         event: Omit<ScheduleEvent, 'date'> | ScheduleEvent
     ): 'Day' | 'Night' | 'Day/Night' => {
-        if (event.flightNumber === 'Night Duty Sup') return 'Night';
-        if (event.resourceId === 'Duty Sup') {
+        if (typeof event.startTime === 'number') {
             return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? 'Night' : 'Day';
         }
         return getEventDayNightClassification(event, syllabusDetails, sctEvents);
@@ -2325,9 +2324,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + syllabusItem.duration;
-        const proposedDayNight = isNightPass
-            ? 'Night'
-            : getEventDayNightClassification({ flightNumber: syllabusItem.code }, syllabusDetails, sctEvents);
+        const proposedDayNight = startTime >= commenceNightFlying && startTime < ceaseNightFlying ? 'Night' : 'Day';
         const proposedIsDay = proposedDayNight === 'Day';
         const proposedIsNight = proposedDayNight === 'Night';
 
@@ -7106,11 +7103,8 @@ const App: React.FC = () => {
     const getScheduleEventDayNightClassification = useCallback((
         event: { flightNumber: string; startTime?: number; resourceId?: string }
     ): 'Day' | 'Night' | 'Day/Night' => {
-        if (event.flightNumber === 'Night Duty Sup') return 'Night';
-        if (event.flightNumber === 'Duty Sup' || event.resourceId === 'Duty Sup') {
-            return typeof event.startTime === 'number' &&
-                event.startTime >= commenceNightFlying &&
-                event.startTime < ceaseNightFlying
+        if (typeof event.startTime === 'number') {
+            return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying
                 ? 'Night'
                 : 'Day';
         }
