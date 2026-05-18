@@ -58,22 +58,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
       )}
 
-      {/* Duty Pilot Button - Half Width */}
-      <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0">
-        <div className="flex justify-center w-full">
-          <button
-            onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
-            disabled={!isSupervisor || !canOpen('SupervisorDashboard')}
-            title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
-            className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor || !canOpen('SupervisorDashboard') ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <span className="leading-tight">Duty<br/>Pilot</span>
-          </button>
-        </div>
-      </div>
+      {/* Main Navigation */}
+      <nav className="flex-1 overflow-y-auto px-2 pt-2 pb-4 flex flex-col items-center gap-px">
+        {/* Duty Pilot Button */}
+        <button
+          onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
+          disabled={!isSupervisor || !canOpen('SupervisorDashboard')}
+          title={!isSupervisor ? 'Access denied: Requires Flying Supervisor role.' : 'View Supervisor Dashboard'}
+          className={`w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === 'SupervisorDashboard' ? 'active' : ''} ${!isSupervisor || !canOpen('SupervisorDashboard') ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <span className="leading-tight">Duty<br/>Pilot</span>
+        </button>
 
-      {/* NEO Build and Program Schedule Buttons - Aligned with DFP button */}
-      <div className="px-2 pt-[1px] space-y-[1px] flex flex-col items-center">
         <button
           onClick={onBuildDfpClick}
           disabled={!canBuild}
@@ -90,11 +86,6 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
         >
           <span className="text-center leading-tight">Program Schedule</span>
         </button>
-      </div>
-
-      {/* Scrollable Main Navigation */}
-      <nav className="flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center">
-        {/* Next Day Build Buttons */}
 
         <button
           onClick={() => navigateIfAllowed('NextDayInstructorSchedule')}

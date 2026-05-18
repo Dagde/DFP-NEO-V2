@@ -4142,21 +4142,21 @@ const RightSidebar = ({
   const userSurname = currentUserName.split(",")[0];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative", children: [
     isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center w-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "button",
-      {
-        onClick: () => isSupervisor && onNavigate("SupervisorDashboard"),
-        disabled: !isSupervisor || !canOpen("SupervisorDashboard"),
-        title: !isSupervisor ? "Access denied: Requires Flying Supervisor role." : "View Supervisor Dashboard",
-        className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor || !canOpen("SupervisorDashboard") ? "opacity-50 cursor-not-allowed" : ""}`,
-        children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
-          "Duty",
-          /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-          "Pilot"
-        ] })
-      }
-    ) }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 pt-[1px] space-y-[1px] flex flex-col items-center", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-2 pb-4 flex flex-col items-center gap-px", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          onClick: () => isSupervisor && onNavigate("SupervisorDashboard"),
+          disabled: !isSupervisor || !canOpen("SupervisorDashboard"),
+          title: !isSupervisor ? "Access denied: Requires Flying Supervisor role." : "View Supervisor Dashboard",
+          className: `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed ${activeView === "SupervisorDashboard" ? "active" : ""} ${!isSupervisor || !canOpen("SupervisorDashboard") ? "opacity-50 cursor-not-allowed" : ""}`,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+            "Duty",
+            /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+            "Pilot"
+          ] })
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -4175,9 +4175,7 @@ const RightSidebar = ({
           className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${activeView === "NextDayBuild" ? "active" : ""} ${accessButtonClass("NextDayBuild")}`,
           children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-center leading-tight", children: "Program Schedule" })
         }
-      )
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto pt-0 pb-4 px-2 space-y-[1px] flex flex-col items-center", children: [
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
