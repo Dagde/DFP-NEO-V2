@@ -74467,23 +74467,20 @@ ${"=".repeat(60)}`);
     if (!eventsForDate || eventsForDate.length === 0) {
       return conflictingEventIds;
     }
-    eventsForDate.forEach((event) => {
-      if (!event.pilot) {
-        if (event.instructor) {
-          event.pilot = event.instructor;
-        } else if (event.student) {
-          event.pilot = event.student;
-        }
-      }
+    const eventsForConflictCheck = eventsForDate.map((event) => {
+      if (event.pilot) return event;
+      if (event.instructor) return { ...event, pilot: event.instructor };
+      if (event.student) return { ...event, pilot: event.student };
+      return event;
     });
-    const sctFormEvents = eventsForDate.filter((e) => e.flightNumber === "SCT FORM");
+    const sctFormEvents = eventsForConflictCheck.filter((e) => e.flightNumber === "SCT FORM");
     if (sctFormEvents.length > 0) {
       sctFormEvents.forEach((e) => {
         console.log(`🔴   - ID: ${e.id}, Instructor: "${e.instructor || "EMPTY"}", Pilot: ${e.pilot}`);
       });
     }
-    for (const event of eventsForDate) {
-      const otherEvents = eventsForDate.filter((e) => e.id !== event.id);
+    for (const event of eventsForConflictCheck) {
+      const otherEvents = eventsForConflictCheck.filter((e) => e.id !== event.id);
       const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
       if (result.hasConflict) {
         conflictingEventIds.add(event.id);

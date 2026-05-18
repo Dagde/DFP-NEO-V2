@@ -7468,20 +7468,16 @@ const App: React.FC = () => {
         }
 
         // console.log('🔴 Total events to check:', eventsForDate.length);
-           // CRITICAL FIX: Ensure ALL events have pilot field before conflict check
-           eventsForDate.forEach(event => {
-               if (!event.pilot) {
-                   // If no pilot field, set it based on event type
-                   if (event.instructor) {
-                       event.pilot = event.instructor;
-                   } else if (event.student) {
-                       event.pilot = event.student;
-                   }
-               }
-           });
+        // Ensure events have a pilot for conflict checks without mutating the published schedule.
+        const eventsForConflictCheck = eventsForDate.map(event => {
+            if (event.pilot) return event;
+            if (event.instructor) return { ...event, pilot: event.instructor };
+            if (event.student) return { ...event, pilot: event.student };
+            return event;
+        });
 
         // Log all SCT FORM events with their instructors
-        const sctFormEvents = eventsForDate.filter(e => e.flightNumber === 'SCT FORM');
+        const sctFormEvents = eventsForConflictCheck.filter(e => e.flightNumber === 'SCT FORM');
         if (sctFormEvents.length > 0) {
             // console.log('🔴 ✈️ SCT FORM events found:', sctFormEvents.length);
             sctFormEvents.forEach(e => {
@@ -7489,9 +7485,9 @@ const App: React.FC = () => {
             });
         }
 
-        for (const event of eventsForDate) {
+        for (const event of eventsForConflictCheck) {
             // Exclude current event from conflict check by filtering it out
-            const otherEvents = eventsForDate.filter(e => e.id !== event.id);
+            const otherEvents = eventsForConflictCheck.filter(e => e.id !== event.id);
             const result = detectConflictsForEventWithDayNightSeparation(event, otherEvents);
             if (result.hasConflict) {
                 // UI conflict logger silenced - focused build-algorithm diagnostic active
