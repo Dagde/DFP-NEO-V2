@@ -5,6 +5,7 @@ import { ScheduleEvent, SyllabusItemDetail, Conflict, Trainee } from '../types';
 import FlightTile from './FlightTile';
 import AirframeColumn from './AirframeColumn';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
+import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 
 
 interface NextDayBuildViewProps {
@@ -52,6 +53,7 @@ interface NextDayBuildViewProps {
   pauseWindowStart?: number | null;  // decimal hours, e.g. 10.0
   pauseWindowEnd?: number | null;    // decimal hours, e.g. 11.0
   formatResourceLabel?: (resourceId: string) => string;
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -111,6 +113,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     pauseWindowStart = null, pauseWindowEnd = null,
     formatResourceLabel,
+    aircraftNumberSettings,
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const scheduleGridRef = useRef<HTMLDivElement>(null);
@@ -826,6 +829,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                         isSelected={isSelected}
                         isChanged={isChanged}
                         isPauseCompleted={isPauseCompleted}
+                        aircraftNumberSettings={aircraftNumberSettings}
                         
                     />
                 );
@@ -963,6 +967,7 @@ export const NextDayBuildView: React.FC<NextDayBuildViewProps> = ({
                                 personnelData={personnelData}
                                 seatConfigs={new Map()}
                                 currentTime={new Date()}
+                                aircraftNumberSettings={aircraftNumberSettings}
                             />
                              <div
                                 className="absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50"

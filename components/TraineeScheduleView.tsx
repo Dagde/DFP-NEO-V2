@@ -5,6 +5,7 @@ import { ScheduleEvent, SyllabusItemDetail, Trainee } from '../types';
 import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
+import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 
 interface TraineeScheduleViewProps {
   date: string;
@@ -26,6 +27,7 @@ interface TraineeScheduleViewProps {
   unavailabilityConflicts: Map<string, string[]>;
   onSelectTrainee: (traineeFullName: string) => void;
   courseColors: { [key: string]: string };
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -122,7 +124,7 @@ const createUnavailabilityEvents = (date: string, personnelData: Trainee[]): Sch
     return unavailabilityEvents;
 };
 
-const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors }) => {
+const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem('timezoneOffset') || '0');
@@ -673,6 +675,7 @@ const TraineeScheduleView: React.FC<TraineeScheduleViewProps> = ({ date, onDateC
                     seatConfigs={seatConfigs}
                     isDraggable={true}
                     currentTime={currentTime}
+                    aircraftNumberSettings={aircraftNumberSettings}
                   />
                 );
               });

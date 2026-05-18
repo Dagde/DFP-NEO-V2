@@ -1,6 +1,11 @@
 
 import React, { MouseEvent } from 'react';
 import { ScheduleEvent, Trainee, EventSegment } from '../types';
+import {
+  AircraftNumberSettings,
+  DEFAULT_AIRCRAFT_NUMBER_SETTINGS,
+  formatAircraftNumber,
+} from '../utils/aircraftNumberFormat';
 
 interface FlightTileProps {
   event: ScheduleEvent | EventSegment;
@@ -28,6 +33,7 @@ interface FlightTileProps {
   isPreview?: boolean;
   isPauseCompleted?: boolean;
   alertStatus?: 'pending' | 'accepted' | 'rejected' | null;
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 const formatTime = (time: number): string => {
@@ -95,7 +101,7 @@ const getAuthorizationTextColorClass = (event: ScheduleEvent, currentTime: Date)
 };
 
 
-const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null }) => {
+const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
   // ERROR TRACKING: Log props to identify missing seatConfigs
 
   // Removed unit color logic - colors are now handled in PersonnelColumn only
@@ -301,6 +307,9 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
   const isSctEvent = event.eventCategory === 'sct';
   const isTwrDiEvent = event.eventCategory === 'twr_di';
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY'));
+  const aircraftNumberDisplay = event.aircraftNumber
+    ? formatAircraftNumber(event.aircraftNumber, undefined, aircraftNumberSettings)
+    : '';
   
   
   
@@ -766,7 +775,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                 </div>
             </div>
 
-            {event.aircraftNumber && (
+            {aircraftNumberDisplay && (
                 <div
                     className="absolute bottom-0.5 left-1 font-mono text-white/80"
                     style={{
@@ -775,7 +784,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
                         opacity: 0.8,
                     }}
                 >
-                    #{event.aircraftNumber}
+                    #{aircraftNumberDisplay}
                 </div>
             )}
             <div className="absolute bottom-0.5 right-3 flex items-center gap-1">

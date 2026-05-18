@@ -13836,6 +13836,7 @@ updates.forEach(update => {
                            baselineEvents={baselineSchedules[activeBaselineKey]}
                            alertsData={alertsDataByDate[date] || {}}
                            formatResourceLabel={formatResourceDisplayLabel}
+                           aircraftNumberSettings={aircraftNumberSettings}
                            isOracleMode={isOracleMode}
                            oraclePreviewEvent={oraclePreviewEvent}
                            onOracleMouseDown={handleOracleMouseDown}
@@ -13932,6 +13933,7 @@ updates.forEach(update => {
                             unavailabilityConflicts={unavailabilityConflicts}
                             onSelectTrainee={handleSelectTraineeFromSchedule}
                             courseColors={courseColors}
+                            aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'InstructorSchedule':
                 // Filter instructors by location (not unit) for Staff Schedule
@@ -13986,6 +13988,7 @@ updates.forEach(update => {
                       showValidation={showValidation}
                       unavailabilityConflicts={unavailabilityConflicts}
                       onSelectInstructor={handleSelectInstructorFromSchedule}
+                      aircraftNumberSettings={aircraftNumberSettings}
                     />;
                 } catch (error) {
                     console.error('🔴 STAFF SCHEDULE ERROR - Failed to render InstructorScheduleView:', error);
@@ -14031,6 +14034,7 @@ updates.forEach(update => {
                     onSelectInstructor={handleSelectInstructorFromSchedule}
                     buildDfpDate={buildDfpDate}
                     onDateChange={handleBuildDateChange}
+                    aircraftNumberSettings={aircraftNumberSettings}
                 />;
             case 'NextDayTraineeSchedule':
                 return <NextDayTraineeScheduleView
@@ -14070,6 +14074,7 @@ updates.forEach(update => {
                     buildDfpDate={buildDfpDate}
                     onDateChange={handleBuildDateChange}
                     courseColors={courseColors}
+                    aircraftNumberSettings={aircraftNumberSettings}
                 />;
             case 'Trainee':
                 return <TraineeView
@@ -14592,6 +14597,7 @@ updates.forEach(update => {
                             pauseWindowStart={showPausePanel ? pauseOverlayStart : null}
                             pauseWindowEnd={showPausePanel ? pauseOverlayEnd : null}
                             formatResourceLabel={formatResourceDisplayLabel}
+                            aircraftNumberSettings={aircraftNumberSettings}
                        />;
             case 'Priorities':
                 return <PrioritiesViewWithMenu

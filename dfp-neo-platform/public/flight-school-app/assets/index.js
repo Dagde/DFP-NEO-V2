@@ -4511,7 +4511,7 @@ const getAuthorizationTextColorClass = (event, currentTime) => {
   }
   return "";
 };
-const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null }) => {
+const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile, onMouseDown, onMouseEnter, onMouseLeave, pixelsPerHour, rowHeight, startHour, row, isDragging, isConflicting, conflictedPersonnelName, personnelData, seatConfigs, isDraggable = true, currentTime, isUnavailabilityConflict, unavailablePersonnel, isSelected = false, isChanged = false, isPreview = false, isPauseCompleted = false, alertStatus = null, aircraftNumberSettings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS }) => {
   try {
     const testAccess = seatConfigs;
   } catch (error) {
@@ -4660,6 +4660,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
   const isSctEvent = event.eventCategory === "sct";
   const isTwrDiEvent = event.eventCategory === "twr_di";
   const isStbyEvent = event.resourceId && (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY"));
+  const aircraftNumberDisplay = event.aircraftNumber ? formatAircraftNumber(event.aircraftNumber, void 0, aircraftNumberSettings) : "";
   const picName = isSctEvent ? event.pilot : event.flightType === "Solo" ? event.pilot : event.instructor;
   const studentName = event.flightType === "Solo" ? "" : isSctEvent ? event.student : event.student || "";
   let displayPicNameForRender = picName;
@@ -5055,7 +5056,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           isTwrDiEvent ? "TWR DI" : event.flightNumber
         ] }) }) })
       ] }),
-      event.aircraftNumber && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      aircraftNumberDisplay && /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
           className: "absolute bottom-0.5 left-1 font-mono text-white/80",
@@ -5066,7 +5067,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
           },
           children: [
             "#",
-            event.aircraftNumber
+            aircraftNumberDisplay
           ]
         }
       ),
@@ -5979,6 +5980,7 @@ const ScheduleView = ({
   onPauseToggleCompleted,
   alertsData,
   formatResourceLabel: formatResourceLabel2,
+  aircraftNumberSettings,
   timezoneOffset = 11
   // Default to UTC+11
 }) => {
@@ -6645,7 +6647,8 @@ const ScheduleView = ({
             isSelected,
             isChanged,
             isPauseCompleted,
-            alertStatus
+            alertStatus,
+            aircraftNumberSettings
           },
           event.id
         );
@@ -6836,7 +6839,8 @@ const ScheduleView = ({
                     traineesData,
                     personnelData,
                     seatConfigs: /* @__PURE__ */ new Map(),
-                    currentTime
+                    currentTime,
+                    aircraftNumberSettings
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -7062,7 +7066,7 @@ const createUnavailabilityEvents$1 = (date, personnelData, isInstructor = true) 
   });
   return unavailabilityEvents;
 };
-const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData }) => {
+const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
   console.log("🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:");
   console.log("  - date:", date);
   console.log("  - events count:", events?.length);
@@ -7610,7 +7614,8 @@ const InstructorScheduleView = ({ date, onDateChange, onDateSelect, snapshotDate
                       personnelData,
                       seatConfigs,
                       isDraggable: true,
-                      currentTime
+                      currentTime,
+                      aircraftNumberSettings
                     },
                     `${event.id}-${instructor.name}`
                   );
@@ -7760,7 +7765,7 @@ const createUnavailabilityEvents = (date, personnelData) => {
   });
   return unavailabilityEvents;
 };
-const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors }) => {
+const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, trainees, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectTrainee, traineesData, courseColors, aircraftNumberSettings }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
     const timezoneOffset = parseFloat(localStorage.getItem("timezoneOffset") || "0");
@@ -8232,7 +8237,8 @@ const TraineeScheduleView = ({ date, onDateChange, onDateSelect, snapshotDates =
                       personnelData,
                       seatConfigs,
                       isDraggable: true,
-                      currentTime
+                      currentTime,
+                      aircraftNumberSettings
                     },
                     `${event.id}-${trainee}`
                   );
@@ -18801,7 +18807,8 @@ const NextDayBuildView = ({
   onPauseToggleCompleted,
   pauseWindowStart = null,
   pauseWindowEnd = null,
-  formatResourceLabel: formatResourceLabel2
+  formatResourceLabel: formatResourceLabel2,
+  aircraftNumberSettings
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const scheduleGridRef = reactExports.useRef(null);
@@ -19417,7 +19424,8 @@ const NextDayBuildView = ({
             currentTime,
             isSelected,
             isChanged,
-            isPauseCompleted
+            isPauseCompleted,
+            aircraftNumberSettings
           },
           event.id
         );
@@ -19546,7 +19554,8 @@ const NextDayBuildView = ({
                     traineesData,
                     personnelData,
                     seatConfigs: /* @__PURE__ */ new Map(),
-                    currentTime: /* @__PURE__ */ new Date()
+                    currentTime: /* @__PURE__ */ new Date(),
+                    aircraftNumberSettings
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -67207,7 +67216,8 @@ const NextDayInstructorScheduleView = ({
   onSelectInstructor,
   traineesData,
   buildDfpDate,
-  onDateChange
+  onDateChange,
+  aircraftNumberSettings
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(/* @__PURE__ */ new Date());
@@ -67603,7 +67613,8 @@ const NextDayInstructorScheduleView = ({
                         personnelData,
                         seatConfigs,
                         isDraggable: true,
-                        currentTime
+                        currentTime,
+                        aircraftNumberSettings
                       },
                       `${event.id}-${instructor.name}`
                     );
@@ -67659,7 +67670,8 @@ const NextDayTraineeScheduleView = ({
   traineesData,
   buildDfpDate,
   onDateChange,
-  courseColors
+  courseColors,
+  aircraftNumberSettings
 }) => {
   const scrollContainerRef = reactExports.useRef(null);
   const [currentTime, setCurrentTime] = reactExports.useState(() => {
@@ -68102,7 +68114,8 @@ const NextDayTraineeScheduleView = ({
                         personnelData,
                         seatConfigs,
                         isDraggable: true,
-                        currentTime
+                        currentTime,
+                        aircraftNumberSettings
                       },
                       `${event.id}-${trainee}`
                     );
@@ -79442,6 +79455,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             baselineEvents: baselineSchedules[activeBaselineKey],
             alertsData: alertsDataByDate[date] || {},
             formatResourceLabel: formatResourceDisplayLabel,
+            aircraftNumberSettings,
             isOracleMode,
             oraclePreviewEvent,
             onOracleMouseDown: handleOracleMouseDown,
@@ -79524,7 +79538,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             showValidation,
             unavailabilityConflicts,
             onSelectTrainee: handleSelectTraineeFromSchedule,
-            courseColors
+            courseColors,
+            aircraftNumberSettings
           }
         );
       case "InstructorSchedule":
@@ -79573,7 +79588,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               conflictingEventIds: personnelAndResourceConflictIds,
               showValidation,
               unavailabilityConflicts,
-              onSelectInstructor: handleSelectInstructorFromSchedule
+              onSelectInstructor: handleSelectInstructorFromSchedule,
+              aircraftNumberSettings
             }
           );
         } catch (error) {
@@ -79617,7 +79633,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             showValidation,
             onSelectInstructor: handleSelectInstructorFromSchedule,
             buildDfpDate,
-            onDateChange: handleBuildDateChange
+            onDateChange: handleBuildDateChange,
+            aircraftNumberSettings
           }
         );
       case "NextDayTraineeSchedule":
@@ -79653,7 +79670,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onSelectTrainee: handleSelectTraineeFromSchedule,
             buildDfpDate,
             onDateChange: handleBuildDateChange,
-            courseColors
+            courseColors,
+            aircraftNumberSettings
           }
         );
       case "Trainee":
@@ -80130,7 +80148,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             },
             pauseWindowStart: showPausePanel ? pauseOverlayStart : null,
             pauseWindowEnd: showPausePanel ? pauseOverlayEnd : null,
-            formatResourceLabel: formatResourceDisplayLabel
+            formatResourceLabel: formatResourceDisplayLabel,
+            aircraftNumberSettings
           }
         );
       case "Priorities":

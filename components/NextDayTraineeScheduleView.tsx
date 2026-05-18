@@ -3,6 +3,7 @@ import { ScheduleEvent, SyllabusItemDetail, Trainee } from '../types';
 import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import TraineeColumn from './TraineeColumn';
+import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 
 interface NextDayTraineeScheduleViewProps {
   events: ScheduleEvent[];
@@ -21,6 +22,7 @@ interface NextDayTraineeScheduleViewProps {
   buildDfpDate: string;
   onDateChange: (direction: 'prev' | 'next') => void;
   courseColors: { [key: string]: string };
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -69,7 +71,8 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
     traineesData,
     buildDfpDate,
     onDateChange,
-    courseColors
+    courseColors,
+    aircraftNumberSettings
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [currentTime, setCurrentTime] = useState(() => {
@@ -616,6 +619,7 @@ export const NextDayTraineeScheduleView: React.FC<NextDayTraineeScheduleViewProp
                     seatConfigs={seatConfigs}
                     isDraggable={true}
                     currentTime={currentTime}
+                    aircraftNumberSettings={aircraftNumberSettings}
                   />
                 );
               });

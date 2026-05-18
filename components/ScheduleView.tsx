@@ -7,6 +7,7 @@ import AirframeColumn from './AirframeColumn';
 import AircraftAvailabilityOverlay from './AircraftAvailabilityOverlay';
 import { DailyAvailabilityRecord } from '../types/AircraftAvailability';
 import { VisualAdjustGuide } from './VisualAdjustGuide';
+import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
    
 
 interface ScheduleViewProps {
@@ -76,6 +77,7 @@ interface ScheduleViewProps {
   // Alert status per event id
   alertsData?: Record<string, { responses?: Record<string, { status: string }> }>;
   formatResourceLabel?: (resourceId: string) => string;
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -171,6 +173,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
     isPauseSelectMode = false, pauseCompletedEventIds, onPauseToggleCompleted,
     alertsData,
     formatResourceLabel,
+    aircraftNumberSettings,
     timezoneOffset = 11 // Default to UTC+11
 }) => {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -982,6 +985,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                         isChanged={isChanged}
                         isPauseCompleted={isPauseCompleted}
                         alertStatus={alertStatus}
+                        aircraftNumberSettings={aircraftNumberSettings}
                     />
                 );
             });
@@ -1181,6 +1185,7 @@ const ScheduleView: React.FC<ScheduleViewProps> = ({
                                 personnelData={personnelData}
                                 seatConfigs={new Map()}
                                 currentTime={currentTime}
+                                aircraftNumberSettings={aircraftNumberSettings}
                             />
                             <div
                                 className="absolute top-1/2 -translate-y-1/2 h-1 bg-sky-300/40 pointer-events-none z-50"

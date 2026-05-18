@@ -5,6 +5,7 @@ import { ScheduleEvent, SyllabusItemDetail, InstructorRank, Trainee } from '../t
 import AuditButton from './AuditButton';
 import FlightTile from './FlightTile';
 import PersonnelColumn from './PersonnelColumn';
+import { AircraftNumberSettings } from '../utils/aircraftNumberFormat';
 
 interface InstructorScheduleViewProps {
   date: string;
@@ -26,6 +27,7 @@ interface InstructorScheduleViewProps {
   showValidation: boolean;
   unavailabilityConflicts: Map<string, string[]>;
   onSelectInstructor: (instructorName: string) => void;
+  aircraftNumberSettings?: AircraftNumberSettings;
 }
 
 const PIXELS_PER_HOUR = 200;
@@ -124,7 +126,7 @@ const createUnavailabilityEvents = (date: string, personnelData: any[], isInstru
 };
 
 
-const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData }) => {
+const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, onDateChange, onDateSelect, snapshotDates = [], events, instructors, instructorsData, onSelectEvent, onUpdateEvent, zoomLevel, daylightTimes, personnelData, seatConfigs, syllabusDetails, conflictingEventIds, showValidation, unavailabilityConflicts, onSelectInstructor, traineesData, aircraftNumberSettings }) => {
   // ERROR TRACKING: Log all props to identify missing seatConfigs
   console.log('🔍 INSTRUCTOR SCHEDULE ERROR TRACKING - Props received:');
   console.log('  - date:', date);
@@ -760,6 +762,7 @@ const InstructorScheduleView: React.FC<InstructorScheduleViewProps> = ({ date, o
                     seatConfigs={seatConfigs}
                     isDraggable={true}
                     currentTime={currentTime}
+                    aircraftNumberSettings={aircraftNumberSettings}
                   />
                 );
               });
