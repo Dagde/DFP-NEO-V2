@@ -59,8 +59,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       )}
 
       {/* Duty Pilot Button - Half Width */}
-      <div className="h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800">
-        <div className="flex justify-center w-full mt-2">
+      <div className="flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0">
+        <div className="flex justify-center w-full">
           <button
             onClick={() => isSupervisor && onNavigate('SupervisorDashboard')}
             disabled={!isSupervisor || !canOpen('SupervisorDashboard')}
@@ -73,7 +73,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({
       </div>
 
       {/* NEO Build and Program Schedule Buttons - Aligned with DFP button */}
-      <div className="px-2 pt-[39px] space-y-[1px] flex flex-col items-center">
+      <div className="px-2 pt-[1px] space-y-[1px] flex flex-col items-center">
         <button
           onClick={onBuildDfpClick}
           disabled={!canBuild}

@@ -229,7 +229,7 @@ const Header: React.FC<HeaderProps> = ({
 
                         {/* 10. Logged In As / User Button - shows active commit fetched from server */}
                         {authUser && (
-                            <div ref={userButtonRef} className="relative" style={{ marginLeft: '1px' }}>
+                            <div ref={userButtonRef} className="relative">
                                 <button
                                     onClick={() => setShowUserMenu(!showUserMenu)}
                                     className="w-[75px] h-[55px] flex flex-col items-center justify-center text-[9px] font-semibold btn-aluminium-brushed rounded-md"

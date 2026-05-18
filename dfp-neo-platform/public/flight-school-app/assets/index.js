@@ -3884,7 +3884,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-r border-gray-700", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           onClick: () => navigateIfAllowed("MyDashboard"),
@@ -3896,7 +3896,7 @@ const Sidebar = ({ activeView, onNavigate, courseColors, onAddCourse, onArchiveC
           ] })
         }
       ) }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[27px] space-y-[1px] flex flex-col items-center", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("nav", { className: "flex-1 overflow-y-auto px-2 pt-[1px] space-y-[1px] flex flex-col items-center", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -4142,7 +4142,7 @@ const RightSidebar = ({
   const userSurname = currentUserName.split(",")[0];
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "w-[110px] bg-gray-900 flex-shrink-0 flex flex-col border-l border-gray-700 relative", children: [
     isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-16 flex items-center justify-center flex-shrink-0 px-2 border-b border-gray-800", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center w-full mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center flex-shrink-0 px-2 pt-2 pb-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-center w-full", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         onClick: () => isSupervisor && onNavigate("SupervisorDashboard"),
@@ -4156,7 +4156,7 @@ const RightSidebar = ({
         ] })
       }
     ) }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 pt-[39px] space-y-[1px] flex flex-col items-center", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-2 pt-[1px] space-y-[1px] flex flex-col items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -4419,7 +4419,7 @@ const Header = ({
             children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-center leading-tight ${isOracleMode ? "animate-pulse-neo-text" : ""}`, style: { color: "#fb923c" }, children: "NEO - Tile" })
           }
         ),
-        authUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: userButtonRef, className: "relative", style: { marginLeft: "1px" }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        authUser && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: userButtonRef, className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
             onClick: () => setShowUserMenu(!showUserMenu),
