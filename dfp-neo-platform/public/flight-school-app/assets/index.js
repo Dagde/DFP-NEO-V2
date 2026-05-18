@@ -74487,7 +74487,7 @@ ${"=".repeat(60)}`);
       }
     }
     for (const event of eventsForDate) {
-      if (!isSoloFlightNeedingTwrDi(event)) {
+      if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
         continue;
       }
       if (!hasTwrDiCoverageForSolo(event, eventsForDate)) {
@@ -78552,14 +78552,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const isValidateFlagged = conflictingEventIds.has(event.id);
     let errors = [];
     if (showValidation && isValidateFlagged) {
-      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
+      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
       if (errors.length > 0) {
         errors.unshift("⚠️ VALIDATE MODE CONFLICTS DETECTED:");
         errors.push("");
         errors.push("This event is marked RED because Validate mode found the following rule violations:");
       }
     } else {
-      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
+      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
     }
     if (errors.length === 0) {
       if (showValidation && !isValidateFlagged) {
@@ -78855,7 +78855,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       pilot: updatedProblemTile.pilot
     });
     console.log("🟠 Running findHardErrors on updated tile...");
-    const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
+    const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: true });
     console.log("🟠 Errors found:", newErrors.length);
     if (newErrors.length > 0) {
       console.log("🟠 Error details:", newErrors);

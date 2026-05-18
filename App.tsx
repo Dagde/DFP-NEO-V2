@@ -7498,9 +7498,10 @@ const App: React.FC = () => {
         // console.log('🔴 Conflict check complete. Conflicting event IDs:', Array.from(conflictingEventIds));
         // console.log('🔴 ========== CONFLICT CHECK END ==========');
 
-        // TWR DI Validation Rule: every trainee solo flight must be fully covered.
+        // TWR DI Validation Rule: every active trainee solo flight must be fully covered.
+        // Solo events parked on STBY lines are exempt until moved onto an active aircraft line.
         for (const event of eventsForDate) {
-            if (!isSoloFlightNeedingTwrDi(event)) {
+            if (!shouldRequireTwrDiCoverage(event, { allowStbySoloWithoutTwrDi: true })) {
                 continue;
             }
 
@@ -12701,7 +12702,7 @@ updates.forEach(update => {
 
         // If Validate mode is active and this event is flagged, emphasize the validation conflicts
         if (showValidation && isValidateFlagged) {
-            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
+            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
             // Add specific validation context
             if (errors.length > 0) {
                 errors.unshift("⚠️ VALIDATE MODE CONFLICTS DETECTED:");
@@ -12709,7 +12710,7 @@ updates.forEach(update => {
                 errors.push("This event is marked RED because Validate mode found the following rule violations:");
             }
         } else {
-            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
+            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
         }
 
         if (errors.length === 0) {
@@ -13140,7 +13141,7 @@ updates.forEach(update => {
 
         // Re-run the error analysis on the updated tile and schedule.
         console.log('🟠 Running findHardErrors on updated tile...');
-        const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: isNextDayContext });
+        const newErrors = findHardErrors(updatedProblemTile, currentEvents, { allowStbySoloWithoutTwrDi: true });
         console.log('🟠 Errors found:', newErrors.length);
         if (newErrors.length > 0) {
             console.log('🟠 Error details:', newErrors);
