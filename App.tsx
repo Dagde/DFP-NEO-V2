@@ -17042,17 +17042,25 @@ updates.forEach(update => {
         {isAuthenticated &&
             dfpSnapshotLoadState.date === date &&
             ['loading', 'cached', 'retrying', 'error'].includes(dfpSnapshotLoadState.status) && (
-                <div className="fixed bottom-[126px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
-                    <span
-                        className={`h-1.5 w-1.5 rounded-full ${
-                            dfpSnapshotLoadState.status === 'error'
-                                ? 'bg-red-400'
+                <div className="fixed bottom-[188px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+                    <div className="flex items-center justify-center gap-1" title={dfpSnapshotLoadState.message}>
+                        <span
+                            className={`h-1.5 w-1.5 rounded-full ${
+                                dfpSnapshotLoadState.status === 'error'
+                                    ? 'bg-red-400'
+                                    : dfpSnapshotLoadState.status === 'cached'
+                                        ? 'bg-amber-400'
+                                        : 'bg-blue-400 animate-pulse'
+                            }`}
+                        ></span>
+                        <span>
+                            {dfpSnapshotLoadState.status === 'error'
+                                ? 'DFP Error'
                                 : dfpSnapshotLoadState.status === 'cached'
-                                    ? 'bg-amber-400'
-                                    : 'bg-blue-400 animate-pulse'
-                        }`}
-                    ></span>
-                    <span className="px-1">{dfpSnapshotLoadState.message}</span>
+                                    ? 'DFP Cache'
+                                    : 'DFP Load'}
+                        </span>
+                    </div>
                     {dfpSnapshotLoadState.status === 'error' && (
                         <button
                             type="button"
@@ -17068,17 +17076,19 @@ updates.forEach(update => {
 
         {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
         {isAuthenticated && (
-            <div className="fixed bottom-[88px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
-                <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                        liveSyncEnabled
-                            ? lastPollChanged ? 'bg-green-400' : 'bg-gray-500'
-                            : 'bg-amber-500/80'
-                    }`}
-                ></span>
-                <span className="px-1">
-                    {liveSyncEnabled ? `Sync ${lastPollTime || 'Wait...'}` : 'Sync Paused'}
-                </span>
+            <div className="fixed bottom-[88px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+                <div className="flex items-center justify-center gap-1">
+                    <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                            liveSyncEnabled
+                                ? lastPollChanged ? 'bg-green-400' : 'bg-gray-500'
+                                : 'bg-amber-500/80'
+                        }`}
+                    ></span>
+                    <span>
+                        {liveSyncEnabled ? `Sync ${lastPollTime || 'Wait...'}` : 'Sync Paused'}
+                    </span>
+                </div>
                 <button
                     type="button"
                     onClick={() => setLiveSyncEnabled(prev => !prev)}

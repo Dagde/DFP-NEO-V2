@@ -82467,14 +82467,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
-    isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[126px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "span",
-        {
-          className: `h-1.5 w-1.5 rounded-full ${dfpSnapshotLoadState.status === "error" ? "bg-red-400" : dfpSnapshotLoadState.status === "cached" ? "bg-amber-400" : "bg-blue-400 animate-pulse"}`
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1", children: dfpSnapshotLoadState.message }),
+    isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[188px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", title: dfpSnapshotLoadState.message, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            className: `h-1.5 w-1.5 rounded-full ${dfpSnapshotLoadState.status === "error" ? "bg-red-400" : dfpSnapshotLoadState.status === "cached" ? "bg-amber-400" : "bg-blue-400 animate-pulse"}`
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: dfpSnapshotLoadState.status === "error" ? "DFP Error" : dfpSnapshotLoadState.status === "cached" ? "DFP Cache" : "DFP Load" })
+      ] }),
       dfpSnapshotLoadState.status === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
@@ -82486,14 +82488,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
       )
     ] }),
-    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[88px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "span",
-        {
-          className: `h-1.5 w-1.5 rounded-full ${liveSyncEnabled ? lastPollChanged ? "bg-green-400" : "bg-gray-500" : "bg-amber-500/80"}`
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1", children: liveSyncEnabled ? `Sync ${lastPollTime || "Wait..."}` : "Sync Paused" }),
+    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[88px] right-[18px] z-[100] flex w-[75px] flex-col items-stretch gap-px rounded border border-gray-700/50 bg-gray-900/75 px-1 py-1 text-center text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-center gap-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "span",
+          {
+            className: `h-1.5 w-1.5 rounded-full ${liveSyncEnabled ? lastPollChanged ? "bg-green-400" : "bg-gray-500" : "bg-amber-500/80"}`
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: liveSyncEnabled ? `Sync ${lastPollTime || "Wait..."}` : "Sync Paused" })
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
