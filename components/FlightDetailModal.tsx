@@ -2184,13 +2184,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="md:col-span-2">
                                                 <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.aircraft} Number</label>
-                                                <div className="mt-1 flex items-center gap-2">
+                                                <div className="mt-1 flex items-stretch">
                                                     {aircraftNumberSettings.usePrefix && (
                                                         <select
                                                             value={aircraftNumberPrefix}
                                                             onChange={e => setAircraftNumberPrefix(e.target.value)}
                                                             disabled={isDeploy}
-                                                            className="block w-32 flex-shrink-0 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                            aria-label={`${resourceDisplayNames.aircraft} number prefix`}
+                                                            className="block w-32 flex-shrink-0 rounded-l-md rounded-r-none bg-gray-700 border border-r-0 border-gray-600 shadow-sm py-2 px-2 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                                                         >
                                                             {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
                                                         </select>
@@ -2201,7 +2202,10 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                         onChange={e => setAircraftNumber(e.target.value.toUpperCase())}
                                                         disabled={isDeploy}
                                                         list="flight-detail-aircraft-number-options"
-                                                        className="block min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                        aria-label={`${resourceDisplayNames.aircraft} number`}
+                                                        className={`block min-w-0 flex-1 bg-gray-700 border border-gray-600 shadow-sm py-2 px-3 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${
+                                                            aircraftNumberSettings.usePrefix ? 'rounded-l-none rounded-r-md' : 'rounded-md'
+                                                        }`}
                                                     />
                                                     <datalist id="flight-detail-aircraft-number-options">
                                                         {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num} />)}
