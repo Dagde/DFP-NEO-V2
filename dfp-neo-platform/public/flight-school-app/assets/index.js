@@ -15484,11 +15484,11 @@ const FlightTile = ({
     startTime: { x: 14, y: 7 },
     picName: { x: 83, y: 9 },
     coPilot: { x: 83, y: 36 },
-    duration: { x: 410, y: 4 },
-    event: { x: 486, y: 4 },
+    duration: { x: 410, y: 1 },
+    event: { x: 486, y: 1 },
     aircraft: { x: 14, y: 57 },
-    area: { x: 481, y: 56 },
-    callsign: { x: 532, y: 57 }
+    area: { x: 476, y: 58 },
+    callsign: { x: 532, y: 59 }
   };
   const activeElemKey = reactExports.useMemo(() => {
     if (activeStep === "startTime") return "startTime";
@@ -15773,15 +15773,15 @@ const FlightTile = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "picName", style: { transform: "translate(5px, 2px)" }, children: picNameContent() }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "coPilot", style: { transform: "translate(5px, -2px)" }, children: coPilotContent() })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flexShrink: 0, minWidth: "fit-content", height: "100%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "flex-start", paddingTop: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, transform: "translateY(-3px)" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flexShrink: 0, minWidth: "fit-content", height: "100%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "flex-start", paddingTop: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12, transform: "translateY(-7px)" }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "duration", children: durationContent() }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "event", children: eventContent() })
       ] }) })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "aircraft", style: { position: "absolute", bottom: 2, left: 10, zIndex: 20 }, children: aircraftContent() }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "absolute", bottom: 4, right: 12, display: "flex", alignItems: "center", gap: 8, zIndex: 20 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", style: { transform: "translate(-5px, 1px)" }, children: areaContent() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translateY(2px)" }, children: callsignContent() })
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "absolute", bottom: 2, right: 12, display: "flex", alignItems: "center", gap: 8, zIndex: 20 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", style: { transform: "translate(-10px, 3px)" }, children: areaContent() }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", style: { transform: "translateY(4px)" }, children: callsignContent() })
     ] })
   ] });
   const savedAbsLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -15915,13 +15915,13 @@ const AddFlightTileModal = ({
     startTime: { x: 14, y: 7 },
     picName: { x: 83, y: 9 },
     coPilot: { x: 83, y: 36 },
-    duration: { x: 410, y: 4 },
-    event: { x: 486, y: 4 },
+    duration: { x: 410, y: 1 },
+    event: { x: 486, y: 1 },
     aircraft: { x: 14, y: 57 },
-    area: { x: 481, y: 56 },
-    callsign: { x: 532, y: 57 }
+    area: { x: 476, y: 58 },
+    callsign: { x: 532, y: 59 }
   };
-  const LAYOUT_PREF_KEY = "flightTileLayout_v3";
+  const LAYOUT_PREF_KEY = "flightTileLayout_v4";
   const isValidPositions = (posData) => {
     return posData && typeof posData === "object" && LAYOUT_ELEM_KEYS.every((k) => posData[k] && typeof posData[k].x === "number");
   };
