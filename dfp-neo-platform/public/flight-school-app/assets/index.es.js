@@ -10429,4 +10429,3 @@ export {
   vectorsAngle,
   vectorsRatio
 };
-//# sourceMappingURL=index.es.js.map

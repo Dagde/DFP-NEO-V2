@@ -39,6 +39,7 @@ dist-ssr
 dist/
 .next/
 .cache/
+dfp-neo-platform/public/flight-school-app/assets/*.map
 
 # Database
 *.db

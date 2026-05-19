@@ -46,7 +46,7 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: true,
+    sourcemap: false,
     // Disable identifier mangling to prevent TDZ name collision bugs.
     // Variable/function names are kept as-is; only whitespace/dead code is removed.
     // The bundle is served over HTTPS with gzip so size is still acceptable.
