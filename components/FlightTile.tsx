@@ -762,7 +762,7 @@ const FlightTile: React.FC<FlightTileProps> = ({ event, traineesData, onSelectEv
     return (
         <>
             <div className="flex items-center justify-between h-full w-full px-2" style={textStyle}>
-                <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: '10%', minWidth: 0 }}>
+                <div className="flex-1 overflow-hidden pr-1" style={{ paddingLeft: 'calc(10% + 2px)', minWidth: 0 }}>
                     <div className={picClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{displayPicName?.split(' – ')[0]}{picSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{picSeatConfig}</span>}</div>
                     <div className={studentClasses.replace('truncate', 'overflow-hidden text-ellipsis whitespace-nowrap')}>{isTwrDiEvent ? 'TWR DI' : typeof studentDisplay === 'string' ? <>{displayStudentName?.split(' – ')[0]}{studentSeatConfig && <span style={{fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)"}}>{studentSeatConfig}</span>}</> : studentDisplay}</div>
                 </div>

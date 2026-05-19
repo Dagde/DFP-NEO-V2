@@ -5080,7 +5080,7 @@ const FlightTile$1 = ({ event, traineesData, onSelectEvent, onSelectAcademicTile
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between h-full w-full px-2", style: textStyle, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden pr-1", style: { paddingLeft: "10%", minWidth: 0 }, children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden pr-1", style: { paddingLeft: "calc(10% + 2px)", minWidth: 0 }, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: picClasses.replace("truncate", "overflow-hidden text-ellipsis whitespace-nowrap"), children: [
             displayPicName?.split(" – ")[0],
             picSeatConfig && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontWeight: "normal", color: "rgba(255, 255, 255, 0.8)" }, children: picSeatConfig })
