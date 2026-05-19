@@ -12427,115 +12427,144 @@ updates.forEach(update => {
     // Poll every 5 seconds so that unavailability submitted from the iOS app
     // appears in the browser without a hard refresh.
     // lastPollTime/lastPollChanged are displayed in UI to confirm sync is running.
+    const [liveSyncEnabled, setLiveSyncEnabled] = useState<boolean>(() => {
+        try {
+            return window.localStorage.getItem('dfp_live_sync_enabled') !== 'false';
+        } catch {
+            return true;
+        }
+    });
+    const [isManualSyncing, setIsManualSyncing] = useState(false);
     const [lastPollTime, setLastPollTime] = useState<string>('');
     const [lastPollChanged, setLastPollChanged] = useState<boolean>(false);
 
     useEffect(() => {
-        const buildUnavailHash = (records: any[]): string => {
-            return records
-                .map(r => `${r.id}:${JSON.stringify((r.unavailability || []).map((u: any) => u.id).sort())}`)
-                .sort()
-                .join('|');
-        };
+        try {
+            window.localStorage.setItem('dfp_live_sync_enabled', liveSyncEnabled ? 'true' : 'false');
+        } catch {
+            // Ignore storage failures; live sync still works for this session.
+        }
+    }, [liveSyncEnabled]);
 
-        const pollUnavailability = async () => {
-            try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-                const [personnelRes, traineesRes] = await Promise.all([
-                    fetch(`${apiBase}/personnel`, { credentials: 'include' }),
-                    fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
-                ]);
-                console.log('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
-                let pollChanged = false;
-                if (personnelRes.ok) {
-                    const personnelData = await personnelRes.json();
-                    const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
-                        ...normalisePersonnelRecord(p),
-                        currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
-                        _dataSource: 'database' as const,
-                        unavailability: Array.isArray(p.unavailability)
-                            ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                            : p.unavailability,
-                    }));
-                    console.log('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
-                    setInstructorsData(prev => {
-                        const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
-                        const prevHash = buildUnavailHash(prevDbPersonnel);
-                        const newHash  = buildUnavailHash(dbPersonnel);
-                        if (prevHash === newHash) return prev;
-                        console.log('[Poll] Personnel unavailability CHANGED - updating state');
-                        pollChanged = true;
-                        const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
-                        return [...nonDbInstructors, ...dbPersonnel];
-                    });
-                }
-                if (traineesRes.ok) {
-                    const traineesData = await traineesRes.json();
-                    const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
-                        ...t,
-                        _dataSource: 'database' as const,
-                        unavailability: Array.isArray(t.unavailability)
-                            ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                            : t.unavailability,
-                    }));
-                    console.log('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
-                    setTraineesData(prev => {
-                        const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
-                        const prevHash = buildUnavailHash(prevDbTrainees);
-                        const newHash  = buildUnavailHash(dbTrainees);
-                        if (prevHash === newHash) return prev;
-                        console.log('[Poll] Trainee unavailability CHANGED - updating state');
-                        pollChanged = true;
-                        const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
-                        return [...mockTrainees, ...dbTrainees];
-                    });
-                }
-                // Update visible poll timestamp so UI confirms sync is running
-                const now = new Date();
-                const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-                setLastPollTime(timeStr);
-                setLastPollChanged(pollChanged);
-            } catch (e) {
-                console.error('[Poll] Error during poll:', e);
-            }
-        };
-
-        // Poll immediately on load, then every 5 seconds for near-instant updates
-        pollUnavailability();
-        const pollInterval = setInterval(pollUnavailability, 5 * 1000);
-        return () => clearInterval(pollInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const buildUnavailHash = useCallback((records: any[]): string => {
+        return records
+            .map(r => `${r.id}:${JSON.stringify((r.unavailability || []).map((u: any) => u.id).sort())}`)
+            .sort()
+            .join('|');
     }, []);
+
+    const syncUnavailabilityFromDatabase = useCallback(async (): Promise<boolean> => {
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const [personnelRes, traineesRes] = await Promise.all([
+                fetch(`${apiBase}/personnel`, { credentials: 'include' }),
+                fetch(`${apiBase}/trainees`,  { credentials: 'include' }),
+            ]);
+            console.log('[Poll] Personnel response:', personnelRes.status, 'Trainees response:', traineesRes.status);
+            let pollChanged = false;
+            if (personnelRes.ok) {
+                const personnelData = await personnelRes.json();
+                const dbPersonnel = (personnelData.personnel || []).map((p: any) => ({
+                    ...normalisePersonnelRecord(p),
+                    currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
+                    _dataSource: 'database' as const,
+                    unavailability: Array.isArray(p.unavailability)
+                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : p.unavailability,
+                }));
+                console.log('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
+                setInstructorsData(prev => {
+                    const prevDbPersonnel = prev.filter(i => (i as any)._dataSource === 'database');
+                    const prevHash = buildUnavailHash(prevDbPersonnel);
+                    const newHash  = buildUnavailHash(dbPersonnel);
+                    if (prevHash === newHash) return prev;
+                    console.log('[Poll] Personnel unavailability CHANGED - updating state');
+                    pollChanged = true;
+                    const nonDbInstructors = prev.filter(i => (i as any)._dataSource !== 'database');
+                    return [...nonDbInstructors, ...dbPersonnel];
+                });
+            }
+            if (traineesRes.ok) {
+                const traineesData = await traineesRes.json();
+                const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
+                    ...t,
+                    _dataSource: 'database' as const,
+                    unavailability: Array.isArray(t.unavailability)
+                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
+                        : t.unavailability,
+                }));
+                console.log('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
+                setTraineesData(prev => {
+                    const prevDbTrainees = prev.filter(t => (t as any)._dataSource === 'database');
+                    const prevHash = buildUnavailHash(prevDbTrainees);
+                    const newHash  = buildUnavailHash(dbTrainees);
+                    if (prevHash === newHash) return prev;
+                    console.log('[Poll] Trainee unavailability CHANGED - updating state');
+                    pollChanged = true;
+                    const mockTrainees = prev.filter(t => (t as any)._dataSource === 'mockdata');
+                    return [...mockTrainees, ...dbTrainees];
+                });
+            }
+            const now = new Date();
+            const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+            setLastPollTime(timeStr);
+            setLastPollChanged(pollChanged);
+            return pollChanged;
+        } catch (e) {
+            console.error('[Poll] Error during poll:', e);
+            return false;
+        }
+    }, [buildUnavailHash]);
+
+    useEffect(() => {
+        if (!liveSyncEnabled) return;
+        syncUnavailabilityFromDatabase();
+        const pollInterval = setInterval(syncUnavailabilityFromDatabase, 5 * 1000);
+        return () => clearInterval(pollInterval);
+    }, [liveSyncEnabled, syncUnavailabilityFromDatabase]);
 
 
     // ── Alert response polling ──────────────────────────────────────────────
     // Poll alert statuses for the current date every 5 seconds
-    useEffect(() => {
-        const pollAlerts = async () => {
-            try {
-                const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
-                const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
-                if (!res.ok) return;
-                const data = await res.json();
-                const snap = data.snapshot;
-                if (!snap) return;
-                // Always update alertsData so responses (accept/reject) are reflected immediately
-                if (snap.alertsData) {
-                    setAlertsDataByDate(prev => ({
-                        ...prev,
-                        [date]: snap.alertsData,
-                    }));
-                }
-            } catch (err) {
-                // Silent fail - polling
+    const syncAlertsForCurrentDate = useCallback(async () => {
+        try {
+            const apiBase = window.location.origin.includes('railway.app') ? '/api' : 'https://dfp-neo-v2-production.up.railway.app/api';
+            const res = await fetch(`${apiBase}/daily-snapshot/${encodeURIComponent(getDailySnapshotKey(date))}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const snap = data.snapshot;
+            if (!snap) return;
+            // Always update alertsData so responses (accept/reject) are reflected immediately
+            if (snap.alertsData) {
+                setAlertsDataByDate(prev => ({
+                    ...prev,
+                    [date]: snap.alertsData,
+                }));
             }
-        };
-        // Run immediately on mount/date change, then every 5 seconds
-        pollAlerts();
-        const interval = setInterval(pollAlerts, 5 * 1000);
-        return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        } catch (err) {
+            // Silent fail - polling
+        }
     }, [date, school]);
+
+    useEffect(() => {
+        if (!liveSyncEnabled) return;
+        syncAlertsForCurrentDate();
+        const interval = setInterval(syncAlertsForCurrentDate, 5 * 1000);
+        return () => clearInterval(interval);
+    }, [liveSyncEnabled, syncAlertsForCurrentDate]);
+
+    const handleManualSync = useCallback(async () => {
+        if (isManualSyncing) return;
+        setIsManualSyncing(true);
+        try {
+            await Promise.all([
+                syncUnavailabilityFromDatabase(),
+                syncAlertsForCurrentDate(),
+            ]);
+        } finally {
+            setIsManualSyncing(false);
+        }
+    }, [isManualSyncing, syncAlertsForCurrentDate, syncUnavailabilityFromDatabase]);
 
     const handleUpdateSyllabus = useCallback((newSyllabus: SyllabusItemDetail[]) => {
         const updatedMap = new Map(newSyllabus.map(s => [s.code.trim().replace(/\s/g, '').toLowerCase(), s]));
@@ -16907,11 +16936,40 @@ updates.forEach(update => {
             </div>
         )}
 
-        {/* Live sync indicator - shows last poll time so users can confirm iOS sync is running */}
+        {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
         {isAuthenticated && (
-            <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 px-2 py-1 rounded text-xs bg-gray-800/80 border border-gray-700/50 text-gray-400 pointer-events-none select-none">
-                <span className={`w-1.5 h-1.5 rounded-full ${lastPollChanged ? 'bg-green-400' : 'bg-gray-500'}`}></span>
-                <span>Sync {lastPollTime || "Wait..."}</span>
+            <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+                <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                        liveSyncEnabled
+                            ? lastPollChanged ? 'bg-green-400' : 'bg-gray-500'
+                            : 'bg-amber-500/80'
+                    }`}
+                ></span>
+                <span className="px-1">
+                    {liveSyncEnabled ? `Sync ${lastPollTime || 'Wait...'}` : 'Sync Paused'}
+                </span>
+                <button
+                    type="button"
+                    onClick={() => setLiveSyncEnabled(prev => !prev)}
+                    className={`rounded border px-1.5 py-0.5 transition-colors ${
+                        liveSyncEnabled
+                            ? 'border-gray-600/60 text-gray-300 hover:border-gray-500 hover:text-white'
+                            : 'border-amber-500/30 text-amber-300 hover:border-amber-400/60 hover:text-amber-100'
+                    }`}
+                    title={liveSyncEnabled ? 'Pause background sync polling' : 'Resume background sync polling'}
+                >
+                    {liveSyncEnabled ? 'Live' : 'Paused'}
+                </button>
+                <button
+                    type="button"
+                    onClick={handleManualSync}
+                    disabled={isManualSyncing}
+                    className="rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white disabled:cursor-wait disabled:opacity-60"
+                    title="Manually refresh mobile unavailability and alert responses"
+                >
+                    {isManualSyncing ? 'Syncing' : 'Sync Now'}
+                </button>
             </div>
         )}
     </>
