@@ -14289,7 +14289,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                       onChange: (e) => setAircraftNumberPrefix(e.target.value),
                       disabled: isDeploy,
                       "aria-label": `${resourceDisplayNames.aircraft} number prefix`,
-                      className: "block w-32 flex-shrink-0 rounded-l-md rounded-r-none bg-gray-700 border border-r-0 border-gray-600 shadow-sm py-2 px-2 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                      className: "block w-32 flex-shrink-0 rounded-l-md rounded-r-none bg-gray-700 border border-r-0 border-gray-600 shadow-sm py-2 px-2 text-center text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
                       children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, children: prefix }, prefix))
                     }
                   ),
@@ -14302,7 +14302,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                       disabled: isDeploy,
                       list: "flight-detail-aircraft-number-options",
                       "aria-label": `${resourceDisplayNames.aircraft} number`,
-                      className: `block min-w-0 flex-1 bg-gray-700 border border-gray-600 shadow-sm py-2 px-3 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${aircraftNumberSettings.usePrefix ? "rounded-l-none rounded-r-md" : "rounded-md"}`
+                      className: `block min-w-0 flex-1 bg-gray-700 border border-gray-600 shadow-sm py-2 px-3 text-center text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${aircraftNumberSettings.usePrefix ? "rounded-l-none rounded-r-md" : "rounded-md"}`
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "flight-detail-aircraft-number-options", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num }, num)) })
