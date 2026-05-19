@@ -73208,59 +73208,143 @@ const App = () => {
     };
     loadSnapshotDates();
   }, []);
+  const applyDailySnapshot = React.useCallback((targetDate, snapshotSchool, snap2, replace, source) => {
+    if (!snap2) return 0;
+    const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
+    if (events2.length > 0) {
+      setPublishedSchedules((prev) => {
+        const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
+        if (!replace && existingNonSeed.length > 0) return prev;
+        return { ...prev, [targetDate]: events2 };
+      });
+      const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
+      setBaselineSchedules((prev) => {
+        const baselineKey = `${snapshotSchool}:${targetDate}`;
+        if (!replace && prev[baselineKey]) return prev;
+        return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
+      });
+      console.log(`[Snapshot] ✅ Loaded ${source} snapshot for ${targetDate} (${snapshotSchool}), ${events2.length} events`);
+    }
+    if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
+      setPt051Assessments((prev) => {
+        const merged = new Map(prev);
+        Object.entries(snap2.pt051Assessments).forEach(([key, assessment]) => {
+          if (!merged.has(key)) merged.set(key, assessment);
+        });
+        return merged;
+      });
+    }
+    if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
+      setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
+    }
+    return events2.length;
+  }, []);
   const loadSnapshotForDate = React.useCallback(async (targetDate, options = {}) => {
-    const { force = false, replace = false, schoolOverride } = options;
+    const { force = false, replace = false, schoolOverride, useCache = true } = options;
     const snapshotSchool = schoolOverride ?? school;
     const snapshotKey = getDailySnapshotKey(targetDate, snapshotSchool);
+    const cacheKey = `dfp_snapshot_cache_${snapshotKey}`;
     if (!force && loadedSnapshotDates.current.has(snapshotKey)) return;
-    loadedSnapshotDates.current.add(snapshotKey);
+    if (loadingSnapshotDates.current.has(snapshotKey)) return;
+    loadingSnapshotDates.current.add(snapshotKey);
+    if (useCache && !replace) {
+      try {
+        const cachedSnapshot = localStorage.getItem(cacheKey);
+        if (cachedSnapshot) {
+          const cachedEvents = applyDailySnapshot(targetDate, snapshotSchool, JSON.parse(cachedSnapshot), false, "cache");
+          if (cachedEvents > 0) {
+            setDfpSnapshotLoadState({
+              status: "cached",
+              date: targetDate,
+              message: "Showing cached DFP while refreshing"
+            });
+          }
+        }
+      } catch (err) {
+        console.warn(`[Snapshot] Could not read cached snapshot for ${targetDate}:`, err);
+      }
+    }
+    const retryDelays = [0, 2e3, 5e3, 1e4];
     try {
       const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
-      let res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
-      if (!res.ok && snapshotSchool === "ESL") {
-        res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
-      }
-      if (!res.ok) {
-        if (replace) {
-          setPublishedSchedules((prev) => ({ ...prev, [targetDate]: [] }));
-          setBaselineSchedules((prev) => ({ ...prev, [`${snapshotSchool}:${targetDate}`]: [] }));
-        }
-        return;
-      }
-      const data = await res.json();
-      const snap2 = data.snapshot;
-      if (!snap2) return;
-      const events2 = Array.isArray(snap2.scheduleEvents) ? snap2.scheduleEvents : [];
-      if (events2.length > 0) {
-        setPublishedSchedules((prev) => {
-          const existingNonSeed = (prev[targetDate] || []).filter((e) => !e.isHistoricalSeed);
-          if (!replace && existingNonSeed.length > 0) return prev;
-          return { ...prev, [targetDate]: events2 };
-        });
-        const baselineEvts = Array.isArray(snap2.baselineEvents) && snap2.baselineEvents.length > 0 ? snap2.baselineEvents : events2;
-        setBaselineSchedules((prev) => {
-          const baselineKey = `${snapshotSchool}:${targetDate}`;
-          if (!replace && prev[baselineKey]) return prev;
-          return { ...prev, [baselineKey]: JSON.parse(JSON.stringify(baselineEvts)) };
-        });
-        console.log(`[Snapshot] ✅ Loaded on-demand snapshot for ${targetDate} (${snapshotSchool}), ${events2.length} events`);
-      }
-      if (snap2.pt051Assessments && Object.keys(snap2.pt051Assessments).length > 0) {
-        setPt051Assessments((prev) => {
-          const merged = new Map(prev);
-          Object.entries(snap2.pt051Assessments).forEach(([key, assessment]) => {
-            if (!merged.has(key)) merged.set(key, assessment);
+      let lastError = null;
+      for (let attempt = 0; attempt < retryDelays.length; attempt++) {
+        const delay = retryDelays[attempt];
+        if (delay > 0) {
+          setDfpSnapshotLoadState({
+            status: "retrying",
+            date: targetDate,
+            message: `Retrying DFP load (${attempt + 1}/${retryDelays.length})`
           });
-          return merged;
-        });
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          setDfpSnapshotLoadState({
+            status: "loading",
+            date: targetDate,
+            message: "Loading DFP"
+          });
+        }
+        try {
+          let res = await fetch(`${apiBase2}/daily-snapshot/${encodeURIComponent(snapshotKey)}`);
+          if (!res.ok && res.status === 404 && snapshotSchool === "ESL") {
+            res = await fetch(`${apiBase2}/daily-snapshot/${targetDate}`);
+          }
+          if (res.status === 404) {
+            if (replace) {
+              setPublishedSchedules((prev) => ({ ...prev, [targetDate]: [] }));
+              setBaselineSchedules((prev) => ({ ...prev, [`${snapshotSchool}:${targetDate}`]: [] }));
+            }
+            loadedSnapshotDates.current.add(snapshotKey);
+            setDfpSnapshotLoadState({
+              status: "empty",
+              date: targetDate,
+              message: "No published DFP for this date"
+            });
+            return;
+          }
+          if (!res.ok) {
+            lastError = new Error(`Snapshot request failed with ${res.status}`);
+            continue;
+          }
+          const data = await res.json();
+          const snap2 = data.snapshot;
+          if (!snap2) {
+            lastError = new Error("Snapshot response did not include snapshot data");
+            continue;
+          }
+          const eventCount = applyDailySnapshot(targetDate, snapshotSchool, snap2, replace, "network");
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(snap2));
+          } catch (cacheErr) {
+            console.warn(`[Snapshot] Could not cache snapshot for ${targetDate}:`, cacheErr);
+          }
+          loadedSnapshotDates.current.add(snapshotKey);
+          setDfpSnapshotLoadState({
+            status: "loaded",
+            date: targetDate,
+            message: eventCount > 0 ? `Loaded ${eventCount} DFP events` : "DFP loaded"
+          });
+          return;
+        } catch (err) {
+          lastError = err;
+        }
       }
-      if (snap2.alertsData && Object.keys(snap2.alertsData).length > 0) {
-        setAlertsDataByDate((prev) => ({ ...prev, [targetDate]: snap2.alertsData }));
-      }
+      throw lastError || new Error("Snapshot request failed");
     } catch (err) {
+      setDfpSnapshotLoadState({
+        status: "error",
+        date: targetDate,
+        message: "DFP did not load. Check connection or retry."
+      });
       console.warn(`[Snapshot] Could not load snapshot for ${targetDate}:`, err);
+    } finally {
+      loadingSnapshotDates.current.delete(snapshotKey);
     }
-  }, [school]);
+  }, [applyDailySnapshot, school]);
+  reactExports.useEffect(() => {
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    void loadSnapshotForDate(date, { useCache: true });
+  }, [date, school, loadSnapshotForDate]);
   const handleUserChange = (userName) => {
     setCurrentUserName(userName);
     const newUser = instructorsData.find((inst) => inst.name === userName);
@@ -73349,6 +73433,8 @@ const App = () => {
   const [publishedSchedules, setPublishedSchedules] = reactExports.useState({});
   const [snapshotDates, setSnapshotDates] = reactExports.useState([]);
   const loadedSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
+  const loadingSnapshotDates = React.useRef(/* @__PURE__ */ new Set());
+  const [dfpSnapshotLoadState, setDfpSnapshotLoadState] = reactExports.useState({ status: "idle", date: "", message: "" });
   function getDailySnapshotKey(targetDate, targetSchool = school) {
     return `${targetDate}__${targetSchool}`;
   }
@@ -75654,15 +75740,11 @@ ${"=".repeat(60)}`);
     currentDate.setUTCDate(currentDate.getUTCDate() + increment);
     const newDateStr = currentDate.toISOString().split("T")[0];
     setDate(newDateStr);
-    if (snapshotDates.includes(newDateStr)) {
-      loadSnapshotForDate(newDateStr);
-    }
+    void loadSnapshotForDate(newDateStr);
   };
   const handleDateSelect = (selectedDate2) => {
     setDate(selectedDate2);
-    if (snapshotDates.includes(selectedDate2)) {
-      loadSnapshotForDate(selectedDate2);
-    }
+    void loadSnapshotForDate(selectedDate2);
   };
   const onSavePT051Assessment = (assessment) => {
     const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
@@ -82385,6 +82467,25 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
+    isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-10 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "span",
+        {
+          className: `h-1.5 w-1.5 rounded-full ${dfpSnapshotLoadState.status === "error" ? "bg-red-400" : dfpSnapshotLoadState.status === "cached" ? "bg-amber-400" : "bg-blue-400 animate-pulse"}`
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "px-1", children: dfpSnapshotLoadState.message }),
+      dfpSnapshotLoadState.status === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => void loadSnapshotForDate(date, { force: true, replace: true, useCache: true }),
+          className: "rounded border border-gray-600/50 px-1.5 py-0.5 text-gray-300 transition-colors hover:border-gray-500 hover:text-white",
+          title: "Retry loading the DFP for this date",
+          children: "Retry"
+        }
+      )
+    ] }),
     isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-2 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "span",
