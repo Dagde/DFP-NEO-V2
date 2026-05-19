@@ -1903,6 +1903,12 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
         </div>
     );
 };    
+    const primaryCrew = crew[0] || { flightType: 'Dual' as const, instructor: '', student: '', pilot: '', group: '', groupTraineeIds: [] };
+    const primaryName = primaryCrew.flightType === 'Solo' ? primaryCrew.pilot : primaryCrew.instructor;
+    const secondaryName = primaryCrew.flightType === 'Solo' ? 'SOLO' : primaryCrew.student;
+    const mockTileBg = event.color?.startsWith('bg-') ? undefined : event.color;
+    const mockTileClass = event.color?.startsWith('bg-') ? event.color : 'bg-gray-600';
+
     if (isVisualAdjustMode) {
         return (
             <VisualAdjustModal
@@ -2140,8 +2146,147 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                       }`}
                                                   >
                                                       TWR DI
-                                                  </button>                                           </div>
+                                      </button>                                           </div>
                                        </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Flight Tile</label>
+                                        <div
+                                            className={`${mockTileClass} relative w-full overflow-hidden rounded border-2 border-gray-900/70 shadow-lg`}
+                                            style={{
+                                                height: 118,
+                                                backgroundColor: mockTileBg,
+                                                boxShadow: '0 4px 18px rgba(0,0,0,0.55)',
+                                            }}
+                                        >
+                                            <select
+                                                value={startTime}
+                                                onChange={e => {
+                                                    setStartTime(e.target.value);
+                                                    setLocalHighlight(null);
+                                                }}
+                                                disabled={isDeploy}
+                                                className="absolute left-3 top-3 w-[110px] bg-transparent text-white/80 font-mono text-3xl font-semibold outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
+                                            >
+                                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                            </select>
+
+                                            <select
+                                                value={primaryName}
+                                                onChange={e => handleCrewChange(0, primaryCrew.flightType === 'Solo' ? 'pilot' : 'instructor', e.target.value)}
+                                                disabled={isDeploy}
+                                                className="absolute left-[12%] top-2 w-[44%] bg-transparent text-white text-4xl font-bold outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
+                                            >
+                                                <option value="" disabled>Select {primaryCrew.flightType === 'Solo' ? 'pilot' : 'instructor'}</option>
+                                                {instructorList.map(name => <option key={name} value={name}>{name}</option>)}
+                                            </select>
+
+                                            {primaryCrew.flightType === 'Dual' ? (
+                                                <select
+                                                    value={secondaryName}
+                                                    onChange={e => handleCrewChange(0, 'student', e.target.value)}
+                                                    disabled={isDeploy}
+                                                    className="absolute left-[12%] bottom-5 w-[44%] bg-transparent text-white/75 text-3xl outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
+                                                >
+                                                    <option value="" disabled>Select trainee</option>
+                                                    {traineeList.map(name => <option key={name} value={name}>{name}</option>)}
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCrewChange(0, 'flightType', 'Dual')}
+                                                    disabled={isDeploy}
+                                                    className="absolute left-[12%] bottom-5 bg-transparent text-amber-300 text-2xl font-bold tracking-wider disabled:cursor-not-allowed"
+                                                >
+                                                    SOLO
+                                                </button>
+                                            )}
+
+                                            <input
+                                                type="number"
+                                                step="0.1"
+                                                min="0.1"
+                                                value={duration}
+                                                onChange={e => setDuration(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                                                disabled={isDeploy}
+                                                aria-label="Duration"
+                                                className="absolute right-[24%] top-3 w-[90px] bg-transparent text-white/80 text-3xl font-mono font-bold outline-none text-right disabled:cursor-not-allowed"
+                                            />
+                                            <span className="absolute right-[35%] top-4 text-white/70 text-3xl font-mono font-bold pointer-events-none">[</span>
+                                            <span className="absolute right-[23%] top-4 text-white/70 text-3xl font-mono font-bold pointer-events-none">]</span>
+
+                                            <select
+                                                value={flightNumber}
+                                                onChange={handleFlightNumberChange}
+                                                onFocus={handleSyllabusFocus}
+                                                disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0)}
+                                                className="absolute right-4 top-2 w-[190px] bg-transparent text-white text-4xl font-mono font-semibold outline-none appearance-none text-right cursor-pointer disabled:cursor-not-allowed"
+                                            >
+                                                <option value="" disabled>{isOracleContext ? 'Select crew first' : 'EVENT'}</option>
+                                                <option value="SCT FORM">SCT FORM</option>
+                                                {filteredSyllabusOptions.filter(item => item !== 'SCT FORM').map(item => (
+                                                    <option key={item} value={item}>{formatSyllabusOptionLabel(item)}</option>
+                                                ))}
+                                            </select>
+
+                                            {eventType === 'flight' && (
+                                                <>
+                                                    <input
+                                                        type="text"
+                                                        value={aircraftNumber}
+                                                        onChange={e => setAircraftNumber(e.target.value.toUpperCase())}
+                                                        disabled={isDeploy}
+                                                        list="flight-detail-aircraft-number-options"
+                                                        aria-label={`${resourceDisplayNames.aircraft} number`}
+                                                        className="absolute left-3 bottom-5 w-[100px] bg-transparent text-white/75 text-3xl font-mono outline-none disabled:cursor-not-allowed"
+                                                    />
+                                                    <datalist id="flight-detail-aircraft-number-options">
+                                                        {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num} />)}
+                                                    </datalist>
+                                                    <select
+                                                        value={area}
+                                                        onChange={e => setArea(e.target.value)}
+                                                        disabled={isDeploy}
+                                                        aria-label="Area"
+                                                        className="absolute right-[160px] bottom-5 w-[55px] bg-transparent text-white/80 text-3xl font-bold outline-none appearance-none text-center cursor-pointer disabled:cursor-not-allowed"
+                                                    >
+                                                        {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                                                    </select>
+                                                    {flightNumber !== 'SCT FORM' && (
+                                                        <input
+                                                            type="text"
+                                                            value={callsign}
+                                                            onChange={e => setCallsign(e.target.value.toUpperCase())}
+                                                            disabled={isDeploy}
+                                                            placeholder="CALLSIGN"
+                                                            className="absolute right-4 bottom-5 w-[140px] bg-transparent text-white/70 text-2xl font-mono outline-none disabled:cursor-not-allowed"
+                                                        />
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                        {syllabusSelectionError && (
+                                            <div className="mt-2 text-xs text-red-400 animate-fade-in">Select a crew member first.</div>
+                                        )}
+                                        <div className="mt-3 grid grid-cols-2 gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCrewChange(0, 'flightType', 'Dual')}
+                                                disabled={isDeploy}
+                                                className={`py-2 px-3 rounded-md text-sm font-semibold transition-colors ${primaryCrew.flightType === 'Dual' ? 'bg-sky-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} disabled:opacity-60`}
+                                            >
+                                                Dual
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCrewChange(0, 'flightType', 'Solo')}
+                                                disabled={isDeploy}
+                                                className={`py-2 px-3 rounded-md text-sm font-semibold transition-colors ${primaryCrew.flightType === 'Solo' ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'} disabled:opacity-60`}
+                                            >
+                                                Solo
+                                            </button>
+                                        </div>
+                                    </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
