@@ -15368,7 +15368,7 @@ const EventDropdown = ({
               "div",
               {
                 onClick: () => {
-                  onChange(code, ev.flightOrSimHours || ev.duration || void 0);
+                  onChange(code, ev.duration || ev.flightOrSimHours || void 0);
                   setOpen(false);
                   setHovCourse(null);
                 },
@@ -16206,9 +16206,20 @@ const AddFlightTileModal = ({
     const item = lmp.find((i) => i.id === flightNumber || i.code === flightNumber);
     if (item?.sortieType) setFlightType(item.sortieType);
   }, [picName, studentName, flightNumber, traineeLMPs]);
+  const resolveLmpDurationForEvent = (code, fallback) => {
+    if (!code) return void 0;
+    const selectedName = flightType === "Solo" ? picName : studentName;
+    const matchesCode = (item) => item.id === code || item.code === code;
+    const selectedLmpItem = selectedName ? traineeLMPs?.get(selectedName)?.find(matchesCode) : void 0;
+    const masterSyllabusItem = syllabusDetails.find(matchesCode);
+    const durationSource = selectedLmpItem || masterSyllabusItem;
+    const resolved = [durationSource?.duration, durationSource?.flightOrSimHours, fallback].map((value) => Number(value)).find((value) => Number.isFinite(value) && value > 0);
+    return resolved;
+  };
   const handleFlightNumberChange = (code, durationHrs) => {
     setFlightNumber(code);
-    if (durationHrs && durationHrs > 0) setDuration(durationHrs);
+    const lmpDuration = resolveLmpDurationForEvent(code, durationHrs);
+    if (lmpDuration) setDuration(lmpDuration);
     setGuidedStep("area");
   };
   const handlePicNameChange = (name) => {

@@ -438,7 +438,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
               <div
                 key={code}
                 onClick={() => {
-                  onChange(code, ev.flightOrSimHours || ev.duration || undefined);
+                  onChange(code, ev.duration || ev.flightOrSimHours || undefined);
                   setOpen(false);
                   setHovCourse(null);
                 }}
@@ -1384,9 +1384,26 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   }, [picName, studentName, flightNumber, traineeLMPs]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+  const resolveLmpDurationForEvent = (code: string, fallback?: number): number | undefined => {
+    if (!code) return undefined;
+
+    const selectedName = flightType === 'Solo' ? picName : studentName;
+    const matchesCode = (item: SyllabusItemDetail) => item.id === code || item.code === code;
+    const selectedLmpItem = selectedName ? traineeLMPs?.get(selectedName)?.find(matchesCode) : undefined;
+    const masterSyllabusItem = syllabusDetails.find(matchesCode);
+    const durationSource = selectedLmpItem || masterSyllabusItem;
+
+    const resolved = [durationSource?.duration, durationSource?.flightOrSimHours, fallback]
+      .map(value => Number(value))
+      .find(value => Number.isFinite(value) && value > 0);
+
+    return resolved;
+  };
+
   const handleFlightNumberChange = (code: string, durationHrs?: number) => {
     setFlightNumber(code);
-    if (durationHrs && durationHrs > 0) setDuration(durationHrs);
+    const lmpDuration = resolveLmpDurationForEvent(code, durationHrs);
+    if (lmpDuration) setDuration(lmpDuration);
     setGuidedStep('area');
   };
 
