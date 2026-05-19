@@ -15500,11 +15500,11 @@ const FlightTile = ({
     return null;
   }, [activeStep]);
   const guideGlowStyle = (elemKey) => activeElemKey === elemKey ? {
-    borderRadius: 6,
-    background: "rgba(34, 211, 238, 0.16)",
-    boxShadow: "0 0 18px rgba(34, 211, 238, 0.85), inset 0 0 10px rgba(34, 211, 238, 0.24)",
+    color: "rgba(210, 250, 255, 0.98)",
+    textShadow: "0 0 6px rgba(34, 211, 238, 0.9), 0 0 16px rgba(34, 211, 238, 0.7)",
     animation: "addFlightTileGuideGlow 2.4s ease-in-out infinite"
   } : {};
+  const stripCourseSuffix = (name) => name.replace(/\s+[–-]\s+[A-Z]{2,}\d{2,}$/i, "").replace(/\s+\([A-Z]{2,}\d{2,}\)$/i, "");
   const tileRef = reactExports.useRef(null);
   const elemRefs = reactExports.useRef({});
   const dragging = reactExports.useRef(null);
@@ -15612,6 +15612,7 @@ const FlightTile = ({
     PersonDropdown,
     {
       value: picName,
+      displayValue: stripCourseSuffix(picName),
       onChange: onPicNameChange,
       allUnits,
       getLayer2,
@@ -15631,6 +15632,7 @@ const FlightTile = ({
       PersonDropdown,
       {
         value: studentName,
+        displayValue: stripCourseSuffix(studentName),
         onChange: (name) => onStudentNameChange(name),
         allUnits,
         getLayer2,
@@ -15838,10 +15840,10 @@ const FlightTile = ({
     /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
         @keyframes addFlightTileGuideGlow {
           0%, 100% {
-            box-shadow: 0 0 10px rgba(34, 211, 238, 0.45), inset 0 0 6px rgba(34, 211, 238, 0.16);
+            text-shadow: 0 0 5px rgba(34, 211, 238, 0.7), 0 0 12px rgba(34, 211, 238, 0.45);
           }
           50% {
-            box-shadow: 0 0 24px rgba(34, 211, 238, 0.95), inset 0 0 14px rgba(34, 211, 238, 0.32);
+            text-shadow: 0 0 9px rgba(34, 211, 238, 1), 0 0 24px rgba(34, 211, 238, 0.9), 0 0 38px rgba(34, 211, 238, 0.55);
           }
         }
       ` }),
