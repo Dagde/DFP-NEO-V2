@@ -2138,7 +2138,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                   </button>                                           </div>
                                        </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Start Time</label>
                                             <select
@@ -2153,11 +2153,11 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                             </select>
                                         </div>
-                                        <div className="relative">
+                                        <div className="relative md:col-span-3">
                                             <label className="block text-sm font-medium text-gray-400">Syllabus Item</label>
-                                            <select 
-                                                value={flightNumber} 
-                                                onChange={handleFlightNumberChange} 
+                                            <select
+                                                value={flightNumber}
+                                                onChange={handleFlightNumberChange}
                                                 onFocus={handleSyllabusFocus}
                                                 disabled={isDeploy || (isOracleContext && filteredSyllabusOptions.length === 0)}
                                                 className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed`}
@@ -2174,22 +2174,23 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <div className="absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in">Select a crew member first.</div>
                                             )}
                                         </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Duration</label>
-                                            <input 
-                                                type="number" 
-                                                step="0.1" 
+                                            <input
+                                                type="number"
+                                                step="0.1"
                                                 min="0.1"
-                                                value={duration} 
+                                                value={duration}
                                                 onChange={e => setDuration(e.target.value === '' ? '' : parseFloat(e.target.value))}
                                                 disabled={isDeploy}
                                                 className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                                             />
                                         </div>
-                                    </div>
-
-                                    {eventType === 'flight' && (
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {eventType === 'flight' && (
+                                            <>
                                             <div className="md:col-span-2">
                                                 <label className="block text-center text-sm font-medium text-gray-400">Aircraft Number</label>
                                                 <div className="mt-1 flex items-stretch">
@@ -2226,8 +2227,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                     {areas.map(a => <option key={a} value={a}>{a}</option>)}
                                                 </select>
                                             </div>
-                                        </div>
-                                    )}
+                                            </>
+                                        )}
+                                    </div>
 
                                     {eventType === 'flight' && (
                                         <div>

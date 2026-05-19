@@ -14225,7 +14225,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               "                                           "
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Start Time" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -14242,7 +14242,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               )
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative md:col-span-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Syllabus Item" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
@@ -14260,7 +14260,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 }
               ),
               syllabusSelectionError && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in", children: "Select a crew member first." })
-            ] }),
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Duration" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -14275,41 +14277,41 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
                 }
               )
-            ] })
-          ] }),
-          eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-center text-sm font-medium text-gray-400", children: "Aircraft Number" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-stretch", children: [
-                aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "select",
-                  {
-                    value: aircraftNumberPrefix,
-                    onChange: (e) => setAircraftNumberPrefix(e.target.value),
-                    disabled: isDeploy,
-                    "aria-label": `${resourceDisplayNames.aircraft} number prefix`,
-                    className: "block w-32 flex-shrink-0 rounded-l-md rounded-r-none bg-gray-700 border border-r-0 border-gray-600 shadow-sm py-2 px-2 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                    children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, children: prefix }, prefix))
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "input",
-                  {
-                    type: "text",
-                    value: aircraftNumber,
-                    onChange: (e) => setAircraftNumber(e.target.value.toUpperCase()),
-                    disabled: isDeploy,
-                    list: "flight-detail-aircraft-number-options",
-                    "aria-label": `${resourceDisplayNames.aircraft} number`,
-                    className: `block min-w-0 flex-1 bg-gray-700 border border-gray-600 shadow-sm py-2 px-3 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${aircraftNumberSettings.usePrefix ? "rounded-l-none rounded-r-md" : "rounded-md"}`
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "flight-detail-aircraft-number-options", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num }, num)) })
-              ] })
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Area" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: area, onChange: (e) => setArea(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: areas.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: a, children: a }, a)) })
+            eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-center text-sm font-medium text-gray-400", children: "Aircraft Number" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-stretch", children: [
+                  aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "select",
+                    {
+                      value: aircraftNumberPrefix,
+                      onChange: (e) => setAircraftNumberPrefix(e.target.value),
+                      disabled: isDeploy,
+                      "aria-label": `${resourceDisplayNames.aircraft} number prefix`,
+                      className: "block w-32 flex-shrink-0 rounded-l-md rounded-r-none bg-gray-700 border border-r-0 border-gray-600 shadow-sm py-2 px-2 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                      children: aircraftNumberSettings.prefixes.map((prefix) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: prefix, children: prefix }, prefix))
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "input",
+                    {
+                      type: "text",
+                      value: aircraftNumber,
+                      onChange: (e) => setAircraftNumber(e.target.value.toUpperCase()),
+                      disabled: isDeploy,
+                      list: "flight-detail-aircraft-number-options",
+                      "aria-label": `${resourceDisplayNames.aircraft} number`,
+                      className: `block min-w-0 flex-1 bg-gray-700 border border-gray-600 shadow-sm py-2 px-3 text-white focus:z-10 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed ${aircraftNumberSettings.usePrefix ? "rounded-l-none rounded-r-md" : "rounded-md"}`
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("datalist", { id: "flight-detail-aircraft-number-options", children: Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")).map((num) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: num }, num)) })
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Area" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: area, onChange: (e) => setArea(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: areas.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: a, children: a }, a)) })
+              ] })
             ] })
           ] }),
           eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
