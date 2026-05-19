@@ -82467,7 +82467,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-12 h-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-4" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-sm", children: "Loading DFP-NEO..." })
     ] }) }),
-    isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-10 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
+    isAuthenticated && dfpSnapshotLoadState.date === date && ["loading", "cached", "retrying", "error"].includes(dfpSnapshotLoadState.status) && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[126px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "span",
         {
@@ -82486,7 +82486,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
       )
     ] }),
-    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-2 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
+    isAuthenticated && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "fixed bottom-[88px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "span",
         {

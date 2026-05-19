@@ -17042,7 +17042,7 @@ updates.forEach(update => {
         {isAuthenticated &&
             dfpSnapshotLoadState.date === date &&
             ['loading', 'cached', 'retrying', 'error'].includes(dfpSnapshotLoadState.status) && (
-                <div className="fixed bottom-10 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+                <div className="fixed bottom-[126px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
                     <span
                         className={`h-1.5 w-1.5 rounded-full ${
                             dfpSnapshotLoadState.status === 'error'
@@ -17068,7 +17068,7 @@ updates.forEach(update => {
 
         {/* Live sync control - keeps mobile/iOS-originated changes visible without forcing it on low-data links */}
         {isAuthenticated && (
-            <div className="fixed bottom-2 right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
+            <div className="fixed bottom-[88px] right-2 z-[100] flex items-center gap-1 rounded border border-gray-700/50 bg-gray-900/75 px-1.5 py-1 text-[10px] text-gray-400 shadow-sm backdrop-blur-sm select-none">
                 <span
                     className={`h-1.5 w-1.5 rounded-full ${
                         liveSyncEnabled
