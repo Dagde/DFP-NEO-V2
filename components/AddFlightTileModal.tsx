@@ -581,13 +581,13 @@ const FlightTile: React.FC<TileProps> = ({
   // Default positions — used for first render and after Cancel
   const DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
     startTime: { x: 14,  y: 7 },
-    picName:   { x: 78, y: 7 },
-    coPilot:   { x: 78, y: 38 },
-    duration:  { x: 410, y: 7 },
-    event:     { x: 486, y: 7 },
-    aircraft:  { x: 14, y: 55 },
-    area:      { x: 486, y: 55 },
-    callsign:  { x: 532, y: 55 },
+    picName:   { x: 83, y: 9 },
+    coPilot:   { x: 83, y: 36 },
+    duration:  { x: 410, y: 4 },
+    event:     { x: 486, y: 4 },
+    aircraft:  { x: 14, y: 57 },
+    area:      { x: 481, y: 56 },
+    callsign:  { x: 532, y: 57 },
   };
 
   const activeElemKey = useMemo<ElemKey | null>(() => {
@@ -875,22 +875,22 @@ const FlightTile: React.FC<TileProps> = ({
       </FlexElem>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', width: '100%', paddingLeft: '10%', paddingRight: 12, boxSizing: 'border-box' }}>
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', paddingRight: 8, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
-          <FlexElem elemKey="picName">{picNameContent()}</FlexElem>
-          <FlexElem elemKey="coPilot">{coPilotContent()}</FlexElem>
+          <FlexElem elemKey="picName" style={{ transform: 'translate(5px, 2px)' }}>{picNameContent()}</FlexElem>
+          <FlexElem elemKey="coPilot" style={{ transform: 'translate(5px, -2px)' }}>{coPilotContent()}</FlexElem>
         </div>
         <div style={{ flexShrink: 0, minWidth: 'fit-content', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, transform: 'translateY(-3px)' }}>
           <FlexElem elemKey="duration">{durationContent()}</FlexElem>
           <FlexElem elemKey="event">{eventContent()}</FlexElem>
           </div>
         </div>
       </div>
-      <FlexElem elemKey="aircraft" style={{ position: 'absolute', bottom: 4, left: 10, zIndex: 20 }}>
+      <FlexElem elemKey="aircraft" style={{ position: 'absolute', bottom: 2, left: 10, zIndex: 20 }}>
         {aircraftContent()}
       </FlexElem>
       <div style={{ position: 'absolute', bottom: 4, right: 12, display: 'flex', alignItems: 'center', gap: 8, zIndex: 20 }}>
-          <FlexElem elemKey="area">{areaContent()}</FlexElem>
-          <FlexElem elemKey="callsign">{callsignContent()}</FlexElem>
+          <FlexElem elemKey="area" style={{ transform: 'translate(-5px, 1px)' }}>{areaContent()}</FlexElem>
+          <FlexElem elemKey="callsign" style={{ transform: 'translateY(2px)' }}>{callsignContent()}</FlexElem>
       </div>
     </>
   );
@@ -1024,15 +1024,15 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const LAYOUT_ELEM_KEYS: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
   const MODAL_DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
     startTime: { x: 14,  y: 7 },
-    picName:   { x: 78, y: 7 },
-    coPilot:   { x: 78, y: 38 },
-    duration:  { x: 410, y: 7 },
-    event:     { x: 486, y: 7 },
-    aircraft:  { x: 14, y: 55 },
-    area:      { x: 486, y: 55 },
-    callsign:  { x: 532, y: 55 },
+    picName:   { x: 83, y: 9 },
+    coPilot:   { x: 83, y: 36 },
+    duration:  { x: 410, y: 4 },
+    event:     { x: 486, y: 4 },
+    aircraft:  { x: 14, y: 57 },
+    area:      { x: 481, y: 56 },
+    callsign:  { x: 532, y: 57 },
   };
-  const LAYOUT_PREF_KEY = 'flightTileLayout_v2';
+  const LAYOUT_PREF_KEY = 'flightTileLayout_v3';
 
   // Helper: validate a positions object has all required keys
   const isValidPositions = (posData: any): posData is Record<ElemKey, { x: number; y: number }> => {
