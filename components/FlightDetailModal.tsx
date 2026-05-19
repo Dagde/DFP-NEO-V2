@@ -2130,7 +2130,21 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                   </button>                                           </div>
                                        </div>
 
-                                    <div className={`grid grid-cols-1 ${eventType === 'flight' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-4`}>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-400">Start Time</label>
+                                            <select
+                                                value={startTime}
+                                                onChange={e => {
+                                                    setStartTime(parseFloat(e.target.value));
+                                                    setLocalHighlight(null);
+                                                }}
+                                                disabled={isDeploy}
+                                                className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === 'startTime' ? 'ring-2 ring-red-500' : ''}`}
+                                            >
+                                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                            </select>
+                                        </div>
                                         <div className="relative">
                                             <label className="block text-sm font-medium text-gray-400">Syllabus Item</label>
                                             <select 
@@ -2152,56 +2166,6 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 <div className="absolute -bottom-6 left-0 text-xs text-red-400 animate-fade-in">Select a crew member first.</div>
                                             )}
                                         </div>
-                                        {eventType === 'flight' && (
-                                        <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-400">Area</label>
-                                            <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
-                                                {areas.map(a => <option key={a} value={a}>{a}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.aircraft} Number</label>
-                                            <div className="mt-1 flex items-center gap-1">
-                                                {aircraftNumberSettings.usePrefix && (
-                                                    <select
-                                                        value={aircraftNumberPrefix}
-                                                        onChange={e => setAircraftNumberPrefix(e.target.value)}
-                                                        disabled={isDeploy}
-                                                        className="block w-24 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                                                    >
-                                                        {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
-                                                    </select>
-                                                )}
-                                                <input
-                                                    type="text"
-                                                    value={aircraftNumber}
-                                                    onChange={e => setAircraftNumber(e.target.value.toUpperCase())}
-                                                    disabled={isDeploy}
-                                                    list="flight-detail-aircraft-number-options"
-                                                    className="block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                                                />
-                                                <datalist id="flight-detail-aircraft-number-options">
-                                                    {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num} />)}
-                                                </datalist>
-                                            </div>
-                                        </div>
-                                        </>
-                                        )}
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-400">Start Time</label>
-                                            <select 
-                                                value={startTime} 
-                                                onChange={e => {
-                                                    setStartTime(parseFloat(e.target.value));
-                                                    setLocalHighlight(null);
-                                                }} 
-                                                disabled={isDeploy}
-                                                className={`mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm transition-all duration-200 disabled:bg-gray-700/50 disabled:cursor-not-allowed ${localHighlight === 'startTime' ? 'ring-2 ring-red-500' : ''}`}
-                                            >
-                                                {timeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                            </select>
-                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Duration</label>
                                             <input 
@@ -2215,7 +2179,44 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             />
                                         </div>
                                     </div>
-        
+
+                                    {eventType === 'flight' && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="md:col-span-2">
+                                                <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.aircraft} Number</label>
+                                                <div className="mt-1 flex items-center gap-2">
+                                                    {aircraftNumberSettings.usePrefix && (
+                                                        <select
+                                                            value={aircraftNumberPrefix}
+                                                            onChange={e => setAircraftNumberPrefix(e.target.value)}
+                                                            disabled={isDeploy}
+                                                            className="block w-32 flex-shrink-0 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-2 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {aircraftNumberSettings.prefixes.map(prefix => <option key={prefix} value={prefix}>{prefix}</option>)}
+                                                        </select>
+                                                    )}
+                                                    <input
+                                                        type="text"
+                                                        value={aircraftNumber}
+                                                        onChange={e => setAircraftNumber(e.target.value.toUpperCase())}
+                                                        disabled={isDeploy}
+                                                        list="flight-detail-aircraft-number-options"
+                                                        className="block min-w-0 flex-1 bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                    />
+                                                    <datalist id="flight-detail-aircraft-number-options">
+                                                        {Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')).map(num => <option key={num} value={num} />)}
+                                                    </datalist>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-400">Area</label>
+                                                <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
+                                                    {areas.map(a => <option key={a} value={a}>{a}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {eventType === 'flight' && (
                                         <div>
                                             <label className="block text-sm font-medium text-gray-400">Location</label>
