@@ -44,6 +44,8 @@ const formatDate = (dateStr: string): string => {
   return `${String(d.getDate()).padStart(2,'0')} ${months[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
 };
 
+type GuideStep = 'startTime' | 'trainee' | 'instructor' | 'event' | 'area' | 'aircraft' | 'done';
+
 // ─── Scale constants for the large interactive tile ─────────────────────────
 //
 // Strategy: mirror the EXACT layout of FlightTile.tsx (the real schedule tile)
@@ -549,6 +551,7 @@ interface TileProps {
   onEnterEditMode: () => void;
   onExitEditMode: (save: boolean) => void;
   onDragPosition: (key: string, pos: { x: number; y: number }) => void;
+  activeStep: GuideStep;
 }
 
 const FlightTile: React.FC<TileProps> = ({
@@ -562,6 +565,7 @@ const FlightTile: React.FC<TileProps> = ({
   onDurationChange, onFlightNumberChange, onAreaChange, onAircraftChange, onAircraftPrefixChange, onCallsignChange,
   editMode, layoutSaved, positions, savedPositions,
   onEnterEditMode, onExitEditMode, onDragPosition,
+  activeStep,
 }) => {
   // ── Design constants ──────────────────────────────────────────────────
   const TILE_BG    = '#7a6a2a';
@@ -569,22 +573,41 @@ const FlightTile: React.FC<TileProps> = ({
   const WHITE_FULL = 'rgba(255,255,255,0.95)';
   const WHITE_DIM  = 'rgba(255,255,255,0.75)';
   const WHITE_GHOST= 'rgba(255,255,255,0.35)';
-  const TILE_H     = 110;
+  const TILE_H     = 76;
   const monoFamily = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
 
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
 
   // Default positions — used for first render and after Cancel
   const DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
-    startTime: { x: 14,  y: 12 },
-    picName:   { x: 110, y: 14 },
-    coPilot:   { x: 110, y: 58 },
-    duration:  { x: 420, y: 10 },
-    event:     { x: 490, y: 10 },
-    area:      { x: 490, y: 62 },
-    aircraft:  { x: 420, y: 62 },
-    callsign:  { x: 530, y: 62 },
+    startTime: { x: 14,  y: 7 },
+    picName:   { x: 78, y: 7 },
+    coPilot:   { x: 78, y: 38 },
+    duration:  { x: 410, y: 7 },
+    event:     { x: 486, y: 7 },
+    aircraft:  { x: 14, y: 55 },
+    area:      { x: 486, y: 55 },
+    callsign:  { x: 532, y: 55 },
   };
+
+  const activeElemKey = useMemo<ElemKey | null>(() => {
+    if (activeStep === 'startTime') return 'startTime';
+    if (activeStep === 'trainee') return 'coPilot';
+    if (activeStep === 'instructor') return 'picName';
+    if (activeStep === 'event') return 'event';
+    if (activeStep === 'area') return 'area';
+    if (activeStep === 'aircraft') return 'aircraft';
+    return null;
+  }, [activeStep]);
+
+  const guideGlowStyle = (elemKey: ElemKey): React.CSSProperties => activeElemKey === elemKey
+    ? {
+        borderRadius: 6,
+        background: 'rgba(34, 211, 238, 0.16)',
+        boxShadow: '0 0 18px rgba(34, 211, 238, 0.85), inset 0 0 10px rgba(34, 211, 238, 0.24)',
+        animation: 'addFlightTileGuideGlow 2.4s ease-in-out infinite',
+      }
+    : {};
 
   // ── State ──────────────────────────────────────────────────────────────
   // Layout state is LIFTED to AddFlightTileModal — received via props:
@@ -696,6 +719,7 @@ const FlightTile: React.FC<TileProps> = ({
           userSelect: 'none',
           display: 'inline-flex',
           alignItems: 'center',
+          ...guideGlowStyle(elemKey),
         }}
         title={isDraggable ? 'Drag to reposition' : undefined}
       >
@@ -706,7 +730,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   // ── Flex ref wrapper (used in normal non-saved layout) ────────────────
   const FlexElem: React.FC<{ elemKey: ElemKey; children: React.ReactNode; style?: React.CSSProperties }> = ({ elemKey, children, style }) => (
-    <div ref={el => { elemRefs.current[elemKey] = el; }} style={{ display: 'inline-flex', ...style }}>
+    <div ref={el => { elemRefs.current[elemKey] = el; }} style={{ display: 'inline-flex', alignItems: 'center', ...guideGlowStyle(elemKey), ...style }}>
       {children}
     </div>
   );
@@ -714,11 +738,9 @@ const FlightTile: React.FC<TileProps> = ({
   // ── All element content definitions ──────────────────────────────────
   const startTimeContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <Oval px={12} py={6} minW={72}>
-        <span style={{ fontFamily: monoFamily, fontSize: 22, fontWeight: 600, color: WHITE_FULL, lineHeight: 1, letterSpacing: 1 }}>
-          {formatTime(startTime)}
-        </span>
-      </Oval>
+      <span style={{ fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }}>
+        {formatTime(startTime)}
+      </span>
       <select value={String(startTime)} onChange={e => onStartTimeChange(parseFloat(e.target.value))}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {timeOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
@@ -728,7 +750,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   const picNameContent = () => (
     <PersonDropdown value={picName} onChange={onPicNameChange} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-      placeholder="Surname, First (N)" fontSize={30} color={picName ? WHITE_FULL : WHITE_GHOST} bold
+      placeholder="Surname, First (N)" fontSize={28} color={picName ? WHITE_FULL : WHITE_GHOST} bold
       dropdownId="pic-dropdown-portal" />
   );
 
@@ -738,7 +760,7 @@ const FlightTile: React.FC<TileProps> = ({
     }
     return flightType === 'Dual' ? (
       <PersonDropdown value={studentName} onChange={(name) => onStudentNameChange(name)} allUnits={allUnits} getLayer2={getLayer2} getNames={getNames}
-        placeholder="Surname, First (N)" fontSize={22} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
+        placeholder="Surname, First (N)" fontSize={26} color={studentName ? WHITE_DIM : WHITE_GHOST} allowSolo onSoloSelect={() => onFlightTypeChange('Solo')}
         dropdownId="copilot-dropdown-portal" />
     ) : (
       <span onClick={() => onFlightTypeChange('Dual')}
@@ -749,9 +771,7 @@ const FlightTile: React.FC<TileProps> = ({
 
   const durationContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <Oval px={10} py={5} minW={58}>
-        <span style={{ fontFamily: monoFamily, fontSize: 18, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
-      </Oval>
+      <span style={{ fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }}>[{duration.toFixed(1)}]</span>
       <select value={String(duration)} onChange={e => onDurationChange(parseFloat(e.target.value))}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {durationOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
@@ -763,36 +783,28 @@ const FlightTile: React.FC<TileProps> = ({
     if (eventCategory === 'twr_di') {
       return (
         <div style={{ position: 'relative' }}>
-          <Oval px={10} py={5} minW={58}>
-            <span style={{ fontSize: 18, color: WHITE_FULL, lineHeight: 1 }}>
-              TWR DI
-            </span>
-          </Oval>
+          <span style={{ fontFamily: monoFamily, fontSize: 26, color: WHITE_FULL, lineHeight: 1 }}>TWR DI</span>
         </div>
       );
     }
     return (
       <div style={{ position: 'relative' }}>
-        <Oval px={10} py={5} minW={58}>
-          <EventDropdown
-            value={flightNumber}
-            onChange={onFlightNumberChange}
-            courseOptions={courseOptions}
-            getEventsForCourse={getEventsForCourse}
-            nextLMPEvent={nextLMPEvent}
-            fontSize={18}
-            color={flightNumber ? WHITE_FULL : WHITE_GHOST}
-          />
-        </Oval>
+        <EventDropdown
+          value={flightNumber}
+          onChange={onFlightNumberChange}
+          courseOptions={courseOptions}
+          getEventsForCourse={getEventsForCourse}
+          nextLMPEvent={nextLMPEvent}
+          fontSize={26}
+          color={flightNumber ? WHITE_FULL : WHITE_GHOST}
+        />
       </div>
     );
   };
 
   const areaContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <Oval px={10} py={5} minW={42}>
-        <span style={{ fontSize: 18, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
-      </Oval>
+      <span style={{ fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : 'rgba(255,220,60,0.95)', lineHeight: 1 }}>{area || '-'}</span>
       <select value={area} onChange={e => onAreaChange(e.target.value)}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
         {areaOptions.map(o => <option key={o.value} value={o.value} style={{ background: '#1a2f4a' }}>{o.label}</option>)}
@@ -802,7 +814,9 @@ const FlightTile: React.FC<TileProps> = ({
 
   const aircraftContent = (zOverride?: number) => (
     <div style={{ position: 'relative' }}>
-      <span style={{ fontFamily: monoFamily, fontSize: 18, color: 'rgba(255,255,255,0.55)', lineHeight: 1 }}>#{formatAircraftNumber(aircraftNumber || '001', aircraftNumberPrefix, aircraftNumberSettings)}</span>
+      <span style={{ fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : 'rgba(255,255,255,0.35)', lineHeight: 1 }}>
+        {aircraftNumber || 'SKIP'}
+      </span>
       {aircraftNumberSettings.usePrefix && (
         <select value={aircraftNumberPrefix} onChange={e => onAircraftPrefixChange(e.target.value)}
           style={{ position: 'absolute', top: 0, left: 0, width: '45%', height: '100%', opacity: 0, cursor: 'pointer', zIndex: zOverride ?? 10 }}>
@@ -826,7 +840,7 @@ const FlightTile: React.FC<TileProps> = ({
         placeholder="CALLSGN"
         style={{
           background: 'transparent', border: 'none', outline: 'none',
-          fontFamily: monoFamily, fontSize: 18, fontStyle: 'italic', lineHeight: 1,
+          fontFamily: monoFamily, fontSize: 22, fontStyle: 'normal', lineHeight: 1,
           color: callsign ? 'rgba(255,255,255,0.70)' : 'rgba(255,255,255,0.30)',
           width: callsignOptions.length > 0 ? 70 : 80, padding: 0, cursor: 'text',
         }}
@@ -856,25 +870,27 @@ const FlightTile: React.FC<TileProps> = ({
   // ── Normal flex layout (before any save) ─────────────────────────────
   const normalFlexLayout = (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 14, paddingRight: 10, flex: 1, minWidth: 0, gap: 14 }}>
-        <FlexElem elemKey="startTime" style={{ position: 'relative', flexShrink: 0, marginTop: -15 }}>
+      <FlexElem elemKey="startTime" style={{ position: 'absolute', top: 4, left: 10, zIndex: 20 }}>
           {startTimeContent()}
-        </FlexElem>
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
+      </FlexElem>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', width: '100%', paddingLeft: '10%', paddingRight: 12, boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', paddingRight: 8, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
           <FlexElem elemKey="picName">{picNameContent()}</FlexElem>
           <FlexElem elemKey="coPilot">{coPilotContent()}</FlexElem>
         </div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-evenly', paddingRight: 16, paddingLeft: 8, paddingTop: 10, paddingBottom: 10, flexShrink: 0, gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ flexShrink: 0, minWidth: 'fit-content', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <FlexElem elemKey="duration">{durationContent()}</FlexElem>
           <FlexElem elemKey="event">{eventContent()}</FlexElem>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      </div>
+      <FlexElem elemKey="aircraft" style={{ position: 'absolute', bottom: 4, left: 10, zIndex: 20 }}>
+        {aircraftContent()}
+      </FlexElem>
+      <div style={{ position: 'absolute', bottom: 4, right: 12, display: 'flex', alignItems: 'center', gap: 8, zIndex: 20 }}>
           <FlexElem elemKey="area">{areaContent()}</FlexElem>
-          <FlexElem elemKey="aircraft">{aircraftContent()}</FlexElem>
           <FlexElem elemKey="callsign">{callsignContent()}</FlexElem>
-        </div>
       </div>
     </>
   );
@@ -934,6 +950,16 @@ const FlightTile: React.FC<TileProps> = ({
       </div>
 
       {/* Tile */}
+      <style>{`
+        @keyframes addFlightTileGuideGlow {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.45), inset 0 0 6px rgba(34, 211, 238, 0.16);
+          }
+          50% {
+            box-shadow: 0 0 24px rgba(34, 211, 238, 0.95), inset 0 0 14px rgba(34, 211, 238, 0.32);
+          }
+        }
+      `}</style>
       <div ref={tileRef}
         style={{
           position: 'relative',
@@ -941,10 +967,10 @@ const FlightTile: React.FC<TileProps> = ({
           height: TILE_H,
           backgroundColor: twClassToHex(color),
           border: editMode ? `3px solid rgba(255,220,60,0.7)` : `3px solid ${TILE_BORDER}`,
-          borderRadius: 10,
+          borderRadius: 4,
           boxShadow: '0 4px 18px rgba(0,0,0,0.55)',
           userSelect: 'none',
-          overflow: 'visible',
+          overflow: 'hidden',
           boxSizing: 'border-box',
           display: showAbsolute ? 'block' : 'flex',
           alignItems: showAbsolute ? undefined : 'stretch',
@@ -991,21 +1017,22 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [deploymentEndDate,    setDeploymentEndDate]    = useState(date);
   const [deploymentEndTime,    setDeploymentEndTime]    = useState('08:00');
   const [deploymentAircraftCount, setDeploymentAircraftCount] = useState(1);
+  const [guidedStep, setGuidedStep] = useState<GuideStep>('startTime');
 
   // ── Tile Layout State (lifted here so it survives modal re-renders) ─────────────
   type ElemKey = 'startTime' | 'picName' | 'coPilot' | 'duration' | 'event' | 'area' | 'aircraft' | 'callsign';
   const LAYOUT_ELEM_KEYS: ElemKey[] = ['startTime','picName','coPilot','duration','event','area','aircraft','callsign'];
   const MODAL_DEFAULT_POSITIONS: Record<ElemKey, { x: number; y: number }> = {
-    startTime: { x: 14,  y: 12 },
-    picName:   { x: 110, y: 14 },
-    coPilot:   { x: 110, y: 58 },
-    duration:  { x: 420, y: 10 },
-    event:     { x: 490, y: 10 },
-    area:      { x: 490, y: 62 },
-    aircraft:  { x: 420, y: 62 },
-    callsign:  { x: 530, y: 62 },
+    startTime: { x: 14,  y: 7 },
+    picName:   { x: 78, y: 7 },
+    coPilot:   { x: 78, y: 38 },
+    duration:  { x: 410, y: 7 },
+    event:     { x: 486, y: 7 },
+    aircraft:  { x: 14, y: 55 },
+    area:      { x: 486, y: 55 },
+    callsign:  { x: 532, y: 55 },
   };
-  const LAYOUT_PREF_KEY = 'flightTileLayout_v1';
+  const LAYOUT_PREF_KEY = 'flightTileLayout_v2';
 
   // Helper: validate a positions object has all required keys
   const isValidPositions = (posData: any): posData is Record<ElemKey, { x: number; y: number }> => {
@@ -1111,10 +1138,10 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
 
   // ── Aircraft options ──────────────────────────────────────────────────────
   const aircraftOptions = useMemo(() =>
-    Array.from({ length: 49 }, (_, i) => {
+    [{ value: '', label: 'Skip aircraft number' }, ...Array.from({ length: 49 }, (_, i) => {
       const n = String(i + 1).padStart(3, '0');
       return { value: n, label: n };
-    }), []);
+    })], []);
 
   // ── Time options (06:00–23:45, 15-min intervals) ──────────────────────────
   const timeOptions = useMemo(() => {
@@ -1330,6 +1357,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setStartTime(8.0); setDuration(1.2);
     setArea(opAreas[0] || '-'); setAircraftNumber('001');
     setCallsign(''); setCallsignOptions([]); setNotes(''); setErrors([]);
+    setGuidedStep('startTime');
   }, [eventCategory]);
 
   useEffect(() => {
@@ -1355,10 +1383,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const handleFlightNumberChange = (code: string, durationHrs?: number) => {
     setFlightNumber(code);
     if (durationHrs && durationHrs > 0) setDuration(durationHrs);
+    setGuidedStep('area');
   };
 
   const handlePicNameChange = (name: string) => {
     setPicName(name);
+    setGuidedStep('event');
   };
 
   const handleSave = () => {
@@ -1543,6 +1573,7 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   layoutSaved={tileLayoutSaved}
                   positions={tilePositions}
                   savedPositions={tileSavedPositions}
+                  activeStep={guidedStep}
                   onEnterEditMode={handleEnterEditMode}
                   onExitEditMode={handleExitEditMode}
                   onDragPosition={handleDragPosition}
@@ -1555,13 +1586,25 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                   nextLMPEvent={nextLMPEvent}
                   eventCategory={eventCategory}
                   onFlightTypeChange={setFlightType}
-                  onStartTimeChange={setStartTime}
+                  onStartTimeChange={(value) => {
+                    setStartTime(value);
+                    setGuidedStep('trainee');
+                  }}
                   onPicNameChange={handlePicNameChange}
-                  onStudentNameChange={setStudentName}
+                  onStudentNameChange={(name) => {
+                    setStudentName(name);
+                    setGuidedStep('instructor');
+                  }}
                   onDurationChange={setDuration}
                   onFlightNumberChange={handleFlightNumberChange}
-                  onAreaChange={setArea}
-                  onAircraftChange={setAircraftNumber}
+                  onAreaChange={(value) => {
+                    setArea(value);
+                    setGuidedStep('aircraft');
+                  }}
+                  onAircraftChange={(value) => {
+                    setAircraftNumber(value);
+                    setGuidedStep('done');
+                  }}
                   onAircraftPrefixChange={setAircraftNumberPrefix}
                   onCallsignChange={setCallsign}
                 />

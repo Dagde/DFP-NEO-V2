@@ -15471,24 +15471,40 @@ const FlightTile = ({
   savedPositions,
   onEnterEditMode,
   onExitEditMode,
-  onDragPosition
+  onDragPosition,
+  activeStep
 }) => {
   const TILE_BORDER = "#1a2340";
   const WHITE_FULL = "rgba(255,255,255,0.95)";
   const WHITE_DIM = "rgba(255,255,255,0.75)";
   const WHITE_GHOST = "rgba(255,255,255,0.35)";
-  const TILE_H = 110;
+  const TILE_H = 76;
   const monoFamily = 'ui-monospace, SFMono-Regular, "Courier New", monospace';
   const DEFAULT_POSITIONS = {
-    startTime: { x: 14, y: 12 },
-    picName: { x: 110, y: 14 },
-    coPilot: { x: 110, y: 58 },
-    duration: { x: 420, y: 10 },
-    event: { x: 490, y: 10 },
-    area: { x: 490, y: 62 },
-    aircraft: { x: 420, y: 62 },
-    callsign: { x: 530, y: 62 }
+    startTime: { x: 14, y: 7 },
+    picName: { x: 78, y: 7 },
+    coPilot: { x: 78, y: 38 },
+    duration: { x: 410, y: 7 },
+    event: { x: 486, y: 7 },
+    aircraft: { x: 14, y: 55 },
+    area: { x: 486, y: 55 },
+    callsign: { x: 532, y: 55 }
   };
+  const activeElemKey = reactExports.useMemo(() => {
+    if (activeStep === "startTime") return "startTime";
+    if (activeStep === "trainee") return "coPilot";
+    if (activeStep === "instructor") return "picName";
+    if (activeStep === "event") return "event";
+    if (activeStep === "area") return "area";
+    if (activeStep === "aircraft") return "aircraft";
+    return null;
+  }, [activeStep]);
+  const guideGlowStyle = (elemKey) => activeElemKey === elemKey ? {
+    borderRadius: 6,
+    background: "rgba(34, 211, 238, 0.16)",
+    boxShadow: "0 0 18px rgba(34, 211, 238, 0.85), inset 0 0 10px rgba(34, 211, 238, 0.24)",
+    animation: "addFlightTileGuideGlow 2.4s ease-in-out infinite"
+  } : {};
   const tileRef = reactExports.useRef(null);
   const elemRefs = reactExports.useRef({});
   const dragging = reactExports.useRef(null);
@@ -15548,17 +15564,6 @@ const FlightTile = ({
       window.removeEventListener("mouseup", onMouseUp);
     };
   }, [editMode, positions]);
-  const Oval = ({ children, style, minW = 0, px = 10, py = 5 }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 50,
-    padding: `${py}px ${px}px`,
-    minWidth: minW,
-    boxSizing: "border-box",
-    lineHeight: 1,
-    ...style
-  }, children });
   const AbsElem = ({ elemKey, children, draggable: isDraggable = false }) => {
     const pos = (editMode ? positions : savedPositions)[elemKey];
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -15580,7 +15585,8 @@ const FlightTile = ({
           padding: isDraggable ? 2 : 0,
           userSelect: "none",
           display: "inline-flex",
-          alignItems: "center"
+          alignItems: "center",
+          ...guideGlowStyle(elemKey)
         },
         title: isDraggable ? "Drag to reposition" : void 0,
         children
@@ -15589,9 +15595,9 @@ const FlightTile = ({
   };
   const FlexElem = ({ elemKey, children, style }) => /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: (el) => {
     elemRefs.current[elemKey] = el;
-  }, style: { display: "inline-flex", ...style }, children });
+  }, style: { display: "inline-flex", alignItems: "center", ...guideGlowStyle(elemKey), ...style }, children });
   const startTimeContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Oval, { px: 12, py: 6, minW: 72, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 22, fontWeight: 600, color: WHITE_FULL, lineHeight: 1, letterSpacing: 1 }, children: formatTime$3(startTime) }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 600, color: WHITE_DIM, lineHeight: 1, letterSpacing: 0 }, children: formatTime$3(startTime) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
@@ -15611,7 +15617,7 @@ const FlightTile = ({
       getLayer2,
       getNames,
       placeholder: "Surname, First (N)",
-      fontSize: 30,
+      fontSize: 28,
       color: picName ? WHITE_FULL : WHITE_GHOST,
       bold: true,
       dropdownId: "pic-dropdown-portal"
@@ -15630,7 +15636,7 @@ const FlightTile = ({
         getLayer2,
         getNames,
         placeholder: "Surname, First (N)",
-        fontSize: 22,
+        fontSize: 26,
         color: studentName ? WHITE_DIM : WHITE_GHOST,
         allowSolo: true,
         onSoloSelect: () => onFlightTypeChange("Solo"),
@@ -15647,11 +15653,11 @@ const FlightTile = ({
     );
   };
   const durationContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Oval, { px: 10, py: 5, minW: 58, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 18, fontWeight: 700, color: WHITE_FULL, lineHeight: 1 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 24, fontWeight: 700, color: WHITE_DIM, lineHeight: 1 }, children: [
       "[",
       duration.toFixed(1),
       "]"
-    ] }) }),
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
@@ -15664,9 +15670,9 @@ const FlightTile = ({
   ] });
   const eventContent = () => {
     if (eventCategory === "twr_di") {
-      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { position: "relative" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Oval, { px: 10, py: 5, minW: 58, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 18, color: WHITE_FULL, lineHeight: 1 }, children: "TWR DI" }) }) });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { position: "relative" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 26, color: WHITE_FULL, lineHeight: 1 }, children: "TWR DI" }) });
     }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { position: "relative" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Oval, { px: 10, py: 5, minW: 58, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { position: "relative" }, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
       EventDropdown,
       {
         value: flightNumber,
@@ -15674,13 +15680,13 @@ const FlightTile = ({
         courseOptions,
         getEventsForCourse,
         nextLMPEvent,
-        fontSize: 18,
+        fontSize: 26,
         color: flightNumber ? WHITE_FULL : WHITE_GHOST
       }
-    ) }) });
+    ) });
   };
   const areaContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(Oval, { px: 10, py: 5, minW: 42, children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 18, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_FULL : "rgba(255,220,60,0.95)", lineHeight: 1 }, children: area || "-" }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 24, fontWeight: 600, color: /^[A-H]$/.test(area) ? WHITE_DIM : "rgba(255,220,60,0.95)", lineHeight: 1 }, children: area || "-" }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
@@ -15692,10 +15698,7 @@ const FlightTile = ({
     )
   ] });
   const aircraftContent = (zOverride) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "relative" }, children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { style: { fontFamily: monoFamily, fontSize: 18, color: "rgba(255,255,255,0.55)", lineHeight: 1 }, children: [
-      "#",
-      formatAircraftNumber(aircraftNumber || "001", aircraftNumberPrefix, aircraftNumberSettings)
-    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontFamily: monoFamily, fontSize: 22, color: aircraftNumber ? WHITE_DIM : "rgba(255,255,255,0.35)", lineHeight: 1 }, children: aircraftNumber || "SKIP" }),
     aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
       "select",
       {
@@ -15728,8 +15731,8 @@ const FlightTile = ({
           border: "none",
           outline: "none",
           fontFamily: monoFamily,
-          fontSize: 18,
-          fontStyle: "italic",
+          fontSize: 22,
+          fontStyle: "normal",
           lineHeight: 1,
           color: callsign ? "rgba(255,255,255,0.70)" : "rgba(255,255,255,0.30)",
           width: callsignOptions.length > 0 ? 70 : 80,
@@ -15764,23 +15767,21 @@ const FlightTile = ({
     ] })
   ] });
   const normalFlexLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", paddingLeft: 14, paddingRight: 10, flex: 1, minWidth: 0, gap: 14 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "startTime", style: { position: "relative", flexShrink: 0, marginTop: -15 }, children: startTimeContent() }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "startTime", style: { position: "absolute", top: 4, left: 10, zIndex: 20 }, children: startTimeContent() }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", height: "100%", width: "100%", paddingLeft: "10%", paddingRight: 12, boxSizing: "border-box" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { flex: 1, minWidth: 0, overflow: "hidden", paddingRight: 8, display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "picName", children: picNameContent() }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "coPilot", children: coPilotContent() })
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "space-evenly", paddingRight: 16, paddingLeft: 8, paddingTop: 10, paddingBottom: 10, flexShrink: 0, gap: 6 }, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flexShrink: 0, minWidth: "fit-content", height: "100%", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "flex-start", paddingTop: 8 }, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 12 }, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "duration", children: durationContent() }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "event", children: eventContent() })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 8 }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", children: areaContent() }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "aircraft", children: aircraftContent() }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", children: callsignContent() })
-      ] })
+      ] }) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "aircraft", style: { position: "absolute", bottom: 4, left: 10, zIndex: 20 }, children: aircraftContent() }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { position: "absolute", bottom: 4, right: 12, display: "flex", alignItems: "center", gap: 8, zIndex: 20 }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "area", children: areaContent() }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(FlexElem, { elemKey: "callsign", children: callsignContent() })
     ] })
   ] });
   const savedAbsLayout = /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -15834,6 +15835,16 @@ const FlightTile = ({
         }
       )
     ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("style", { children: `
+        @keyframes addFlightTileGuideGlow {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.45), inset 0 0 6px rgba(34, 211, 238, 0.16);
+          }
+          50% {
+            box-shadow: 0 0 24px rgba(34, 211, 238, 0.95), inset 0 0 14px rgba(34, 211, 238, 0.32);
+          }
+        }
+      ` }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       "div",
       {
@@ -15844,10 +15855,10 @@ const FlightTile = ({
           height: TILE_H,
           backgroundColor: twClassToHex(color),
           border: editMode ? `3px solid rgba(255,220,60,0.7)` : `3px solid ${TILE_BORDER}`,
-          borderRadius: 10,
+          borderRadius: 4,
           boxShadow: "0 4px 18px rgba(0,0,0,0.55)",
           userSelect: "none",
-          overflow: "visible",
+          overflow: "hidden",
           boxSizing: "border-box",
           display: showAbsolute ? "block" : "flex",
           alignItems: showAbsolute ? void 0 : "stretch"
@@ -15898,18 +15909,19 @@ const AddFlightTileModal = ({
   const [deploymentEndDate, setDeploymentEndDate] = reactExports.useState(date);
   const [deploymentEndTime, setDeploymentEndTime] = reactExports.useState("08:00");
   const [deploymentAircraftCount, setDeploymentAircraftCount] = reactExports.useState(1);
+  const [guidedStep, setGuidedStep] = reactExports.useState("startTime");
   const LAYOUT_ELEM_KEYS = ["startTime", "picName", "coPilot", "duration", "event", "area", "aircraft", "callsign"];
   const MODAL_DEFAULT_POSITIONS = {
-    startTime: { x: 14, y: 12 },
-    picName: { x: 110, y: 14 },
-    coPilot: { x: 110, y: 58 },
-    duration: { x: 420, y: 10 },
-    event: { x: 490, y: 10 },
-    area: { x: 490, y: 62 },
-    aircraft: { x: 420, y: 62 },
-    callsign: { x: 530, y: 62 }
+    startTime: { x: 14, y: 7 },
+    picName: { x: 78, y: 7 },
+    coPilot: { x: 78, y: 38 },
+    duration: { x: 410, y: 7 },
+    event: { x: 486, y: 7 },
+    aircraft: { x: 14, y: 55 },
+    area: { x: 486, y: 55 },
+    callsign: { x: 532, y: 55 }
   };
-  const LAYOUT_PREF_KEY = "flightTileLayout_v1";
+  const LAYOUT_PREF_KEY = "flightTileLayout_v2";
   const isValidPositions = (posData) => {
     return posData && typeof posData === "object" && LAYOUT_ELEM_KEYS.every((k) => posData[k] && typeof posData[k].x === "number");
   };
@@ -15988,10 +16000,10 @@ const AddFlightTileModal = ({
     setArea(opAreas[0] || "-");
   }, [opAreas]);
   const areaOptions = reactExports.useMemo(() => opAreas.map((a) => ({ value: a, label: a })), [opAreas]);
-  const aircraftOptions = reactExports.useMemo(() => Array.from({ length: 49 }, (_, i) => {
+  const aircraftOptions = reactExports.useMemo(() => [{ value: "", label: "Skip aircraft number" }, ...Array.from({ length: 49 }, (_, i) => {
     const n = String(i + 1).padStart(3, "0");
     return { value: n, label: n };
-  }), []);
+  })], []);
   const timeOptions = reactExports.useMemo(() => {
     const opts = [];
     for (let h = 6; h <= 23; h++) {
@@ -16175,6 +16187,7 @@ const AddFlightTileModal = ({
     setCallsignOptions([]);
     setNotes("");
     setErrors([]);
+    setGuidedStep("startTime");
   }, [eventCategory]);
   reactExports.useEffect(() => {
     if (eventCategory === "sct" || eventCategory === "twr_di") setFlightType("Solo");
@@ -16194,9 +16207,11 @@ const AddFlightTileModal = ({
   const handleFlightNumberChange = (code, durationHrs) => {
     setFlightNumber(code);
     if (durationHrs && durationHrs > 0) setDuration(durationHrs);
+    setGuidedStep("area");
   };
   const handlePicNameChange = (name) => {
     setPicName(name);
+    setGuidedStep("event");
   };
   const handleSave = () => {
     const errs = [];
@@ -16376,6 +16391,7 @@ const AddFlightTileModal = ({
                     layoutSaved: tileLayoutSaved,
                     positions: tilePositions,
                     savedPositions: tileSavedPositions,
+                    activeStep: guidedStep,
                     onEnterEditMode: handleEnterEditMode,
                     onExitEditMode: handleExitEditMode,
                     onDragPosition: handleDragPosition,
@@ -16388,13 +16404,25 @@ const AddFlightTileModal = ({
                     nextLMPEvent,
                     eventCategory,
                     onFlightTypeChange: setFlightType,
-                    onStartTimeChange: setStartTime,
+                    onStartTimeChange: (value) => {
+                      setStartTime(value);
+                      setGuidedStep("trainee");
+                    },
                     onPicNameChange: handlePicNameChange,
-                    onStudentNameChange: setStudentName,
+                    onStudentNameChange: (name) => {
+                      setStudentName(name);
+                      setGuidedStep("instructor");
+                    },
                     onDurationChange: setDuration,
                     onFlightNumberChange: handleFlightNumberChange,
-                    onAreaChange: setArea,
-                    onAircraftChange: setAircraftNumber,
+                    onAreaChange: (value) => {
+                      setArea(value);
+                      setGuidedStep("aircraft");
+                    },
+                    onAircraftChange: (value) => {
+                      setAircraftNumber(value);
+                      setGuidedStep("done");
+                    },
                     onAircraftPrefixChange: setAircraftNumberPrefix,
                     onCallsignChange: setCallsign
                   }
