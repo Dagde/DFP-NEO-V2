@@ -13034,6 +13034,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [origin, setOrigin] = reactExports.useState(event.origin || school);
   const [destination, setDestination] = reactExports.useState(event.destination || school);
   const [formationType, setFormationType] = reactExports.useState(event.formationType || "");
+  const [callsign, setCallsign] = reactExports.useState(event.callsign || "");
+  const [notes, setNotes] = reactExports.useState(event.notes || "");
   const [isDeploy, setIsDeploy] = reactExports.useState(event.isDeploy || false);
   const [selectedDeploymentId, setSelectedDeploymentId] = reactExports.useState("");
   const [deploymentStartDate, setDeploymentStartDate] = reactExports.useState(event.deploymentStartDate || event.date);
@@ -13414,6 +13416,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
     setOrigin(event.origin || school);
     setDestination(event.destination || school);
     setFormationType(event.formationType || formationTypes[0]);
+    setCallsign(event.callsign || "");
+    setNotes(event.notes || "");
     setIsDeploy(event.isDeploy || false);
     setDeploymentStartDate(event.deploymentStartDate || event.date);
     setDeploymentStartTime(event.deploymentStartTime || "");
@@ -13687,8 +13691,9 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         destination: locationType === "Local" ? school : destination,
         formationType: flightNumber === "SCT FORM" ? formationType : void 0,
         formationPosition: flightNumber === "SCT FORM" ? index + 1 : void 0,
-        callsign: flightNumber === "SCT FORM" ? `${formationType}${index + 1}` : void 0,
+        callsign: flightNumber === "SCT FORM" ? `${formationType}${index + 1}` : callsign,
         formationId: void 0,
+        notes,
         isDeploy: eventType === "flight" && locationType === "Land Away" ? isDeploy : void 0,
         // Explicit Deployment Period
         deploymentStartDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentStartDate : void 0,
@@ -14173,16 +14178,16 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             ] })
           ] })
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-6", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400 mb-3", children: "Event Category" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-5 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-y-auto p-6", children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2", children: "Event Category" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
                   onClick: () => setEventCategory("lmp_event"),
-                  className: `px-4 py-3 rounded-lg font-semibold text-sm transition-all ${eventCategory === "lmp_event" ? "bg-sky-600 text-white shadow-lg ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                  className: `px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${eventCategory === "lmp_event" ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
                   children: "LMP Event"
                 }
               ),
@@ -14191,7 +14196,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 {
                   type: "button",
                   onClick: () => setEventCategory("lmp_currency"),
-                  className: `px-4 py-3 rounded-lg font-semibold text-sm transition-all ${eventCategory === "lmp_currency" ? "bg-sky-600 text-white shadow-lg ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                  className: `px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${eventCategory === "lmp_currency" ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
                   children: "LMP Currency"
                 }
               ),
@@ -14200,7 +14205,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 {
                   type: "button",
                   onClick: () => setEventCategory("sct"),
-                  className: `px-4 py-3 rounded-lg font-semibold text-sm transition-all ${eventCategory === "sct" ? "bg-sky-600 text-white shadow-lg ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                  className: `px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${eventCategory === "sct" ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
                   children: "SCT"
                 }
               ),
@@ -14209,7 +14214,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 {
                   type: "button",
                   onClick: () => setEventCategory("staff_cat"),
-                  className: `px-4 py-3 rounded-lg font-semibold text-sm transition-all ${eventCategory === "staff_cat" ? "bg-sky-600 text-white shadow-lg ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                  className: `px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${eventCategory === "staff_cat" ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
                   children: "Staff CAT"
                 }
               ),
@@ -14218,7 +14223,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 {
                   type: "button",
                   onClick: () => setEventCategory("twr_di"),
-                  className: `px-4 py-3 rounded-lg font-semibold text-sm transition-all ${eventCategory === "twr_di" ? "bg-sky-600 text-white shadow-lg ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
+                  className: `px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${eventCategory === "twr_di" ? "bg-sky-600 text-white ring-2 ring-sky-400" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`,
                   children: "TWR DI"
                 }
               ),
@@ -14227,7 +14232,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Start Time" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Start Time" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "select",
                 {
@@ -14243,7 +14248,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative md:col-span-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Syllabus Item" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Syllabus Item" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 "select",
                 {
@@ -14264,7 +14269,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Duration" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Duration" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -14280,7 +14285,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
             ] }),
             eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-center text-sm font-medium text-gray-400", children: "Aircraft Number" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-center text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft Number" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-stretch", children: [
                   aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "select",
@@ -14309,30 +14314,46 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 ] })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Area" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Area" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: area, onChange: (e) => setArea(e.target.value), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: areas.map((a) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: a, children: a }, a)) })
               ] })
             ] })
           ] }),
-          eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Location" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: locationType,
-                onChange: (e) => setLocationType(e.target.value),
-                disabled: isDeploy,
-                className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Local", children: "Local" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Land Away", children: "Land Away" })
-                ]
-              }
-            )
+          eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Location" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "select",
+                {
+                  value: locationType,
+                  onChange: (e) => setLocationType(e.target.value),
+                  disabled: isDeploy,
+                  className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Local", children: "Local" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Land Away", children: "Land Away" })
+                  ]
+                }
+              )
+            ] }),
+            flightNumber !== "SCT FORM" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Callsign" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "input",
+                {
+                  type: "text",
+                  value: callsign,
+                  onChange: (e) => setCallsign(e.target.value.toUpperCase()),
+                  disabled: isDeploy,
+                  placeholder: "Optional callsign",
+                  className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                }
+              )
+            ] })
           ] }),
           eventType === "flight" && locationType === "Land Away" && !isDeploy && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Origin" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Origin" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -14346,7 +14367,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               )
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Destination" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Destination" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
@@ -14420,6 +14441,19 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 /* @__PURE__ */ jsxRuntimeExports.jsx("select", { value: aircraftCount, onChange: (e) => setAircraftCount(parseInt(e.target.value)), disabled: isDeploy, className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed", children: Array.from({ length: 7 }, (_, i) => i + 2).map((n) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: n, children: n }, n)) })
               ] })
             ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "textarea",
+              {
+                value: notes,
+                onChange: (e) => setNotes(e.target.value),
+                rows: 2,
+                placeholder: "Optional notes...",
+                className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
+              }
+            )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-4", children: crew.map(renderCrewFields) }),
           (eventType === "flight" || eventType === "ftd" || eventType === "cpt") && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "border-t border-gray-600 pt-6 mt-6", children: [
@@ -15337,12 +15371,7 @@ const EventDropdown = ({
             "div",
             {
               onMouseEnter: () => setHovCourse(course),
-              onClick: () => {
-                if (course === "SCT") {
-                  onChange("SCT");
-                  setOpen(false);
-                }
-              },
+              onClick: () => setHovCourse(course),
               style: {
                 padding: "9px 12px",
                 fontSize: 13,
@@ -15356,12 +15385,36 @@ const EventDropdown = ({
               },
               children: [
                 course,
-                course !== "SCT" && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: { fontSize: 9, opacity: 0.5 }, children: "▶" })
               ]
             },
             course
           )) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: hovCourse && hovCourse !== "SCT" ? getEventsForCourse(hovCourse).map((ev) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { flex: 1, overflowY: "auto", maxHeight: 320, backgroundColor: "#16293f" }, children: hovCourse === "SCT" ? ["SCT", "SCT FORM"].map((code) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "div",
+            {
+              onClick: () => {
+                onChange(code);
+                setOpen(false);
+                setHovCourse(null);
+              },
+              style: {
+                padding: "9px 12px",
+                fontSize: 13,
+                cursor: "pointer",
+                color: "#fff",
+                backgroundColor: "transparent",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                whiteSpace: "nowrap"
+              },
+              onMouseEnter: (e) => e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.1)",
+              onMouseLeave: (e) => e.currentTarget.style.backgroundColor = "transparent",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: code })
+            },
+            code
+          )) : hovCourse ? getEventsForCourse(hovCourse).map((ev) => {
             const code = ev.code || ev.id || "";
             const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
             return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -15901,6 +15954,11 @@ const AddFlightTileModal = ({
   const [aircraftNumber, setAircraftNumber] = reactExports.useState("001");
   const [aircraftNumberPrefix, setAircraftNumberPrefix] = reactExports.useState(aircraftNumberSettings.defaultPrefix);
   const [locationType, setLocationType] = reactExports.useState("Local");
+  const [origin, setOrigin] = reactExports.useState(school);
+  const [destination, setDestination] = reactExports.useState(school);
+  const [formationType, setFormationType] = reactExports.useState("");
+  const [aircraftCount, setAircraftCount] = reactExports.useState(1);
+  const [formationCrew, setFormationCrew] = reactExports.useState([]);
   const [callsign, setCallsign] = reactExports.useState("");
   const [callsignOptions, setCallsignOptions] = reactExports.useState([]);
   const [notes, setNotes] = reactExports.useState("");
@@ -15992,6 +16050,14 @@ const AddFlightTileModal = ({
     setTilePositions((prev) => ({ ...prev, [key]: pos }));
   };
   const locationFullName = school === "ESL" ? "East Sale" : "Pearce";
+  const filteredFormationCallsigns = reactExports.useMemo(() => {
+    const matches = (formationCallsigns || []).filter((fc) => fc.location === locationFullName);
+    return matches.length > 0 ? matches : null;
+  }, [formationCallsigns, locationFullName]);
+  const formationTypes = reactExports.useMemo(() => {
+    if (filteredFormationCallsigns) return filteredFormationCallsigns.map((cs) => cs.code);
+    return school === "ESL" ? ["MERL", "VANG"] : ["COBR", "HAWK"];
+  }, [filteredFormationCallsigns, school]);
   const opAreas = reactExports.useMemo(() => {
     const areas = locationOpAreas[locationFullName];
     if (areas && areas.length > 0) return areas;
@@ -16001,6 +16067,17 @@ const AddFlightTileModal = ({
   reactExports.useEffect(() => {
     setArea(opAreas[0] || "-");
   }, [opAreas]);
+  reactExports.useEffect(() => {
+    setOrigin(school);
+    setDestination(school);
+  }, [school]);
+  reactExports.useEffect(() => {
+    if (!formationType && formationTypes.length > 0) setFormationType(formationTypes[0]);
+  }, [formationType, formationTypes]);
+  reactExports.useEffect(() => {
+    const additionalCrewCount = flightNumber === "SCT FORM" ? Math.max(0, aircraftCount - 1) : 0;
+    setFormationCrew((prev) => Array.from({ length: additionalCrewCount }, (_, index) => prev[index] || { flightType: "Solo", picName: "", studentName: "", callsign: `${formationType || formationTypes[0] || ""}${index + 2}` }));
+  }, [aircraftCount, flightNumber, formationType, formationTypes]);
   const areaOptions = reactExports.useMemo(() => opAreas.map((a) => ({ value: a, label: a })), [opAreas]);
   const aircraftOptions = reactExports.useMemo(() => [{ value: "", label: "Skip aircraft number" }, ...Array.from({ length: 49 }, (_, i) => {
     const n = String(i + 1).padStart(3, "0");
@@ -16185,6 +16262,10 @@ const AddFlightTileModal = ({
     setDuration(1.2);
     setArea(opAreas[0] || "-");
     setAircraftNumber("001");
+    setOrigin(school);
+    setDestination(school);
+    setAircraftCount(1);
+    setFormationCrew([]);
     setCallsign("");
     setCallsignOptions([]);
     setNotes("");
@@ -16198,6 +16279,15 @@ const AddFlightTileModal = ({
   reactExports.useEffect(() => {
     if (eventCategory === "lmp_currency") setFlightNumber("CURR");
   }, [eventCategory]);
+  reactExports.useEffect(() => {
+    if (flightNumber === "SCT FORM") {
+      setAircraftCount((prev) => Math.max(prev, 2));
+      setFlightType("Solo");
+    } else {
+      setAircraftCount(1);
+      setFormationCrew([]);
+    }
+  }, [flightNumber]);
   reactExports.useEffect(() => {
     const name = flightType === "Solo" ? picName : studentName;
     if (!name || !flightNumber || !traineeLMPs) return;
@@ -16226,6 +16316,9 @@ const AddFlightTileModal = ({
     setPicName(name);
     setGuidedStep("event");
   };
+  const updateFormationCrew = (index, updates) => {
+    setFormationCrew((prev) => prev.map((crewMember, crewIndex) => crewIndex === index ? { ...crewMember, ...updates } : crewMember));
+  };
   const handleSave = () => {
     const errs = [];
     if (isDeploy) {
@@ -16236,6 +16329,13 @@ const AddFlightTileModal = ({
       if (flightType === "Dual" && !picName) errs.push("Instructor / PIC is required for Dual flights.");
       if (flightType === "Dual" && !studentName) errs.push("Co-Pilot / Student is required for Dual flights.");
       if (flightType === "Solo" && !picName) errs.push("Pilot is required for Solo flights.");
+      if (locationType === "Land Away" && (!origin || !destination)) errs.push("Origin and destination are required for land away flights.");
+      if (flightNumber === "SCT FORM") {
+        formationCrew.forEach((crewMember, index) => {
+          if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
+          if (crewMember.flightType === "Dual" && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
+        });
+      }
       if (!duration || duration <= 0) errs.push("Duration must be greater than 0.");
     }
     if (errs.length > 0) {
@@ -16244,30 +16344,45 @@ const AddFlightTileModal = ({
     }
     const eventsToSave = [];
     if (!isDeploy) {
-      eventsToSave.push({
-        id: v4(),
-        date,
-        type: "flight",
-        eventCategory,
-        flightType,
-        flightNumber: eventCategory === "twr_di" ? "TWR DI" : flightNumber,
-        instructor: flightType === "Dual" ? picName : "",
-        student: flightType === "Dual" ? studentName : "",
-        pilot: picName,
-        startTime,
-        duration,
-        area,
-        aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
-        callsign,
-        locationType,
-        color: tileColor,
-        resourceId: "",
-        notes,
-        group: "",
-        groupTraineeIds: [],
-        attendees: [],
-        origin: "",
-        destination: ""
+      const isFormation = flightNumber === "SCT FORM";
+      const crewDrafts = isFormation ? [
+        { flightType, picName, studentName, callsign: formationType ? `${formationType}1` : callsign },
+        ...formationCrew.map((crewMember, index) => ({
+          ...crewMember,
+          callsign: crewMember.callsign || (formationType ? `${formationType}${index + 2}` : "")
+        }))
+      ] : [{ flightType, picName, studentName, callsign }];
+      crewDrafts.forEach((crewMember, index) => {
+        const savedFlightType = isFormation ? crewMember.flightType : flightType;
+        const savedCallsign = isFormation ? formationType ? `${formationType}${index + 1}` : crewMember.callsign : crewMember.callsign;
+        eventsToSave.push({
+          id: v4(),
+          date,
+          type: "flight",
+          eventCategory,
+          flightType: savedFlightType,
+          flightNumber: eventCategory === "twr_di" ? "TWR DI" : flightNumber,
+          instructor: isFormation ? "" : savedFlightType === "Dual" ? crewMember.picName : "",
+          student: savedFlightType === "Dual" ? crewMember.studentName : "",
+          pilot: crewMember.picName,
+          startTime,
+          duration,
+          area,
+          aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
+          callsign: savedCallsign,
+          locationType,
+          color: tileColor,
+          resourceId: "",
+          notes,
+          group: "",
+          groupTraineeIds: [],
+          attendees: [],
+          origin: locationType === "Local" ? school : origin,
+          destination: locationType === "Local" ? school : destination,
+          formationType: isFormation ? formationType : void 0,
+          formationPosition: isFormation ? index + 1 : void 0,
+          formationId: void 0
+        });
       });
     } else {
       const parseHrs = (t) => {
@@ -16569,6 +16684,125 @@ const AddFlightTileModal = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Date" }),
                       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full bg-gray-700/50 border border-gray-600 rounded-md py-2 px-3 text-gray-300 text-sm font-mono", children: formatDate$3(date) })
                     ] })
+                  ] }),
+                  locationType === "Land Away" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4 mt-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Origin" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "text",
+                          value: origin,
+                          onChange: (e) => setOrigin(e.target.value.toUpperCase()),
+                          maxLength: 4,
+                          placeholder: "ESL",
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                        }
+                      )
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Destination" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "text",
+                          value: destination,
+                          onChange: (e) => setDestination(e.target.value.toUpperCase()),
+                          maxLength: 4,
+                          placeholder: "PEA",
+                          className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                        }
+                      )
+                    ] })
+                  ] }),
+                  flightNumber === "SCT FORM" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-4 rounded-lg border border-gray-600 bg-gray-800/70 p-4", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Formation Callsign" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "select",
+                          {
+                            value: formationType,
+                            onChange: (e) => setFormationType(e.target.value),
+                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
+                            children: filteredFormationCallsigns ? filteredFormationCallsigns.map((cs) => /* @__PURE__ */ jsxRuntimeExports.jsxs("option", { value: cs.code, children: [
+                              cs.name,
+                              " (",
+                              cs.code,
+                              ")"
+                            ] }, cs.code)) : formationTypes.map((type) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: type, children: type }, type))
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft Count" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "select",
+                          {
+                            value: aircraftCount,
+                            onChange: (e) => setAircraftCount(parseInt(e.target.value, 10)),
+                            className: "w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500",
+                            children: Array.from({ length: 7 }, (_, i) => i + 2).map((count) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: count, children: count }, count))
+                          }
+                        )
+                      ] })
+                    ] }),
+                    formationCrew.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-3", children: formationCrew.map((crewMember, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[90px_1fr_1fr] gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Aircraft" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center", children: [
+                          formationType,
+                          index + 2
+                        ] })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Pilot" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          PersonDropdown,
+                          {
+                            value: crewMember.picName,
+                            displayValue: crewMember.picName,
+                            onChange: (name) => updateFormationCrew(index, { picName: name }),
+                            allUnits,
+                            getLayer2,
+                            getNames,
+                            placeholder: "Select pilot",
+                            fontSize: 14,
+                            color: crewMember.picName ? "#fff" : "rgba(255,255,255,0.45)",
+                            bold: true,
+                            dropdownId: `formation-pic-dropdown-${index}`
+                          }
+                        ) })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Crew" }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm", children: crewMember.flightType === "Dual" ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          PersonDropdown,
+                          {
+                            value: crewMember.studentName,
+                            displayValue: crewMember.studentName,
+                            onChange: (name) => updateFormationCrew(index, { studentName: name }),
+                            allUnits,
+                            getLayer2,
+                            getNames,
+                            placeholder: "Select crew",
+                            fontSize: 14,
+                            color: crewMember.studentName ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.45)",
+                            allowSolo: true,
+                            onSoloSelect: () => updateFormationCrew(index, { flightType: "Solo", studentName: "" }),
+                            dropdownId: `formation-crew-dropdown-${index}`
+                          }
+                        ) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          "button",
+                          {
+                            type: "button",
+                            onClick: () => updateFormationCrew(index, { flightType: "Dual" }),
+                            className: "w-full text-left text-sm font-semibold text-amber-300",
+                            children: "SOLO"
+                          }
+                        ) })
+                      ] })
+                    ] }, index)) })
                   ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-3", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1", children: "Notes" }),

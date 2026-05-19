@@ -45,6 +45,12 @@ const formatDate = (dateStr: string): string => {
 };
 
 type GuideStep = 'startTime' | 'trainee' | 'instructor' | 'event' | 'area' | 'aircraft' | 'done';
+type FormationCrewDraft = {
+  flightType: 'Dual' | 'Solo';
+  picName: string;
+  studentName: string;
+  callsign: string;
+};
 
 // ─── Scale constants for the large interactive tile ─────────────────────────
 //
@@ -408,12 +414,7 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
           <div
             key={course}
             onMouseEnter={() => setHovCourse(course)}
-            onClick={() => {
-              if (course === 'SCT') {
-                onChange('SCT');
-                setOpen(false);
-              }
-            }}
+            onClick={() => setHovCourse(course)}
             style={{
               padding: '9px 12px', fontSize: 13, cursor: 'pointer',
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -423,14 +424,36 @@ const EventDropdown: React.FC<EventDropdownProps> = ({
             }}
           >
             {course}
-            {course !== 'SCT' && <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>}
+            <span style={{ fontSize: 9, opacity: 0.5 }}>▶</span>
           </div>
         ))}
       </div>
 
       {/* Col 2: Events */}
       <div style={{ flex: 1, overflowY: 'auto', maxHeight: 320, backgroundColor: '#16293f' }}>
-        {hovCourse && hovCourse !== 'SCT' ? (
+        {hovCourse === 'SCT' ? (
+          ['SCT', 'SCT FORM'].map(code => (
+            <div
+              key={code}
+              onClick={() => {
+                onChange(code);
+                setOpen(false);
+                setHovCourse(null);
+              }}
+              style={{
+                padding: '9px 12px', fontSize: 13, cursor: 'pointer',
+                color: '#fff',
+                backgroundColor: 'transparent',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <span>{code}</span>
+            </div>
+          ))
+        ) : hovCourse ? (
           getEventsForCourse(hovCourse).map(ev => {
             const code = ev.code || ev.id || '';
             const isNext = nextLMPEvent && (nextLMPEvent.code === code || nextLMPEvent.id === code);
@@ -1011,6 +1034,11 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   const [aircraftNumber,setAircraftNumber]= useState('001');
   const [aircraftNumberPrefix,setAircraftNumberPrefix]= useState(aircraftNumberSettings.defaultPrefix);
   const [locationType,  setLocationType]  = useState<'Local'|'Land Away'>('Local');
+  const [origin,        setOrigin]        = useState(school);
+  const [destination,   setDestination]   = useState(school);
+  const [formationType, setFormationType] = useState('');
+  const [aircraftCount, setAircraftCount] = useState(1);
+  const [formationCrew, setFormationCrew] = useState<FormationCrewDraft[]>([]);
   const [callsign,      setCallsign]      = useState('');
   const [callsignOptions, setCallsignOptions] = useState<string[]>([]);
   const [notes,         setNotes]         = useState('');
@@ -1124,6 +1152,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   // ── Determine the current location full name from school ──────────────────
   const locationFullName = school === 'ESL' ? 'East Sale' : 'Pearce';
 
+  const filteredFormationCallsigns = useMemo(() => {
+    const matches = (formationCallsigns || []).filter(fc => fc.location === locationFullName);
+    return matches.length > 0 ? matches : null;
+  }, [formationCallsigns, locationFullName]);
+
+  const formationTypes = useMemo(() => {
+    if (filteredFormationCallsigns) return filteredFormationCallsigns.map(cs => cs.code);
+    return school === 'ESL' ? ['MERL', 'VANG'] : ['COBR', 'HAWK'];
+  }, [filteredFormationCallsigns, school]);
+
   // ── Op Areas for this location ────────────────────────────────────────────
   const opAreas = useMemo(() => {
     const areas = locationOpAreas[locationFullName];
@@ -1137,6 +1175,22 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   useEffect(() => {
     setArea(opAreas[0] || '-');
   }, [opAreas]);
+
+  useEffect(() => {
+    setOrigin(school);
+    setDestination(school);
+  }, [school]);
+
+  useEffect(() => {
+    if (!formationType && formationTypes.length > 0) setFormationType(formationTypes[0]);
+  }, [formationType, formationTypes]);
+
+  useEffect(() => {
+    const additionalCrewCount = flightNumber === 'SCT FORM' ? Math.max(0, aircraftCount - 1) : 0;
+    setFormationCrew(prev => Array.from({ length: additionalCrewCount }, (_, index) => (
+      prev[index] || { flightType: 'Solo', picName: '', studentName: '', callsign: `${formationType || formationTypes[0] || ''}${index + 2}` }
+    )));
+  }, [aircraftCount, flightNumber, formationType, formationTypes]);
 
   const areaOptions = useMemo(() => opAreas.map(a => ({ value: a, label: a })), [opAreas]);
 
@@ -1360,6 +1414,8 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setPicName(''); setStudentName(''); setFlightNumber('');
     setStartTime(8.0); setDuration(1.2);
     setArea(opAreas[0] || '-'); setAircraftNumber('001');
+    setOrigin(school); setDestination(school);
+    setAircraftCount(1); setFormationCrew([]);
     setCallsign(''); setCallsignOptions([]); setNotes(''); setErrors([]);
     setGuidedStep('startTime');
   }, [eventCategory]);
@@ -1372,6 +1428,16 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
   useEffect(() => {
     if (eventCategory === 'lmp_currency') setFlightNumber('CURR');
   }, [eventCategory]);
+
+  useEffect(() => {
+    if (flightNumber === 'SCT FORM') {
+      setAircraftCount(prev => Math.max(prev, 2));
+      setFlightType('Solo');
+    } else {
+      setAircraftCount(1);
+      setFormationCrew([]);
+    }
+  }, [flightNumber]);
 
   // ── Set sortie type from LMP item when event chosen ───────────────────────
   useEffect(() => {
@@ -1412,6 +1478,12 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     setGuidedStep('event');
   };
 
+  const updateFormationCrew = (index: number, updates: Partial<FormationCrewDraft>) => {
+    setFormationCrew(prev => prev.map((crewMember, crewIndex) => (
+      crewIndex === index ? { ...crewMember, ...updates } : crewMember
+    )));
+  };
+
   const handleSave = () => {
     const errs: string[] = [];
     if (isDeploy) {
@@ -1422,6 +1494,13 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
       if (flightType === 'Dual' && !picName) errs.push('Instructor / PIC is required for Dual flights.');
       if (flightType === 'Dual' && !studentName) errs.push('Co-Pilot / Student is required for Dual flights.');
       if (flightType === 'Solo' && !picName) errs.push('Pilot is required for Solo flights.');
+      if (locationType === 'Land Away' && (!origin || !destination)) errs.push('Origin and destination are required for land away flights.');
+      if (flightNumber === 'SCT FORM') {
+        formationCrew.forEach((crewMember, index) => {
+          if (!crewMember.picName) errs.push(`Aircraft ${index + 2} pilot is required.`);
+          if (crewMember.flightType === 'Dual' && !crewMember.studentName) errs.push(`Aircraft ${index + 2} crew is required.`);
+        });
+      }
       if (!duration || duration <= 0) errs.push('Duration must be greater than 0.');
     }
     if (errs.length > 0) { setErrors(errs); return; }
@@ -1429,31 +1508,49 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
     const eventsToSave: ScheduleEvent[] = [];
 
     if (!isDeploy) {
-      eventsToSave.push({
-        id: uuidv4(),
-        date,
-        type: 'flight',
-        eventCategory,
-        flightType,
-        flightNumber: eventCategory === 'twr_di' ? 'TWR DI' : flightNumber,
-        instructor: flightType === 'Dual' ? picName : '',
-        student: flightType === 'Dual' ? studentName : '',
-        pilot: picName,
-        startTime,
-        duration,
-        area,
-        aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
-        callsign,
-        locationType,
-        color: tileColor,
-        resourceId: '',
-        notes,
-        group: '',
-        groupTraineeIds: [],
-        attendees: [],
-        origin: '',
-        destination: '',
-      } as any);
+      const isFormation = flightNumber === 'SCT FORM';
+      const crewDrafts: FormationCrewDraft[] = isFormation
+        ? [
+            { flightType, picName, studentName, callsign: formationType ? `${formationType}1` : callsign },
+            ...formationCrew.map((crewMember, index) => ({
+              ...crewMember,
+              callsign: crewMember.callsign || (formationType ? `${formationType}${index + 2}` : ''),
+            })),
+          ]
+        : [{ flightType, picName, studentName, callsign }];
+
+      crewDrafts.forEach((crewMember, index) => {
+        const savedFlightType = isFormation ? crewMember.flightType : flightType;
+        const savedCallsign = isFormation ? (formationType ? `${formationType}${index + 1}` : crewMember.callsign) : crewMember.callsign;
+        eventsToSave.push({
+          id: uuidv4(),
+          date,
+          type: 'flight',
+          eventCategory,
+          flightType: savedFlightType,
+          flightNumber: eventCategory === 'twr_di' ? 'TWR DI' : flightNumber,
+          instructor: isFormation ? '' : (savedFlightType === 'Dual' ? crewMember.picName : ''),
+          student: savedFlightType === 'Dual' ? crewMember.studentName : '',
+          pilot: crewMember.picName,
+          startTime,
+          duration,
+          area,
+          aircraftNumber: formatAircraftNumber(aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings),
+          callsign: savedCallsign,
+          locationType,
+          color: tileColor,
+          resourceId: '',
+          notes,
+          group: '',
+          groupTraineeIds: [],
+          attendees: [],
+          origin: locationType === 'Local' ? school : origin,
+          destination: locationType === 'Local' ? school : destination,
+          formationType: isFormation ? formationType : undefined,
+          formationPosition: isFormation ? index + 1 : undefined,
+          formationId: undefined,
+        } as any);
+      });
     } else {
       // Deployment tiles
       const parseHrs = (t: string) => { const [h,m] = t.split(':').map(Number); return h + m/60; };
@@ -1725,6 +1822,121 @@ const AddFlightTileModal: React.FC<AddFlightTileModalProps> = ({
                     </div>
                   </div>
                 </div>
+                {locationType === 'Land Away' && (
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Origin</label>
+                      <input
+                        type="text"
+                        value={origin}
+                        onChange={e => setOrigin(e.target.value.toUpperCase())}
+                        maxLength={4}
+                        placeholder="ESL"
+                        className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Destination</label>
+                      <input
+                        type="text"
+                        value={destination}
+                        onChange={e => setDestination(e.target.value.toUpperCase())}
+                        maxLength={4}
+                        placeholder="PEA"
+                        className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                      />
+                    </div>
+                  </div>
+                )}
+                {flightNumber === 'SCT FORM' && (
+                  <div className="mt-4 rounded-lg border border-gray-600 bg-gray-800/70 p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Formation Callsign</label>
+                        <select
+                          value={formationType}
+                          onChange={e => setFormationType(e.target.value)}
+                          className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                        >
+                          {filteredFormationCallsigns
+                            ? filteredFormationCallsigns.map(cs => <option key={cs.code} value={cs.code}>{cs.name} ({cs.code})</option>)
+                            : formationTypes.map(type => <option key={type} value={type}>{type}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft Count</label>
+                        <select
+                          value={aircraftCount}
+                          onChange={e => setAircraftCount(parseInt(e.target.value, 10))}
+                          className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500"
+                        >
+                          {Array.from({ length: 7 }, (_, i) => i + 2).map(count => <option key={count} value={count}>{count}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    {formationCrew.length > 0 && (
+                      <div className="mt-4 space-y-3">
+                        {formationCrew.map((crewMember, index) => (
+                          <div key={index} className="grid grid-cols-[90px_1fr_1fr] gap-3 items-end rounded-md bg-gray-900/45 border border-gray-700 px-3 py-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft</label>
+                              <div className="bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm font-mono text-center">
+                                {formationType}{index + 2}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Pilot</label>
+                              <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                                <PersonDropdown
+                                  value={crewMember.picName}
+                                  displayValue={crewMember.picName}
+                                  onChange={(name) => updateFormationCrew(index, { picName: name })}
+                                  allUnits={allUnits}
+                                  getLayer2={getLayer2}
+                                  getNames={getNames}
+                                  placeholder="Select pilot"
+                                  fontSize={14}
+                                  color={crewMember.picName ? '#fff' : 'rgba(255,255,255,0.45)'}
+                                  bold
+                                  dropdownId={`formation-pic-dropdown-${index}`}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Crew</label>
+                              <div className="bg-gray-700 border border-gray-600 rounded-md py-1.5 px-2 text-white text-sm">
+                                {crewMember.flightType === 'Dual' ? (
+                                  <PersonDropdown
+                                    value={crewMember.studentName}
+                                    displayValue={crewMember.studentName}
+                                    onChange={(name) => updateFormationCrew(index, { studentName: name })}
+                                    allUnits={allUnits}
+                                    getLayer2={getLayer2}
+                                    getNames={getNames}
+                                    placeholder="Select crew"
+                                    fontSize={14}
+                                    color={crewMember.studentName ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.45)'}
+                                    allowSolo
+                                    onSoloSelect={() => updateFormationCrew(index, { flightType: 'Solo', studentName: '' })}
+                                    dropdownId={`formation-crew-dropdown-${index}`}
+                                  />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => updateFormationCrew(index, { flightType: 'Dual' })}
+                                    className="w-full text-left text-sm font-semibold text-amber-300"
+                                  >
+                                    SOLO
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="mt-3">
                   <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
                   <textarea

@@ -566,6 +566,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [origin, setOrigin] = useState(event.origin || school);
     const [destination, setDestination] = useState(event.destination || school);
     const [formationType, setFormationType] = useState(event.formationType || '');
+    const [callsign, setCallsign] = useState(event.callsign || '');
+    const [notes, setNotes] = useState(event.notes || '');
     const [isDeploy, setIsDeploy] = useState(event.isDeploy || false);
     
     // Deployment Selection State
@@ -1098,6 +1100,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         setOrigin(event.origin || school);
         setDestination(event.destination || school);
         setFormationType(event.formationType || formationTypes[0]);
+        setCallsign(event.callsign || '');
+        setNotes(event.notes || '');
         setIsDeploy(event.isDeploy || false);
         
         setDeploymentStartDate(event.deploymentStartDate || event.date);
@@ -1475,8 +1479,9 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 destination: locationType === 'Local' ? school : destination,
                 formationType: flightNumber === 'SCT FORM' ? formationType : undefined,
                 formationPosition: flightNumber === 'SCT FORM' ? index + 1 : undefined,
-                callsign: flightNumber === 'SCT FORM' ? `${formationType}${index + 1}` : undefined,
+                callsign: flightNumber === 'SCT FORM' ? `${formationType}${index + 1}` : callsign,
                 formationId: undefined,
+                notes,
                 isDeploy: eventType === 'flight' && locationType === 'Land Away' ? isDeploy : undefined,
                 
                 // Explicit Deployment Period
@@ -2076,17 +2081,17 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                         {/* Main Content */}
                         <div className="flex-1 overflow-y-auto p-6">
                             {isEditing ? (
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                        {/* Event Category Selector */}
-                                       <div className="mb-6">
-                                           <label className="block text-sm font-medium text-gray-400 mb-3">Event Category</label>
-                                           <div className="grid grid-cols-5 gap-3">
+                                       <div>
+                                           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Category</label>
+                                           <div className="flex flex-wrap gap-2">
                                                <button
                                                    type="button"
                                                    onClick={() => setEventCategory('lmp_event')}
-                                                   className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                   className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
                                                        eventCategory === 'lmp_event'
-                                                           ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                           ? 'bg-sky-600 text-white ring-2 ring-sky-400'
                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                    }`}
                                                >
@@ -2095,9 +2100,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                <button
                                                    type="button"
                                                    onClick={() => setEventCategory('lmp_currency')}
-                                                   className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                   className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
                                                        eventCategory === 'lmp_currency'
-                                                           ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                           ? 'bg-sky-600 text-white ring-2 ring-sky-400'
                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                    }`}
                                                >
@@ -2106,9 +2111,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                <button
                                                    type="button"
                                                    onClick={() => setEventCategory('sct')}
-                                                   className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                   className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
                                                        eventCategory === 'sct'
-                                                           ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                           ? 'bg-sky-600 text-white ring-2 ring-sky-400'
                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                    }`}
                                                >
@@ -2117,9 +2122,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                <button
                                                    type="button"
                                                    onClick={() => setEventCategory('staff_cat')}
-                                                   className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                   className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
                                                        eventCategory === 'staff_cat'
-                                                           ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                           ? 'bg-sky-600 text-white ring-2 ring-sky-400'
                                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                    }`}
                                                >
@@ -2128,9 +2133,9 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
 <button
                                                       type="button"
                                                       onClick={() => setEventCategory('twr_di')}
-                                                      className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                                                      className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition-all ${
                                                           eventCategory === 'twr_di'
-                                                              ? 'bg-sky-600 text-white shadow-lg ring-2 ring-sky-400'
+                                                              ? 'bg-sky-600 text-white ring-2 ring-sky-400'
                                                               : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                                       }`}
                                                   >
@@ -2140,7 +2145,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-400">Start Time</label>
+                                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Start Time</label>
                                             <select
                                                 value={startTime}
                                                 onChange={e => {
@@ -2154,7 +2159,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </select>
                                         </div>
                                         <div className="relative md:col-span-3">
-                                            <label className="block text-sm font-medium text-gray-400">Syllabus Item</label>
+                                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Syllabus Item</label>
                                             <select
                                                 value={flightNumber}
                                                 onChange={handleFlightNumberChange}
@@ -2178,7 +2183,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-400">Duration</label>
+                                            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Duration</label>
                                             <input
                                                 type="number"
                                                 step="0.1"
@@ -2192,7 +2197,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         {eventType === 'flight' && (
                                             <>
                                             <div className="md:col-span-2">
-                                                <label className="block text-center text-sm font-medium text-gray-400">Aircraft Number</label>
+                                                <label className="block text-center text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Aircraft Number</label>
                                                 <div className="mt-1 flex items-stretch">
                                                     {aircraftNumberSettings.usePrefix && (
                                                         <select
@@ -2222,7 +2227,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-400">Area</label>
+                                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Area</label>
                                                 <select value={area} onChange={e => setArea(e.target.value)} disabled={isDeploy} className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed">
                                                     {areas.map(a => <option key={a} value={a}>{a}</option>)}
                                                 </select>
@@ -2232,23 +2237,38 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     </div>
 
                                     {eventType === 'flight' && (
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-400">Location</label>
-                                            <select
-                                                value={locationType}
-                                                onChange={e => setLocationType(e.target.value as 'Local' | 'Land Away')}
-                                                disabled={isDeploy}
-                                                className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
-                                            >
-                                                <option value="Local">Local</option>
-                                                <option value="Land Away">Land Away</option>
-                                            </select>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Location</label>
+                                                <select
+                                                    value={locationType}
+                                                    onChange={e => setLocationType(e.target.value as 'Local' | 'Land Away')}
+                                                    disabled={isDeploy}
+                                                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                >
+                                                    <option value="Local">Local</option>
+                                                    <option value="Land Away">Land Away</option>
+                                                </select>
+                                            </div>
+                                            {flightNumber !== 'SCT FORM' && (
+                                                <div>
+                                                    <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Callsign</label>
+                                                    <input
+                                                        type="text"
+                                                        value={callsign}
+                                                        onChange={e => setCallsign(e.target.value.toUpperCase())}
+                                                        disabled={isDeploy}
+                                                        placeholder="Optional callsign"
+                                                        className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm disabled:bg-gray-700/50 disabled:cursor-not-allowed"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     {eventType === 'flight' && locationType === 'Land Away' && !isDeploy && (
                                         <div className="flex items-center gap-4">
                                             <div className="flex-1">
-                                                <label className="block text-sm font-medium text-gray-400">Origin</label>
+                                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Origin</label>
                                                 <input
                                                     type="text"
                                                     value={origin}
@@ -2259,7 +2279,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                                 />
                                             </div>
                                             <div className="flex-1">
-                                                <label className="block text-sm font-medium text-gray-400">Destination</label>
+                                                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Destination</label>
                                                 <input
                                                     type="text"
                                                     value={destination}
@@ -2346,6 +2366,16 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             </div>
                                         </div>
                                     )}
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Notes</label>
+                                        <textarea
+                                            value={notes}
+                                            onChange={e => setNotes(e.target.value)}
+                                            rows={2}
+                                            placeholder="Optional notes..."
+                                            className="w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm focus:outline-none focus:ring-sky-500 resize-none"
+                                        />
+                                    </div>
                                     <div className="space-y-4">{crew.map(renderCrewFields)}</div>
                                     
                                     {/* Add to Deployment Section */}
