@@ -12913,6 +12913,13 @@ const formatTime$4 = (time) => {
   const minutes = Math.round(time % 1 * 60);
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
+const normalizeStartTimeValue = (time) => {
+  if (typeof time === "number") return formatTime$4(time);
+  if (!time) return "00:00";
+  if (time.includes(":")) return time;
+  const cleaned = time.replace(/\D/g, "").padStart(4, "0").slice(-4);
+  return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+};
 const convertTimeToDecimal = (timeStr) => {
   if (!timeStr) return 0;
   const [hours, minutes] = timeStr.split(":").map(Number);
@@ -12943,7 +12950,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
   const [flightNumber, setFlightNumber] = reactExports.useState(event.flightNumber);
   const [duration, setDuration] = reactExports.useState(event.duration);
   const [eventType, setEventType] = reactExports.useState(event.type);
-  const [startTime, setStartTime] = reactExports.useState(typeof event.startTime === "string" ? event.startTime : formatTime$4(event.startTime));
+  const [startTime, setStartTime] = reactExports.useState(normalizeStartTimeValue(event.startTime));
   const [area, setArea] = reactExports.useState(event.area || "A");
   const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
   const [aircraftNumber, setAircraftNumber] = reactExports.useState(initialAircraftNumber.number || "001");
@@ -13387,7 +13394,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       setDuration(event.duration);
     }
     setEventType(event.type);
-    setStartTime(typeof event.startTime === "string" ? event.startTime : formatTime$4(event.startTime));
+    setStartTime(normalizeStartTimeValue(event.startTime));
     setArea(event.area || "A");
     const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || "001", aircraftNumberSettings);
     setAircraftNumber(parsedAircraftNumber.number || "001");
@@ -13662,7 +13669,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         id: eventId,
         type: eventType,
         flightNumber,
-        startTime: typeof startTime === "string" ? convertTimeToDecimal(startTime) : startTime,
+        startTime: convertTimeToDecimal(startTime),
         resourceId,
         duration: typeof duration === "number" ? duration : 0,
         // Ensure duration is a number
@@ -13766,7 +13773,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       for (let m = 0; m < 60; m += 5) {
         const totalHours = h + m / 60;
         const label = `${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}`;
-        options.push({ label, value: totalHours });
+        options.push({ label, value: formatTime$4(totalHours) });
       }
     }
     return options;
@@ -14226,7 +14233,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                 {
                   value: startTime,
                   onChange: (e) => {
-                    setStartTime(parseFloat(e.target.value));
+                    setStartTime(e.target.value);
                     setLocalHighlight(null);
                   },
                   disabled: isDeploy,
@@ -14272,10 +14279,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           ] }),
           eventType === "flight" && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "md:col-span-2", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "block text-sm font-medium text-gray-400", children: [
-                resourceDisplayNames.aircraft,
-                " Number"
-              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-center text-sm font-medium text-gray-400", children: "Aircraft Number" }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 flex items-stretch", children: [
                 aircraftNumberSettings.usePrefix && /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "select",

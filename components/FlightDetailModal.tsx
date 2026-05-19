@@ -419,6 +419,14 @@ const formatTime = (time: number) => {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
 
+const normalizeStartTimeValue = (time: number | string | undefined): string => {
+    if (typeof time === 'number') return formatTime(time);
+    if (!time) return '00:00';
+    if (time.includes(':')) return time;
+    const cleaned = time.replace(/\D/g, '').padStart(4, '0').slice(-4);
+    return `${cleaned.slice(0, 2)}:${cleaned.slice(2, 4)}`;
+};
+
 const convertTimeToDecimal = (timeStr: string): number => {
     if (!timeStr) return 0;
     const [hours, minutes] = timeStr.split(':').map(Number);
@@ -455,7 +463,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
     const [flightNumber, setFlightNumber] = useState(event.flightNumber);
     const [duration, setDuration] = useState<number | ''>(event.duration);
     const [eventType, setEventType] = useState(event.type);
-    const [startTime, setStartTime] = useState(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
+    const [startTime, setStartTime] = useState(normalizeStartTimeValue(event.startTime));
     const [area, setArea] = useState(event.area || 'A');
     const initialAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
     const [aircraftNumber, setAircraftNumber] = useState(initialAircraftNumber.number || '001');
@@ -1070,7 +1078,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
         }
 
         setEventType(event.type);
-        setStartTime(typeof event.startTime === 'string' ? event.startTime : formatTime(event.startTime));
+        setStartTime(normalizeStartTimeValue(event.startTime));
         setArea(event.area || 'A');
         const parsedAircraftNumber = parseAircraftNumber(event.aircraftNumber || '001', aircraftNumberSettings);
         setAircraftNumber(parsedAircraftNumber.number || '001');
@@ -1450,7 +1458,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 id: eventId,
                 type: eventType,
                 flightNumber,
-                startTime: typeof startTime === 'string' ? convertTimeToDecimal(startTime) : startTime,
+                startTime: convertTimeToDecimal(startTime),
                 resourceId,
                 duration: typeof duration === 'number' ? duration : 0, // Ensure duration is a number
                 area: eventType === 'flight' ? area : undefined,
@@ -1577,7 +1585,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
             for (let m = 0; m < 60; m += 5) {
                 const totalHours = h + m / 60;
                 const label = `${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`; // 24-hour format without colon
-                options.push({ label, value: totalHours });
+                options.push({ label, value: formatTime(totalHours) });
             }
         }
         return options;
@@ -2136,7 +2144,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <select
                                                 value={startTime}
                                                 onChange={e => {
-                                                    setStartTime(parseFloat(e.target.value));
+                                                    setStartTime(e.target.value);
                                                     setLocalHighlight(null);
                                                 }}
                                                 disabled={isDeploy}
@@ -2183,7 +2191,7 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                     {eventType === 'flight' && (
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="md:col-span-2">
-                                                <label className="block text-sm font-medium text-gray-400">{resourceDisplayNames.aircraft} Number</label>
+                                                <label className="block text-center text-sm font-medium text-gray-400">Aircraft Number</label>
                                                 <div className="mt-1 flex items-stretch">
                                                     {aircraftNumberSettings.usePrefix && (
                                                         <select
