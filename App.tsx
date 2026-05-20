@@ -13273,17 +13273,30 @@ updates.forEach(update => {
 
     const handleNeoClick = (event: ScheduleEvent) => {
         const isNextDayContext = ['NextDayBuild', 'Priorities', 'ProgramData', 'NextDayInstructorSchedule', 'NextDayTraineeSchedule'].includes(activeView);
-        const allEvents = isNextDayContext ? nextDayBuildEvents.map(e => ({...e, date: buildDfpDate})) : eventsForDate;
+        const currentEvents = isNextDayContext ? nextDayBuildEvents.map(e => ({...e, date: buildDfpDate})) : eventsForDate;
+        const latestEvent = currentEvents.find(e => e.id === event.id) || event;
+        const eventForNeo = normaliseCrewFieldsForSave(latestEvent as ScheduleEvent);
+        const allEvents = currentEvents.map(e => e.id === eventForNeo.id ? eventForNeo : e);
+
+        console.log('NEO: Resolved event for analysis:', {
+            id: eventForNeo.id,
+            originalInstructor: event.instructor,
+            latestInstructor: latestEvent.instructor,
+            analysisInstructor: eventForNeo.instructor,
+            originalPilot: event.pilot,
+            latestPilot: latestEvent.pilot,
+            analysisPilot: eventForNeo.pilot,
+        });
 
         // Check if this event is flagged by Validate mode
         const conflictingEventIds = isNextDayContext ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds;
-        const isValidateFlagged = conflictingEventIds.has(getValidationEventKey(event));
+        const isValidateFlagged = conflictingEventIds.has(getValidationEventKey(eventForNeo));
 
         let errors: string[] = [];
 
         // If Validate mode is active and this event is flagged, emphasize the validation conflicts
         if (showValidation && isValidateFlagged) {
-            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
+            errors = findHardErrors(eventForNeo, allEvents, { allowStbySoloWithoutTwrDi: true });
             // Add specific validation context
             if (errors.length > 0) {
                 errors.unshift("⚠️ VALIDATE MODE CONFLICTS DETECTED:");
@@ -13291,7 +13304,7 @@ updates.forEach(update => {
                 errors.push("This event is marked RED because Validate mode found the following rule violations:");
             }
         } else {
-            errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
+            errors = findHardErrors(eventForNeo, allEvents, { allowStbySoloWithoutTwrDi: true });
         }
 
         if (errors.length === 0) {
@@ -13305,19 +13318,19 @@ updates.forEach(update => {
 
         // If this is a validate-mode conflict, add specific context about validation
         if (showValidation && isValidateFlagged) {
-            console.log(`NEO: Analyzing validate-mode conflict for event ${event.flightNumber} (${event.id})`);
+            console.log(`NEO: Analyzing validate-mode conflict for event ${eventForNeo.flightNumber} (${eventForNeo.id})`);
             console.log(`Validation errors found:`, errors);
-            setNeoProblemTileForFlyout({ event, errors });
+            setNeoProblemTileForFlyout({ event: eventForNeo, errors });
         } else {
-            setNeoProblemTileForFlyout({ event, errors });
+            setNeoProblemTileForFlyout({ event: eventForNeo, errors });
         }
 
         const isTurnaroundViolationOnly = errors.every(e => e.toLowerCase().includes('turnaround')) && errors.length > 0;
-        const instructorIsConflicted = errors.some(e => event.instructor && e.includes(event.instructor.split(',')[0]));
+        const instructorIsConflicted = errors.some(e => eventForNeo.instructor && e.includes(eventForNeo.instructor.split(',')[0]));
 
         if (isTurnaroundViolationOnly || !instructorIsConflicted) {
             const context: AlgoContext = { flightTurnaround, ftdTurnaround, syllabusDetails, instructorsData, traineesData, getPersonnel, getEventBookingWindow, isPersonStaticallyUnavailable, generateInstructorRemediesAtTime, maxCrewDutyPeriod };
-            const timeRemedy = findClosestTurnaroundFix(event, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
+            const timeRemedy = findClosestTurnaroundFix(eventForNeo, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
 
             if (timeRemedy) {
                 setTimeOnlyRemedyForConfirmation(timeRemedy);
@@ -13332,10 +13345,10 @@ updates.forEach(update => {
             }
         }
 
-        const traineeErrors = errors.filter(e => (event.student && e.includes(event.student.split(',')[0])));
+        const traineeErrors = errors.filter(e => (eventForNeo.student && e.includes(eventForNeo.student.split(',')[0])));
 
         if (!instructorIsConflicted && traineeErrors.length > 0) {
-            const remedies = generateTraineeRemedies(event, allEvents);
+            const remedies = generateTraineeRemedies(eventForNeo, allEvents);
             if (remedies.length > 0) {
                 setNeoRemediesForFlyout(remedies);
                 return;
@@ -13343,11 +13356,11 @@ updates.forEach(update => {
         }
 
         // Check if this is an SCT event - if so, generate pilot remedies instead of instructor remedies
-        const isSctEvent = event.flightNumber?.startsWith('SCT');
+        const isSctEvent = eventForNeo.flightNumber?.startsWith('SCT');
 
         if (isSctEvent) {
             console.log('🔧 SCT event detected, generating pilot remedies');
-            const remedies = generatePilotRemediesAtTime(event, allEvents, event.startTime);
+            const remedies = generatePilotRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
             if (remedies.length > 0) {
                 setNeoRemediesForFlyout(remedies);
             } else {
@@ -13355,7 +13368,7 @@ updates.forEach(update => {
                 setNeoRemediesForFlyout([]);
             }
         } else {
-            const remedies = generateInstructorRemediesAtTime(event, allEvents, event.startTime);
+            const remedies = generateInstructorRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
             if (remedies.length > 0) {
                 setNeoRemediesForFlyout(remedies);
             } else {

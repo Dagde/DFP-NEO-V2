@@ -79418,19 +79418,31 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   };
   const handleNeoClick = (event) => {
     const isNextDayContext = ["NextDayBuild", "Priorities", "ProgramData", "NextDayInstructorSchedule", "NextDayTraineeSchedule"].includes(activeView);
-    const allEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate;
+    const currentEvents = isNextDayContext ? nextDayBuildEvents.map((e) => ({ ...e, date: buildDfpDate })) : eventsForDate;
+    const latestEvent = currentEvents.find((e) => e.id === event.id) || event;
+    const eventForNeo = normaliseCrewFieldsForSave(latestEvent);
+    const allEvents = currentEvents.map((e) => e.id === eventForNeo.id ? eventForNeo : e);
+    console.log("NEO: Resolved event for analysis:", {
+      id: eventForNeo.id,
+      originalInstructor: event.instructor,
+      latestInstructor: latestEvent.instructor,
+      analysisInstructor: eventForNeo.instructor,
+      originalPilot: event.pilot,
+      latestPilot: latestEvent.pilot,
+      analysisPilot: eventForNeo.pilot
+    });
     const conflictingEventIds = isNextDayContext ? nextDayPersonnelAndResourceConflictIds : personnelAndResourceConflictIds;
-    const isValidateFlagged = conflictingEventIds.has(getValidationEventKey2(event));
+    const isValidateFlagged = conflictingEventIds.has(getValidationEventKey2(eventForNeo));
     let errors = [];
     if (showValidation && isValidateFlagged) {
-      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
+      errors = findHardErrors(eventForNeo, allEvents, { allowStbySoloWithoutTwrDi: true });
       if (errors.length > 0) {
         errors.unshift("⚠️ VALIDATE MODE CONFLICTS DETECTED:");
         errors.push("");
         errors.push("This event is marked RED because Validate mode found the following rule violations:");
       }
     } else {
-      errors = findHardErrors(event, allEvents, { allowStbySoloWithoutTwrDi: true });
+      errors = findHardErrors(eventForNeo, allEvents, { allowStbySoloWithoutTwrDi: true });
     }
     if (errors.length === 0) {
       if (showValidation && !isValidateFlagged) {
@@ -79441,17 +79453,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       return;
     }
     if (showValidation && isValidateFlagged) {
-      console.log(`NEO: Analyzing validate-mode conflict for event ${event.flightNumber} (${event.id})`);
+      console.log(`NEO: Analyzing validate-mode conflict for event ${eventForNeo.flightNumber} (${eventForNeo.id})`);
       console.log(`Validation errors found:`, errors);
-      setNeoProblemTileForFlyout({ event, errors });
+      setNeoProblemTileForFlyout({ event: eventForNeo, errors });
     } else {
-      setNeoProblemTileForFlyout({ event, errors });
+      setNeoProblemTileForFlyout({ event: eventForNeo, errors });
     }
     const isTurnaroundViolationOnly = errors.every((e) => e.toLowerCase().includes("turnaround")) && errors.length > 0;
-    const instructorIsConflicted = errors.some((e) => event.instructor && e.includes(event.instructor.split(",")[0]));
+    const instructorIsConflicted = errors.some((e) => eventForNeo.instructor && e.includes(eventForNeo.instructor.split(",")[0]));
     if (isTurnaroundViolationOnly || !instructorIsConflicted) {
       const context = { flightTurnaround, ftdTurnaround, syllabusDetails, getPersonnel, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
-      const timeRemedy = findClosestTurnaroundFix(event, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
+      const timeRemedy = findClosestTurnaroundFix(eventForNeo, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
       if (timeRemedy) {
         setTimeOnlyRemedyForConfirmation(timeRemedy);
         setShowTimeOnlyRemedyConfirm(true);
@@ -79464,18 +79476,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         return;
       }
     }
-    const traineeErrors = errors.filter((e) => event.student && e.includes(event.student.split(",")[0]));
+    const traineeErrors = errors.filter((e) => eventForNeo.student && e.includes(eventForNeo.student.split(",")[0]));
     if (!instructorIsConflicted && traineeErrors.length > 0) {
-      const remedies = generateTraineeRemedies(event, allEvents);
+      const remedies = generateTraineeRemedies(eventForNeo, allEvents);
       if (remedies.length > 0) {
         setNeoRemediesForFlyout(remedies);
         return;
       }
     }
-    const isSctEvent = event.flightNumber?.startsWith("SCT");
+    const isSctEvent = eventForNeo.flightNumber?.startsWith("SCT");
     if (isSctEvent) {
       console.log("🔧 SCT event detected, generating pilot remedies");
-      const remedies = generatePilotRemediesAtTime(event, allEvents, event.startTime);
+      const remedies = generatePilotRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
       if (remedies.length > 0) {
         setNeoRemediesForFlyout(remedies);
       } else {
@@ -79483,7 +79495,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         setNeoRemediesForFlyout([]);
       }
     } else {
-      const remedies = generateInstructorRemediesAtTime(event, allEvents, event.startTime);
+      const remedies = generateInstructorRemediesAtTime(eventForNeo, allEvents, eventForNeo.startTime);
       if (remedies.length > 0) {
         setNeoRemediesForFlyout(remedies);
       } else {
