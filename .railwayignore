@@ -1,0 +1,28 @@
+# Keep Railway's build context focused on the deployed web app.
+node_modules
+.git
+.browser_data
+.screenshots
+.psiphon_data
+
+# Legacy/reference copies and local-only workspaces.
+DFP-NEO-V2
+DFP-NEO-iOS
+DFP-NEO-Hybrid-V3
+DFP-NEO-Website
+
+# Large local/reference artefacts not needed at runtime.
+*.docx
+/IMG_*.PNG
+/Screenshot*.png
+/Screenshot*.jpg
+/xcode*
+/ios_*
+/*_Source_Files.txt
+/*_export*.txt
+
+# Caches and diagnostics.
+snapshots
+tmp
+logs
+*.log
