@@ -2359,7 +2359,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 //              place event on STBY with no instructor assigned.
                 // Night pass: single pass (night pairings are fixed, two-pass not applicable)
                 // Priority disabled: single pass, any instructor.
-                const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass
+                const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass && type !== 'ground'
                     ? [true, false]   // priority-only pass first, then fallback
                     : [false];        // priority disabled or night pass — single pass only
 
@@ -2470,6 +2470,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return null;
         }
 
+        const traineeHasOverlap = generatedEvents
+            .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
+            .some(e => {
+                if (!getPersonnel(e).includes(trainee.fullName)) return false;
+                const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+                return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+            });
+        if (traineeHasOverlap) {
+            if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TIME_OVERLAP');
+            return null;
+        }
+
         const findAvailableInstructor = (
             traineeForCheck: Trainee,
             syllabusItemForCheck: SyllabusItemDetail,
@@ -2526,16 +2538,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 // ── BUILD-TIME OVERLAP CHECK (BNF night pass) ────────────────────────
-                // Ground↔flight cross-type pairs are NOT blocking unless Duty Sup is involved.
-                // Duty Sup is a higher-priority assignment and blocks all other instructor events.
+                // Any instructor booking-window overlap blocks assignment, regardless of event type.
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(instructor.name)) return false;
-                         const existingIsDutySup = isDutySupervisorEvent(e);
-                         const existingIsGround = e.type === 'ground';
-                         const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === 'ground';
-                         if (!existingIsDutySup && existingIsGround !== proposedIsGround) return false;
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
                          if (overlaps) {
@@ -2795,20 +2802,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 // ── BUILD-TIME OVERLAP CHECK (main candidate loop) ───────────────────
-                // Ground↔flight/ftd cross-type pairs are NOT blocking unless Duty Sup is involved.
-                // Duty Sup is a higher-priority assignment and blocks all other instructor events.
-                let _crossTypeSkipped = false;
+                // Any instructor booking-window overlap blocks assignment, regardless of event type.
                 const hasOverlap = generatedEvents
                      .filter(e => !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'))
                      .some(e => {
                          if (!getPersonnel(e).includes(ip.name)) return false;
-                         const existingIsDutySup = isDutySupervisorEvent(e);
-                         const existingIsGround = e.type === 'ground';
-                         const proposedIsGround = type === 'ground';
-                         if (!existingIsDutySup && existingIsGround !== proposedIsGround) {
-                             _crossTypeSkipped = true;
-                             return false;
-                         }
                          const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
                          const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
                          if (overlaps) {

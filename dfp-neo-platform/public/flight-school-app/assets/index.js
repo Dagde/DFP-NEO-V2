@@ -71241,7 +71241,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const segmentSearchOrder = [...segments].sort((a, b) => a.count - b.count || a.start - b.start);
         let placed = false;
         const searchSpaces = (type === "cpt" || type === "ground") && !isNightPass && segments.length > 0 ? segmentSearchOrder.map((s) => ({ start: Math.max(searchStartTime, s.start), end: s.end })) : [{ start: searchStartTime, end: endTimeBoundary }];
-        const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass ? [true, false] : [false];
+        const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) && !isNightPass && type !== "ground" ? [true, false] : [false];
         const nightAircraftReuseModes = isNightPass && isPlusOne && type === "flight" ? [true, false] : [false];
         for (const requireNightAircraftReuse of nightAircraftReuseModes) {
           if (placed) break;
@@ -71316,6 +71316,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return null;
     }
+    const traineeHasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
+      if (!getPersonnel(e).includes(trainee.fullName)) return false;
+      const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
+      return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
+    });
+    if (traineeHasOverlap) {
+      if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TIME_OVERLAP");
+      return null;
+    }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
       const isBnfEvent2 = syllabusItemForCheck.code.startsWith("BNF");
       if (isBnfEvent2) {
@@ -71353,10 +71362,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
           if (!getPersonnel(e).includes(instructor2.name)) return false;
-          const existingIsDutySup = isDutySupervisorEvent(e);
-          const existingIsGround = e.type === "ground";
-          const proposedIsGround = syllabusItemForCheck.type?.toLowerCase() === "ground";
-          if (!existingIsDutySup && existingIsGround !== proposedIsGround) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
@@ -71556,12 +71561,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
           if (!getPersonnel(e).includes(ip.name)) return false;
-          const existingIsDutySup = isDutySupervisorEvent(e);
-          const existingIsGround = e.type === "ground";
-          const proposedIsGround = type === "ground";
-          if (!existingIsDutySup && existingIsGround !== proposedIsGround) {
-            return false;
-          }
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
