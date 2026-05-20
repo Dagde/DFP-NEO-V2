@@ -4358,10 +4358,175 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return events.filter(event => !removeEventIds.has(event.id));
     };
 
+    const repairGeneratedGroundConflicts = (
+        events: (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[]
+    ): (Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string })[] => {
+        type BuildEvent = Omit<ScheduleEvent, 'date'> & { _source?: string; _isNext?: boolean; _traineeName?: string };
+        const isGeneratedGround = (event: BuildEvent): boolean => event.type === 'ground' && event._source === 'generated';
+        const groundResourceCount = Math.max(
+            6,
+            ...events
+                .map(event => event.resourceId?.match(/^Ground (\d+)$/)?.[1])
+                .filter((value): value is string => !!value)
+                .map(value => Number(value))
+                .filter(value => Number.isFinite(value))
+        );
+        const groundResources = Array.from({ length: groundResourceCount }, (_, index) => `Ground ${index + 1}`);
+        const timeIncrement = 15 / 60;
+
+        const eventWindow = (event: Omit<ScheduleEvent, 'date'>): { start: number; end: number } =>
+            getEventBookingWindowForAlgo(event, syllabusDetails);
+
+        const windowsOverlap = (a: { start: number; end: number }, b: { start: number; end: number }): boolean =>
+            a.start < b.end && a.end > b.start;
+
+        const resourceTurnaroundFor = (event: Omit<ScheduleEvent, 'date'>): number => {
+            if (event.type === 'flight') return flightTurnaround;
+            if (event.type === 'ftd') return ftdTurnaround;
+            if (event.type === 'cpt' || (event.type === 'ground' && event.flightNumber.includes('CPT'))) return cptTurnaround;
+            return 0;
+        };
+
+        const hasBuildConflict = (candidate: BuildEvent, acceptedEvents: BuildEvent[]): boolean => {
+            const candidateWindow = eventWindow(candidate);
+
+            return acceptedEvents.some(existing => {
+                if (existing.id === candidate.id) return false;
+                if (isStbyResource(existing.resourceId) || isStbyResource(candidate.resourceId)) return false;
+
+                if (existing.resourceId === candidate.resourceId) {
+                    const candidateAfterExistingGap = candidate.startTime - (existing.startTime + existing.duration);
+                    if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < resourceTurnaroundFor(candidate)) {
+                        return true;
+                    }
+
+                    const existingAfterCandidateGap = existing.startTime - (candidate.startTime + candidate.duration);
+                    if (existing.startTime >= candidate.startTime && existingAfterCandidateGap < resourceTurnaroundFor(existing)) {
+                        return true;
+                    }
+
+                    if (isOverlapping(candidate, existing)) return true;
+                }
+
+                if (getCommonPersonnel(candidate, existing).length > 0) {
+                    const existingWindow = eventWindow(existing);
+                    if (windowsOverlap(candidateWindow, existingWindow)) return true;
+
+                    const candidateClassification = getGeneratedEventDayNightClassification(candidate);
+                    const existingClassification = getGeneratedEventDayNightClassification(existing);
+                    if (
+                        candidateClassification !== 'Day/Night' &&
+                        existingClassification !== 'Day/Night' &&
+                        candidateClassification !== existingClassification
+                    ) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+        };
+
+        const canUseInstructorForGround = (instructor: Instructor, trainee?: Trainee): boolean => {
+            if (!trainee) return true;
+            return isInstructorEligibleByUnit(instructor, trainee);
+        };
+
+        const findGroundRepair = (event: BuildEvent, acceptedEvents: BuildEvent[]): BuildEvent | null => {
+            const trainee = trainees.find(t => personnelNamesMatch(t.fullName, event._traineeName || event.student || event.pilot));
+            const currentInstructor = instructors.find(instructor => instructor.name === event.instructor);
+            const eligibleInstructors = instructors
+                .filter(instructor => canUseInstructorForGround(instructor, trainee))
+                .sort((a, b) => {
+                    if (a.name === event.instructor) return -1;
+                    if (b.name === event.instructor) return 1;
+                    const aCounts = eventCounts.get(a.name);
+                    const bCounts = eventCounts.get(b.name);
+                    const aWorkload = (aCounts?.flightFtd || 0) * 2 + (aCounts?.cpt || 0) + (aCounts?.ground || 0);
+                    const bWorkload = (bCounts?.flightFtd || 0) * 2 + (bCounts?.cpt || 0) + (bCounts?.ground || 0);
+                    return aWorkload - bWorkload || a.name.localeCompare(b.name);
+                });
+            const instructorCandidates = currentInstructor && !eligibleInstructors.some(instructor => instructor.name === currentInstructor.name)
+                ? [currentInstructor, ...eligibleInstructors]
+                : eligibleInstructors;
+            const timeCandidates = [
+                event.startTime,
+                ...Array.from(
+                    { length: Math.max(0, Math.floor((flyingEndTime - flyingStartTime - event.duration) / timeIncrement) + 1) },
+                    (_, index) => flyingStartTime + index * timeIncrement
+                )
+            ].filter((time, index, list) => list.findIndex(value => Math.abs(value - time) < 0.001) === index);
+            const resourceCandidates = [
+                event.resourceId,
+                ...groundResources.filter(resourceId => resourceId !== event.resourceId)
+            ].filter((resourceId): resourceId is string => !!resourceId);
+
+            for (const instructor of instructorCandidates) {
+                for (const startTime of timeCandidates) {
+                    if (startTime + event.duration > flyingEndTime + 0.001) continue;
+                    const candidateWindow = eventWindow({ ...event, startTime });
+                    if (trainee && isPersonStaticallyUnavailable(trainee, candidateWindow.start, candidateWindow.end, buildDate, 'ground')) continue;
+                    if (isPersonStaticallyUnavailable(instructor, candidateWindow.start, candidateWindow.end, buildDate, 'ground')) continue;
+
+                    for (const resourceId of resourceCandidates) {
+                        const candidate: BuildEvent = {
+                            ...event,
+                            instructor: instructor.name,
+                            pilot: instructor.name,
+                            startTime,
+                            resourceId
+                        };
+
+                        if (!hasBuildConflict(candidate, acceptedEvents)) {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        const acceptedEvents: BuildEvent[] = events.filter(event => !isGeneratedGround(event));
+        const generatedGroundEvents = events.filter(isGeneratedGround);
+        let moved = 0;
+        let dropped = 0;
+
+        generatedGroundEvents.forEach(event => {
+            if (!hasBuildConflict(event, acceptedEvents)) {
+                acceptedEvents.push(event);
+                return;
+            }
+
+            const repaired = findGroundRepair(event, acceptedEvents);
+            if (repaired) {
+                moved++;
+                acceptedEvents.push(repaired);
+                return;
+            }
+
+            dropped++;
+            console.warn('[GROUND-REPAIR] Dropped generated ground event with no conflict-free placement:', {
+                flightNumber: event.flightNumber,
+                trainee: event.student || event._traineeName,
+                instructor: event.instructor,
+                startTime: event.startTime,
+                resourceId: event.resourceId
+            });
+        });
+
+        if (moved > 0 || dropped > 0) {
+            console.warn(`[GROUND-REPAIR] Generated ground cleanup complete. Moved: ${moved}, dropped: ${dropped}.`);
+        }
+
+        return acceptedEvents;
+    };
+
     const dayNightSeparatedEvents = enforceBuildDayNightSeparation(generatedEvents);
+    const conflictSafeEvents = repairGeneratedGroundConflicts(dayNightSeparatedEvents);
 
     // Sort events by resource order, then by start time
-    const sortedEvents = [...dayNightSeparatedEvents].sort((a, b) => {
+    const sortedEvents = [...conflictSafeEvents].sort((a, b) => {
         const orderA = resourceOrderMap.get(a.resourceId) ?? 9999;
         const orderB = resourceOrderMap.get(b.resourceId) ?? 9999;
 
