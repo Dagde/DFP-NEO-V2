@@ -12905,11 +12905,66 @@ updates.forEach(update => {
         });
     }, [getScheduleEventDayNightClassification]);
 
+    const buildNeoCandidateEvent = useCallback((
+        baseEvent: ScheduleEvent,
+        replacementType: 'instructor' | 'trainee',
+        replacementName: string,
+        atTime: number = baseEvent.startTime
+    ): ScheduleEvent => {
+        const candidateEvent = { ...baseEvent, startTime: atTime };
+        const isSctEvent = candidateEvent.flightNumber?.startsWith('SCT');
+
+        if (replacementType === 'instructor') {
+            if (isSctEvent) {
+                candidateEvent.pilot = replacementName;
+                candidateEvent.instructor = '';
+            } else {
+                candidateEvent.instructor = replacementName;
+                if (candidateEvent.type === 'flight' || candidateEvent.type === 'ftd') {
+                    candidateEvent.pilot = candidateEvent.flightType === 'Solo'
+                        ? (candidateEvent.student || candidateEvent.pilot || '')
+                        : replacementName;
+                }
+            }
+        } else {
+            if (candidateEvent.flightType === 'Solo') {
+                candidateEvent.pilot = replacementName;
+                candidateEvent.student = '';
+            } else {
+                candidateEvent.student = replacementName;
+            }
+        }
+
+        return candidateEvent;
+    }, []);
+
+    const isReplacementAvailableForCandidateEvent = useCallback((
+        person: Instructor | Trainee,
+        personName: string,
+        candidateEvent: ScheduleEvent,
+        allEvents: ScheduleEvent[]
+    ): boolean => {
+        const candidateEventType = candidateEvent.type as 'flight' | 'ground' | 'ftd' | 'duty_sup' | 'cpt';
+        const eventWindow = getEventBookingWindow(candidateEvent, syllabusDetails);
+
+        if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, candidateEvent.date, candidateEventType)) {
+            return false;
+        }
+
+        if (replacementViolatesDayNightSeparation(personName, candidateEvent, allEvents)) {
+            return false;
+        }
+
+        return !allEvents.some(event => {
+            if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+            const otherEventWindow = getEventBookingWindow(event, syllabusDetails);
+            return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
+        });
+    }, [replacementViolatesDayNightSeparation, syllabusDetails]);
+
     const generateTraineeRemedies = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[]): NeoTraineeRemedy[] => {
         const suggestions: NeoTraineeRemedy[] = [];
-        const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
         const conflictedSyllabusId = conflictedEvent.flightNumber;
-        const candidateEventType = conflictedEvent.type as 'flight' | 'ground' | 'ftd' | 'duty_sup' | 'cpt';
 
         const otherTrainees = allTraineesData.filter(t => !personnelNamesMatch(t.fullName, conflictedEvent.student) && !t.isPaused);
 
@@ -12921,22 +12976,8 @@ updates.forEach(update => {
             }
 
             // 2. Check availability
-            if (isPersonStaticallyUnavailable(trainee, eventWindow.start, eventWindow.end, conflictedEvent.date, candidateEventType)) {
-                continue;
-            }
-
-            if (replacementViolatesDayNightSeparation(trainee.fullName, conflictedEvent, allEvents)) {
-                continue;
-            }
-
-            const hasOverlap = allEvents.some(e => {
-                if (e.id === conflictedEvent.id) return false;
-                if (!eventHasPerson(e, trainee.fullName)) return false;
-                const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
-                return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
-            });
-
-            if (hasOverlap) {
+            const candidateEvent = buildNeoCandidateEvent(conflictedEvent, 'trainee', trainee.fullName);
+            if (!isReplacementAvailableForCandidateEvent(trainee, trainee.fullName, candidateEvent, allEvents)) {
                 continue;
             }
 
@@ -12965,7 +13006,7 @@ updates.forEach(update => {
 
         // Sort by most needy (longest since last flight)
         return suggestions.sort((a, b) => b.trainee.daysSinceLastFlight - a.trainee.daysSinceLastFlight);
-    }, [allTraineesData, syllabusDetails, traineeLMPs, scores, publishedSchedules, buildDfpDate, replacementViolatesDayNightSeparation]);
+    }, [allTraineesData, traineeLMPs, scores, publishedSchedules, buildDfpDate, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
 
     const generateInstructorRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
         const suggestions: NeoInstructorRemedy[] = [];
@@ -12973,7 +13014,6 @@ updates.forEach(update => {
         console.log('🔍 Total instructors to check:', instructorsData.length);
         let qualificationFailures = 0, unavailabilityFailures = 0, overlapFailures = 0;
         const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
-        const eventWindow = getEventBookingWindow(eventAtNewTime, syllabusDetails);
 
         for (const instructor of instructorsData) {
             // Check qualification
@@ -12984,19 +13024,11 @@ updates.forEach(update => {
                                 (conflictedEvent.type === 'ground');
             if (!isQualified) { qualificationFailures++; continue; }
 
-            // Check static unavailability
-            if (isPersonStaticallyUnavailable(instructor, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type as any)) { unavailabilityFailures++; continue; }
-
-            if (replacementViolatesDayNightSeparation(instructor.name, eventAtNewTime, allEvents)) { overlapFailures++; continue; }
-
-            // Check for overlaps with other events for this instructor
-            const hasOverlap = allEvents.some(e => {
-                if (e.id === conflictedEvent.id) return false;
-                if (!eventHasPerson(e, instructor.name)) return false;
-                const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
-                return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
-            });
-            if (hasOverlap) { overlapFailures++; continue; }
+            const candidateEvent = buildNeoCandidateEvent(eventAtNewTime, 'instructor', instructor.name, atTime);
+            if (!isReplacementAvailableForCandidateEvent(instructor, instructor.name, candidateEvent, allEvents)) {
+                overlapFailures++;
+                continue;
+            }
 
             // All checks passed, add as a remedy
             const instructorEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPerson(e, instructor.name));
@@ -13032,7 +13064,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails, replacementViolatesDayNightSeparation]);
+    }, [instructorsData, syllabusDetails, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
 
     // Generate pilot remedies for SCT events
     const generatePilotRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
@@ -13064,28 +13096,13 @@ updates.forEach(update => {
 
         let unavailabilityFailures = 0, overlapFailures = 0;
         const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
-        const eventWindow = getEventBookingWindow(eventAtNewTime, syllabusDetails);
 
         for (const pilot of qualifiedPilots) {
-            // Check static unavailability
-            if (isPersonStaticallyUnavailable(pilot, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type as any)) {
-                unavailabilityFailures++;
-                continue;
-            }
-
-            if (replacementViolatesDayNightSeparation(pilot.name, eventAtNewTime, allEvents)) {
+            const candidateEvent = buildNeoCandidateEvent(eventAtNewTime, 'instructor', pilot.name, atTime);
+            if (!isReplacementAvailableForCandidateEvent(pilot, pilot.name, candidateEvent, allEvents)) {
                 overlapFailures++;
                 continue;
             }
-
-            // Check for overlaps with other events for this pilot
-            const hasOverlap = allEvents.some(e => {
-                if (e.id === conflictedEvent.id) return false;
-                if (!eventHasPerson(e, pilot.name)) return false;
-                const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
-                return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
-            });
-            if (hasOverlap) { overlapFailures++; continue; }
 
             // All checks passed, add as a remedy
             const pilotEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPerson(e, pilot.name));
@@ -13121,7 +13138,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [instructorsData, syllabusDetails, school, replacementViolatesDayNightSeparation]);
+    }, [instructorsData, syllabusDetails, school, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
 
     // --- New Iterative Turnaround Fix ---
     const findClosestTurnaroundFix = (
@@ -13512,9 +13529,17 @@ updates.forEach(update => {
                     console.log('📝 Applying instructor remedy');
                     console.log('📝 New instructor:', remedy.instructor.name);
                     updatedEvent.instructor = remedy.instructor.name;
+                    if ((updatedEvent.type === 'flight' || updatedEvent.type === 'ftd') && updatedEvent.flightType !== 'Solo') {
+                        updatedEvent.pilot = remedy.instructor.name;
+                    }
                 } else if (remedy.type === 'trainee') {
                     console.log('📝 Applying trainee remedy');
-                    updatedEvent.student = remedy.trainee.name;
+                    if (updatedEvent.flightType === 'Solo') {
+                        updatedEvent.pilot = remedy.trainee.name;
+                        updatedEvent.student = '';
+                    } else {
+                        updatedEvent.student = remedy.trainee.name;
+                    }
                 }
 
                 console.log('📝 Updated instructor:', updatedEvent.instructor);
@@ -13598,10 +13623,18 @@ updates.forEach(update => {
                 // For training flights, change the instructor
                 console.log('🟣 NEO: Applying instructor change:', eventToUpdate.instructor, '→', remedy.instructor.name);
                 updatedEvent.instructor = remedy.instructor.name;
+                if ((updatedEvent.type === 'flight' || updatedEvent.type === 'ftd') && updatedEvent.flightType !== 'Solo') {
+                    updatedEvent.pilot = remedy.instructor.name;
+                }
             }
         } else if (remedy.type === 'trainee') {
             console.log('🟣 NEO: Applying trainee change:', eventToUpdate.student, '→', remedy.trainee.name);
-            updatedEvent.student = remedy.trainee.name;
+            if (updatedEvent.flightType === 'Solo') {
+                updatedEvent.pilot = remedy.trainee.name;
+                updatedEvent.student = '';
+            } else {
+                updatedEvent.student = remedy.trainee.name;
+            }
         } else if (remedy.type === 'timeshift') {
             console.log('🟣 NEO: Applying time shift:', eventToUpdate.startTime, '→', remedy.newStartTime);
             updatedEvent.startTime = remedy.newStartTime;
@@ -13611,6 +13644,9 @@ updates.forEach(update => {
                     updatedEvent.instructor = '';
                 } else {
                     updatedEvent.instructor = remedy.instructor.name;
+                    if ((updatedEvent.type === 'flight' || updatedEvent.type === 'ftd') && updatedEvent.flightType !== 'Solo') {
+                        updatedEvent.pilot = remedy.instructor.name;
+                    }
                 }
             }
         }
