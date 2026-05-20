@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20", "openssl"]
 
 [phases.install]
-cmds = ["npm ci --engine-strict=false", "npx prisma generate"]
+cmds = ["npm ci --engine-strict=false"]
 
 [phases.build]
-cmds = ["echo 'Build complete - using pre-built static assets'"]
+cmds = ["npm run build"]
 
 [start]
 cmd = "node server.js"
