@@ -226,6 +226,35 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
     return Array.from(personnel);
 };
 
+const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+
+const normalizePersonnelNameForMatch = (name?: string): string =>
+    (name || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(PERSONNEL_RANK_PREFIX_RE, '')
+        .replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, '')
+        .toLowerCase();
+
+const personnelNamesMatch = (a?: string, b?: string): boolean => {
+    const left = normalizePersonnelNameForMatch(a);
+    const right = normalizePersonnelNameForMatch(b);
+    return !!left && left === right;
+};
+
+const eventHasPerson = (
+    event: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
+    personName?: string
+): boolean => getPersonnel(event).some(p => personnelNamesMatch(p, personName));
+
+const getCommonPersonnel = (
+    eventA: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
+    eventB: Omit<ScheduleEvent, 'date'> | ScheduleEvent
+): string[] => {
+    const eventBPersonnel = getPersonnel(eventB);
+    return getPersonnel(eventA).filter(person => eventBPersonnel.some(other => personnelNamesMatch(person, other)));
+};
+
 const isDutySupervisorEvent = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): boolean =>
     event.flightNumber === 'Duty Sup' ||
     event.flightNumber === 'Night Duty Sup' ||
@@ -298,7 +327,7 @@ const getEventDayNightClassification = (
 
 const calculateTotalDutyHoursForPeriod = (instructorName: string, events: ScheduleEvent[], startTime: number, endTime: number, syllabusDetails: SyllabusItemDetail[]): number => {
     const instructorEvents = events.filter(e =>
-        getPersonnel(e).includes(instructorName) &&
+        eventHasPerson(e, instructorName) &&
         // Check if event overlaps with the specified time period (considering booking windows)
         (() => {
             const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -382,7 +411,7 @@ const calculateProjectedDuty = (
     syllabusDetails: SyllabusItemDetail[] = []
 ): number => {
     // Filter events for the instructor
-    const instructorEvents = [...events.filter(e => getPersonnel(e).includes(instructorName)), newEvent];
+    const instructorEvents = [...events.filter(e => eventHasPerson(e, instructorName)), newEvent];
     if (instructorEvents.length === 0) return 0;
 
     // Calculate start/end times including pre/post brief
@@ -7599,8 +7628,7 @@ const App: React.FC = () => {
         }
 
         for (const event of validEvents) {
-            const eventPersonnel = getPersonnel(event);
-            const commonPersonnel = targetPersonnel.filter(p => eventPersonnel.includes(p));
+            const commonPersonnel = getCommonPersonnel(targetEvent, event);
 
             if (commonPersonnel.length > 0) {
                 const eventWithDate = 'date' in event ? event : { ...event, date: checkDate || buildDfpDate };
@@ -7635,8 +7663,7 @@ const App: React.FC = () => {
         }
 
         for (const event of validEvents) {
-            const eventPersonnel = getPersonnel(event);
-            const commonPersonnelForDayNight = targetPersonnelForDayNight.filter(p => eventPersonnel.includes(p));
+            const commonPersonnelForDayNight = getCommonPersonnel(targetEvent, event);
 
             if (commonPersonnelForDayNight.length > 0) {
                 const eventClassification = getScheduleEventDayNightClassification(event);
@@ -7682,7 +7709,7 @@ const App: React.FC = () => {
         // Check existing events for this person, excluding the current event being checked
         const existingEvents = eventsForDate.filter(e =>
             e.id !== excludeEventId &&
-            getPersonnel(e).includes(personName) &&
+            eventHasPerson(e, personName) &&
             e.date === analysisDate
         );
 
@@ -12862,12 +12889,29 @@ updates.forEach(update => {
 
 
     // --- NEO ALGORITHM IMPLEMENTATION ---
+    const replacementViolatesDayNightSeparation = useCallback((
+        personName: string,
+        candidateEvent: ScheduleEvent,
+        allEvents: ScheduleEvent[]
+    ): boolean => {
+        const candidateClassification = getScheduleEventDayNightClassification(candidateEvent);
+        if (candidateClassification === 'Day/Night') return false;
+
+        return allEvents.some(event => {
+            if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+            const eventClassification = getScheduleEventDayNightClassification(event);
+            if (eventClassification === 'Day/Night') return false;
+            return candidateClassification !== eventClassification;
+        });
+    }, [getScheduleEventDayNightClassification]);
+
     const generateTraineeRemedies = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[]): NeoTraineeRemedy[] => {
         const suggestions: NeoTraineeRemedy[] = [];
         const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
         const conflictedSyllabusId = conflictedEvent.flightNumber;
+        const candidateEventType = conflictedEvent.type as 'flight' | 'ground' | 'ftd' | 'duty_sup' | 'cpt';
 
-        const otherTrainees = allTraineesData.filter(t => t.fullName !== conflictedEvent.student && !t.isPaused);
+        const otherTrainees = allTraineesData.filter(t => !personnelNamesMatch(t.fullName, conflictedEvent.student) && !t.isPaused);
 
         for (const trainee of otherTrainees) {
             // 1. Check if their next event matches
@@ -12877,13 +12921,17 @@ updates.forEach(update => {
             }
 
             // 2. Check availability
-            if (isPersonStaticallyUnavailable(trainee, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type as any)) {
+            if (isPersonStaticallyUnavailable(trainee, eventWindow.start, eventWindow.end, conflictedEvent.date, candidateEventType)) {
+                continue;
+            }
+
+            if (replacementViolatesDayNightSeparation(trainee.fullName, conflictedEvent, allEvents)) {
                 continue;
             }
 
             const hasOverlap = allEvents.some(e => {
                 if (e.id === conflictedEvent.id) return false;
-                if (!getPersonnel(e).includes(trainee.fullName)) return false;
+                if (!eventHasPerson(e, trainee.fullName)) return false;
                 const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
                 return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
             });
@@ -12894,7 +12942,7 @@ updates.forEach(update => {
 
             // All checks passed
             const daysSinceLastFlight = daysSince(trainee.lastFlightDate, conflictedEvent.date);
-            const traineeEventsToday = allEvents.filter(e => getPersonnel(e).includes(trainee.fullName));
+            const traineeEventsToday = allEvents.filter(e => eventHasPerson(e, trainee.fullName));
             const flightsToday = traineeEventsToday.filter(e => e.type === 'flight').length;
             const ftdsToday = traineeEventsToday.filter(e => e.type === 'ftd').length;
             const cptsToday = traineeEventsToday.filter(e => e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))).length;
@@ -12917,7 +12965,7 @@ updates.forEach(update => {
 
         // Sort by most needy (longest since last flight)
         return suggestions.sort((a, b) => b.trainee.daysSinceLastFlight - a.trainee.daysSinceLastFlight);
-    }, [allTraineesData, syllabusDetails, traineeLMPs, scores]);
+    }, [allTraineesData, syllabusDetails, traineeLMPs, scores, publishedSchedules, buildDfpDate, replacementViolatesDayNightSeparation]);
 
     const generateInstructorRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
         const suggestions: NeoInstructorRemedy[] = [];
@@ -12939,17 +12987,19 @@ updates.forEach(update => {
             // Check static unavailability
             if (isPersonStaticallyUnavailable(instructor, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type as any)) { unavailabilityFailures++; continue; }
 
+            if (replacementViolatesDayNightSeparation(instructor.name, eventAtNewTime, allEvents)) { overlapFailures++; continue; }
+
             // Check for overlaps with other events for this instructor
             const hasOverlap = allEvents.some(e => {
                 if (e.id === conflictedEvent.id) return false;
-                if (!getPersonnel(e).includes(instructor.name)) return false;
+                if (!eventHasPerson(e, instructor.name)) return false;
                 const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
                 return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
             });
             if (hasOverlap) { overlapFailures++; continue; }
 
             // All checks passed, add as a remedy
-            const instructorEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && getPersonnel(e).includes(instructor.name));
+            const instructorEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPerson(e, instructor.name));
             const flightsToday = instructorEventsToday.filter(e => e.type === 'flight').length;
             const ftdsToday = instructorEventsToday.filter(e => e.type === 'ftd').length;
             const cptsToday = instructorEventsToday.filter(e => e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))).length;
@@ -12982,7 +13032,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [allInstructorsData, syllabusDetails]);
+    }, [instructorsData, syllabusDetails, replacementViolatesDayNightSeparation]);
 
     // Generate pilot remedies for SCT events
     const generatePilotRemediesAtTime = useCallback((conflictedEvent: ScheduleEvent, allEvents: ScheduleEvent[], atTime: number): NeoInstructorRemedy[] => {
@@ -13023,17 +13073,22 @@ updates.forEach(update => {
                 continue;
             }
 
+            if (replacementViolatesDayNightSeparation(pilot.name, eventAtNewTime, allEvents)) {
+                overlapFailures++;
+                continue;
+            }
+
             // Check for overlaps with other events for this pilot
             const hasOverlap = allEvents.some(e => {
                 if (e.id === conflictedEvent.id) return false;
-                if (!getPersonnel(e).includes(pilot.name)) return false;
+                if (!eventHasPerson(e, pilot.name)) return false;
                 const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
                 return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
             });
             if (hasOverlap) { overlapFailures++; continue; }
 
             // All checks passed, add as a remedy
-            const pilotEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && getPersonnel(e).includes(pilot.name));
+            const pilotEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPerson(e, pilot.name));
             const flightsToday = pilotEventsToday.filter(e => e.type === 'flight').length;
             const ftdsToday = pilotEventsToday.filter(e => e.type === 'ftd').length;
             const cptsToday = pilotEventsToday.filter(e => e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))).length;
@@ -13066,7 +13121,7 @@ updates.forEach(update => {
             if (eventCountA !== eventCountB) return eventCountA - eventCountB;
             return a.instructor.dutyHours - b.instructor.dutyHours;
         });
-    }, [allInstructorsData, syllabusDetails]);
+    }, [instructorsData, syllabusDetails, school, replacementViolatesDayNightSeparation]);
 
     // --- New Iterative Turnaround Fix ---
     const findClosestTurnaroundFix = (
@@ -13131,20 +13186,20 @@ updates.forEach(update => {
 
             const originalCrew = getPersonnel(problemEvent);
             for (const personName of originalCrew) {
-                const person = [...allInstructorsData, ...allTraineesData].find(p => ('fullName' in p ? p.fullName : p.name) === personName);
+                const person = [...allInstructorsData, ...allTraineesData].find(p => personnelNamesMatch('fullName' in p ? p.fullName : p.name, personName));
                 if (!person) continue;
 
                 if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type as any)) return false;
 
                 const hasOverlap = allEvents.some(e => {
                     if (e.id === problemEvent.id) return false;
-                    if (!getPersonnel(e).includes(personName)) return false;
+                    if (!eventHasPerson(e, personName)) return false;
                     const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
                     return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
                 });
                 if (hasOverlap) return false;
 
-                const otherEventsForPerson = allEvents.filter(e => e.id !== problemEvent.id && getPersonnel(e).includes(personName));
+                const otherEventsForPerson = allEvents.filter(e => e.id !== problemEvent.id && eventHasPerson(e, personName));
                 const projectedDuty = calculateProjectedDuty(personName, otherEventsForPerson, tempEvent, syllabusDetails);
                 if (projectedDuty > maxCrewDutyPeriod) return false;
             }
@@ -13414,7 +13469,7 @@ updates.forEach(update => {
         const personnel = getPersonnel(event);
         const allPersonnelData = [...allInstructorsData, ...allTraineesData];
         personnel.forEach(name => {
-            const person = allPersonnelData.find(p => ('fullName' in p ? p.fullName : p.name) === name);
+            const person = allPersonnelData.find(p => personnelNamesMatch('fullName' in p ? p.fullName : p.name, name));
             if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type as any)) {
                 const unavailability = person.unavailability.find(u => {
                     const isInDateRange = u.allDay
