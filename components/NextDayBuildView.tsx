@@ -90,7 +90,12 @@ const getValidationEventKey = (event: ScheduleEvent): string =>
         event.resourceId || '',
         event.startTime,
         event.duration,
-        event.flightNumber || ''
+        event.flightNumber || '',
+        event.flightType || '',
+        event.instructor || '',
+        event.student || '',
+        event.pilot || '',
+        event.crew || ''
     ].join('|');
 
 const getResourceCategory = (res: string) => {

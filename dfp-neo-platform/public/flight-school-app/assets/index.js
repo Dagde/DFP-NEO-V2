@@ -5935,7 +5935,12 @@ const getValidationEventKey$3 = (event) => [
   event.resourceId || "",
   event.startTime,
   event.duration,
-  event.flightNumber || ""
+  event.flightNumber || "",
+  event.flightType || "",
+  event.instructor || "",
+  event.student || "",
+  event.pilot || "",
+  event.crew || ""
 ].join("|");
 const checkIsChanged = (event, baselineEvents) => {
   if (!baselineEvents) return false;
@@ -19122,7 +19127,12 @@ const getValidationEventKey$2 = (event) => [
   event.resourceId || "",
   event.startTime,
   event.duration,
-  event.flightNumber || ""
+  event.flightNumber || "",
+  event.flightType || "",
+  event.instructor || "",
+  event.student || "",
+  event.pilot || "",
+  event.crew || ""
 ].join("|");
 const getResourceCategory = (res) => {
   if (res.startsWith("PC-21")) return "PC-21";
@@ -67583,7 +67593,12 @@ const getValidationEventKey$1 = (event) => [
   event.resourceId || "",
   event.startTime,
   event.duration,
-  event.flightNumber || ""
+  event.flightNumber || "",
+  event.flightType || "",
+  event.instructor || "",
+  event.student || "",
+  event.pilot || "",
+  event.crew || ""
 ].join("|");
 const NextDayInstructorScheduleView = ({
   events,
@@ -68036,7 +68051,12 @@ const getValidationEventKey = (event) => [
   event.resourceId || "",
   event.startTime,
   event.duration,
-  event.flightNumber || ""
+  event.flightNumber || "",
+  event.flightType || "",
+  event.instructor || "",
+  event.student || "",
+  event.pilot || "",
+  event.crew || ""
 ].join("|");
 const NextDayTraineeScheduleView = ({
   events,
@@ -75209,7 +75229,12 @@ ${"=".repeat(60)}`);
     event.resourceId || "",
     event.startTime,
     event.duration,
-    event.flightNumber || ""
+    event.flightNumber || "",
+    event.flightType || "",
+    event.instructor || "",
+    event.student || "",
+    event.pilot || "",
+    event.crew || ""
   ].join("|");
   const shouldRequireTwrDiCoverage = (event, options = {}) => {
     if (!isSoloFlightNeedingTwrDi(event)) return false;
