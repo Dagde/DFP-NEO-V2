@@ -206,15 +206,14 @@ const getPersonnel = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): strin
         // For SCT events: pilot (PIC) + crew (second pilot)
         if (event.pilot) personnel.add(event.pilot);
         if (event.crew) personnel.add(event.crew);
-    } else {
-        // For training flights: instructor + student/pilot
-        if (event.instructor) personnel.add(event.instructor);
+    } else if (event.flightType === 'Solo') {
         if (event.pilot) personnel.add(event.pilot);
-        if (event.flightType === 'Solo') {
-            if (event.pilot) personnel.add(event.pilot);
-        } else {
-            if (event.student) personnel.add(event.student);
-        }
+    } else {
+        // For non-SCT Dual training events, the instructor field is authoritative.
+        // The pilot field is a legacy mirror of instructor and may be stale after crew swaps.
+        if (event.instructor) personnel.add(event.instructor);
+        else if (event.pilot) personnel.add(event.pilot);
+        if (event.student) personnel.add(event.student);
     }
 
     if (event.attendees) event.attendees.forEach(p => personnel.add(p));

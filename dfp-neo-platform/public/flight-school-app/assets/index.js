@@ -69874,14 +69874,12 @@ const getPersonnel = (event) => {
   if (isSctEvent) {
     if (event.pilot) personnel.add(event.pilot);
     if (event.crew) personnel.add(event.crew);
+  } else if (event.flightType === "Solo") {
+    if (event.pilot) personnel.add(event.pilot);
   } else {
     if (event.instructor) personnel.add(event.instructor);
-    if (event.pilot) personnel.add(event.pilot);
-    if (event.flightType === "Solo") {
-      if (event.pilot) personnel.add(event.pilot);
-    } else {
-      if (event.student) personnel.add(event.student);
-    }
+    else if (event.pilot) personnel.add(event.pilot);
+    if (event.student) personnel.add(event.student);
   }
   if (event.attendees) event.attendees.forEach((p) => personnel.add(p));
   if (event.groupTraineeIds && event.groupTraineeIds.length > 0) ;
