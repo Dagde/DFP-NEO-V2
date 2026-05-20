@@ -75034,15 +75034,6 @@ ${"=".repeat(60)}`);
       console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
     }
     for (const event of validEvents) {
-      const isDutySup = (e) => e.flightNumber === "Duty Sup" || e.flightNumber === "Night Duty Sup" || e.resourceId === "Duty Sup";
-      const isTwrDi = (e) => e.eventCategory === "twr_di" || e.resourceId === "TWR DI";
-      const targetEffectivelyFlight = targetEvent.type === "flight" || targetEvent.type === "ftd" || targetEvent.type === "cpt" || isDutySup(targetEvent) || isTwrDi(targetEvent);
-      const eventEffectivelyFlight = event.type === "flight" || event.type === "ftd" || event.type === "cpt" || isDutySup(event) || isTwrDi(event);
-      const targetIsGround = !targetEffectivelyFlight;
-      const eventIsGround = !eventEffectivelyFlight;
-      if (targetIsGround !== eventIsGround) {
-        continue;
-      }
       const eventPersonnel = getPersonnel(event);
       const commonPersonnel = targetPersonnel.filter((p) => eventPersonnel.includes(p));
       if (commonPersonnel.length > 0) {
