@@ -1364,7 +1364,7 @@ function generateDfpInternal(
         if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
         _overlapRejCount++;
         const isCrossType = (candidateType === 'ground') !== (conflictingType === 'ground');
-        const crossTypeLabel = isCrossType ? '⚠️ CROSS-TYPE (should not block)' : '✅ SAME-TYPE (correct block)';
+        const crossTypeLabel = isCrossType ? '✅ CROSS-TYPE (booking-window block)' : '✅ SAME-TYPE (booking-window block)';
         console.log(
             `[OVERLAP-REJ #${_overlapRejCount}] ${crossTypeLabel}\n` +
             `  Instructor  : ${instructorName}\n` +
@@ -2373,10 +2373,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         if (placed) break;
                         for (const space of searchSpaces) {
                             if (placed) break;
-                            const earliestEventStart = isNightPass
+                            const mustFitFullBookingWindow = isNightPass || type === 'ground' || type === 'cpt';
+                            const earliestEventStart = mustFitFullBookingWindow
                                 ? space.start + (syllabusItem.preFlightTime || 0)
                                 : space.start;
-                            const latestEventStart = isNightPass
+                            const latestEventStart = mustFitFullBookingWindow
                                 ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0)
                                 : space.end - syllabusItem.duration;
 
@@ -3123,7 +3124,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // FTD events must finish by the end of the FTD window.
         // This mirrors the same end-of-window rule applied to flight events above.
         if (type === 'ground' || type === 'cpt') {
-            if (startTime + syllabusItem.duration > flyingEndTime) {
+            const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
+            const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+            if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
                 return null; // TIME_BOUNDARY_VIOLATION – event would run past flying window end
             }
         } else if (type === 'ftd') {
@@ -4387,14 +4390,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return 0;
         };
 
+        const personnelTurnaroundFor = (earlierEvent: Omit<ScheduleEvent, 'date'>, laterEvent: Omit<ScheduleEvent, 'date'>): number => {
+            const earlierWindow = eventWindow(earlierEvent);
+            const laterWindow = eventWindow(laterEvent);
+            const lmpBriefDebriefGap = Math.max(0, earlierWindow.end - (earlierEvent.startTime + earlierEvent.duration)) +
+                Math.max(0, laterEvent.startTime - laterWindow.start);
+            return Math.max(resourceTurnaroundFor(laterEvent), lmpBriefDebriefGap);
+        };
+
         const hasBuildConflict = (candidate: BuildEvent, acceptedEvents: BuildEvent[]): boolean => {
             const candidateWindow = eventWindow(candidate);
 
             return acceptedEvents.some(existing => {
                 if (existing.id === candidate.id) return false;
-                if (isStbyResource(existing.resourceId) || isStbyResource(candidate.resourceId)) return false;
 
-                if (existing.resourceId === candidate.resourceId) {
+                if (
+                    existing.resourceId === candidate.resourceId &&
+                    !isStbyResource(existing.resourceId) &&
+                    !isStbyResource(candidate.resourceId)
+                ) {
                     const candidateAfterExistingGap = candidate.startTime - (existing.startTime + existing.duration);
                     if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < resourceTurnaroundFor(candidate)) {
                         return true;
@@ -4411,6 +4425,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 if (getCommonPersonnel(candidate, existing).length > 0) {
                     const existingWindow = eventWindow(existing);
                     if (windowsOverlap(candidateWindow, existingWindow)) return true;
+
+                    if (candidate.startTime >= existing.startTime) {
+                        const requiredGap = personnelTurnaroundFor(existing, candidate);
+                        const actualGap = candidate.startTime - (existing.startTime + existing.duration);
+                        if (actualGap < requiredGap - 0.001) return true;
+                    } else {
+                        const requiredGap = personnelTurnaroundFor(candidate, existing);
+                        const actualGap = existing.startTime - (candidate.startTime + candidate.duration);
+                        if (actualGap < requiredGap - 0.001) return true;
+                    }
 
                     const candidateClassification = getGeneratedEventDayNightClassification(candidate);
                     const existingClassification = getGeneratedEventDayNightClassification(existing);
@@ -4463,8 +4487,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             for (const instructor of instructorCandidates) {
                 for (const startTime of timeCandidates) {
-                    if (startTime + event.duration > flyingEndTime + 0.001) continue;
                     const candidateWindow = eventWindow({ ...event, startTime });
+                    if (candidateWindow.start < flyingStartTime - 0.001 || candidateWindow.end > flyingEndTime + 0.001) continue;
                     if (trainee && isPersonStaticallyUnavailable(trainee, candidateWindow.start, candidateWindow.end, buildDate, 'ground')) continue;
                     if (isPersonStaticallyUnavailable(instructor, candidateWindow.start, candidateWindow.end, buildDate, 'ground')) continue;
 

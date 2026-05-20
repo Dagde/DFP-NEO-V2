@@ -70504,7 +70504,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
     _overlapRejCount++;
     const isCrossType = candidateType === "ground" !== (conflictingType === "ground");
-    const crossTypeLabel = isCrossType ? "⚠️ CROSS-TYPE (should not block)" : "✅ SAME-TYPE (correct block)";
+    const crossTypeLabel = isCrossType ? "✅ CROSS-TYPE (booking-window block)" : "✅ SAME-TYPE (booking-window block)";
     console.log(
       `[OVERLAP-REJ #${_overlapRejCount}] ${crossTypeLabel}
   Instructor  : ${instructorName}
@@ -71249,8 +71249,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             if (placed) break;
             for (const space of searchSpaces) {
               if (placed) break;
-              const earliestEventStart = isNightPass ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
-              const latestEventStart = isNightPass ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
+              const mustFitFullBookingWindow = isNightPass || type === "ground" || type === "cpt";
+              const earliestEventStart = mustFitFullBookingWindow ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
+              const latestEventStart = mustFitFullBookingWindow ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
               for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
                 if (result && typeof result === "object" && "id" in result) {
@@ -71792,7 +71793,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     if (type === "ground" || type === "cpt") {
-      if (startTime + syllabusItem.duration > flyingEndTime) {
+      const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
+      const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
+      if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
         return null;
       }
     } else if (type === "ftd") {
@@ -72611,12 +72614,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
       return 0;
     };
+    const personnelTurnaroundFor = (earlierEvent, laterEvent) => {
+      const earlierWindow = eventWindow(earlierEvent);
+      const laterWindow = eventWindow(laterEvent);
+      const lmpBriefDebriefGap = Math.max(0, earlierWindow.end - (earlierEvent.startTime + earlierEvent.duration)) + Math.max(0, laterEvent.startTime - laterWindow.start);
+      return Math.max(resourceTurnaroundFor(laterEvent), lmpBriefDebriefGap);
+    };
     const hasBuildConflict = (candidate, acceptedEvents2) => {
       const candidateWindow = eventWindow(candidate);
       return acceptedEvents2.some((existing) => {
         if (existing.id === candidate.id) return false;
-        if (isStbyResource(existing.resourceId) || isStbyResource(candidate.resourceId)) return false;
-        if (existing.resourceId === candidate.resourceId) {
+        if (existing.resourceId === candidate.resourceId && !isStbyResource(existing.resourceId) && !isStbyResource(candidate.resourceId)) {
           const candidateAfterExistingGap = candidate.startTime - (existing.startTime + existing.duration);
           if (candidate.startTime >= existing.startTime && candidateAfterExistingGap < resourceTurnaroundFor(candidate)) {
             return true;
@@ -72630,6 +72638,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (getCommonPersonnel(candidate, existing).length > 0) {
           const existingWindow = eventWindow(existing);
           if (windowsOverlap(candidateWindow, existingWindow)) return true;
+          if (candidate.startTime >= existing.startTime) {
+            const requiredGap = personnelTurnaroundFor(existing, candidate);
+            const actualGap = candidate.startTime - (existing.startTime + existing.duration);
+            if (actualGap < requiredGap - 1e-3) return true;
+          } else {
+            const requiredGap = personnelTurnaroundFor(candidate, existing);
+            const actualGap = existing.startTime - (candidate.startTime + candidate.duration);
+            if (actualGap < requiredGap - 1e-3) return true;
+          }
           const candidateClassification = getGeneratedEventDayNightClassification(candidate);
           const existingClassification = getGeneratedEventDayNightClassification(existing);
           if (candidateClassification !== "Day/Night" && existingClassification !== "Day/Night" && candidateClassification !== existingClassification) {
@@ -72669,8 +72686,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       ].filter((resourceId) => !!resourceId);
       for (const instructor of instructorCandidates) {
         for (const startTime of timeCandidates) {
-          if (startTime + event.duration > flyingEndTime + 1e-3) continue;
           const candidateWindow = eventWindow({ ...event, startTime });
+          if (candidateWindow.start < flyingStartTime - 1e-3 || candidateWindow.end > flyingEndTime + 1e-3) continue;
           if (trainee && isPersonStaticallyUnavailable(trainee, candidateWindow.start, candidateWindow.end, buildDate, "ground")) continue;
           if (isPersonStaticallyUnavailable(instructor, candidateWindow.start, candidateWindow.end, buildDate, "ground")) continue;
           for (const resourceId of resourceCandidates) {
