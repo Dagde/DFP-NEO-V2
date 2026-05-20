@@ -79703,7 +79703,32 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       resourceId: updatedEvent.resourceId
     });
     console.log("🟣 NEO: Calling handleSaveEvents...");
-    handleSaveEvents([updatedEvent], false);
+    const savedUpdatedEvent = normaliseCrewFieldsForSave(updatedEvent);
+    handleSaveEvents([savedUpdatedEvent], false);
+    if (isNextDayContext) {
+      setNextDayBuildEvents((prev) => prev.map((event) => {
+        if (event.id !== savedUpdatedEvent.id) return event;
+        const { date: _savedDate, ...eventForBuild } = savedUpdatedEvent;
+        return eventForBuild;
+      }));
+    } else {
+      setPublishedSchedules((prev) => {
+        const scheduleDate = savedUpdatedEvent.date || targetDate;
+        const currentEventsForDate = prev[scheduleDate] || [];
+        const nextEventsForDate = currentEventsForDate.map(
+          (event) => event.id === savedUpdatedEvent.id ? savedUpdatedEvent : event
+        );
+        const eventExists = currentEventsForDate.some((event) => event.id === savedUpdatedEvent.id);
+        const mergedEventsForDate = eventExists ? nextEventsForDate : [...currentEventsForDate, savedUpdatedEvent];
+        return {
+          ...prev,
+          [scheduleDate]: mergedEventsForDate
+        };
+      });
+    }
+    setEvents((prev) => prev.map(
+      (event) => event.id === savedUpdatedEvent.id ? savedUpdatedEvent : event
+    ));
     setNeoProblemTileForFlyout(null);
     setNeoRemediesForFlyout([]);
     setDutyWarningRemedy(null);

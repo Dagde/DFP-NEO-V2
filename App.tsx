@@ -13687,8 +13687,40 @@ updates.forEach(update => {
         console.log('🟣 NEO: Calling handleSaveEvents...');
 
         // Use the SAME save pathway as Flight Details modal.
-        // The save pathway normalises crew fields, so NEO and the rendered tile read the same event state.
-        handleSaveEvents([updatedEvent], false);
+        // Then mirror the normalized result into the canonical in-memory stores immediately.
+        // This prevents the tile label, validation pass, and next NEO explanation from reading
+        // different versions of the same event while React state updates settle.
+        const savedUpdatedEvent = normaliseCrewFieldsForSave(updatedEvent as ScheduleEvent);
+        handleSaveEvents([savedUpdatedEvent], false);
+
+        if (isNextDayContext) {
+            setNextDayBuildEvents(prev => prev.map(event => {
+                if (event.id !== savedUpdatedEvent.id) return event;
+                const { date: _savedDate, ...eventForBuild } = savedUpdatedEvent;
+                return eventForBuild as ScheduleEvent;
+            }));
+        } else {
+            setPublishedSchedules(prev => {
+                const scheduleDate = savedUpdatedEvent.date || targetDate;
+                const currentEventsForDate = prev[scheduleDate] || [];
+                const nextEventsForDate = currentEventsForDate.map(event =>
+                    event.id === savedUpdatedEvent.id ? savedUpdatedEvent : event
+                );
+                const eventExists = currentEventsForDate.some(event => event.id === savedUpdatedEvent.id);
+                const mergedEventsForDate = eventExists
+                    ? nextEventsForDate
+                    : [...currentEventsForDate, savedUpdatedEvent];
+
+                return {
+                    ...prev,
+                    [scheduleDate]: mergedEventsForDate,
+                };
+            });
+        }
+
+        setEvents(prev => prev.map(event =>
+            event.id === savedUpdatedEvent.id ? savedUpdatedEvent : event
+        ));
 
         setNeoProblemTileForFlyout(null);
         setNeoRemediesForFlyout([]);
