@@ -21621,9 +21621,9 @@ const CourseMetricsTab = ({
         const course = getCourseFromStudent(e.student || "") || getCourseFromStudent(e.pilot || "");
         if (course && eventsPerCourse.has(course)) {
           eventsPerCourse.set(course, eventsPerCourse.get(course) + 1);
-          const eventPersonnel = getEventPersonnel(e);
+          const eventPersonnel2 = getEventPersonnel(e);
           const coursePersonnelSet = personnelPerCourse.get(course);
-          eventPersonnel.forEach((p) => coursePersonnelSet.add(p));
+          eventPersonnel2.forEach((p) => coursePersonnelSet.add(p));
         }
       }
     });
@@ -69867,6 +69867,36 @@ const getPersonnel = (event) => {
   if (event.groupTraineeIds && event.groupTraineeIds.length > 0) ;
   return Array.from(personnel);
 };
+const PERSONNEL_RANK_PREFIX_RE = /^(ACM|AIRMSHL|AVM|AIRCDRE|GPCAPT|WGCDR|SQNLDR|FLTLT|FLGOFF|PLTOFF|OFFCDT|WOFF|FSGT|SGT|CPL|LACW?|ACW?|MIDN|CMDR|LCDR|LEUT|SBLT|ASLT|CDRE|CAPT|COL|LTCOL|MAJ|LT|2LT|WO1|WO2|SSGT|PTE|MR|MRS|MS|MISS|DR)\s+/i;
+const normalizePersonnelNameForMatch = (name) => (name || "").replace(/\s+/g, " ").trim().replace(PERSONNEL_RANK_PREFIX_RE, "").replace(/\s+[–-]\s+[A-Z]{2,}\d+$/i, "").toLowerCase();
+const personnelNamesMatch = (a, b) => {
+  const left = normalizePersonnelNameForMatch(a);
+  const right = normalizePersonnelNameForMatch(b);
+  return !!left && left === right;
+};
+const eventHasPerson = (event, personName) => getPersonnel(event).some((p) => personnelNamesMatch(p, personName));
+const getCommonPersonnel = (eventA, eventB) => {
+  const eventBPersonnel = getPersonnel(eventB);
+  return getPersonnel(eventA).filter((person) => eventBPersonnel.some((other) => personnelNamesMatch(person, other)));
+};
+const normaliseCrewFieldsForSave = (event) => {
+  const normalised = { ...event };
+  const isSctEvent = normalised.eventCategory === "sct" || normalised.flightNumber?.startsWith("SCT");
+  if (isSctEvent) {
+    normalised.instructor = "";
+    return normalised;
+  }
+  if ((normalised.type === "flight" || normalised.type === "ftd") && normalised.flightType === "Solo") {
+    normalised.pilot = normalised.pilot || normalised.student || "";
+    normalised.instructor = "";
+    normalised.student = "";
+    return normalised;
+  }
+  if ((normalised.type === "flight" || normalised.type === "ftd") && normalised.instructor) {
+    normalised.pilot = normalised.instructor;
+  }
+  return normalised;
+};
 const isDutySupervisorEvent = (event) => event.flightNumber === "Duty Sup" || event.flightNumber === "Night Duty Sup" || event.resourceId === "Duty Sup";
 const isStbyResource = (resourceId) => !!resourceId && (resourceId.startsWith("STBY") || resourceId.startsWith("BNF-STBY"));
 const getEventBookingWindow = (event, syllabusDetails) => {
@@ -69931,7 +69961,7 @@ const formatDecimalHourToString = (decimalHour) => {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 };
 const calculateProjectedDuty = (instructorName, events, newEvent, syllabusDetails = []) => {
-  const instructorEvents = [...events.filter((e) => getPersonnel(e).includes(instructorName)), newEvent];
+  const instructorEvents = [...events.filter((e) => eventHasPerson(e, instructorName)), newEvent];
   if (instructorEvents.length === 0) return 0;
   const sortedWindows = instructorEvents.map((e) => getEventBookingWindowForAlgo(e, syllabusDetails)).sort((a, b) => a.start - b.start);
   const firstEventStart = sortedWindows[0].start;
@@ -75034,8 +75064,7 @@ ${"=".repeat(60)}`);
       console.log(`   Target window: ${targetWindow.start} - ${targetWindow.end}`);
     }
     for (const event of validEvents) {
-      const eventPersonnel = getPersonnel(event);
-      const commonPersonnel = targetPersonnel.filter((p) => eventPersonnel.includes(p));
+      const commonPersonnel = getCommonPersonnel(targetEvent, event);
       if (commonPersonnel.length > 0) {
         const eventWithDate = "date" in event ? event : { ...event };
         const eventWindow = getEventBookingWindow(eventWithDate, syllabusDetails);
@@ -75056,14 +75085,13 @@ ${"=".repeat(60)}`);
         }
       }
     }
-    const targetPersonnelForDayNight = getPersonnel(targetEvent);
+    getPersonnel(targetEvent);
     const targetClassification = getScheduleEventDayNightClassification(targetEvent);
     if (targetClassification === "Day/Night") {
       return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
     }
     for (const event of validEvents) {
-      const eventPersonnel = getPersonnel(event);
-      const commonPersonnelForDayNight = targetPersonnelForDayNight.filter((p) => eventPersonnel.includes(p));
+      const commonPersonnelForDayNight = getCommonPersonnel(targetEvent, event);
       if (commonPersonnelForDayNight.length > 0) {
         const eventClassification = getScheduleEventDayNightClassification(event);
         if (eventClassification === "Day/Night") {
@@ -75088,7 +75116,7 @@ ${"=".repeat(60)}`);
   const enforceDayNightSeparation = (personName, proposedStartTime, proposedDuration = 1.5, eventType = "flight", checkDate, proposedFlightNumber, excludeEventId) => {
     const analysisDate = checkDate || date;
     const existingEvents = eventsForDate.filter(
-      (e) => e.id !== excludeEventId && getPersonnel(e).includes(personName) && e.date === analysisDate
+      (e) => e.id !== excludeEventId && eventHasPerson(e, personName) && e.date === analysisDate
     );
     const hasDayEvents = existingEvents.some((e) => {
       const classification = getScheduleEventDayNightClassification(e);
@@ -76324,6 +76352,7 @@ ${"=".repeat(60)}`);
     console.log("🔵 date:", date);
     console.log("🔵 buildDfpDate:", buildDfpDate);
     if (!eventsToSave || eventsToSave.length === 0) return;
+    eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave);
     for (const event of eventsToSave) {
       const personnel = getPersonnel(event);
       for (const personName of personnel) {
@@ -79114,30 +79143,69 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setSuccessMessage(successMsg);
     console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====");
   };
+  const replacementViolatesDayNightSeparation = reactExports.useCallback((personName, candidateEvent, allEvents) => {
+    const candidateClassification = getScheduleEventDayNightClassification(candidateEvent);
+    if (candidateClassification === "Day/Night") return false;
+    return allEvents.some((event) => {
+      if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+      const eventClassification = getScheduleEventDayNightClassification(event);
+      if (eventClassification === "Day/Night") return false;
+      return candidateClassification !== eventClassification;
+    });
+  }, [getScheduleEventDayNightClassification]);
+  const buildNeoCandidateEvent = reactExports.useCallback((baseEvent, replacementType, replacementName, atTime = baseEvent.startTime) => {
+    const candidateEvent = { ...baseEvent, startTime: atTime };
+    const isSctEvent = candidateEvent.flightNumber?.startsWith("SCT");
+    if (replacementType === "instructor") {
+      if (isSctEvent) {
+        candidateEvent.pilot = replacementName;
+        candidateEvent.instructor = "";
+      } else {
+        candidateEvent.instructor = replacementName;
+        if (candidateEvent.type === "flight" || candidateEvent.type === "ftd") {
+          candidateEvent.pilot = candidateEvent.flightType === "Solo" ? candidateEvent.student || candidateEvent.pilot || "" : replacementName;
+        }
+      }
+    } else {
+      if (candidateEvent.flightType === "Solo") {
+        candidateEvent.pilot = replacementName;
+        candidateEvent.student = "";
+      } else {
+        candidateEvent.student = replacementName;
+      }
+    }
+    return candidateEvent;
+  }, []);
+  const isReplacementAvailableForCandidateEvent = reactExports.useCallback((person, personName, candidateEvent, allEvents) => {
+    const candidateEventType = candidateEvent.type;
+    const eventWindow = getEventBookingWindow(candidateEvent, syllabusDetails);
+    if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, candidateEvent.date, candidateEventType)) {
+      return false;
+    }
+    if (replacementViolatesDayNightSeparation(personName, candidateEvent, allEvents)) {
+      return false;
+    }
+    return !allEvents.some((event) => {
+      if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+      const otherEventWindow = getEventBookingWindow(event, syllabusDetails);
+      return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
+    });
+  }, [replacementViolatesDayNightSeparation, syllabusDetails]);
   const generateTraineeRemedies = reactExports.useCallback((conflictedEvent, allEvents) => {
     const suggestions = [];
-    const eventWindow = getEventBookingWindow(conflictedEvent, syllabusDetails);
     const conflictedSyllabusId = conflictedEvent.flightNumber;
-    const otherTrainees = allTraineesData.filter((t) => t.fullName !== conflictedEvent.student && !t.isPaused);
+    const otherTrainees = allTraineesData.filter((t) => !personnelNamesMatch(t.fullName, conflictedEvent.student) && !t.isPaused);
     for (const trainee of otherTrainees) {
       const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDfpDate);
       if (nextEvents.next?.id !== conflictedSyllabusId) {
         continue;
       }
-      if (isPersonStaticallyUnavailable(trainee, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type)) {
-        continue;
-      }
-      const hasOverlap = allEvents.some((e) => {
-        if (e.id === conflictedEvent.id) return false;
-        if (!getPersonnel(e).includes(trainee.fullName)) return false;
-        const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
-        return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
-      });
-      if (hasOverlap) {
+      const candidateEvent = buildNeoCandidateEvent(conflictedEvent, "trainee", trainee.fullName);
+      if (!isReplacementAvailableForCandidateEvent(trainee, trainee.fullName, candidateEvent, allEvents)) {
         continue;
       }
       const daysSinceLastFlight = daysSince(trainee.lastFlightDate, conflictedEvent.date);
-      const traineeEventsToday = allEvents.filter((e) => getPersonnel(e).includes(trainee.fullName));
+      const traineeEventsToday = allEvents.filter((e) => eventHasPerson(e, trainee.fullName));
       const flightsToday = traineeEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = traineeEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = traineeEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -79157,14 +79225,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       });
     }
     return suggestions.sort((a, b) => b.trainee.daysSinceLastFlight - a.trainee.daysSinceLastFlight);
-  }, [allTraineesData, syllabusDetails, traineeLMPs, scores]);
+  }, [allTraineesData, traineeLMPs, scores, publishedSchedules, buildDfpDate, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const generateInstructorRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
     console.log("🔍 generateInstructorRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
     console.log("🔍 Total instructors to check:", instructorsData.length);
     let qualificationFailures = 0, unavailabilityFailures = 0, overlapFailures = 0;
     const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
-    const eventWindow = getEventBookingWindow(eventAtNewTime, syllabusDetails);
     for (const instructor of instructorsData) {
       const isQFI = instructor.role === "QFI";
       const isSimIp2 = instructor.role === "SIM IP";
@@ -79173,21 +79240,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         qualificationFailures++;
         continue;
       }
-      if (isPersonStaticallyUnavailable(instructor, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type)) {
-        unavailabilityFailures++;
-        continue;
-      }
-      const hasOverlap = allEvents.some((e) => {
-        if (e.id === conflictedEvent.id) return false;
-        if (!getPersonnel(e).includes(instructor.name)) return false;
-        const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
-        return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
-      });
-      if (hasOverlap) {
+      const candidateEvent = buildNeoCandidateEvent(eventAtNewTime, "instructor", instructor.name, atTime);
+      if (!isReplacementAvailableForCandidateEvent(instructor, instructor.name, candidateEvent, allEvents)) {
         overlapFailures++;
         continue;
       }
-      const instructorEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && getPersonnel(e).includes(instructor.name));
+      const instructorEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && eventHasPerson(e, instructor.name));
       const flightsToday = instructorEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = instructorEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = instructorEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -79217,7 +79275,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [allInstructorsData, syllabusDetails]);
+  }, [instructorsData, syllabusDetails, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const generatePilotRemediesAtTime = reactExports.useCallback((conflictedEvent, allEvents, atTime) => {
     const suggestions = [];
     console.log("🔍 generatePilotRemediesAtTime called for:", conflictedEvent.flightNumber, "at time:", atTime);
@@ -79240,23 +79298,13 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🔍 Total qualified pilots to check:", qualifiedPilots.length);
     let unavailabilityFailures = 0, overlapFailures = 0;
     const eventAtNewTime = { ...conflictedEvent, startTime: atTime };
-    const eventWindow = getEventBookingWindow(eventAtNewTime, syllabusDetails);
     for (const pilot of qualifiedPilots) {
-      if (isPersonStaticallyUnavailable(pilot, eventWindow.start, eventWindow.end, conflictedEvent.date, conflictedEvent.type)) {
-        unavailabilityFailures++;
-        continue;
-      }
-      const hasOverlap = allEvents.some((e) => {
-        if (e.id === conflictedEvent.id) return false;
-        if (!getPersonnel(e).includes(pilot.name)) return false;
-        const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
-        return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
-      });
-      if (hasOverlap) {
+      const candidateEvent = buildNeoCandidateEvent(eventAtNewTime, "instructor", pilot.name, atTime);
+      if (!isReplacementAvailableForCandidateEvent(pilot, pilot.name, candidateEvent, allEvents)) {
         overlapFailures++;
         continue;
       }
-      const pilotEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && getPersonnel(e).includes(pilot.name));
+      const pilotEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && eventHasPerson(e, pilot.name));
       const flightsToday = pilotEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = pilotEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = pilotEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -79286,7 +79334,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (eventCountA !== eventCountB) return eventCountA - eventCountB;
       return a.instructor.dutyHours - b.instructor.dutyHours;
     });
-  }, [allInstructorsData, syllabusDetails]);
+  }, [instructorsData, syllabusDetails, school, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const findClosestTurnaroundFix = (problemEvent, allEvents, context, flyingWindow) => {
     const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, getPersonnel: getPersonnel2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
     const eventsOnResource = allEvents.filter((e) => e.resourceId === problemEvent.resourceId && e.id !== problemEvent.id).sort((a, b) => a.startTime - b.startTime);
@@ -79332,17 +79380,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
       const originalCrew = getPersonnel2(problemEvent);
       for (const personName of originalCrew) {
-        const person = [...allInstructorsData, ...allTraineesData].find((p) => ("fullName" in p ? p.fullName : p.name) === personName);
+        const person = [...allInstructorsData, ...allTraineesData].find((p) => personnelNamesMatch("fullName" in p ? p.fullName : p.name, personName));
         if (!person) continue;
         if (isPersonStaticallyUnavailable2(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type)) return false;
         const hasOverlap = allEvents.some((e) => {
           if (e.id === problemEvent.id) return false;
-          if (!getPersonnel2(e).includes(personName)) return false;
+          if (!eventHasPerson(e, personName)) return false;
           const otherEventWindow = getEventBookingWindow2(e, syllabusDetails2);
           return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
         });
         if (hasOverlap) return false;
-        const otherEventsForPerson = allEvents.filter((e) => e.id !== problemEvent.id && getPersonnel2(e).includes(personName));
+        const otherEventsForPerson = allEvents.filter((e) => e.id !== problemEvent.id && eventHasPerson(e, personName));
         const projectedDuty = calculateProjectedDuty(personName, otherEventsForPerson, tempEvent, syllabusDetails2);
         if (projectedDuty > maxCrewDutyPeriod2) return false;
       }
@@ -79556,7 +79604,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const personnel = getPersonnel(event);
     const allPersonnelData = [...allInstructorsData, ...allTraineesData];
     personnel.forEach((name) => {
-      const person = allPersonnelData.find((p) => ("fullName" in p ? p.fullName : p.name) === name);
+      const person = allPersonnelData.find((p) => personnelNamesMatch("fullName" in p ? p.fullName : p.name, name));
       if (person && isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, event.date, event.type)) {
         const unavailability = person.unavailability.find((u) => {
           const isInDateRange = u.allDay ? event.date >= u.startDate && event.date < u.endDate : event.date >= u.startDate && event.date <= u.endDate;
@@ -79619,10 +79667,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       } else {
         console.log("🟣 NEO: Applying instructor change:", eventToUpdate.instructor, "→", remedy.instructor.name);
         updatedEvent.instructor = remedy.instructor.name;
+        if ((updatedEvent.type === "flight" || updatedEvent.type === "ftd") && updatedEvent.flightType !== "Solo") {
+          updatedEvent.pilot = remedy.instructor.name;
+        }
       }
     } else if (remedy.type === "trainee") {
       console.log("🟣 NEO: Applying trainee change:", eventToUpdate.student, "→", remedy.trainee.name);
-      updatedEvent.student = remedy.trainee.name;
+      if (updatedEvent.flightType === "Solo") {
+        updatedEvent.pilot = remedy.trainee.name;
+        updatedEvent.student = "";
+      } else {
+        updatedEvent.student = remedy.trainee.name;
+      }
     } else if (remedy.type === "timeshift") {
       console.log("🟣 NEO: Applying time shift:", eventToUpdate.startTime, "→", remedy.newStartTime);
       updatedEvent.startTime = remedy.newStartTime;
@@ -79632,6 +79688,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           updatedEvent.instructor = "";
         } else {
           updatedEvent.instructor = remedy.instructor.name;
+          if ((updatedEvent.type === "flight" || updatedEvent.type === "ftd") && updatedEvent.flightType !== "Solo") {
+            updatedEvent.pilot = remedy.instructor.name;
+          }
         }
       }
     }
@@ -79645,7 +79704,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
     console.log("🟣 NEO: Calling handleSaveEvents...");
     handleSaveEvents([updatedEvent], false);
-    console.log("🟣 NEO: handleSaveEvents returned, waiting for useEffect to recalculate conflicts");
+    setNeoProblemTileForFlyout(null);
+    setNeoRemediesForFlyout([]);
+    setDutyWarningRemedy(null);
+    setShowDutyWarning(false);
+    setTimeOnlyRemedyForConfirmation(null);
+    setShowTimeOnlyRemedyConfirm(false);
+    setSelectedEvent(null);
+    console.log("🟣 NEO: handleSaveEvents returned, closing NEO and Flight Details windows");
     console.log("🟣 ========== NEO REMEDY END ==========");
   };
   reactExports.useEffect(() => {
