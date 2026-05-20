@@ -255,6 +255,29 @@ const getCommonPersonnel = (
     return getPersonnel(eventA).filter(person => eventBPersonnel.some(other => personnelNamesMatch(person, other)));
 };
 
+const normaliseCrewFieldsForSave = (event: ScheduleEvent): ScheduleEvent => {
+    const normalised = { ...event };
+    const isSctEvent = normalised.eventCategory === 'sct' || normalised.flightNumber?.startsWith('SCT');
+
+    if (isSctEvent) {
+        normalised.instructor = '';
+        return normalised;
+    }
+
+    if ((normalised.type === 'flight' || normalised.type === 'ftd') && normalised.flightType === 'Solo') {
+        normalised.pilot = normalised.pilot || normalised.student || '';
+        normalised.instructor = '';
+        normalised.student = '';
+        return normalised;
+    }
+
+    if ((normalised.type === 'flight' || normalised.type === 'ftd') && normalised.instructor) {
+        normalised.pilot = normalised.instructor;
+    }
+
+    return normalised;
+};
+
 const isDutySupervisorEvent = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): boolean =>
     event.flightNumber === 'Duty Sup' ||
     event.flightNumber === 'Night Duty Sup' ||
@@ -9314,6 +9337,7 @@ const App: React.FC = () => {
         console.log('🔵 date:', date);
         console.log('🔵 buildDfpDate:', buildDfpDate);
         if (!eventsToSave || eventsToSave.length === 0) return;
+        eventsToSave = eventsToSave.map(normaliseCrewFieldsForSave);
 
         // HARD-WIRED: Check day/night separation violations BEFORE saving any events
         for (const event of eventsToSave) {
@@ -13662,15 +13686,19 @@ updates.forEach(update => {
 
         console.log('🟣 NEO: Calling handleSaveEvents...');
 
-        // Use the SAME save pathway as Flight Details modal
-        // This ensures all downstream updates happen identically
+        // Use the SAME save pathway as Flight Details modal.
+        // The save pathway normalises crew fields, so NEO and the rendered tile read the same event state.
         handleSaveEvents([updatedEvent], false);
 
-        // DO NOT close the flyout here!
-        // The useEffect below will detect the updated state, recalculate conflicts,
-        // and automatically close the flyout if all conflicts are resolved.
-        // This matches the reactive flow that happens when manually editing via Flight Details.
-        console.log('🟣 NEO: handleSaveEvents returned, waiting for useEffect to recalculate conflicts');
+        setNeoProblemTileForFlyout(null);
+        setNeoRemediesForFlyout([]);
+        setDutyWarningRemedy(null);
+        setShowDutyWarning(false);
+        setTimeOnlyRemedyForConfirmation(null);
+        setShowTimeOnlyRemedyConfirm(false);
+        setSelectedEvent(null);
+
+        console.log('🟣 NEO: handleSaveEvents returned, closing NEO and Flight Details windows');
         console.log('🟣 ========== NEO REMEDY END ==========');
     };
 
