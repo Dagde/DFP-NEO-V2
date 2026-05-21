@@ -31,6 +31,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [selectionMode, setSelectionMode] = useState<'suggested' | 'other'>('suggested');
   const [eventToRemediateId, setEventToRemediateId] = useState<string>('');
   const [remedialEvents, setRemedialEvents] = useState<{ id: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]>([]);
+  const [validationMessage, setValidationMessage] = useState<string>('');
 
   // State for the three new rows
   const [tutState, setTutState] = useState({ quantity: 0, duration: 1.0, instructor: '' });
@@ -158,12 +159,13 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
     if (eventsToAdd.length > 0) {
         setRemedialEvents(prev => [...prev, ...eventsToAdd]);
+        setValidationMessage('');
         // Reset forms
         setTutState({ quantity: 0, duration: 1.0, instructor: '' });
         setFtdState({ quantity: 0, duration: 1.5, instructor: '' });
         setFlightState({ quantity: 0, duration: 1.5, instructor: '' });
     } else {
-        alert("Please enter a quantity, duration, and instructor for at least one event type.");
+        setValidationMessage("Please enter a quantity, duration, and instructor for at least one event type.");
     }
   };
   
@@ -178,9 +180,10 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
   const handleSavePackage = () => {
     if (!eventToRemediate || remedialEvents.length === 0) {
-        alert("Please select an event to remediate and add at least one remedial event.");
+        setValidationMessage("Please select an event to remediate and add at least one remedial event.");
         return;
     }
+    setValidationMessage('');
     onSave(trainee, eventToRemediate, remedialEvents);
   };
   
@@ -212,7 +215,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in">
       <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-sky-400">Add Remedial Package for {trainee.name}</h2>
@@ -223,6 +226,11 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
           {/* Transparent freeze overlay */}
           {isFrozen && (
             <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
+          )}
+          {validationMessage && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100 shadow-lg">
+              {validationMessage}
+            </div>
           )}
           {/* Step 1: Select Event to Remediate */}
           <fieldset className="p-4 border border-gray-600 rounded-lg">

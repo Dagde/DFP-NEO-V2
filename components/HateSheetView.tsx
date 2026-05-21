@@ -52,11 +52,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     };
        const combinedHistory = React.useMemo(() => {
            // FIX: Add 'as const' to create a discriminated union for type-safe property access.
-              // Filter out LMP Score placeholder records - only show records with a date OR an instructor
-              const lmpItems = lmpScores
-                  .filter(score => (score.date && score.date.trim() !== '') || (score.instructor && score.instructor.trim() !== ''))
-                  .map(score => ({ ...score, type: 'LMP Score' as const }));
-           
            // Filter out placeholder/empty PT-051 records - only show records with actual assessment data OR date+instructor
               // NOTE: isCompleted alone is NOT sufficient - historical seed records have isCompleted=true with no actual data
               // Events like mass briefs, CUT, TUT have no grade but DO have date+instructor - these should be shown
@@ -89,6 +84,23 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
               });
 
            const pt051Items = finalAssessments.map(assessment => ({ ...assessment, type: 'PT-051' as const }));
+           const visiblePt051Keys = new Set(finalAssessments.map(assessment =>
+               `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ''}`
+           ));
+           const visiblePt051EventKeys = new Set(finalAssessments.map(assessment =>
+               `${assessment.traineeFullName}|||${assessment.flightNumber}`
+           ));
+           // Filter out LMP Score placeholder records when a PT-051 row exists for
+           // the same trainee/event. The score record is still used by the app,
+           // but the empty duplicate does not need to be shown in Performance History.
+           const lmpItems = lmpScores
+               .filter(score => (score.date && score.date.trim() !== '') || (score.instructor && score.instructor.trim() !== ''))
+               .filter(score => {
+                   const exactKey = `${trainee.fullName}|||${score.event}|||${score.date || ''}`;
+                   const eventKey = `${trainee.fullName}|||${score.event}`;
+                   return !visiblePt051Keys.has(exactKey) && !visiblePt051EventKeys.has(eventKey);
+               })
+               .map(score => ({ ...score, type: 'LMP Score' as const }));
            
            console.log('=== Building combinedHistory ===');
            console.log('LMP Scores:', lmpScores.length, lmpScores);

@@ -14,6 +14,13 @@ console.log('App imported');
 import './theme.css';
 import { ThemeProvider } from './context/ThemeContext';
 import { SystemFreezeProvider } from './context/SystemFreezeContext';
+import { showDarkAlert } from './components/DarkMessageModal';
+
+if (typeof window !== 'undefined') {
+  window.alert = (message?: any) => {
+    void showDarkAlert(String(message ?? ''), 'Notice', 'warning');
+  };
+}
 
 const rootElement = document.getElementById('root');
 console.log('Root element:', rootElement);

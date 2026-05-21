@@ -9323,7 +9323,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const combinedHistory = React.useMemo(() => {
-    const lmpItems = lmpScores.filter((score) => score.date && score.date.trim() !== "" || score.instructor && score.instructor.trim() !== "").map((score) => ({ ...score, type: "LMP Score" }));
     const completedAssessments = assessments2.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
       const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
@@ -9348,6 +9347,17 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
       return mostRecentKeys.has(assessment.id);
     });
     const pt051Items = finalAssessments.map((assessment) => ({ ...assessment, type: "PT-051" }));
+    const visiblePt051Keys = new Set(finalAssessments.map(
+      (assessment) => `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ""}`
+    ));
+    const visiblePt051EventKeys = new Set(finalAssessments.map(
+      (assessment) => `${assessment.traineeFullName}|||${assessment.flightNumber}`
+    ));
+    const lmpItems = lmpScores.filter((score) => score.date && score.date.trim() !== "" || score.instructor && score.instructor.trim() !== "").filter((score) => {
+      const exactKey = `${trainee.fullName}|||${score.event}|||${score.date || ""}`;
+      const eventKey = `${trainee.fullName}|||${score.event}`;
+      return !visiblePt051Keys.has(exactKey) && !visiblePt051EventKeys.has(eventKey);
+    }).map((score) => ({ ...score, type: "LMP Score" }));
     console.log("=== Building combinedHistory ===");
     console.log("LMP Scores:", lmpScores.length, lmpScores);
     console.log("All PT-051 Assessments:", assessments2.length, assessments2);
@@ -63109,6 +63119,7 @@ const AddRemedialPackageFlyout = ({
   const [selectionMode, setSelectionMode] = reactExports.useState("suggested");
   const [eventToRemediateId, setEventToRemediateId] = reactExports.useState("");
   const [remedialEvents, setRemedialEvents] = reactExports.useState([]);
+  const [validationMessage, setValidationMessage] = reactExports.useState("");
   const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "" });
   const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
   const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
@@ -63191,11 +63202,12 @@ const AddRemedialPackageFlyout = ({
     }
     if (eventsToAdd.length > 0) {
       setRemedialEvents((prev) => [...prev, ...eventsToAdd]);
+      setValidationMessage("");
       setTutState({ quantity: 0, duration: 1, instructor: "" });
       setFtdState({ quantity: 0, duration: 1.5, instructor: "" });
       setFlightState({ quantity: 0, duration: 1.5, instructor: "" });
     } else {
-      alert("Please enter a quantity, duration, and instructor for at least one event type.");
+      setValidationMessage("Please enter a quantity, duration, and instructor for at least one event type.");
     }
   };
   const handleRemoveEvent = (id) => {
@@ -63207,9 +63219,10 @@ const AddRemedialPackageFlyout = ({
   };
   const handleSavePackage = () => {
     if (!eventToRemediate || remedialEvents.length === 0) {
-      alert("Please select an event to remediate and add at least one remedial event.");
+      setValidationMessage("Please select an event to remediate and add at least one remedial event.");
       return;
     }
+    setValidationMessage("");
     onSave(trainee, eventToRemediate, remedialEvents);
   };
   const InputRow = ({ label, state, setState }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end space-x-2", children: [
@@ -63230,7 +63243,7 @@ const AddRemedialPackageFlyout = ({
       ] })
     ] })
   ] });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 flex flex-col h-[90vh]", onClick: (e) => e.stopPropagation(), children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 flex flex-col h-[90vh]", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
         "Add Remedial Package for ",
@@ -63240,6 +63253,7 @@ const AddRemedialPackageFlyout = ({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6 flex-1 overflow-y-auto relative", children: [
       isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
+      validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-lg border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100 shadow-lg", children: validationMessage }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 1: Select Event" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-3", children: [
@@ -83588,6 +83602,11 @@ console.log("Starting app initialization...");
 console.log("React imported");
 console.log("ReactDOM imported");
 console.log("App imported");
+if (typeof window !== "undefined") {
+  window.alert = (message) => {
+    void showDarkAlert(String(message ?? ""), "Notice", "warning");
+  };
+}
 const rootElement = document.getElementById("root");
 console.log("Root element:", rootElement);
 if (!rootElement) {
