@@ -9550,8 +9550,10 @@ const App: React.FC = () => {
 
     const onSavePT051Assessment = (assessment: Pt051Assessment) => {
         // Use traineeFullName for the key to ensure consistency across the app
-        const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
-        setPt051Assessments(prev => new Map(prev).set(saveKey, assessment));
+        const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
+        const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
+        setPt051Assessments(updatedAssessments);
+        void persistPt051AssessmentsForDate(assessment.date || date, updatedAssessments);
 
         // Log to audit trail
         const changes = [
@@ -9915,6 +9917,114 @@ const App: React.FC = () => {
         });
     };
     // ────────────────────────────────────────────────────────────────────────────
+
+    const persistPt051AssessmentsForDate = async (
+        targetDate: string,
+        assessmentsMap: Map<string, Pt051Assessment>
+    ) => {
+        const apiBase = getApiBaseUrl();
+        const snapshotKey = getDailySnapshotKey(targetDate);
+        const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+        const allEventsForDate = publishedSchedules[targetDate] || (targetDate === date ? eventsForDate : []);
+        const staffEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
+            e.instructor && !e.student && e.type !== 'logbook'
+        );
+        const traineeEventsForDate = allEventsForDate.filter((e: ScheduleEvent) => !!e.student);
+
+        const staffCurrencyMap: Record<string, any> = {};
+        instructorsData.forEach((inst: any) => {
+            if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+                staffCurrencyMap[inst.name] = inst.currencyStatus;
+            }
+        });
+
+        const traineeProfilesSnapshot = traineesData.map((t: any) => ({
+            idNumber: t.idNumber,
+            fullName: t.fullName,
+            name: t.name,
+            rank: t.rank,
+            course: t.course,
+            lmpType: t.lmpType,
+            service: t.service,
+            unit: t.unit,
+            primaryInstructor: t.primaryInstructor,
+            currencyStatus: t.currencyStatus || [],
+            isPaused: t.isPaused || false,
+        }));
+
+        const staffProfilesSnapshot = instructorsData.map((inst: any) => ({
+            id: inst.id,
+            idNumber: inst.idNumber,
+            name: inst.name,
+            rank: inst.rank,
+            role: inst.role,
+            unit: inst.unit,
+            location: inst.location,
+            flight: inst.flight,
+            service: inst.service,
+            category: inst.category,
+            isQFI: !!inst.isQFI,
+            isOFI: !!inst.isOFI,
+            isCFI: !!inst.isCFI,
+            isFlyingSupervisor: !!inst.isFlyingSupervisor,
+            isTestingOfficer: !!inst.isTestingOfficer,
+            isCommandingOfficer: !!inst.isCommandingOfficer,
+            isExecutive: !!inst.isExecutive,
+            isPaused: !!inst.isPaused,
+            currencyStatus: inst.currencyStatus || [],
+            snapshotSchool: school,
+            snapshotDate: targetDate,
+        }));
+
+        const lmpCompletedIdsMap: Record<string, string[]> = {};
+        traineesData.forEach((t: any) => {
+            const individualLMP = traineeLMPs.get(t.fullName);
+            if (individualLMP) {
+                const completedIds = (individualLMP as any[])
+                    .filter((item: any) => item.completedAt || item.isComplete)
+                    .map((item: any) => (item.id || item.code || '').replace('*', ''));
+                if (completedIds.length > 0) {
+                    lmpCompletedIdsMap[t.fullName] = completedIds;
+                }
+            }
+        });
+
+        const pt051AssessmentsObj: Record<string, any> = {};
+        assessmentsMap.forEach((assessment: any, key: string) => {
+            pt051AssessmentsObj[key] = assessment;
+        });
+
+        const response = await fetch(`${apiBase}/daily-snapshot/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                date: snapshotKey,
+                scheduleEvents: allEventsForDate,
+                staffEvents: staffEventsForDate,
+                traineeEvents: traineeEventsForDate,
+                pt051Assessments: pt051AssessmentsObj,
+                traineeProfiles: traineeProfilesSnapshot,
+                staffProfiles: staffProfilesSnapshot,
+                lmpCompletedIds: lmpCompletedIdsMap,
+                staffCurrency: staffCurrencyMap,
+                staffLogbook: {},
+                savedBy,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to persist PT-051 assessments (${response.status})`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to persist PT-051 assessments');
+        }
+
+        loadedSnapshotDates.current.add(snapshotKey);
+        console.log(`[PT051] ✅ Persisted ${assessmentsMap.size} PT-051 assessments to snapshot ${snapshotKey}`);
+    };
 
     const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
         console.log('🔵 ========== handleSaveEvents START ==========');
@@ -15531,6 +15641,12 @@ updates.forEach(update => {
                                     // Log the insertion to audit trail
                                     logAudit('Performance History', 'Insert', `Inserted PT-051 for ${selectedTraineeForHateSheet!.fullName} at position ${insertIndex} on ${targetDate}`);
 
+                                    const assessmentKey = `pt051-${newAssessment.eventId}-${selectedTraineeForHateSheet!.fullName}`;
+                                    const updatedAssessments = new Map(pt051Assessments).set(assessmentKey, newAssessment);
+                                    setPt051Assessments(updatedAssessments);
+                                    void persistPt051AssessmentsForDate(targetDate, updatedAssessments)
+                                        .catch(err => console.warn('[PT051] Failed to persist inserted PT-051:', err));
+
                                     // Set the event and navigate to PT-051 view
                                     setEventForPt051(mockEvent);
                                     handleNavigation('PT051');
@@ -16567,12 +16683,12 @@ updates.forEach(update => {
                             // Find and delete the PT-051 assessment
                             const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                             console.log('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
-                            setPt051Assessments(prev => {
-                                const newMap = new Map(prev);
-                                const deleted = newMap.delete(assessmentKey);
-                                console.log('🗑️ App.tsx: Assessment deleted from map:', deleted);
-                                return newMap;
-                            });
+                            const updatedAssessments = new Map(pt051Assessments);
+                            const deleted = updatedAssessments.delete(assessmentKey);
+                            console.log('🗑️ App.tsx: Assessment deleted from map:', deleted);
+                            setPt051Assessments(updatedAssessments);
+                            void persistPt051AssessmentsForDate(eventForPt051.date || date, updatedAssessments)
+                                .catch(err => console.warn('[PT051] Failed to persist assessment deletion:', err));
 
                             // Log PT-051 deletion to audit trail
                             console.log('📋 App.tsx: Logging to audit...');
@@ -16594,7 +16710,13 @@ updates.forEach(update => {
 
                             // Save using the correct key format: pt051-${eventId}-${traineeFullName}
                             const saveKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-                            setPt051Assessments(prev => new Map(prev).set(saveKey, updatedAssessment));
+                            const updatedAssessments = new Map(pt051Assessments).set(saveKey, updatedAssessment);
+                            setPt051Assessments(updatedAssessments);
+                            void persistPt051AssessmentsForDate(updatedAssessment.date || eventForPt051.date || date, updatedAssessments)
+                                .catch(err => {
+                                    console.warn('[PT051] Failed to persist assessment snapshot:', err);
+                                    if (!isAutoSave) setShowInfoNotification('PT-051 was saved locally, but could not be saved to the database snapshot. Please try saving again before refreshing.');
+                                });
 
                             if (!isAutoSave) {
                                 setSuccessMessage('PT-051 Assessment Saved!');
@@ -16615,7 +16737,7 @@ updates.forEach(update => {
                                 // / NEO Build scheduling reflect the correct trainee progress.
                                 const eventId = assessment.flightNumber;
                                 if (eventId) {
-                                    const traineeObj = traineesData.find((t: any) => t.fullName === assessment.traineeFullName);
+                                    const traineeObj = allTraineesData.find((t: any) => t.fullName === assessment.traineeFullName);
                                     const overallScore = typeof assessment.overallGrade === 'number' ? assessment.overallGrade : 3;
                                     fetch('/api/scores', {
                                         method: 'POST',

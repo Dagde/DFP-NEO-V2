@@ -63106,20 +63106,42 @@ const AddRemedialPackageFlyout = ({
   onSave
 }) => {
   const { isFrozen } = useSystemFreeze();
+  const [selectionMode, setSelectionMode] = reactExports.useState("suggested");
   const [eventToRemediateId, setEventToRemediateId] = reactExports.useState("");
   const [remedialEvents, setRemedialEvents] = reactExports.useState([]);
   const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "" });
   const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
   const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
-  const failedEvents = reactExports.useMemo(() => {
-    return scores.filter((score) => score.score === 0 || score.score === 1).map((score) => traineeLmp.find(
-      (item) => item.id === score.event || item.code === score.event || item.masterEventId === score.event
-    )).filter((item) => !!item).sort((a, b) => {
-      const scoreForA = scores.find((s) => s.event === a.id || s.event === a.code || s.event === a.masterEventId);
-      const scoreForB = scores.find((s) => s.event === b.id || s.event === b.code || s.event === b.masterEventId);
-      return new Date(scoreForB?.date || 0).getTime() - new Date(scoreForA?.date || 0).getTime();
+  const getScoreForEvent = (item) => scores.find(
+    (s) => s.event === item.id || s.event === item.code || s.event === item.masterEventId
+  );
+  const suggestedRemedialEvents = reactExports.useMemo(() => {
+    const scoredLmpItems = traineeLmp.map((item) => ({ item, score: getScoreForEvent(item) })).filter((entry) => !!entry.score).sort((a, b) => new Date(a.score.date || 0).getTime() - new Date(b.score.date || 0).getTime());
+    const suggestions = /* @__PURE__ */ new Map();
+    scoredLmpItems.forEach((entry, index) => {
+      const eventKey = entry.item.id || entry.item.code;
+      if (!eventKey) return;
+      if (entry.score.score === 0) {
+        suggestions.set(eventKey, { item: entry.item, reason: "Failed event", date: entry.score.date });
+        return;
+      }
+      if (entry.score.score === 1) {
+        const previous = scoredLmpItems[index - 1];
+        const next = scoredLmpItems[index + 1];
+        const isDoubleMarginal = previous?.score.score === 1 || next?.score.score === 1;
+        if (isDoubleMarginal) {
+          suggestions.set(eventKey, { item: entry.item, reason: "Double marginal", date: entry.score.date });
+        }
+      }
     });
+    return Array.from(suggestions.values()).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }, [scores, traineeLmp]);
+  const eventOptions = selectionMode === "suggested" ? suggestedRemedialEvents.map((suggestion) => suggestion.item) : traineeLmp;
+  const getEventOptionLabel = (event) => {
+    const suggestion = suggestedRemedialEvents.find((s) => s.item.id === event.id || s.item.code === event.code);
+    const suffix = selectionMode === "suggested" && suggestion ? ` - ${suggestion.reason}` : "";
+    return `${event.code || event.id}${suffix}`;
+  };
   const lastCompletedEvent = reactExports.useMemo(() => {
     const flownEventsWithDates = traineeLmp.map((item) => {
       const score = scores.find(
@@ -63219,8 +63241,34 @@ const AddRemedialPackageFlyout = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-6 flex-1 overflow-y-auto relative", children: [
       isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 1: Select Failed Event" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 1: Select Event" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setSelectionMode("suggested");
+                  setEventToRemediateId("");
+                },
+                className: `px-3 py-2 rounded-md text-sm font-semibold border ${selectionMode === "suggested" ? "bg-sky-600 border-sky-400 text-white" : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"}`,
+                children: "Suggested"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                onClick: () => {
+                  setSelectionMode("other");
+                  setEventToRemediateId("");
+                },
+                className: `px-3 py-2 rounded-md text-sm font-semibold border ${selectionMode === "other" ? "bg-sky-600 border-sky-400 text-white" : "bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600"}`,
+                children: "Other"
+              }
+            )
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "select",
@@ -63231,7 +63279,7 @@ const AddRemedialPackageFlyout = ({
                 size: "8",
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select an event to remediate..." }),
-                  failedEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  eventOptions.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "option",
                     {
                       value: event.id,
@@ -63239,7 +63287,7 @@ const AddRemedialPackageFlyout = ({
                         color: lastCompletedEvent?.id === event.id ? "#ef4444" : "#ffffff",
                         fontWeight: lastCompletedEvent?.id === event.id ? "bold" : "normal"
                       },
-                      children: event.code
+                      children: getEventOptionLabel(event)
                     },
                     event.id
                   ))
@@ -63262,6 +63310,7 @@ const AddRemedialPackageFlyout = ({
             })()
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs space-y-1", children: [
+            selectionMode === "suggested" && suggestedRemedialEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400", children: "No failed or double marginal events found. Select Other to choose from the full LMP." }),
             lastCompletedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-red-400", children: [
               "Last completed: ",
               lastCompletedEvent.code
@@ -76564,8 +76613,10 @@ ${"=".repeat(60)}`);
     void loadSnapshotForDate(selectedDate2);
   };
   const onSavePT051Assessment = (assessment) => {
-    const saveKey = `${assessment.traineeFullName}_${assessment.eventId}_PT051`;
-    setPt051Assessments((prev) => new Map(prev).set(saveKey, assessment));
+    const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
+    const updatedAssessments = new Map(pt051Assessments).set(saveKey, assessment);
+    setPt051Assessments(updatedAssessments);
+    void persistPt051AssessmentsForDate(assessment.date || date, updatedAssessments);
     const changes = [
       assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
       assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
@@ -76842,6 +76893,99 @@ ${"=".repeat(60)}`);
     }).catch((err) => {
       console.warn(`⚠️ [Persist] Could not save snapshot for ${targetDate}:`, err);
     });
+  };
+  const persistPt051AssessmentsForDate = async (targetDate, assessmentsMap) => {
+    const apiBase2 = getApiBaseUrl();
+    const snapshotKey = getDailySnapshotKey(targetDate);
+    const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
+    const allEventsForDate = publishedSchedules[targetDate] || (targetDate === date ? eventsForDate : []);
+    const staffEventsForDate = allEventsForDate.filter(
+      (e) => e.instructor && !e.student && e.type !== "logbook"
+    );
+    const traineeEventsForDate = allEventsForDate.filter((e) => !!e.student);
+    const staffCurrencyMap = {};
+    instructorsData.forEach((inst) => {
+      if (inst.currencyStatus && inst.currencyStatus.length > 0) {
+        staffCurrencyMap[inst.name] = inst.currencyStatus;
+      }
+    });
+    const traineeProfilesSnapshot = traineesData.map((t) => ({
+      idNumber: t.idNumber,
+      fullName: t.fullName,
+      name: t.name,
+      rank: t.rank,
+      course: t.course,
+      lmpType: t.lmpType,
+      service: t.service,
+      unit: t.unit,
+      primaryInstructor: t.primaryInstructor,
+      currencyStatus: t.currencyStatus || [],
+      isPaused: t.isPaused || false
+    }));
+    const staffProfilesSnapshot = instructorsData.map((inst) => ({
+      id: inst.id,
+      idNumber: inst.idNumber,
+      name: inst.name,
+      rank: inst.rank,
+      role: inst.role,
+      unit: inst.unit,
+      location: inst.location,
+      flight: inst.flight,
+      service: inst.service,
+      category: inst.category,
+      isQFI: !!inst.isQFI,
+      isOFI: !!inst.isOFI,
+      isCFI: !!inst.isCFI,
+      isFlyingSupervisor: !!inst.isFlyingSupervisor,
+      isTestingOfficer: !!inst.isTestingOfficer,
+      isCommandingOfficer: !!inst.isCommandingOfficer,
+      isExecutive: !!inst.isExecutive,
+      isPaused: !!inst.isPaused,
+      currencyStatus: inst.currencyStatus || [],
+      snapshotSchool: school,
+      snapshotDate: targetDate
+    }));
+    const lmpCompletedIdsMap = {};
+    traineesData.forEach((t) => {
+      const individualLMP = traineeLMPs.get(t.fullName);
+      if (individualLMP) {
+        const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
+        if (completedIds.length > 0) {
+          lmpCompletedIdsMap[t.fullName] = completedIds;
+        }
+      }
+    });
+    const pt051AssessmentsObj = {};
+    assessmentsMap.forEach((assessment, key) => {
+      pt051AssessmentsObj[key] = assessment;
+    });
+    const response = await fetch(`${apiBase2}/daily-snapshot/save`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date: snapshotKey,
+        scheduleEvents: allEventsForDate,
+        staffEvents: staffEventsForDate,
+        traineeEvents: traineeEventsForDate,
+        pt051Assessments: pt051AssessmentsObj,
+        traineeProfiles: traineeProfilesSnapshot,
+        staffProfiles: staffProfilesSnapshot,
+        lmpCompletedIds: lmpCompletedIdsMap,
+        staffCurrency: staffCurrencyMap,
+        staffLogbook: {},
+        savedBy
+      })
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || `Failed to persist PT-051 assessments (${response.status})`);
+    }
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || "Failed to persist PT-051 assessments");
+    }
+    loadedSnapshotDates.current.add(snapshotKey);
+    console.log(`[PT051] ✅ Persisted ${assessmentsMap.size} PT-051 assessments to snapshot ${snapshotKey}`);
   };
   const handleSaveEvents = async (eventsToSave, isPriority) => {
     console.log("🔵 ========== handleSaveEvents START ==========");
@@ -81229,7 +81373,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   id: v4(),
                   traineeFullName: selectedTraineeForHateSheet.fullName,
                   eventId: `inserted-pt051-${Date.now()}`,
-                  flightNumber: "PT-051 Assessment"
+                  flightNumber: "PT-051 Assessment",
+                  date: targetDate,
+                  instructorName: "",
+                  overallGrade: null,
+                  overallResult: null,
+                  scores: ALL_ELEMENTS.map((element) => ({
+                    element,
+                    grade: null,
+                    comment: ""
+                  })),
+                  isCompleted: false
                 };
                 const mockEvent = {
                   id: newAssessment.eventId,
@@ -81259,6 +81413,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   notes: ""
                 };
                 logAudit("Performance History", "Insert", `Inserted PT-051 for ${selectedTraineeForHateSheet.fullName} at position ${insertIndex} on ${targetDate}`);
+                const assessmentKey = `pt051-${newAssessment.eventId}-${selectedTraineeForHateSheet.fullName}`;
+                const updatedAssessments = new Map(pt051Assessments).set(assessmentKey, newAssessment);
+                setPt051Assessments(updatedAssessments);
+                void persistPt051AssessmentsForDate(targetDate, updatedAssessments).catch((err) => console.warn("[PT051] Failed to persist inserted PT-051:", err));
                 setEventForPt051(mockEvent);
                 handleNavigation("PT051");
               },
@@ -82259,12 +82417,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
                 const assessmentKey2 = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                 console.log("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
-                setPt051Assessments((prev) => {
-                  const newMap = new Map(prev);
-                  const deleted = newMap.delete(assessmentKey2);
-                  console.log("🗑️ App.tsx: Assessment deleted from map:", deleted);
-                  return newMap;
-                });
+                const updatedAssessments = new Map(pt051Assessments);
+                const deleted = updatedAssessments.delete(assessmentKey2);
+                console.log("🗑️ App.tsx: Assessment deleted from map:", deleted);
+                setPt051Assessments(updatedAssessments);
+                void persistPt051AssessmentsForDate(eventForPt051.date || date, updatedAssessments).catch((err) => console.warn("[PT051] Failed to persist assessment deletion:", err));
                 console.log("📋 App.tsx: Logging to audit...");
                 logAudit("Performance History", "Delete", `Deleted PT-051 for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
                 console.log("✅ App.tsx: Audit logged successfully");
@@ -82280,7 +82437,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   isCompleted: !isAutoSave ? true : assessment.isCompleted
                 };
                 const saveKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-                setPt051Assessments((prev) => new Map(prev).set(saveKey, updatedAssessment));
+                const updatedAssessments = new Map(pt051Assessments).set(saveKey, updatedAssessment);
+                setPt051Assessments(updatedAssessments);
+                void persistPt051AssessmentsForDate(updatedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
+                  console.warn("[PT051] Failed to persist assessment snapshot:", err);
+                  if (!isAutoSave) setShowInfoNotification("PT-051 was saved locally, but could not be saved to the database snapshot. Please try saving again before refreshing.");
+                });
                 if (!isAutoSave) {
                   setSuccessMessage("PT-051 Assessment Saved!");
                   const changes = [
@@ -82292,7 +82454,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   logAudit("Performance History", "Edit", `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
                   const eventId = assessment.flightNumber;
                   if (eventId) {
-                    const traineeObj = traineesData.find((t) => t.fullName === assessment.traineeFullName);
+                    const traineeObj = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
                     const overallScore = typeof assessment.overallGrade === "number" ? assessment.overallGrade : 3;
                     fetch("/api/scores", {
                       method: "POST",

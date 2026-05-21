@@ -74,3 +74,88 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// POST /api/scores - Create or update one trainee score
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { traineeId, traineeFullName, event, score, date, instructor, notes, details } = body;
+
+    let resolvedTraineeId = traineeId;
+    if (!resolvedTraineeId && traineeFullName) {
+      const trainee = await prisma.trainee.findFirst({
+        where: { fullName: traineeFullName }
+      });
+      if (!trainee) {
+        return NextResponse.json(
+          { error: `Trainee not found: ${traineeFullName}` },
+          { status: 404 }
+        );
+      }
+      resolvedTraineeId = trainee.id;
+    }
+
+    if (!resolvedTraineeId) {
+      return NextResponse.json(
+        { error: 'traineeId or traineeFullName required' },
+        { status: 400 }
+      );
+    }
+    if (!event) {
+      return NextResponse.json({ error: 'event is required' }, { status: 400 });
+    }
+
+    const existing = await prisma.score.findFirst({
+      where: { traineeId: resolvedTraineeId, event }
+    });
+
+    const scoreRecord = existing
+      ? await prisma.score.update({
+          where: { id: existing.id },
+          data: {
+            score: score !== undefined ? parseInt(score, 10) : existing.score,
+            date: date ? new Date(date) : existing.date,
+            instructor: instructor || existing.instructor,
+            notes: notes || existing.notes,
+            details: details !== undefined ? details : existing.details,
+          },
+        })
+      : await prisma.score.create({
+          data: {
+            traineeId: resolvedTraineeId,
+            event,
+            score: score !== undefined ? parseInt(score, 10) : 3,
+            date: date ? new Date(date) : new Date(),
+            instructor: instructor || 'DCO',
+            notes: notes || '',
+            details: details || null,
+          },
+        });
+
+    try {
+      const lmp = await (prisma as any).individualLMP.findFirst({
+        where: { traineeId: resolvedTraineeId }
+      });
+      if (lmp) {
+        const existingIds = lmp.completedEventIds || [];
+        const updatedIds = Array.from(new Set([...existingIds, event]));
+        if (updatedIds.length !== existingIds.length) {
+          await (prisma as any).individualLMP.update({
+            where: { id: lmp.id },
+            data: { completedEventIds: updatedIds, updatedAt: new Date() },
+          });
+        }
+      }
+    } catch (lmpError) {
+      console.warn('[Scores POST] Could not update IndividualLMP:', lmpError);
+    }
+
+    return NextResponse.json({ success: true, score: scoreRecord });
+  } catch (error) {
+    console.error('Error creating score:', error);
+    return NextResponse.json(
+      { error: 'Failed to create score' },
+      { status: 500 }
+    );
+  }
+}

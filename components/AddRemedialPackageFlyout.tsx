@@ -28,6 +28,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   onSave
 }) => {
   const { isFrozen } = useSystemFreeze();
+  const [selectionMode, setSelectionMode] = useState<'suggested' | 'other'>('suggested');
   const [eventToRemediateId, setEventToRemediateId] = useState<string>('');
   const [remedialEvents, setRemedialEvents] = useState<{ id: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]>([]);
 
@@ -37,21 +38,51 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [flightState, setFlightState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
 
 
-  const failedEvents = useMemo(() => {
-    return scores
-      .filter(score => score.score === 0 || score.score === 1)
-      .map(score => traineeLmp.find(item =>
-        item.id === score.event ||
-        item.code === score.event ||
-        item.masterEventId === score.event
-      ))
-      .filter((item): item is SyllabusItemDetail => !!item)
-      .sort((a, b) => {
-        const scoreForA = scores.find(s => s.event === a.id || s.event === a.code || s.event === a.masterEventId);
-        const scoreForB = scores.find(s => s.event === b.id || s.event === b.code || s.event === b.masterEventId);
-        return new Date(scoreForB?.date || 0).getTime() - new Date(scoreForA?.date || 0).getTime();
-      });
+  const getScoreForEvent = (item: SyllabusItemDetail) => scores.find(s =>
+    s.event === item.id ||
+    s.event === item.code ||
+    s.event === item.masterEventId
+  );
+
+  const suggestedRemedialEvents = useMemo(() => {
+    const scoredLmpItems = traineeLmp
+      .map(item => ({ item, score: getScoreForEvent(item) }))
+      .filter((entry): entry is { item: SyllabusItemDetail; score: Score } => !!entry.score)
+      .sort((a, b) => new Date(a.score.date || 0).getTime() - new Date(b.score.date || 0).getTime());
+
+    const suggestions = new Map<string, { item: SyllabusItemDetail; reason: string; date: string }>();
+    scoredLmpItems.forEach((entry, index) => {
+      const eventKey = entry.item.id || entry.item.code;
+      if (!eventKey) return;
+
+      if (entry.score.score === 0) {
+        suggestions.set(eventKey, { item: entry.item, reason: 'Failed event', date: entry.score.date });
+        return;
+      }
+
+      if (entry.score.score === 1) {
+        const previous = scoredLmpItems[index - 1];
+        const next = scoredLmpItems[index + 1];
+        const isDoubleMarginal = previous?.score.score === 1 || next?.score.score === 1;
+        if (isDoubleMarginal) {
+          suggestions.set(eventKey, { item: entry.item, reason: 'Double marginal', date: entry.score.date });
+        }
+      }
+    });
+
+    return Array.from(suggestions.values())
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }, [scores, traineeLmp]);
+
+  const eventOptions = selectionMode === 'suggested'
+    ? suggestedRemedialEvents.map(suggestion => suggestion.item)
+    : traineeLmp;
+
+  const getEventOptionLabel = (event: SyllabusItemDetail) => {
+    const suggestion = suggestedRemedialEvents.find(s => s.item.id === event.id || s.item.code === event.code);
+    const suffix = selectionMode === 'suggested' && suggestion ? ` - ${suggestion.reason}` : '';
+    return `${event.code || event.id}${suffix}`;
+  };
 
   // Find the last completed event (based on PT-051 flight history - last event actually flown)
   const lastCompletedEvent = useMemo(() => {
@@ -195,8 +226,30 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
           )}
           {/* Step 1: Select Event to Remediate */}
           <fieldset className="p-4 border border-gray-600 rounded-lg">
-            <legend className="px-2 text-sm font-semibold text-gray-300">Step 1: Select Failed Event</legend>
-            <div className="mt-2">
+            <legend className="px-2 text-sm font-semibold text-gray-300">Step 1: Select Event</legend>
+            <div className="mt-2 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectionMode('suggested');
+                    setEventToRemediateId('');
+                  }}
+                  className={`px-3 py-2 rounded-md text-sm font-semibold border ${selectionMode === 'suggested' ? 'bg-sky-600 border-sky-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'}`}
+                >
+                  Suggested
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectionMode('other');
+                    setEventToRemediateId('');
+                  }}
+                  className={`px-3 py-2 rounded-md text-sm font-semibold border ${selectionMode === 'other' ? 'bg-sky-600 border-sky-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600'}`}
+                >
+                  Other
+                </button>
+              </div>
               <div className="relative">
                 <select
                   value={eventToRemediateId}
@@ -205,7 +258,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                   size="8"
                 >
                   <option value="" disabled>Select an event to remediate...</option>
-                  {failedEvents.map(event => (
+                  {eventOptions.map(event => (
                     <option 
                       key={event.id} 
                       value={event.id}
@@ -214,7 +267,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                         fontWeight: lastCompletedEvent?.id === event.id ? 'bold' : 'normal'
                       }}
                     >
-                      {event.code}
+                      {getEventOptionLabel(event)}
                     </option>
                   ))}
                 </select>
@@ -236,6 +289,11 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                 })()}
               </div>
               <div className="mt-2 text-xs space-y-1">
+                {selectionMode === 'suggested' && suggestedRemedialEvents.length === 0 && (
+                  <div className="text-gray-400">
+                    No failed or double marginal events found. Select Other to choose from the full LMP.
+                  </div>
+                )}
                 {lastCompletedEvent && (
                   <div className="text-red-400">
                     Last completed: {lastCompletedEvent.code}
