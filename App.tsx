@@ -6166,6 +6166,29 @@ const App: React.FC = () => {
                     });
                 }
 
+                try {
+                    const perfRes = await fetch(`${apiBase}/trainee-performance?limit=2000`);
+                    if (perfRes.ok) {
+                        const persistedAssessments = await perfRes.json();
+                        if (!cancelled && Array.isArray(persistedAssessments) && persistedAssessments.length > 0) {
+                            console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
+                            setPt051Assessments(prev => {
+                                if (cancelled) return prev;
+                                const merged = new Map(prev);
+                                persistedAssessments.forEach((assessment: Pt051Assessment) => {
+                                    if (!assessment?.eventId || !assessment?.traineeFullName) return;
+                                    merged.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
+                                });
+                                return merged;
+                            });
+                        }
+                    } else {
+                        console.warn('[PT051] Could not load persisted trainee performance records:', await perfRes.text());
+                    }
+                } catch (perfErr) {
+                    console.warn('[PT051] Could not load persisted trainee performance records:', perfErr);
+                }
+
                 if (data.seedingMetadata) {
                     console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(', ')}`);
                 }
@@ -10030,6 +10053,33 @@ const App: React.FC = () => {
 
         loadedSnapshotDates.current.add(snapshotKey);
         console.log(`[PT051] ✅ Persisted ${assessmentsMap.size} PT-051 assessments to snapshot ${snapshotKey}`);
+    };
+
+    const persistPt051AssessmentRecord = async (assessment: Pt051Assessment) => {
+        const apiBase = getApiBaseUrl();
+        const trainee = allTraineesData.find((t: any) => t.fullName === assessment.traineeFullName);
+        const traineeId = (trainee as any)?.id;
+        if (!traineeId) {
+            throw new Error(`Cannot save PT-051: trainee database record not found for ${assessment.traineeFullName}`);
+        }
+
+        const response = await fetch(`${apiBase}/trainee-performance`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...assessment,
+                traineeId,
+                course: (trainee as any)?.course || null,
+                createdBy: authUser?.userId ?? sessionUser?.userId ?? null,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to save PT-051 record (${response.status})`);
+        }
+
+        return response.json();
     };
 
     const handleSaveEvents = async (eventsToSave: ScheduleEvent[], isPriority?: boolean) => {
@@ -16721,7 +16771,6 @@ updates.forEach(update => {
                             void persistPt051AssessmentsForDate(updatedAssessment.date || eventForPt051.date || date, updatedAssessments)
                                 .catch(err => {
                                     console.warn('[PT051] Failed to persist assessment snapshot:', err);
-                                    if (!isAutoSave) setShowInfoNotification('PT-051 was saved locally, but could not be saved to the database snapshot. Please try saving again before refreshing.');
                                 });
 
                             if (!isAutoSave) {
@@ -16745,6 +16794,13 @@ updates.forEach(update => {
                                 if (eventId) {
                                     const traineeObj = allTraineesData.find((t: any) => t.fullName === assessment.traineeFullName);
                                     const overallScore = typeof assessment.overallGrade === 'number' ? assessment.overallGrade : 3;
+                                    persistPt051AssessmentRecord(updatedAssessment)
+                                        .then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${eventId}`))
+                                        .catch(err => {
+                                            console.warn('[PT051] Failed to persist trainee performance record:', err);
+                                            void showDarkAlert(`PT-051 could not be saved to the database.\n\n${err instanceof Error ? err.message : String(err)}`, 'PT-051 Save Failed', 'error');
+                                        });
+
                                     fetch('/api/scores', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json' },
