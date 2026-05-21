@@ -7241,6 +7241,7 @@ const App: React.FC = () => {
     const [selectedTraineeForHateSheet, setSelectedTraineeForHateSheet] = useState<Trainee | null>(null);
     const [selectedScoreForDetail, setSelectedScoreForDetail] = useState<Score | null>(null);
     const [eventForPt051, setEventForPt051] = useState<ScheduleEvent | null>(null);
+    const [loadedPt051Keys, setLoadedPt051Keys] = useState<Set<string>>(new Set());
     const [selectedPersonForCurrency, setSelectedPersonForCurrency] = useState<Instructor | Trainee | null>(null);
     const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = useState<'instructor' | 'trainee'>('instructor');
     const [showAuthFlyout, setShowAuthFlyout] = useState(false);
@@ -8971,6 +8972,67 @@ const App: React.FC = () => {
             return null;
         }
     }, [allTraineesData]);
+
+    const loadPersistedPt051Assessment = useCallback(async (
+        trainee: Trainee,
+        event: ScheduleEvent
+    ): Promise<Pt051Assessment | null> => {
+        const loadKey = `${event.id}-${trainee.fullName}`;
+        try {
+            const apiBase = getApiBaseUrl();
+            let assessment: Pt051Assessment | null = null;
+
+            if (event.id) {
+                const response = await fetch(`${apiBase}/trainee-performance/${encodeURIComponent(event.id)}`);
+                if (response.ok) {
+                    const loaded = await response.json();
+                    if (loaded?.traineeFullName === trainee.fullName) {
+                        assessment = loaded;
+                    }
+                }
+            }
+
+            if (!assessment) {
+                const response = await fetch(`${apiBase}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`);
+                if (response.ok) {
+                    const rows = await response.json();
+                    if (Array.isArray(rows)) {
+                        assessment = rows.find((row: Pt051Assessment) =>
+                            row.flightNumber === event.flightNumber &&
+                            (!event.date || !row.date || row.date === event.date)
+                        ) || rows.find((row: Pt051Assessment) => row.flightNumber === event.flightNumber) || null;
+                    }
+                }
+            }
+
+            if (assessment?.eventId && assessment?.traineeFullName) {
+                setPt051Assessments(prev => {
+                    const updated = new Map(prev);
+                    updated.set(`pt051-${assessment!.eventId}-${assessment!.traineeFullName}`, assessment!);
+                    return updated;
+                });
+                console.log(`[PT051] Loaded authoritative PT-051 for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
+            }
+
+            return assessment;
+        } catch (error) {
+            console.warn(`[PT051] Could not load authoritative PT-051 for ${trainee.fullName} ${event.flightNumber}:`, error);
+            return null;
+        } finally {
+            setLoadedPt051Keys(prev => {
+                const updated = new Set(prev);
+                updated.add(loadKey);
+                return updated;
+            });
+        }
+    }, []);
+
+    useEffect(() => {
+        if (activeView !== 'PT051' || !eventForPt051 || !selectedTraineeForHateSheet) return;
+        const loadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+        if (loadedPt051Keys.has(loadKey)) return;
+        void loadPersistedPt051Assessment(selectedTraineeForHateSheet, eventForPt051);
+    }, [activeView, eventForPt051, selectedTraineeForHateSheet, loadedPt051Keys, loadPersistedPt051Assessment]);
 
     const handleViewTraineeLMP = async (trainee: Trainee) => {
         if (!canViewTraineeLmp(trainee)) {
@@ -16772,25 +16834,20 @@ updates.forEach(update => {
                         );
                         console.log('Trainee/event/date fallback result:', existingAssessment);
                     }
-                    const currentScoreRecord = (scores.get(selectedTraineeForHateSheet.fullName) || []).find(score =>
-                        score.event === eventForPt051.flightNumber ||
-                        score.event === eventForPt051.id ||
-                        score.event === (eventForPt051 as any).syllabus
-                    );
-                    const initialAssessmentForPt051 = existingAssessment && currentScoreRecord && typeof currentScoreRecord.score === 'number' && existingAssessment.overallGrade !== currentScoreRecord.score
-                        ? {
-                            ...existingAssessment,
-                            overallGrade: currentScoreRecord.score as any,
-                            overallResult: currentScoreRecord.score === 0 ? 'F' as const : 'P' as const,
-                            date: currentScoreRecord.date || existingAssessment.date,
-                            instructorName: currentScoreRecord.instructor || existingAssessment.instructorName,
-                        }
-                        : existingAssessment;
+                    const pt051LoadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+                    if (!loadedPt051Keys.has(pt051LoadKey)) {
+                        return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
+                            <div className="rounded-lg border border-gray-700 bg-gray-800 p-6 text-center">
+                                <h2 className="text-lg font-semibold text-sky-300 mb-2">Loading PT-051</h2>
+                                <p className="text-sm text-gray-400">Fetching the saved assessment record...</p>
+                            </div>
+                        </div>;
+                    }
                     return <PT051View
-                        key={`${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${initialAssessmentForPt051?.overallGrade ?? 'none'}`}
+                        key={`${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${existingAssessment?.overallGrade ?? 'none'}`}
                         trainee={selectedTraineeForHateSheet}
                         event={eventForPt051}
-                        initialAssessment={initialAssessmentForPt051}
+                        initialAssessment={existingAssessment}
                         instructorLabel={instructorLabel}
                         onBack={() => {
                             handleNavigation('HateSheet');

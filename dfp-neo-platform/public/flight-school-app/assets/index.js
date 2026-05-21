@@ -74946,6 +74946,7 @@ ${"=".repeat(60)}`);
   const [selectedTraineeForHateSheet, setSelectedTraineeForHateSheet] = reactExports.useState(null);
   const [selectedScoreForDetail, setSelectedScoreForDetail] = reactExports.useState(null);
   const [eventForPt051, setEventForPt051] = reactExports.useState(null);
+  const [loadedPt051Keys, setLoadedPt051Keys] = reactExports.useState(/* @__PURE__ */ new Set());
   const [selectedPersonForCurrency, setSelectedPersonForCurrency] = reactExports.useState(null);
   const [selectedPersonForCurrencyType, setSelectedPersonForCurrencyType] = reactExports.useState("instructor");
   const [showAuthFlyout, setShowAuthFlyout] = reactExports.useState(false);
@@ -76239,6 +76240,57 @@ ${"=".repeat(60)}`);
       return null;
     }
   }, [allTraineesData]);
+  const loadPersistedPt051Assessment = reactExports.useCallback(async (trainee, event) => {
+    const loadKey = `${event.id}-${trainee.fullName}`;
+    try {
+      const apiBase2 = getApiBaseUrl();
+      let assessment = null;
+      if (event.id) {
+        const response = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(event.id)}`);
+        if (response.ok) {
+          const loaded = await response.json();
+          if (loaded?.traineeFullName === trainee.fullName) {
+            assessment = loaded;
+          }
+        }
+      }
+      if (!assessment) {
+        const response = await fetch(`${apiBase2}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`);
+        if (response.ok) {
+          const rows = await response.json();
+          if (Array.isArray(rows)) {
+            assessment = rows.find(
+              (row) => row.flightNumber === event.flightNumber && (!event.date || !row.date || row.date === event.date)
+            ) || rows.find((row) => row.flightNumber === event.flightNumber) || null;
+          }
+        }
+      }
+      if (assessment?.eventId && assessment?.traineeFullName) {
+        setPt051Assessments((prev) => {
+          const updated = new Map(prev);
+          updated.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
+          return updated;
+        });
+        console.log(`[PT051] Loaded authoritative PT-051 for ${trainee.fullName} ${assessment.flightNumber}: ${assessment.overallGrade}`);
+      }
+      return assessment;
+    } catch (error) {
+      console.warn(`[PT051] Could not load authoritative PT-051 for ${trainee.fullName} ${event.flightNumber}:`, error);
+      return null;
+    } finally {
+      setLoadedPt051Keys((prev) => {
+        const updated = new Set(prev);
+        updated.add(loadKey);
+        return updated;
+      });
+    }
+  }, []);
+  reactExports.useEffect(() => {
+    if (activeView !== "PT051" || !eventForPt051 || !selectedTraineeForHateSheet) return;
+    const loadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+    if (loadedPt051Keys.has(loadKey)) return;
+    void loadPersistedPt051Assessment(selectedTraineeForHateSheet, eventForPt051);
+  }, [activeView, eventForPt051, selectedTraineeForHateSheet, loadedPt051Keys, loadPersistedPt051Assessment]);
   const handleViewTraineeLMP = async (trainee) => {
     if (!canViewTraineeLmp(trainee)) {
       denyPlatformAction("Individual LMP");
@@ -82583,22 +82635,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             );
             console.log("Trainee/event/date fallback result:", existingAssessment);
           }
-          const currentScoreRecord = (scores.get(selectedTraineeForHateSheet.fullName) || []).find(
-            (score) => score.event === eventForPt051.flightNumber || score.event === eventForPt051.id || score.event === eventForPt051.syllabus
-          );
-          const initialAssessmentForPt051 = existingAssessment && currentScoreRecord && typeof currentScoreRecord.score === "number" && existingAssessment.overallGrade !== currentScoreRecord.score ? {
-            ...existingAssessment,
-            overallGrade: currentScoreRecord.score,
-            overallResult: currentScoreRecord.score === 0 ? "F" : "P",
-            date: currentScoreRecord.date || existingAssessment.date,
-            instructorName: currentScoreRecord.instructor || existingAssessment.instructorName
-          } : existingAssessment;
+          const pt051LoadKey = `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+          if (!loadedPt051Keys.has(pt051LoadKey)) {
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-center", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-sky-300 mb-2", children: "Loading PT-051" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Fetching the saved assessment record..." })
+            ] }) });
+          }
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             PT051View,
             {
               trainee: selectedTraineeForHateSheet,
               event: eventForPt051,
-              initialAssessment: initialAssessmentForPt051,
+              initialAssessment: existingAssessment,
               instructorLabel,
               onBack: () => {
                 handleNavigation("HateSheet");
@@ -82727,7 +82776,7 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
               currentUserPin: currentUser2?.pin || "1111",
               canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet)
             },
-            `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${initialAssessmentForPt051?.overallGrade ?? "none"}`
+            `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${existingAssessment?.overallGrade ?? "none"}`
           );
         }
         console.error("❌ PT051 View Error - Missing context:", {
