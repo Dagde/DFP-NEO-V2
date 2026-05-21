@@ -3823,8 +3823,24 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: traineeFullName, lmpType, events' });
     }
 
+    const decodedId = decodeURIComponent(id);
+    const trainee = await db.trainee.findFirst({
+      where: {
+        OR: [
+          { id },
+          { fullName: traineeFullName },
+          { fullName: decodedId },
+        ],
+      },
+    });
+
+    if (!trainee) {
+      return res.status(404).json({ error: `Trainee not found for LMP save: ${traineeFullName}` });
+    }
+
+    const resolvedTraineeId = trainee.id;
     const lmp = await db.individualLMP.upsert({
-      where: { traineeId: id },
+      where: { traineeId: resolvedTraineeId },
       update: {
         traineeFullName,
         lmpType,
@@ -3833,7 +3849,7 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
         updatedAt: new Date(),
       },
       create: {
-        traineeId: id,
+        traineeId: resolvedTraineeId,
         traineeFullName,
         lmpType,
         events,
@@ -3841,7 +3857,7 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
       },
     });
 
-    console.log(`✅ PUT /api/trainees/${id}/lmp - ${traineeFullName}: ${(completedEventIds || []).length} events complete`);
+    console.log(`✅ PUT /api/trainees/${resolvedTraineeId}/lmp - ${traineeFullName}: ${(completedEventIds || []).length} events complete`);
     res.json({ success: true, lmp });
   } catch (error) {
     console.error('❌ PUT /api/trainees/:id/lmp error:', error);

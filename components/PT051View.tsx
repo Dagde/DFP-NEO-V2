@@ -10,7 +10,7 @@ interface PT051ViewProps {
     trainee: Trainee;
     event: ScheduleEvent;
     onBack: () => void;
-    onSave: (assessment: Pt051Assessment, isAutoSave?: boolean) => void;
+    onSave: (assessment: Pt051Assessment, isAutoSave?: boolean) => void | Promise<void>;
     onDeleteAssessment?: (assessmentId: string) => void;
     onEventUpdate?: (event: ScheduleEvent) => void;
     initialAssessment?: Pt051Assessment;
@@ -622,12 +622,12 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         }));
     }, [commentFields]);
 
-    const handleSave = async (isAutoSave = false) => {
+    const handleSave = async (isAutoSave = false): Promise<boolean> => {
         if (!canEditPt051) {
             if (!isAutoSave) {
                 await showDarkAlert('Your permission profile allows you to view this PT-051, but not edit or save it.', 'Access Denied', 'error');
             }
-            return;
+            return false;
         }
         // System freeze check - read directly from localStorage to avoid stale closure
         const _freezeRaw = localStorage.getItem('systemFreezeState');
@@ -635,7 +635,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
                 await showDarkAlert('System is currently frozen. PT-051 entries are not permitted during a system freeze.', 'System Frozen', 'error');
-                return;
+                return false;
             }
         }
         // Include timing data from currentEvent in the assessment
@@ -656,14 +656,23 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             onEventUpdate(currentEvent);
         }
         
-        onSave(finalAssessment, isAutoSave);
-        setIsDirty(false);
-        setSaveStatus('Saved');
+        try {
+            await onSave(finalAssessment, isAutoSave);
+            setIsDirty(false);
+            setSaveStatus('Saved');
+            return true;
+        } catch (error) {
+            console.error('[PT051] Save failed:', error);
+            setSaveStatus('Unsaved');
+            return false;
+        }
     };
 
-    const handleManualSaveAndExit = () => {
-        handleSave(false);
-        onBack();
+    const handleManualSaveAndExit = async () => {
+        const saved = await handleSave(false);
+        if (saved) {
+            onBack();
+        }
     };
 
     const handleDeleteAssessment = async () => {

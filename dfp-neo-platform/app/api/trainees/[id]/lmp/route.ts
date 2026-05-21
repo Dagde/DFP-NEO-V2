@@ -65,8 +65,27 @@ export async function PUT(
       );
     }
 
+    const decodedId = decodeURIComponent(traineeId);
+    const trainee = await (prisma as any).trainee.findFirst({
+      where: {
+        OR: [
+          { id: traineeId },
+          { fullName: traineeFullName },
+          { fullName: decodedId },
+        ],
+      },
+    });
+
+    if (!trainee) {
+      return NextResponse.json(
+        { error: `Trainee not found for LMP save: ${traineeFullName}` },
+        { status: 404, headers: CORS_HEADERS }
+      );
+    }
+
+    const resolvedTraineeId = trainee.id;
     const lmp = await (prisma as any).individualLMP.upsert({
-      where: { traineeId },
+      where: { traineeId: resolvedTraineeId },
       update: {
         traineeFullName,
         lmpType,
@@ -75,7 +94,7 @@ export async function PUT(
         updatedAt: new Date(),
       },
       create: {
-        traineeId,
+        traineeId: resolvedTraineeId,
         traineeFullName,
         lmpType,
         events,

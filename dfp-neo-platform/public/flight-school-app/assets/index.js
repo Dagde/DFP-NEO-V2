@@ -48486,14 +48486,14 @@ ${commentFields[key]}`).join("\n\n");
       if (!isAutoSave) {
         await showDarkAlert("Your permission profile allows you to view this PT-051, but not edit or save it.", "Access Denied", "error");
       }
-      return;
+      return false;
     }
     const _freezeRaw = localStorage.getItem("systemFreezeState");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
       if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
         await showDarkAlert("System is currently frozen. PT-051 entries are not permitted during a system freeze.", "System Frozen", "error");
-        return;
+        return false;
       }
     }
     const finalAssessment = {
@@ -48510,13 +48510,22 @@ ${commentFields[key]}`).join("\n\n");
     if (onEventUpdate && currentEvent) {
       onEventUpdate(currentEvent);
     }
-    onSave(finalAssessment, isAutoSave);
-    setIsDirty(false);
-    setSaveStatus("Saved");
+    try {
+      await onSave(finalAssessment, isAutoSave);
+      setIsDirty(false);
+      setSaveStatus("Saved");
+      return true;
+    } catch (error) {
+      console.error("[PT051] Save failed:", error);
+      setSaveStatus("Unsaved");
+      return false;
+    }
   };
-  const handleManualSaveAndExit = () => {
-    handleSave(false);
-    onBack();
+  const handleManualSaveAndExit = async () => {
+    const saved = await handleSave(false);
+    if (saved) {
+      onBack();
+    }
   };
   const handleDeleteAssessment = async () => {
     if (!canEditPt051) {
@@ -76370,15 +76379,16 @@ ${"=".repeat(60)}`);
     return "BPC+IPC";
   };
   const persistTraineeLmp = async (trainee, lmp) => {
-    const traineeDbId = trainee.id;
-    if (!traineeDbId || trainee._dataSource !== "database") {
-      console.log("[Individual LMP] Remedial package saved in memory only for non-DB trainee:", trainee.fullName);
-      return;
+    const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
+    const traineeDbId = trainee.id || matchedTrainee?.id;
+    if (!traineeDbId) {
+      throw new Error(`Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}`);
     }
     const completedFromLmp = lmp.filter((item) => item.completedAt).map((item) => item.id || item.code).filter(Boolean);
     const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter(Boolean);
     const completedEventIds = Array.from(/* @__PURE__ */ new Set([...completedFromLmp, ...completedFromScores]));
-    const response = await fetch(`/api/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+    const apiBase2 = getApiBaseUrl();
+    const response = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
@@ -76417,7 +76427,13 @@ ${"=".repeat(60)}`);
       setSuccessMessage("Remedial package added to trainee LMP.");
     } catch (error) {
       console.error("[Individual LMP] Failed to persist remedial package:", error);
-      setShowInfoNotification("Remedial package was added locally, but could not be saved to the database. Please try again before refreshing.");
+      void showDarkAlert2(
+        `Remedial package was added locally, but could not be saved to the database. Please try again before refreshing.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Individual LMP Save Failed",
+        "error"
+      );
     }
   };
   const handleUnsavedConfirm = (action) => {
@@ -82498,7 +82514,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 console.log("✅ App.tsx: Audit logged successfully");
                 setSuccessMessage("PT-051 Assessment Deleted!");
               },
-              onSave: (assessment, isAutoSave) => {
+              onSave: async (assessment, isAutoSave) => {
                 if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
                   if (!isAutoSave) denyPlatformAction("save PT-051 assessment");
                   return;
@@ -82513,8 +82529,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 void persistPt051AssessmentsForDate(updatedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
                   console.warn("[PT051] Failed to persist assessment snapshot:", err);
                 });
+                const performanceSave = persistPt051AssessmentRecord(updatedAssessment).then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
+                  console.warn("[PT051] Failed to persist trainee performance record:", err);
+                  if (!isAutoSave) {
+                    void showDarkAlert2(`PT-051 could not be saved to the database.
+
+${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "error");
+                    throw err;
+                  }
+                });
                 if (!isAutoSave) {
-                  setSuccessMessage("PT-051 Assessment Saved!");
                   const changes = [
                     assessment.overallGrade ? `Overall Grade: ${assessment.overallGrade}` : null,
                     assessment.overallResult ? `Overall Result: ${assessment.overallResult}` : null,
@@ -82522,16 +82546,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                     assessment.overallComments ? `Comments: ${assessment.overallComments.substring(0, 50)}...` : null
                   ].filter(Boolean).join(", ");
                   logAudit("Performance History", "Edit", `Modified PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`, changes);
+                  await performanceSave;
+                  setSuccessMessage("PT-051 Assessment Saved!");
                   const eventId = assessment.flightNumber;
                   if (eventId) {
                     const traineeObj = allTraineesData.find((t) => t.fullName === assessment.traineeFullName);
                     const overallScore = typeof assessment.overallGrade === "number" ? assessment.overallGrade : 3;
-                    persistPt051AssessmentRecord(updatedAssessment).then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${eventId}`)).catch((err) => {
-                      console.warn("[PT051] Failed to persist trainee performance record:", err);
-                      void showDarkAlert2(`PT-051 could not be saved to the database.
-
-${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "error");
-                    });
                     fetch("/api/scores", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
