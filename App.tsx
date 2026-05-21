@@ -9057,100 +9057,174 @@ const App: React.FC = () => {
         }
     }, []);
 
-    const handleSaveRemedialPackage = (
+    const buildRemedialPackageLmp = (
+        originalTraineeLMP: SyllabusItemDetail[],
+        eventToRemediate: SyllabusItemDetail,
+        newEvents: { type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
+    ): SyllabusItemDetail[] | null => {
+        // Req 3.2, 3.3.1-3.3.3: Create all new remedial items and the re-fly event.
+        let lastNewEventId = eventToRemediate.id;
+        const remedialPackageItems: SyllabusItemDetail[] = [];
+
+        newEvents.forEach((remEvent, index) => {
+            let codeSuffix = '';
+            let type: SyllabusItemDetail['type'] = 'Flight';
+            if (remEvent.type === 'TUT') { codeSuffix = `REM-T${index + 1}`; type = 'Ground School'; }
+            else if (remEvent.type === 'FTD') { codeSuffix = `REM-FTD${index + 1}`; type = 'FTD'; }
+            else if (remEvent.type === 'Flight') { codeSuffix = `REM-F${index + 1}`; type = 'Flight'; }
+
+            const newItem: SyllabusItemDetail = {
+                ...eventToRemediate,
+                id: `${eventToRemediate.code}-${codeSuffix}`, code: `${eventToRemediate.code}-${codeSuffix}`,
+                isRemedial: true, // Req 2.3.3
+                eventDescription: `Remedial ${remEvent.type} for ${eventToRemediate.code}`,
+                module: 'Remedial', prerequisites: [lastNewEventId],
+                duration: remEvent.duration, flightOrSimHours: remEvent.duration,
+                totalEventHours: remEvent.duration + (type === 'Ground School' ? 0.25 : 1.0), type,
+                prerequisitesGround: [], prerequisitesFlying: [],
+                preFlightTime: type === 'Ground School' ? 0.25 : (type === 'FTD' ? 0.5 : 1.0),
+                postFlightTime: type === 'Ground School' ? 0 : (type === 'FTD' ? 0.5 : 0.5),
+                location: '', methodOfDelivery: [], methodOfAssessment: [], resourcesPhysical: [], resourcesHuman: [remEvent.instructor], eventDetailsCommon: [], eventDetailsSortie: [],
+            };
+            remedialPackageItems.push(newItem);
+            lastNewEventId = newItem.id;
+        });
+
+        const reFlyEvent: SyllabusItemDetail = {
+            ...eventToRemediate, id: `${eventToRemediate.code}-RF`, code: `${eventToRemediate.code}-RF`,
+            isRemedial: true,
+            eventDescription: `Re-Fly: ${eventToRemediate.eventDescription}`, module: 'Remedial',
+            prerequisites: [lastNewEventId], prerequisitesGround: [], prerequisitesFlying: [],
+        };
+        remedialPackageItems.push(reFlyEvent);
+
+        const newRemedialIds = new Set(remedialPackageItems.map(item => item.id));
+        const cleanedLmp: SyllabusItemDetail[] = originalTraineeLMP
+            .filter(item => !newRemedialIds.has(item.id))
+            .map(item => ({ ...item, prerequisites: [...(item.prerequisites || [])] }));
+
+        const insertionIndex = cleanedLmp.findIndex(item =>
+            item.id === eventToRemediate.id ||
+            item.code === eventToRemediate.code ||
+            (!!eventToRemediate.masterEventId && item.masterEventId === eventToRemediate.masterEventId)
+        );
+
+        if (insertionIndex === -1) {
+            console.error("Critical error: Failed to find insertion point. LMP not modified.", {
+                eventToRemediateId: eventToRemediate.id,
+                eventToRemediateCode: eventToRemediate.code,
+                eventToRemediateMasterId: eventToRemediate.masterEventId,
+            });
+            return null;
+        }
+
+        const anchorAfterMasterEventId = getMasterEventId(cleanedLmp[insertionIndex]);
+        const anchorBeforeMasterEventId = getMasterEventId(cleanedLmp.slice(insertionIndex + 1).find(item => !isLmpOverlayItem(item)) || {});
+        const anchoredRemedialItems = remedialPackageItems.map((item, index) => ({
+            ...item,
+            lmpSource: 'remedial' as const,
+            masterEventId: undefined,
+            anchorAfterMasterEventId,
+            anchorBeforeMasterEventId: anchorBeforeMasterEventId || undefined,
+            anchorPolicy: 'between' as const,
+            orderKey: `${createLmpOrderKey(insertionIndex)}.${String(index + 1).padStart(3, '0')}`,
+            placementNeedsReview: !anchorAfterMasterEventId && !anchorBeforeMasterEventId,
+        }));
+
+        cleanedLmp.splice(insertionIndex + 1, 0, ...anchoredRemedialItems);
+
+        // CRITICAL FIX: Update ALL subsequent events that depend on the failed event
+        // Previously only updated the first one, causing events beyond the first to be schedulable
+        // before completing the remedial package
+        const originalEventRefs = [eventToRemediate.id, eventToRemediate.code, eventToRemediate.masterEventId].filter(Boolean);
+        const subsequentEvents = cleanedLmp.filter(item =>
+            item.prerequisites.some(prerequisite => originalEventRefs.includes(prerequisite))
+        );
+
+        subsequentEvents.forEach(subsequentEvent => {
+            const prereqIndex = subsequentEvent.prerequisites.findIndex(prerequisite => originalEventRefs.includes(prerequisite));
+            if (prereqIndex !== -1) {
+                const oldPrereq = subsequentEvent.prerequisites[prereqIndex];
+                subsequentEvent.prerequisites[prereqIndex] = reFlyEvent.id;
+                console.log(`✅ Updated prerequisite for ${subsequentEvent.code}: ${oldPrereq} → ${reFlyEvent.id}`);
+            }
+        });
+
+        return cleanedLmp;
+    };
+
+    const getLmpTypeForTrainee = (trainee: Trainee): string => {
+        if (trainee.lmpType) return trainee.lmpType;
+        if (trainee.course && trainee.course.toUpperCase().startsWith('FIC')) return 'FIC';
+        return 'BPC+IPC';
+    };
+
+    const persistTraineeLmp = async (trainee: Trainee, lmp: SyllabusItemDetail[]) => {
+        const traineeDbId = (trainee as any).id;
+        if (!traineeDbId || (trainee as any)._dataSource !== 'database') {
+            console.log('[Individual LMP] Remedial package saved in memory only for non-DB trainee:', trainee.fullName);
+            return;
+        }
+
+        const completedFromLmp = lmp
+            .filter(item => item.completedAt)
+            .map(item => item.id || item.code)
+            .filter(Boolean);
+        const completedFromScores = (scores.get(trainee.fullName) || [])
+            .map(score => score.event)
+            .filter(Boolean);
+        const completedEventIds = Array.from(new Set([...completedFromLmp, ...completedFromScores]));
+
+        const response = await fetch(`/api/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                traineeFullName: trainee.fullName,
+                lmpType: getLmpTypeForTrainee(trainee),
+                events: lmp,
+                completedEventIds,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to persist Individual LMP (${response.status})`);
+        }
+    };
+
+    const handleSaveRemedialPackage = async (
         trainee: Trainee,
         eventToRemediate: SyllabusItemDetail,
         newEvents: { type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
     ) => {
+        const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+        if (!originalTraineeLMP) {
+            console.error("LMP not found for trainee:", trainee.fullName);
+            setShowInfoNotification(`Could not add remedial package: Individual LMP not found for ${trainee.fullName}.`);
+            return;
+        }
+
+        const updatedLmp = buildRemedialPackageLmp(originalTraineeLMP, eventToRemediate, newEvents);
+        if (!updatedLmp) {
+            setShowInfoNotification('Could not add remedial package: failed to find the selected event in the Individual LMP.');
+            return;
+        }
+
         setTraineeLMPs(prevLMPs => {
             const newLMPs = new Map(prevLMPs);
-            const originalTraineeLMP = newLMPs.get(trainee.fullName);
-            if (!originalTraineeLMP) {
-                console.error("LMP not found for trainee:", trainee.fullName);
-                return prevLMPs;
-            }
-
-            // Req 3.2, 3.3.1-3.3.3: Create all new remedial items and the re-fly event.
-            let lastNewEventId = eventToRemediate.id;
-            const remedialPackageItems: SyllabusItemDetail[] = [];
-
-            newEvents.forEach((remEvent, index) => {
-                let codeSuffix = '';
-                let type: SyllabusItemDetail['type'] = 'Flight';
-                if (remEvent.type === 'TUT') { codeSuffix = `REM-T${index+1}`; type = 'Ground School'; }
-                else if (remEvent.type === 'FTD') { codeSuffix = `REM-FTD${index+1}`; type = 'FTD'; }
-                else if (remEvent.type === 'Flight') { codeSuffix = `REM-F${index+1}`; type = 'Flight'; }
-
-                const newItem: SyllabusItemDetail = {
-                    ...eventToRemediate,
-                    id: `${eventToRemediate.code}-${codeSuffix}`, code: `${eventToRemediate.code}-${codeSuffix}`,
-                    isRemedial: true, // Req 2.3.3
-                    eventDescription: `Remedial ${remEvent.type} for ${eventToRemediate.code}`,
-                    module: 'Remedial', prerequisites: [lastNewEventId],
-                    duration: remEvent.duration, flightOrSimHours: remEvent.duration,
-                    totalEventHours: remEvent.duration + (type === 'Ground School' ? 0.25 : 1.0), type,
-                    prerequisitesGround: [], prerequisitesFlying: [],
-                    preFlightTime: type === 'Ground School' ? 0.25 : (type === 'FTD' ? 0.5 : 1.0),
-                    postFlightTime: type === 'Ground School' ? 0 : (type === 'FTD' ? 0.5 : 0.5),
-                    location: '', methodOfDelivery: [], methodOfAssessment: [], resourcesPhysical: [], resourcesHuman: [remEvent.instructor], eventDetailsCommon: [], eventDetailsSortie: [],
-                };
-                remedialPackageItems.push(newItem);
-                lastNewEventId = newItem.id;
-            });
-
-            const reFlyEvent: SyllabusItemDetail = {
-                ...eventToRemediate, id: `${eventToRemediate.code}-RF`, code: `${eventToRemediate.code}-RF`,
-                isRemedial: true,
-                eventDescription: `Re-Fly: ${eventToRemediate.eventDescription}`, module: 'Remedial',
-                prerequisites: [lastNewEventId], prerequisitesGround: [], prerequisitesFlying: [],
-            };
-            remedialPackageItems.push(reFlyEvent);
-
-            const newRemedialIds = new Set(remedialPackageItems.map(item => item.id));
-
-            let cleanedLmp: SyllabusItemDetail[] = (originalTraineeLMP as SyllabusItemDetail[]).filter(item => !newRemedialIds.has(item.id));
-
-            const insertionIndex = cleanedLmp.findIndex(item => item.id === eventToRemediate.id);
-
-            if (insertionIndex === -1) {
-                console.error("Critical error: Failed to find insertion point. LMP not modified.");
-                return prevLMPs;
-            }
-
-            const anchorAfterMasterEventId = getMasterEventId(cleanedLmp[insertionIndex]);
-            const anchorBeforeMasterEventId = getMasterEventId(cleanedLmp.slice(insertionIndex + 1).find(item => !isLmpOverlayItem(item)) || {});
-            const anchoredRemedialItems = remedialPackageItems.map((item, index) => ({
-                ...item,
-                lmpSource: 'remedial' as const,
-                masterEventId: undefined,
-                anchorAfterMasterEventId,
-                anchorBeforeMasterEventId: anchorBeforeMasterEventId || undefined,
-                anchorPolicy: 'between' as const,
-                orderKey: `${createLmpOrderKey(insertionIndex)}.${String(index + 1).padStart(3, '0')}`,
-                placementNeedsReview: !anchorAfterMasterEventId && !anchorBeforeMasterEventId,
-            }));
-
-            cleanedLmp.splice(insertionIndex + 1, 0, ...anchoredRemedialItems);
-
-            // CRITICAL FIX: Update ALL subsequent events that depend on the failed event
-            // Previously only updated the first one, causing events beyond the first to be schedulable
-            // before completing the remedial package
-            const subsequentEvents = cleanedLmp.filter(item => item.prerequisites.includes(eventToRemediate.id));
-
-            subsequentEvents.forEach(subsequentEvent => {
-                const prereqIndex = subsequentEvent.prerequisites.indexOf(eventToRemediate.id);
-                if (prereqIndex !== -1) {
-                    subsequentEvent.prerequisites[prereqIndex] = reFlyEvent.id;
-                    console.log(`✅ Updated prerequisite for ${subsequentEvent.code}: ${eventToRemediate.id} → ${reFlyEvent.id}`);
-                }
-            });
-
-            newLMPs.set(trainee.fullName, cleanedLmp);
+            newLMPs.set(trainee.fullName, updatedLmp);
             return newLMPs;
         });
 
-        setShowAddRemedialPackage(false);
-        setSuccessMessage('Remedial package added to trainee LMP.');
+        try {
+            await persistTraineeLmp(trainee, updatedLmp);
+            setShowAddRemedialPackage(false);
+            setSuccessMessage('Remedial package added to trainee LMP.');
+        } catch (error) {
+            console.error('[Individual LMP] Failed to persist remedial package:', error);
+            setShowInfoNotification('Remedial package was added locally, but could not be saved to the database. Please try again before refreshing.');
+        }
     };
 
     const handleUnsavedConfirm = (action: 'save' | 'discard') => {

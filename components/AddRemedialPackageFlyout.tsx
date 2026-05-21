@@ -40,9 +40,17 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const failedEvents = useMemo(() => {
     return scores
       .filter(score => score.score === 0 || score.score === 1)
-      .map(score => traineeLmp.find(item => item.id === score.event))
+      .map(score => traineeLmp.find(item =>
+        item.id === score.event ||
+        item.code === score.event ||
+        item.masterEventId === score.event
+      ))
       .filter((item): item is SyllabusItemDetail => !!item)
-      .sort((a, b) => new Date(scores.find(s => s.event === b.id)!.date).getTime() - new Date(scores.find(s => s.event === a.id)!.date).getTime());
+      .sort((a, b) => {
+        const scoreForA = scores.find(s => s.event === a.id || s.event === a.code || s.event === a.masterEventId);
+        const scoreForB = scores.find(s => s.event === b.id || s.event === b.code || s.event === b.masterEventId);
+        return new Date(scoreForB?.date || 0).getTime() - new Date(scoreForA?.date || 0).getTime();
+      });
   }, [scores, traineeLmp]);
 
   // Find the last completed event (based on PT-051 flight history - last event actually flown)
@@ -51,7 +59,11 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
     // Even Fail (0) or Marginal (1) scores count as "completed" for progression purposes
     const flownEventsWithDates = traineeLmp
       .map(item => {
-        const score = scores.find(s => s.event === item.id);
+        const score = scores.find(s =>
+          s.event === item.id ||
+          s.event === item.code ||
+          s.event === item.masterEventId
+        );
         return {
           item,
           score,
