@@ -3543,6 +3543,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
         traineeId: true,
         traineeFullName: true,
         lmpType: true,
+        events: true,
         completedEventIds: true,
         updatedAt: true,
       },
@@ -3554,6 +3555,117 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch LMP completions', details: error.message });
   }
 });
+
+const getLmpMasterEventId = (item) => item?.masterEventId || item?.id || item?.code || '';
+const createLmpOrderKeyForSync = (index) => String(index + 1).padStart(5, '0');
+const isLmpOverlayItemForSync = (item) =>
+  item?.lmpSource === 'remedial' ||
+  item?.lmpSource === 'custom' ||
+  item?.isRemedial === true ||
+  item?.id?.includes?.('REM') ||
+  item?.id?.endsWith?.('-RF') ||
+  item?.code?.includes?.('REM') ||
+  item?.code?.endsWith?.('-RF') ||
+  item?.id?.endsWith?.('-CUR') ||
+  item?.code?.endsWith?.('-CUR');
+
+const stampMasterLmpItemsForSync = (masterSyllabus) =>
+  masterSyllabus.map((item, index) => ({
+    ...item,
+    masterEventId: getLmpMasterEventId(item),
+    lmpSource: 'master',
+    orderKey: item.orderKey || createLmpOrderKeyForSync(index),
+    placementNeedsReview: false,
+  }));
+
+const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, scoreMap) => {
+  const stampedMaster = stampMasterLmpItemsForSync(masterSyllabus);
+  if (!existingEvents || existingEvents.length === 0) {
+    return stampedMaster.map(item => ({
+      ...item,
+      completedAt: scoreMap[item.id || item.code] || null,
+    }));
+  }
+
+  const masterIds = new Set(stampedMaster.map(getLmpMasterEventId).filter(Boolean));
+  const existingByMasterId = new Map();
+  existingEvents.forEach(item => {
+    if (isLmpOverlayItemForSync(item)) return;
+    const masterId = getLmpMasterEventId(item);
+    if (masterId) existingByMasterId.set(masterId, item);
+  });
+
+  const mergedMaster = stampedMaster.map((masterItem, index) => {
+    const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
+    return {
+      ...masterItem,
+      completedAt: scoreMap[masterItem.id || masterItem.code] || existingItem?.completedAt || null,
+      userLockedPosition: existingItem?.userLockedPosition,
+      orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
+      placementNeedsReview: false,
+    };
+  });
+
+  const masterIndexById = new Map();
+  mergedMaster.forEach((item, index) => {
+    const masterId = getLmpMasterEventId(item);
+    if (masterId) masterIndexById.set(masterId, index);
+  });
+
+  const overlays = existingEvents.filter(isLmpOverlayItemForSync).map((item, index) => {
+    const itemIndex = existingEvents.indexOf(item);
+    const fallbackAfter = item.anchorAfterMasterEventId || getLmpMasterEventId(existingEvents.slice(0, itemIndex).reverse().find(prev => !isLmpOverlayItemForSync(prev)) || {});
+    const fallbackBefore = item.anchorBeforeMasterEventId || getLmpMasterEventId(existingEvents.slice(itemIndex + 1).find(next => !isLmpOverlayItemForSync(next)) || {});
+    const afterExists = !!fallbackAfter && masterIds.has(fallbackAfter);
+    const beforeExists = !!fallbackBefore && masterIds.has(fallbackBefore);
+
+    return {
+      ...item,
+      lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
+      orderKey: item.orderKey || `${createLmpOrderKeyForSync(index)}.500`,
+      anchorAfterMasterEventId: fallbackAfter || undefined,
+      anchorBeforeMasterEventId: fallbackBefore || undefined,
+      anchorPolicy: item.anchorPolicy || 'between',
+      placementNeedsReview: !(afterExists || beforeExists),
+    };
+  });
+
+  const overlaysBefore = new Map();
+  const overlaysAfter = new Map();
+  const appendOverlays = [];
+
+  overlays.forEach(overlay => {
+    const policy = overlay.anchorPolicy || 'between';
+    const beforeId = overlay.anchorBeforeMasterEventId;
+    const afterId = overlay.anchorAfterMasterEventId;
+
+    if ((policy === 'between' || policy === 'before') && beforeId && masterIndexById.has(beforeId)) {
+      const list = overlaysBefore.get(beforeId) || [];
+      list.push(overlay);
+      overlaysBefore.set(beforeId, list);
+      return;
+    }
+
+    if (afterId && masterIndexById.has(afterId)) {
+      const list = overlaysAfter.get(afterId) || [];
+      list.push(overlay);
+      overlaysAfter.set(afterId, list);
+      return;
+    }
+
+    appendOverlays.push({ ...overlay, placementNeedsReview: true });
+  });
+
+  const result = [];
+  mergedMaster.forEach(masterItem => {
+    const masterId = getLmpMasterEventId(masterItem);
+    result.push(...(masterId ? overlaysBefore.get(masterId) || [] : []).sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || '')));
+    result.push(masterItem);
+    result.push(...(masterId ? overlaysAfter.get(masterId) || [] : []).sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || '')));
+  });
+
+  return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
+};
 
 // POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
 // Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
@@ -3725,14 +3837,10 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       }
       // --- END PREREQUISITE BACKFILL ---
 
-      // Build the full LMP events array with completion status
-      const lmpEvents = masterSyllabus.map(item => ({
-        ...item,
-        completedAt: scoreMap[item.id || item.code] || null,
-      }));
-
       // Check what was previously marked
       const existing = trainee.individualLMP;
+      const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
+      const lmpEvents = mergeIndividualLmpWithMasterForSync(existingEvents, masterSyllabus, scoreMap);
       const existingCompleted = existing ? (existing.completedEventIds || []) : [];
       const newlyMarked = completedEventIds.filter(id => !existingCompleted.includes(id));
 
