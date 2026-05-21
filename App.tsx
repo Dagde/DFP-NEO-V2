@@ -1759,6 +1759,19 @@ function generateDfpInternal(
                if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
                    eventWithoutDate.pilot = eventWithoutDate.instructor;
                }
+            const existingEventIndex = generatedEvents.findIndex(existingEvent => existingEvent.id === eventWithoutDate.id);
+            if (existingEventIndex !== -1) {
+                generatedEvents[existingEventIndex] = {
+                    ...generatedEvents[existingEventIndex],
+                    ...eventWithoutDate,
+                    _source: 'highest-priority',
+                    _isNext: undefined,
+                    _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || ''
+                };
+                console.log(`  ↻ DEBUG UPDATED existing Active DFP event as highest priority (ID: ${event.id})`);
+                return;
+            }
+
             generatedEvents.push({ ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' });
             includedCount++;
             console.log(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
