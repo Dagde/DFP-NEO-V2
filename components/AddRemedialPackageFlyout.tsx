@@ -273,7 +273,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                 </select>
                 {/* Center the last completed event in the dropdown */}
                 {lastCompletedEvent && (() => {
-                  const lastCompletedIndex = failedEvents.findIndex(event => event.id === lastCompletedEvent!.id);
+                  const lastCompletedIndex = eventOptions.findIndex(event => event.id === lastCompletedEvent!.id);
                   if (lastCompletedIndex >= 0) {
                     const selectElement = document.querySelector('select[size="8"]') as HTMLSelectElement;
                     if (selectElement) {

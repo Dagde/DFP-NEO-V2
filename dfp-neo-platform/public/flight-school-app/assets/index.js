@@ -63295,7 +63295,7 @@ const AddRemedialPackageFlyout = ({
               }
             ),
             lastCompletedEvent && (() => {
-              const lastCompletedIndex = failedEvents.findIndex((event) => event.id === lastCompletedEvent.id);
+              const lastCompletedIndex = eventOptions.findIndex((event) => event.id === lastCompletedEvent.id);
               if (lastCompletedIndex >= 0) {
                 const selectElement = document.querySelector('select[size="8"]');
                 if (selectElement) {
