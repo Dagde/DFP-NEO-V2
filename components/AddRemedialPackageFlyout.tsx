@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Trainee, Score, SyllabusItemDetail, Instructor } from '../types';
+import { Trainee, Score, SyllabusItemDetail, Instructor, Pt051Assessment } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -8,6 +8,7 @@ interface AddRemedialPackageFlyoutProps {
   trainee: Trainee;
   instructors: Instructor[];
   scores: Score[];
+  pt051Assessments?: Pt051Assessment[];
   traineeLmp: SyllabusItemDetail[];
   resourceDisplayNames?: ResourceDisplayNames;
   onClose: () => void;
@@ -22,6 +23,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   trainee,
   instructors,
   scores,
+  pt051Assessments = [],
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   onClose,
@@ -40,22 +42,61 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [flightState, setFlightState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
 
 
-  const getScoreForEvent = (item: SyllabusItemDetail) => scores.find(s =>
-    s.event === item.id ||
-    s.event === item.code ||
-    s.event === item.masterEventId
-  );
+  const eventMatchesLmpItem = (eventCode: string | undefined, item: SyllabusItemDetail) => {
+    if (!eventCode) return false;
+    return eventCode === item.id || eventCode === item.code || eventCode === item.masterEventId;
+  };
+
+  const getScoreForEvent = (item: SyllabusItemDetail) => scores.find(s => eventMatchesLmpItem(s.event, item));
+
+  const getAssessmentGrade = (assessment: Pt051Assessment): number | null => {
+    if (typeof assessment.overallGrade === 'number') return assessment.overallGrade;
+    if (assessment.overallGrade === 'No Grade' || assessment.overallGrade === null || assessment.overallGrade === undefined) return null;
+    const parsed = Number(assessment.overallGrade);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
 
   const suggestedRemedialEvents = useMemo(() => {
+    const suggestions = new Map<string, { item: SyllabusItemDetail; reason: string; date: string }>();
+
+    const assessedLmpItems = pt051Assessments
+      .map(assessment => {
+        const item = traineeLmp.find(lmpItem => eventMatchesLmpItem(assessment.flightNumber, lmpItem));
+        const grade = getAssessmentGrade(assessment);
+        return item && grade !== null
+          ? { item, assessment, grade, date: assessment.date || '' }
+          : null;
+      })
+      .filter((entry): entry is { item: SyllabusItemDetail; assessment: Pt051Assessment; grade: number; date: string } => !!entry)
+      .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
+
+    assessedLmpItems.forEach((entry, index) => {
+      const eventKey = entry.item.id || entry.item.code;
+      if (!eventKey) return;
+
+      if (entry.grade === 0) {
+        suggestions.set(eventKey, { item: entry.item, reason: 'Failed PT-051', date: entry.date });
+        return;
+      }
+
+      if (entry.grade === 1) {
+        const previous = assessedLmpItems[index - 1];
+        const next = assessedLmpItems[index + 1];
+        const isDoubleMarginal = previous?.grade === 1 || next?.grade === 1;
+        if (isDoubleMarginal) {
+          suggestions.set(eventKey, { item: entry.item, reason: 'Double marginal PT-051', date: entry.date });
+        }
+      }
+    });
+
     const scoredLmpItems = traineeLmp
       .map(item => ({ item, score: getScoreForEvent(item) }))
       .filter((entry): entry is { item: SyllabusItemDetail; score: Score } => !!entry.score)
       .sort((a, b) => new Date(a.score.date || 0).getTime() - new Date(b.score.date || 0).getTime());
 
-    const suggestions = new Map<string, { item: SyllabusItemDetail; reason: string; date: string }>();
     scoredLmpItems.forEach((entry, index) => {
       const eventKey = entry.item.id || entry.item.code;
-      if (!eventKey) return;
+      if (!eventKey || suggestions.has(eventKey)) return;
 
       if (entry.score.score === 0) {
         suggestions.set(eventKey, { item: entry.item, reason: 'Failed event', date: entry.score.date });
@@ -74,7 +115,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
     return Array.from(suggestions.values())
       .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-  }, [scores, traineeLmp]);
+  }, [scores, pt051Assessments, traineeLmp]);
 
   const eventOptions = selectionMode === 'suggested'
     ? suggestedRemedialEvents.map(suggestion => suggestion.item)

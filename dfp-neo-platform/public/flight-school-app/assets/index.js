@@ -63146,6 +63146,7 @@ const AddRemedialPackageFlyout = ({
   trainee,
   instructors,
   scores,
+  pt051Assessments = [],
   traineeLmp,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   onClose,
@@ -63160,15 +63161,44 @@ const AddRemedialPackageFlyout = ({
   const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "" });
   const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
   const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
-  const getScoreForEvent = (item) => scores.find(
-    (s) => s.event === item.id || s.event === item.code || s.event === item.masterEventId
-  );
+  const eventMatchesLmpItem = (eventCode, item) => {
+    if (!eventCode) return false;
+    return eventCode === item.id || eventCode === item.code || eventCode === item.masterEventId;
+  };
+  const getScoreForEvent = (item) => scores.find((s) => eventMatchesLmpItem(s.event, item));
+  const getAssessmentGrade = (assessment) => {
+    if (typeof assessment.overallGrade === "number") return assessment.overallGrade;
+    if (assessment.overallGrade === "No Grade" || assessment.overallGrade === null || assessment.overallGrade === void 0) return null;
+    const parsed = Number(assessment.overallGrade);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
   const suggestedRemedialEvents = reactExports.useMemo(() => {
-    const scoredLmpItems = traineeLmp.map((item) => ({ item, score: getScoreForEvent(item) })).filter((entry) => !!entry.score).sort((a, b) => new Date(a.score.date || 0).getTime() - new Date(b.score.date || 0).getTime());
     const suggestions = /* @__PURE__ */ new Map();
-    scoredLmpItems.forEach((entry, index) => {
+    const assessedLmpItems = pt051Assessments.map((assessment) => {
+      const item = traineeLmp.find((lmpItem) => eventMatchesLmpItem(assessment.flightNumber, lmpItem));
+      const grade = getAssessmentGrade(assessment);
+      return item && grade !== null ? { item, assessment, grade, date: assessment.date || "" } : null;
+    }).filter((entry) => !!entry).sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
+    assessedLmpItems.forEach((entry, index) => {
       const eventKey = entry.item.id || entry.item.code;
       if (!eventKey) return;
+      if (entry.grade === 0) {
+        suggestions.set(eventKey, { item: entry.item, reason: "Failed PT-051", date: entry.date });
+        return;
+      }
+      if (entry.grade === 1) {
+        const previous = assessedLmpItems[index - 1];
+        const next = assessedLmpItems[index + 1];
+        const isDoubleMarginal = previous?.grade === 1 || next?.grade === 1;
+        if (isDoubleMarginal) {
+          suggestions.set(eventKey, { item: entry.item, reason: "Double marginal PT-051", date: entry.date });
+        }
+      }
+    });
+    const scoredLmpItems = traineeLmp.map((item) => ({ item, score: getScoreForEvent(item) })).filter((entry) => !!entry.score).sort((a, b) => new Date(a.score.date || 0).getTime() - new Date(b.score.date || 0).getTime());
+    scoredLmpItems.forEach((entry, index) => {
+      const eventKey = entry.item.id || entry.item.code;
+      if (!eventKey || suggestions.has(eventKey)) return;
       if (entry.score.score === 0) {
         suggestions.set(eventKey, { item: entry.item, reason: "Failed event", date: entry.score.date });
         return;
@@ -63183,7 +63213,7 @@ const AddRemedialPackageFlyout = ({
       }
     });
     return Array.from(suggestions.values()).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
-  }, [scores, traineeLmp]);
+  }, [scores, pt051Assessments, traineeLmp]);
   const eventOptions = selectionMode === "suggested" ? suggestedRemedialEvents.map((suggestion) => suggestion.item) : traineeLmp;
   const getEventOptionLabel = (event) => {
     const suggestion = suggestedRemedialEvents.find((s) => s.item.id === event.id || s.item.code === event.code);
@@ -83581,6 +83611,9 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
           trainee: selectedTraineeForRemedial,
           instructors: instructorsData,
           scores: scores.get(selectedTraineeForRemedial.fullName) || [],
+          pt051Assessments: Array.from(pt051Assessments.values()).filter(
+            (assessment) => assessment.traineeFullName === selectedTraineeForRemedial.fullName
+          ),
           traineeLmp: traineeLMPs.get(selectedTraineeForRemedial.fullName) || [],
           onClose: () => setShowAddRemedialPackage(false),
           onSave: handleSaveRemedialPackage

@@ -17923,6 +17923,9 @@ updates.forEach(update => {
                     trainee={selectedTraineeForRemedial}
                     instructors={instructorsData}
                     scores={scores.get(selectedTraineeForRemedial.fullName) || []}
+                    pt051Assessments={Array.from(pt051Assessments.values()).filter(
+                        assessment => assessment.traineeFullName === selectedTraineeForRemedial.fullName
+                    )}
                     traineeLmp={traineeLMPs.get(selectedTraineeForRemedial.fullName) || []}
                     onClose={() => setShowAddRemedialPackage(false)}
                     onSave={handleSaveRemedialPackage}
