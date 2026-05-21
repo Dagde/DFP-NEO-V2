@@ -69929,8 +69929,8 @@ const getEventBookingWindow = (event, syllabusDetails) => {
 const getEventBookingWindowForAlgo = (event, syllabusDetails) => {
   const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
   if (syllabusItem) {
-    const start = event.startTime - syllabusItem.preFlightTime;
-    const end = event.startTime + event.duration + syllabusItem.postFlightTime;
+    const start = event.startTime - (syllabusItem.preFlightTime || 0);
+    const end = event.startTime + event.duration + (syllabusItem.postFlightTime || 0);
     return { start, end };
   }
   return { start: event.startTime, end: event.startTime + event.duration };
@@ -71318,7 +71318,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     }
     const traineeHasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
-      if (!getPersonnel(e).includes(trainee.fullName)) return false;
+      if (!eventHasPerson(e, trainee.fullName)) return false;
       const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
     });
@@ -71362,7 +71362,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (instructor2.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
-          if (!getPersonnel(e).includes(instructor2.name)) return false;
+          if (!eventHasPerson(e, instructor2.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
@@ -71561,7 +71561,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         }
         const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
-          if (!getPersonnel(e).includes(ip.name)) return false;
+          if (!eventHasPerson(e, ip.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
           if (overlaps) {
@@ -79348,12 +79348,24 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     if (replacementViolatesDayNightSeparation(personName, candidateEvent, allEvents)) {
       return false;
     }
-    return !allEvents.some((event) => {
+    const replacementHasOverlap = allEvents.some((event) => {
       if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
       const otherEventWindow = getEventBookingWindow(event, syllabusDetails);
       return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
     });
-  }, [replacementViolatesDayNightSeparation, syllabusDetails]);
+    if (replacementHasOverlap) {
+      return false;
+    }
+    const otherEvents = allEvents.filter((event) => event.id !== candidateEvent.id);
+    const candidateConflict = detectConflictsForEvent(candidateEvent, otherEvents, candidateEvent.date);
+    if (candidateConflict.hasConflict) {
+      return false;
+    }
+    if (shouldRequireTwrDiCoverage(candidateEvent, { allowStbySoloWithoutTwrDi: true }) && !hasTwrDiCoverageForSolo(candidateEvent, allEvents)) {
+      return false;
+    }
+    return true;
+  }, [detectConflictsForEvent, hasTwrDiCoverageForSolo, replacementViolatesDayNightSeparation, shouldRequireTwrDiCoverage, syllabusDetails]);
   const generateTraineeRemedies = reactExports.useCallback((conflictedEvent, allEvents) => {
     const suggestions = [];
     const conflictedSyllabusId = conflictedEvent.flightNumber;
@@ -79515,6 +79527,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (eventWindow.start < flyingWindow.start || eventWindow.end > flyingWindow.end) return false;
       const nowInHours = (/* @__PURE__ */ new Date()).getHours() + (/* @__PURE__ */ new Date()).getMinutes() / 60;
       if (newStartTime < problemEvent.startTime && eventWindow.start < nowInHours) return false;
+      const otherEvents = allEvents.filter((e) => e.id !== problemEvent.id);
+      const validationResult = detectConflictsForEvent(tempEvent, otherEvents, problemEvent.date);
+      if (validationResult.hasConflict) return false;
+      if (shouldRequireTwrDiCoverage(tempEvent, { allowStbySoloWithoutTwrDi: true }) && !hasTwrDiCoverageForSolo(tempEvent, allEvents)) {
+        return false;
+      }
       if (prevEvent) {
         let effectiveTurnaround = baseTurnaround;
         const prevCrew = getPersonnel2(prevEvent);
