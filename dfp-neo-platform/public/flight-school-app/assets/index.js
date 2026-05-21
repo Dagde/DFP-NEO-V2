@@ -70453,6 +70453,23 @@ window.__downloadFlightDiag = () => {
   URL.revokeObjectURL(url);
   console.log("[FLIGHT-DIAG] Downloaded flight-diag JSON");
 };
+window.__downloadBuildConflictDiagnostic = () => {
+  const raw = localStorage.getItem("build_conflict_diag_report");
+  if (!raw) {
+    console.error("No build conflict diagnostic report found. Run a build first.");
+    return;
+  }
+  const report = JSON.parse(raw);
+  const ts = (report.timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `build-conflict-diag-${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  console.log("[BUILD-CONFLICT-DIAG] Download triggered:", `build-conflict-diag-${ts}.json`);
+};
 function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
@@ -72745,6 +72762,169 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return a.startTime - b.startTime;
   });
+  const generateBuildConflictDiagnostic = (events) => {
+    const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
+    const resourceTurnaroundFor = (event) => {
+      if (event.type === "flight") return flightTurnaround;
+      if (event.type === "ftd") return ftdTurnaround;
+      if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
+      return 0;
+    };
+    const formatEvent = (event) => {
+      const window2 = eventWindow(event);
+      const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
+      return {
+        id: event.id,
+        source: event._source || "unknown",
+        resourceId: event.resourceId,
+        type: event.type,
+        flightNumber: event.flightNumber,
+        flightType: event.flightType,
+        instructor: event.instructor || "",
+        student: event.student || "",
+        pilot: event.pilot || "",
+        crew: event.crew || "",
+        startTime: event.startTime,
+        duration: event.duration,
+        endTime: event.startTime + event.duration,
+        bookingStart: window2.start,
+        bookingEnd: window2.end,
+        preFlightTime: syllabusItem?.preFlightTime ?? null,
+        postFlightTime: syllabusItem?.postFlightTime ?? null,
+        dayNight: getGeneratedEventDayNightClassification(event),
+        personnel: getPersonnel(event)
+      };
+    };
+    const conflicts = [];
+    const invalidWindows = [];
+    events.forEach((event) => {
+      const window2 = eventWindow(event);
+      if (!Number.isFinite(window2.start) || !Number.isFinite(window2.end)) {
+        invalidWindows.push({
+          reason: "NON_FINITE_BOOKING_WINDOW",
+          event: formatEvent(event),
+          matchedSyllabus: syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber) || null
+        });
+      }
+    });
+    for (let i = 0; i < events.length; i++) {
+      const a = events[i];
+      const aWindow = eventWindow(a);
+      for (let j = i + 1; j < events.length; j++) {
+        const b = events[j];
+        const bWindow = eventWindow(b);
+        if (a.resourceId === b.resourceId && !isStbyResource(a.resourceId) && !isStbyResource(b.resourceId)) {
+          if (a.startTime < b.startTime + b.duration && a.startTime + a.duration > b.startTime) {
+            conflicts.push({
+              conflictType: "resource-overlap",
+              eventA: formatEvent(a),
+              eventB: formatEvent(b)
+            });
+          }
+          if (a.startTime >= b.startTime) {
+            const actualGap = a.startTime - (b.startTime + b.duration);
+            const requiredGap = resourceTurnaroundFor(a);
+            if (actualGap >= 0 && actualGap < requiredGap - 1e-3) {
+              conflicts.push({
+                conflictType: "resource-turnaround",
+                actualGap,
+                requiredGap,
+                eventA: formatEvent(a),
+                eventB: formatEvent(b)
+              });
+            }
+          } else {
+            const actualGap = b.startTime - (a.startTime + a.duration);
+            const requiredGap = resourceTurnaroundFor(b);
+            if (actualGap >= 0 && actualGap < requiredGap - 1e-3) {
+              conflicts.push({
+                conflictType: "resource-turnaround",
+                actualGap,
+                requiredGap,
+                eventA: formatEvent(a),
+                eventB: formatEvent(b)
+              });
+            }
+          }
+        }
+        const commonPersonnel = getCommonPersonnel(a, b);
+        if (commonPersonnel.length > 0) {
+          if (aWindow.start < bWindow.end && aWindow.end > bWindow.start) {
+            conflicts.push({
+              conflictType: "personnel-booking-window",
+              commonPersonnel,
+              eventA: formatEvent(a),
+              eventB: formatEvent(b)
+            });
+          }
+          const aClassification = getGeneratedEventDayNightClassification(a);
+          const bClassification = getGeneratedEventDayNightClassification(b);
+          if (aClassification !== "Day/Night" && bClassification !== "Day/Night" && aClassification !== bClassification) {
+            conflicts.push({
+              conflictType: "personnel-day-night",
+              commonPersonnel,
+              eventA: formatEvent(a),
+              eventB: formatEvent(b)
+            });
+          }
+        }
+      }
+    }
+    const report = {
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      buildDate,
+      totalEvents: events.length,
+      totalConflicts: conflicts.length,
+      totalInvalidWindows: invalidWindows.length,
+      summaryByType: conflicts.reduce((acc, conflict) => {
+        acc[conflict.conflictType] = (acc[conflict.conflictType] || 0) + 1;
+        return acc;
+      }, {}),
+      summaryByGeneratedType: conflicts.reduce((acc, conflict) => {
+        const generatedTypes = [conflict.eventA, conflict.eventB].filter((event) => event.source === "generated").map((event) => event.type);
+        generatedTypes.forEach((type) => {
+          acc[type] = (acc[type] || 0) + 1;
+        });
+        return acc;
+      }, {}),
+      invalidWindows,
+      conflicts
+    };
+    try {
+      localStorage.setItem("build_conflict_diag_report", JSON.stringify(report));
+    } catch (error) {
+      console.warn("[BUILD-CONFLICT-DIAG] Failed to save report to localStorage:", error);
+    }
+    if (conflicts.length > 0 || invalidWindows.length > 0) {
+      console.warn("[BUILD-CONFLICT-DIAG] Final build contains conflicts or invalid booking windows.", {
+        totalConflicts: conflicts.length,
+        totalInvalidWindows: invalidWindows.length,
+        summaryByType: report.summaryByType,
+        summaryByGeneratedType: report.summaryByGeneratedType,
+        download: "Run __downloadBuildConflictDiagnostic() in DevTools"
+      });
+      console.table(conflicts.slice(0, 25).map((conflict) => ({
+        conflictType: conflict.conflictType,
+        resourceA: conflict.eventA.resourceId,
+        eventA: conflict.eventA.flightNumber,
+        sourceA: conflict.eventA.source,
+        startA: conflict.eventA.startTime,
+        bookingA: `${conflict.eventA.bookingStart}-${conflict.eventA.bookingEnd}`,
+        resourceB: conflict.eventB.resourceId,
+        eventB: conflict.eventB.flightNumber,
+        sourceB: conflict.eventB.source,
+        startB: conflict.eventB.startTime,
+        bookingB: `${conflict.eventB.bookingStart}-${conflict.eventB.bookingEnd}`,
+        personnel: (conflict.commonPersonnel || []).join(", "),
+        actualGap: conflict.actualGap,
+        requiredGap: conflict.requiredGap
+      })));
+    } else {
+      console.log("[BUILD-CONFLICT-DIAG] Final build conflict scan clear.");
+    }
+    return report;
+  };
+  generateBuildConflictDiagnostic(sortedEvents);
   console.log("First 20 sorted events by resource:");
   sortedEvents.slice(0, 20).forEach((e) => {
     const personName = e.student || e.pilot || e.instructor || "N/A";
