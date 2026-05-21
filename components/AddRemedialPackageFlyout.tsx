@@ -271,22 +271,6 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                     </option>
                   ))}
                 </select>
-                {/* Center the last completed event in the dropdown */}
-                {lastCompletedEvent && (() => {
-                  const lastCompletedIndex = eventOptions.findIndex(event => event.id === lastCompletedEvent!.id);
-                  if (lastCompletedIndex >= 0) {
-                    const selectElement = document.querySelector('select[size="8"]') as HTMLSelectElement;
-                    if (selectElement) {
-                      // Center the selected item in the visible area
-                      const visibleStart = Math.max(0, lastCompletedIndex - 3);
-                      selectElement.selectedIndex = visibleStart;
-                      setTimeout(() => {
-                        selectElement.selectedIndex = eventToRemediateId || -1;
-                      }, 100);
-                    }
-                  }
-                  return null;
-                })()}
               </div>
               <div className="mt-2 text-xs space-y-1">
                 {selectionMode === 'suggested' && suggestedRemedialEvents.length === 0 && (

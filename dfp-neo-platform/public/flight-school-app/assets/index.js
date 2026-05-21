@@ -63269,46 +63269,30 @@ const AddRemedialPackageFlyout = ({
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "select",
-              {
-                value: eventToRemediateId,
-                onChange: (e) => setEventToRemediateId(e.target.value),
-                className: "block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm",
-                size: "8",
-                children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select an event to remediate..." }),
-                  eventOptions.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "option",
-                    {
-                      value: event.id,
-                      style: {
-                        color: lastCompletedEvent?.id === event.id ? "#ef4444" : "#ffffff",
-                        fontWeight: lastCompletedEvent?.id === event.id ? "bold" : "normal"
-                      },
-                      children: getEventOptionLabel(event)
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "select",
+            {
+              value: eventToRemediateId,
+              onChange: (e) => setEventToRemediateId(e.target.value),
+              className: "block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm",
+              size: "8",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", disabled: true, children: "Select an event to remediate..." }),
+                eventOptions.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "option",
+                  {
+                    value: event.id,
+                    style: {
+                      color: lastCompletedEvent?.id === event.id ? "#ef4444" : "#ffffff",
+                      fontWeight: lastCompletedEvent?.id === event.id ? "bold" : "normal"
                     },
-                    event.id
-                  ))
-                ]
-              }
-            ),
-            lastCompletedEvent && (() => {
-              const lastCompletedIndex = eventOptions.findIndex((event) => event.id === lastCompletedEvent.id);
-              if (lastCompletedIndex >= 0) {
-                const selectElement = document.querySelector('select[size="8"]');
-                if (selectElement) {
-                  const visibleStart = Math.max(0, lastCompletedIndex - 3);
-                  selectElement.selectedIndex = visibleStart;
-                  setTimeout(() => {
-                    selectElement.selectedIndex = eventToRemediateId || -1;
-                  }, 100);
-                }
-              }
-              return null;
-            })()
-          ] }),
+                    children: getEventOptionLabel(event)
+                  },
+                  event.id
+                ))
+              ]
+            }
+          ) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 text-xs space-y-1", children: [
             selectionMode === "suggested" && suggestedRemedialEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-gray-400", children: "No failed or double marginal events found. Select Other to choose from the full LMP." }),
             lastCompletedEvent && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-red-400", children: [
@@ -73682,15 +73666,19 @@ const App = () => {
                     lmps.forEach((lmp) => {
                       if (!lmp.completedEventIds || lmp.completedEventIds.length === 0) return;
                       const normalizedIds = lmp.completedEventIds.map((id) => id.replace("*", ""));
-                      const scoreRecords = normalizedIds.map((eventId) => ({
+                      const existingScores = merged.get(lmp.traineeFullName) || [];
+                      const existingEventIds = new Set(existingScores.map((score) => score.event));
+                      const completionOnlyRecords = normalizedIds.filter((eventId) => !existingEventIds.has(eventId)).map((eventId) => ({
                         event: eventId,
                         score: 3,
                         date: "",
                         instructor: "",
-                        notes: "",
+                        notes: "LMP completion",
                         details: []
                       }));
-                      merged.set(lmp.traineeFullName, scoreRecords);
+                      if (completionOnlyRecords.length > 0) {
+                        merged.set(lmp.traineeFullName, [...existingScores, ...completionOnlyRecords]);
+                      }
                       console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
                     });
                     console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
@@ -82473,8 +82461,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                         console.log(`[PT051->Score] Persisted score for ${assessment.traineeFullName} event=${eventId}`);
                         setScores((prev) => {
                           const existing = prev.get(assessment.traineeFullName) || [];
-                          const alreadyHas = existing.some((s) => s.event === eventId);
-                          if (alreadyHas) return prev;
                           const newScore = {
                             event: eventId,
                             score: overallScore,
@@ -82484,8 +82470,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                             details: []
                           };
                           const updated = new Map(prev);
-                          updated.set(assessment.traineeFullName, [...existing, newScore]);
-                          console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
+                          const scoreIndex = existing.findIndex((s) => s.event === eventId);
+                          const updatedScores = scoreIndex >= 0 ? existing.map((score, index) => index === scoreIndex ? { ...score, ...newScore } : score) : [...existing, newScore];
+                          updated.set(assessment.traineeFullName, updatedScores);
+                          console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
                           return updated;
                         });
                       } else {

@@ -5795,17 +5795,23 @@ const App: React.FC = () => {
                                             // in the syllabus (createSyllabusItem already strips asterisks from item.id)
                                             const normalizedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
 
-                                            // Convert completedEventIds (string[]) back to Score[] shape
-                                            // so computeNextEventsForTrainee can do: scores.get(fullName).map(s => s.event)
-                                            const scoreRecords: Score[] = normalizedIds.map((eventId: string) => ({
-                                                event: eventId,
-                                                score: 3 as 0 | 1 | 2 | 3 | 4 | 5,
-                                                date: '',
-                                                instructor: '',
-                                                notes: '',
-                                                details: [],
-                                            }));
-                                            merged.set(lmp.traineeFullName, scoreRecords);
+                                            // Add LMP completions only when there is no real score record.
+                                            // Do not replace actual PT-051 grades such as Fail/Marginal.
+                                            const existingScores = merged.get(lmp.traineeFullName) || [];
+                                            const existingEventIds = new Set(existingScores.map(score => score.event));
+                                            const completionOnlyRecords: Score[] = normalizedIds
+                                                .filter((eventId: string) => !existingEventIds.has(eventId))
+                                                .map((eventId: string) => ({
+                                                    event: eventId,
+                                                    score: 3 as 0 | 1 | 2 | 3 | 4 | 5,
+                                                    date: '',
+                                                    instructor: '',
+                                                    notes: 'LMP completion',
+                                                    details: [],
+                                                }));
+                                            if (completionOnlyRecords.length > 0) {
+                                                merged.set(lmp.traineeFullName, [...existingScores, ...completionOnlyRecords]);
+                                            }
                                             console.log(`[LMP Sync] ${lmp.traineeFullName}: ${lmp.completedEventIds.length} events complete in Individual LMP`);
                                         });
                                         console.log(`[LMP Sync] ✅ ${lmps.length} trainee Individual LMPs loaded into scores state`);
@@ -16760,8 +16766,6 @@ updates.forEach(update => {
                                             // scheduling immediately reflect the completed event.
                                             setScores(prev => {
                                                 const existing = prev.get(assessment.traineeFullName) || [];
-                                                const alreadyHas = existing.some(s => s.event === eventId);
-                                                if (alreadyHas) return prev;
                                                 const newScore: Score = {
                                                     event: eventId,
                                                     score: overallScore as 0 | 1 | 2 | 3 | 4 | 5,
@@ -16771,8 +16775,12 @@ updates.forEach(update => {
                                                     details: [],
                                                 };
                                                 const updated = new Map(prev);
-                                                updated.set(assessment.traineeFullName, [...existing, newScore]);
-                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: added ${eventId}`);
+                                                const scoreIndex = existing.findIndex(s => s.event === eventId);
+                                                const updatedScores = scoreIndex >= 0
+                                                    ? existing.map((score, index) => index === scoreIndex ? { ...score, ...newScore } : score)
+                                                    : [...existing, newScore];
+                                                updated.set(assessment.traineeFullName, updatedScores);
+                                                console.log(`[PT051->Score] Updated in-memory scores for ${assessment.traineeFullName}: ${eventId}=${overallScore}`);
                                                 return updated;
                                             });
                                         } else {
