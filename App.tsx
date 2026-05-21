@@ -347,6 +347,120 @@ const getEventDayNightClassification = (
     return 'Day';
 };
 
+const getMasterEventId = (item: Partial<SyllabusItemDetail>): string =>
+    item.masterEventId || item.id || item.code || '';
+
+const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
+
+const stampMasterLmpItems = (masterLMP: SyllabusItemDetail[]): SyllabusItemDetail[] =>
+    masterLMP.map((item, index) => ({
+        ...item,
+        masterEventId: getMasterEventId(item),
+        lmpSource: 'master',
+        orderKey: item.orderKey || createLmpOrderKey(index),
+        placementNeedsReview: false,
+    }));
+
+const isLmpOverlayItem = (item: SyllabusItemDetail): boolean =>
+    item.lmpSource === 'remedial' ||
+    item.lmpSource === 'custom' ||
+    item.isRemedial === true ||
+    item.id?.includes('REM') ||
+    item.id?.endsWith('-RF') ||
+    item.code?.includes('REM') ||
+    item.code?.endsWith('-RF') ||
+    item.id?.endsWith('-CUR') ||
+    item.code?.endsWith('-CUR');
+
+const mergeIndividualLmpWithMaster = (
+    existingLmp: SyllabusItemDetail[] | undefined,
+    masterLMP: SyllabusItemDetail[]
+): SyllabusItemDetail[] => {
+    const stampedMaster = stampMasterLmpItems(masterLMP);
+    if (!existingLmp || existingLmp.length === 0) return stampedMaster;
+
+    const masterIds = new Set(stampedMaster.map(getMasterEventId).filter(Boolean));
+    const existingByMasterId = new Map<string, SyllabusItemDetail>();
+    existingLmp.forEach(item => {
+        if (isLmpOverlayItem(item)) return;
+        const masterId = getMasterEventId(item);
+        if (masterId) existingByMasterId.set(masterId, item);
+    });
+
+    const mergedMaster = stampedMaster.map((masterItem, index) => {
+        const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
+        return {
+            ...masterItem,
+            completedAt: (existingItem as any)?.completedAt ?? (masterItem as any).completedAt ?? null,
+            userLockedPosition: existingItem?.userLockedPosition,
+            orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+            placementNeedsReview: false,
+        } as SyllabusItemDetail;
+    });
+
+    const masterIndexById = new Map<string, number>();
+    mergedMaster.forEach((item, index) => {
+        const masterId = getMasterEventId(item);
+        if (masterId) masterIndexById.set(masterId, index);
+    });
+
+    const overlays = existingLmp.filter(isLmpOverlayItem).map((item, index) => {
+        const itemIndex = existingLmp.indexOf(item);
+        const fallbackAfter = item.anchorAfterMasterEventId || getMasterEventId(existingLmp.slice(0, itemIndex).reverse().find(prev => !isLmpOverlayItem(prev)) || {});
+        const fallbackBefore = item.anchorBeforeMasterEventId || getMasterEventId(existingLmp.slice(itemIndex + 1).find(next => !isLmpOverlayItem(next)) || {});
+        const afterExists = !!fallbackAfter && masterIds.has(fallbackAfter);
+        const beforeExists = !!fallbackBefore && masterIds.has(fallbackBefore);
+
+        return {
+            ...item,
+            lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
+            orderKey: item.orderKey || `${createLmpOrderKey(index)}.500`,
+            anchorAfterMasterEventId: fallbackAfter || undefined,
+            anchorBeforeMasterEventId: fallbackBefore || undefined,
+            anchorPolicy: item.anchorPolicy || 'between',
+            placementNeedsReview: !(afterExists || beforeExists),
+        } as SyllabusItemDetail;
+    });
+
+    const overlaysBefore = new Map<string, SyllabusItemDetail[]>();
+    const overlaysAfter = new Map<string, SyllabusItemDetail[]>();
+    const appendOverlays: SyllabusItemDetail[] = [];
+
+    overlays.forEach(overlay => {
+        const policy = overlay.anchorPolicy || 'between';
+        const beforeId = overlay.anchorBeforeMasterEventId;
+        const afterId = overlay.anchorAfterMasterEventId;
+
+        if ((policy === 'between' || policy === 'before') && beforeId && masterIndexById.has(beforeId)) {
+            const list = overlaysBefore.get(beforeId) || [];
+            list.push(overlay);
+            overlaysBefore.set(beforeId, list);
+            return;
+        }
+
+        if (afterId && masterIndexById.has(afterId)) {
+            const list = overlaysAfter.get(afterId) || [];
+            list.push(overlay);
+            overlaysAfter.set(afterId, list);
+            return;
+        }
+
+        appendOverlays.push({ ...overlay, placementNeedsReview: true });
+    });
+
+    const result: SyllabusItemDetail[] = [];
+    mergedMaster.forEach(masterItem => {
+        const masterId = getMasterEventId(masterItem);
+        const before = masterId ? overlaysBefore.get(masterId) || [] : [];
+        result.push(...before.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || '')));
+        result.push(masterItem);
+        const after = masterId ? overlaysAfter.get(masterId) || [] : [];
+        result.push(...after.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || '')));
+    });
+
+    return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
+};
+
 const calculateTotalDutyHoursForPeriod = (instructorName: string, events: ScheduleEvent[], startTime: number, endTime: number, syllabusDetails: SyllabusItemDetail[]): number => {
     const instructorEvents = events.filter(e =>
         eventHasPerson(e, instructorName) &&
@@ -5663,6 +5777,7 @@ const App: React.FC = () => {
                                 const lmps = lmpData.lmps as Array<{
                                     traineeFullName: string;
                                     lmpType: string;
+                                    events?: SyllabusItemDetail[];
                                     completedEventIds: string[];
                                 }>;
 
@@ -5702,13 +5817,14 @@ const App: React.FC = () => {
                                         const newLMPs = new Map(prev);
                                         lmps.forEach(lmp => {
                                             const existingLMP = newLMPs.get(lmp.traineeFullName);
-                                            if (!existingLMP) return;
+                                            if (!existingLMP && (!lmp.events || lmp.events.length === 0)) return;
 
                                             // Normalize event IDs - strip asterisks
                                             const normalizedCompletedIds = lmp.completedEventIds.map((id: string) => id.replace('*', ''));
 
                                             // Update completedAt field for each event in the Individual LMP
-                                            const updatedLMP = existingLMP.map(item => {
+                                            const lmpSource = lmp.events && lmp.events.length > 0 ? lmp.events : existingLMP;
+                                            const updatedLMP = lmpSource.map(item => {
                                                 const isCompleted = normalizedCompletedIds.includes(item.id || item.code);
                                                 return {
                                                     ...item,
@@ -5814,7 +5930,7 @@ const App: React.FC = () => {
                                     return item.courses && item.courses.includes(lmpType);
                                 });
                                 if (masterLMP.length > 0) {
-                                    newLMPs.set(trainee.fullName, [...masterLMP]);
+                                    newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                                     console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? ' [CORRECTED]' : ''}`);
                                 }
                             }
@@ -5902,11 +6018,11 @@ const App: React.FC = () => {
                         return item.courses && item.courses.includes(lmpType);
                     });
                     if (masterLMP.length > 0) {
-                        newLMPs.set(trainee.fullName, [...masterLMP]);
+                        newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                         console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
                     } else {
                         // Fallback: use entire syllabus if no specific match
-                        newLMPs.set(trainee.fullName, [...syllabusDetails]);
+                        newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), syllabusDetails));
                         console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => fallback to full syllabus (${syllabusDetails.length} events)`);
                     }
                 }
@@ -8838,7 +8954,7 @@ const App: React.FC = () => {
         if (masterLMP.length > 0) {
             setTraineeLMPs(prev => {
                 const newLMPs = new Map(prev);
-                newLMPs.set(newTrainee.fullName, [...masterLMP]);
+                newLMPs.set(newTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(newTrainee.fullName), masterLMP));
                 console.log(`[Individual LMP] Initialized ${newTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
                 return newLMPs;
             });
@@ -9001,7 +9117,20 @@ const App: React.FC = () => {
                 return prevLMPs;
             }
 
-            cleanedLmp.splice(insertionIndex + 1, 0, ...remedialPackageItems);
+            const anchorAfterMasterEventId = getMasterEventId(cleanedLmp[insertionIndex]);
+            const anchorBeforeMasterEventId = getMasterEventId(cleanedLmp.slice(insertionIndex + 1).find(item => !isLmpOverlayItem(item)) || {});
+            const anchoredRemedialItems = remedialPackageItems.map((item, index) => ({
+                ...item,
+                lmpSource: 'remedial' as const,
+                masterEventId: undefined,
+                anchorAfterMasterEventId,
+                anchorBeforeMasterEventId: anchorBeforeMasterEventId || undefined,
+                anchorPolicy: 'between' as const,
+                orderKey: `${createLmpOrderKey(insertionIndex)}.${String(index + 1).padStart(3, '0')}`,
+                placementNeedsReview: !anchorAfterMasterEventId && !anchorBeforeMasterEventId,
+            }));
+
+            cleanedLmp.splice(insertionIndex + 1, 0, ...anchoredRemedialItems);
 
             // CRITICAL FIX: Update ALL subsequent events that depend on the failed event
             // Previously only updated the first one, causing events beyond the first to be schedulable
@@ -16144,13 +16273,13 @@ updates.forEach(update => {
                             // Set the LMP data immediately
                             setTraineeLMPs(prev => {
                                 const newLMPs = new Map(prev);
-                                newLMPs.set(selectedTraineeForLMP.fullName, [...masterLMP]);
+                                newLMPs.set(selectedTraineeForLMP.fullName, mergeIndividualLmpWithMaster(newLMPs.get(selectedTraineeForLMP.fullName), masterLMP));
                                 console.log(`[Individual LMP] Emergency initialized ${selectedTraineeForLMP.fullName}'s Individual LMP with ${selectedTraineeForLMP.lmpType} (${masterLMP.length} events)`);
                                 return newLMPs;
                             });
 
                             // Use the newly set LMP
-                            individualLMP = masterLMP;
+                            individualLMP = mergeIndividualLmpWithMaster(individualLMP, masterLMP);
                         } else {
                             console.warn(`[Individual LMP] No Master LMP found for LMP type: ${selectedTraineeForLMP.lmpType}`);
                         }

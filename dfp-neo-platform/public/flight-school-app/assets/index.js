@@ -69954,6 +69954,89 @@ const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
   }
   return "Day";
 };
+const getMasterEventId = (item) => item.masterEventId || item.id || item.code || "";
+const createLmpOrderKey = (index) => String(index + 1).padStart(5, "0");
+const stampMasterLmpItems = (masterLMP) => masterLMP.map((item, index) => ({
+  ...item,
+  masterEventId: getMasterEventId(item),
+  lmpSource: "master",
+  orderKey: item.orderKey || createLmpOrderKey(index),
+  placementNeedsReview: false
+}));
+const isLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || item.id?.includes("REM") || item.id?.endsWith("-RF") || item.code?.includes("REM") || item.code?.endsWith("-RF") || item.id?.endsWith("-CUR") || item.code?.endsWith("-CUR");
+const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
+  const stampedMaster = stampMasterLmpItems(masterLMP);
+  if (!existingLmp || existingLmp.length === 0) return stampedMaster;
+  const masterIds = new Set(stampedMaster.map(getMasterEventId).filter(Boolean));
+  const existingByMasterId = /* @__PURE__ */ new Map();
+  existingLmp.forEach((item) => {
+    if (isLmpOverlayItem(item)) return;
+    const masterId = getMasterEventId(item);
+    if (masterId) existingByMasterId.set(masterId, item);
+  });
+  const mergedMaster = stampedMaster.map((masterItem, index) => {
+    const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
+    return {
+      ...masterItem,
+      completedAt: existingItem?.completedAt ?? masterItem.completedAt ?? null,
+      userLockedPosition: existingItem?.userLockedPosition,
+      orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+      placementNeedsReview: false
+    };
+  });
+  const masterIndexById = /* @__PURE__ */ new Map();
+  mergedMaster.forEach((item, index) => {
+    const masterId = getMasterEventId(item);
+    if (masterId) masterIndexById.set(masterId, index);
+  });
+  const overlays = existingLmp.filter(isLmpOverlayItem).map((item, index) => {
+    const itemIndex = existingLmp.indexOf(item);
+    const fallbackAfter = item.anchorAfterMasterEventId || getMasterEventId(existingLmp.slice(0, itemIndex).reverse().find((prev) => !isLmpOverlayItem(prev)) || {});
+    const fallbackBefore = item.anchorBeforeMasterEventId || getMasterEventId(existingLmp.slice(itemIndex + 1).find((next) => !isLmpOverlayItem(next)) || {});
+    const afterExists = !!fallbackAfter && masterIds.has(fallbackAfter);
+    const beforeExists = !!fallbackBefore && masterIds.has(fallbackBefore);
+    return {
+      ...item,
+      lmpSource: item.lmpSource || (item.isRemedial ? "remedial" : "custom"),
+      orderKey: item.orderKey || `${createLmpOrderKey(index)}.500`,
+      anchorAfterMasterEventId: fallbackAfter || void 0,
+      anchorBeforeMasterEventId: fallbackBefore || void 0,
+      anchorPolicy: item.anchorPolicy || "between",
+      placementNeedsReview: !(afterExists || beforeExists)
+    };
+  });
+  const overlaysBefore = /* @__PURE__ */ new Map();
+  const overlaysAfter = /* @__PURE__ */ new Map();
+  const appendOverlays = [];
+  overlays.forEach((overlay) => {
+    const policy = overlay.anchorPolicy || "between";
+    const beforeId = overlay.anchorBeforeMasterEventId;
+    const afterId = overlay.anchorAfterMasterEventId;
+    if ((policy === "between" || policy === "before") && beforeId && masterIndexById.has(beforeId)) {
+      const list = overlaysBefore.get(beforeId) || [];
+      list.push(overlay);
+      overlaysBefore.set(beforeId, list);
+      return;
+    }
+    if (afterId && masterIndexById.has(afterId)) {
+      const list = overlaysAfter.get(afterId) || [];
+      list.push(overlay);
+      overlaysAfter.set(afterId, list);
+      return;
+    }
+    appendOverlays.push({ ...overlay, placementNeedsReview: true });
+  });
+  const result = [];
+  mergedMaster.forEach((masterItem) => {
+    const masterId = getMasterEventId(masterItem);
+    const before = masterId ? overlaysBefore.get(masterId) || [] : [];
+    result.push(...before.sort((a, b) => (a.orderKey || "").localeCompare(b.orderKey || "")));
+    result.push(masterItem);
+    const after = masterId ? overlaysAfter.get(masterId) || [] : [];
+    result.push(...after.sort((a, b) => (a.orderKey || "").localeCompare(b.orderKey || "")));
+  });
+  return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || "").localeCompare(b.orderKey || ""))];
+};
 const timeStringToHours = (timeStr) => {
   if (!timeStr) return null;
   let hours;
@@ -73560,9 +73643,10 @@ const App = () => {
                     const newLMPs = new Map(prev);
                     lmps.forEach((lmp) => {
                       const existingLMP = newLMPs.get(lmp.traineeFullName);
-                      if (!existingLMP) return;
+                      if (!existingLMP && (!lmp.events || lmp.events.length === 0)) return;
                       const normalizedCompletedIds = lmp.completedEventIds.map((id) => id.replace("*", ""));
-                      const updatedLMP = existingLMP.map((item) => {
+                      const lmpSource = lmp.events && lmp.events.length > 0 ? lmp.events : existingLMP;
+                      const updatedLMP = lmpSource.map((item) => {
                         const isCompleted = normalizedCompletedIds.includes(item.id || item.code);
                         return {
                           ...item,
@@ -73649,7 +73733,7 @@ const App = () => {
                   return item.courses && item.courses.includes(lmpType);
                 });
                 if (masterLMP.length > 0) {
-                  newLMPs.set(trainee.fullName, [...masterLMP]);
+                  newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
                   console.log(`[LMP Init] ${trainee.fullName} (${trainee.course}) → ${lmpType} LMP (${masterLMP.length} events)${isFicTrainee && alreadySet ? " [CORRECTED]" : ""}`);
                 }
               }
@@ -73726,10 +73810,10 @@ const App = () => {
             return item.courses && item.courses.includes(lmpType);
           });
           if (masterLMP.length > 0) {
-            newLMPs.set(trainee.fullName, [...masterLMP]);
+            newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), masterLMP));
             console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => ${lmpType} LMP (${masterLMP.length} events)`);
           } else {
-            newLMPs.set(trainee.fullName, [...syllabusDetails]);
+            newLMPs.set(trainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(trainee.fullName), syllabusDetails));
             console.log(`[LMP Re-init] ${trainee.fullName} (${trainee.course}) => fallback to full syllabus (${syllabusDetails.length} events)`);
           }
         }
@@ -75989,7 +76073,7 @@ ${"=".repeat(60)}`);
     if (masterLMP.length > 0) {
       setTraineeLMPs((prev) => {
         const newLMPs = new Map(prev);
-        newLMPs.set(newTrainee.fullName, [...masterLMP]);
+        newLMPs.set(newTrainee.fullName, mergeIndividualLmpWithMaster(newLMPs.get(newTrainee.fullName), masterLMP));
         console.log(`[Individual LMP] Initialized ${newTrainee.fullName}'s Individual LMP with ${lmpType} (${masterLMP.length} events)`);
         return newLMPs;
       });
@@ -76149,7 +76233,19 @@ ${"=".repeat(60)}`);
         console.error("Critical error: Failed to find insertion point. LMP not modified.");
         return prevLMPs;
       }
-      cleanedLmp.splice(insertionIndex + 1, 0, ...remedialPackageItems);
+      const anchorAfterMasterEventId = getMasterEventId(cleanedLmp[insertionIndex]);
+      const anchorBeforeMasterEventId = getMasterEventId(cleanedLmp.slice(insertionIndex + 1).find((item) => !isLmpOverlayItem(item)) || {});
+      const anchoredRemedialItems = remedialPackageItems.map((item, index) => ({
+        ...item,
+        lmpSource: "remedial",
+        masterEventId: void 0,
+        anchorAfterMasterEventId,
+        anchorBeforeMasterEventId: anchorBeforeMasterEventId || void 0,
+        anchorPolicy: "between",
+        orderKey: `${createLmpOrderKey(insertionIndex)}.${String(index + 1).padStart(3, "0")}`,
+        placementNeedsReview: !anchorAfterMasterEventId && !anchorBeforeMasterEventId
+      }));
+      cleanedLmp.splice(insertionIndex + 1, 0, ...anchoredRemedialItems);
       const subsequentEvents = cleanedLmp.filter((item) => item.prerequisites.includes(eventToRemediate.id));
       subsequentEvents.forEach((subsequentEvent) => {
         const prereqIndex = subsequentEvent.prerequisites.indexOf(eventToRemediate.id);
@@ -81887,11 +81983,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             if (masterLMP.length > 0) {
               setTraineeLMPs((prev) => {
                 const newLMPs = new Map(prev);
-                newLMPs.set(selectedTraineeForLMP.fullName, [...masterLMP]);
+                newLMPs.set(selectedTraineeForLMP.fullName, mergeIndividualLmpWithMaster(newLMPs.get(selectedTraineeForLMP.fullName), masterLMP));
                 console.log(`[Individual LMP] Emergency initialized ${selectedTraineeForLMP.fullName}'s Individual LMP with ${selectedTraineeForLMP.lmpType} (${masterLMP.length} events)`);
                 return newLMPs;
               });
-              individualLMP = masterLMP;
+              individualLMP = mergeIndividualLmpWithMaster(individualLMP, masterLMP);
             } else {
               console.warn(`[Individual LMP] No Master LMP found for LMP type: ${selectedTraineeForLMP.lmpType}`);
             }

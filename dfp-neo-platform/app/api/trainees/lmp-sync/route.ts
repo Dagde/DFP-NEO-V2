@@ -9,6 +9,128 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+const getMasterEventId = (item: any): string => item?.masterEventId || item?.id || item?.code || '';
+const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
+const isLmpOverlayItem = (item: any): boolean =>
+  item?.lmpSource === 'remedial' ||
+  item?.lmpSource === 'custom' ||
+  item?.isRemedial === true ||
+  item?.id?.includes?.('REM') ||
+  item?.id?.endsWith?.('-RF') ||
+  item?.code?.includes?.('REM') ||
+  item?.code?.endsWith?.('-RF') ||
+  item?.id?.endsWith?.('-CUR') ||
+  item?.code?.endsWith?.('-CUR');
+
+const stampMasterLmpItems = (masterSyllabus: any[]): any[] =>
+  masterSyllabus.map((item, index) => ({
+    ...item,
+    masterEventId: getMasterEventId(item),
+    lmpSource: 'master',
+    orderKey: item.orderKey || createLmpOrderKey(index),
+    placementNeedsReview: false,
+  }));
+
+const mergeIndividualLmpWithMaster = (
+  existingEvents: any[] | undefined,
+  masterSyllabus: any[],
+  completedFromScores: Set<string>,
+  scores: { event: string; date: Date }[]
+): any[] => {
+  const stampedMaster = stampMasterLmpItems(masterSyllabus);
+  if (!existingEvents || existingEvents.length === 0) {
+    return stampedMaster.map(item => ({
+      ...item,
+      completedAt: completedFromScores.has(item.id || item.code)
+        ? scores.find(s => s.event === (item.id || item.code))?.date?.toISOString() || null
+        : null,
+    }));
+  }
+
+  const masterIds = new Set(stampedMaster.map(getMasterEventId).filter(Boolean));
+  const existingByMasterId = new Map<string, any>();
+  existingEvents.forEach(item => {
+    if (isLmpOverlayItem(item)) return;
+    const masterId = getMasterEventId(item);
+    if (masterId) existingByMasterId.set(masterId, item);
+  });
+
+  const mergedMaster = stampedMaster.map((masterItem, index) => {
+    const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
+    const completedAt = completedFromScores.has(masterItem.id || masterItem.code)
+      ? scores.find(s => s.event === (masterItem.id || masterItem.code))?.date?.toISOString() || existingItem?.completedAt || null
+      : existingItem?.completedAt ?? null;
+
+    return {
+      ...masterItem,
+      completedAt,
+      userLockedPosition: existingItem?.userLockedPosition,
+      orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
+      placementNeedsReview: false,
+    };
+  });
+
+  const masterIndexById = new Map<string, number>();
+  mergedMaster.forEach((item, index) => {
+    const masterId = getMasterEventId(item);
+    if (masterId) masterIndexById.set(masterId, index);
+  });
+
+  const overlays = existingEvents.filter(isLmpOverlayItem).map((item, index) => {
+    const itemIndex = existingEvents.indexOf(item);
+    const fallbackAfter = item.anchorAfterMasterEventId || getMasterEventId(existingEvents.slice(0, itemIndex).reverse().find(prev => !isLmpOverlayItem(prev)) || {});
+    const fallbackBefore = item.anchorBeforeMasterEventId || getMasterEventId(existingEvents.slice(itemIndex + 1).find(next => !isLmpOverlayItem(next)) || {});
+    const afterExists = !!fallbackAfter && masterIds.has(fallbackAfter);
+    const beforeExists = !!fallbackBefore && masterIds.has(fallbackBefore);
+
+    return {
+      ...item,
+      lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
+      orderKey: item.orderKey || `${createLmpOrderKey(index)}.500`,
+      anchorAfterMasterEventId: fallbackAfter || undefined,
+      anchorBeforeMasterEventId: fallbackBefore || undefined,
+      anchorPolicy: item.anchorPolicy || 'between',
+      placementNeedsReview: !(afterExists || beforeExists),
+    };
+  });
+
+  const overlaysBefore = new Map<string, any[]>();
+  const overlaysAfter = new Map<string, any[]>();
+  const appendOverlays: any[] = [];
+
+  overlays.forEach(overlay => {
+    const policy = overlay.anchorPolicy || 'between';
+    const beforeId = overlay.anchorBeforeMasterEventId;
+    const afterId = overlay.anchorAfterMasterEventId;
+
+    if ((policy === 'between' || policy === 'before') && beforeId && masterIndexById.has(beforeId)) {
+      const list = overlaysBefore.get(beforeId) || [];
+      list.push(overlay);
+      overlaysBefore.set(beforeId, list);
+      return;
+    }
+
+    if (afterId && masterIndexById.has(afterId)) {
+      const list = overlaysAfter.get(afterId) || [];
+      list.push(overlay);
+      overlaysAfter.set(afterId, list);
+      return;
+    }
+
+    appendOverlays.push({ ...overlay, placementNeedsReview: true });
+  });
+
+  const result: any[] = [];
+  mergedMaster.forEach(masterItem => {
+    const masterId = getMasterEventId(masterItem);
+    result.push(...(masterId ? overlaysBefore.get(masterId) || [] : []).sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || '')));
+    result.push(masterItem);
+    result.push(...(masterId ? overlaysAfter.get(masterId) || [] : []).sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || '')));
+  });
+
+  return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
+};
+
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
 }
@@ -22,6 +144,7 @@ export async function GET(request: NextRequest) {
         traineeId: true,
         traineeFullName: true,
         lmpType: true,
+        events: true,
         completedEventIds: true,
         updatedAt: true,
       },
@@ -115,18 +238,9 @@ export async function POST(request: NextRequest) {
 
       const completedEventIds = Array.from(completedFromScores);
 
-      // Build the full LMP events array with completion status
-      const lmpEvents = masterSyllabus.map((item: any) => ({
-        ...item,
-        completedAt: completedFromScores.has(item.id || item.code)
-          ? trainee.scores.find(
-              (s: any) => s.event === (item.id || item.code)
-            )?.date?.toISOString() || null
-          : null,
-      }));
-
       // Check if LMP already exists and what it contains
       const existing = (trainee as any).individualLMP;
+      const existingEvents = Array.isArray(existing?.events) ? existing.events as any[] : [];
       const existingCompleted = existing
         ? (existing.completedEventIds as string[])
         : [];
@@ -134,6 +248,8 @@ export async function POST(request: NextRequest) {
       const newlyMarked = completedEventIds.filter(
         (id) => !existingCompleted.includes(id)
       );
+
+      const lmpEvents = mergeIndividualLmpWithMaster(existingEvents, masterSyllabus, completedFromScores, trainee.scores as any[]);
 
       // Upsert the IndividualLMP
       await (prisma as any).individualLMP.upsert({

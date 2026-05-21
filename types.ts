@@ -265,6 +265,15 @@ export interface SyllabusItemDetail {
   resourcesPhysical: string[];
   resourcesHuman: string[];
   isRemedial?: boolean;
+  completedAt?: string | null;
+  masterEventId?: string;
+  lmpSource?: 'master' | 'remedial' | 'custom';
+  orderKey?: string;
+  anchorAfterMasterEventId?: string;
+  anchorBeforeMasterEventId?: string;
+  anchorPolicy?: 'between' | 'after' | 'before' | 'fixed';
+  userLockedPosition?: boolean;
+  placementNeedsReview?: boolean;
   location: string;
   courses: string[]; // Added for Master LMP filtering
   lmpType?: 'Master LMP' | 'Staff CAT'; // Added for LMP type filtering
