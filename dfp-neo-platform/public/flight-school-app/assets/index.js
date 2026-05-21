@@ -74021,23 +74021,32 @@ const App = () => {
           });
         }
         try {
-          const perfRes = await fetch(`${apiBase2}/trainee-performance?limit=2000`);
-          if (perfRes.ok) {
-            const persistedAssessments = await perfRes.json();
-            if (!cancelled && Array.isArray(persistedAssessments) && persistedAssessments.length > 0) {
-              console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
-              setPt051Assessments((prev) => {
-                if (cancelled) return prev;
-                const merged = new Map(prev);
-                persistedAssessments.forEach((assessment) => {
-                  if (!assessment?.eventId || !assessment?.traineeFullName) return;
-                  merged.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
-                });
-                return merged;
-              });
+          const persistedAssessments = [];
+          const pageSize = 2e3;
+          let offset = 0;
+          while (!cancelled) {
+            const perfRes = await fetch(`${apiBase2}/trainee-performance?limit=${pageSize}&offset=${offset}`);
+            if (!perfRes.ok) {
+              console.warn("[PT051] Could not load persisted trainee performance records:", await perfRes.text());
+              break;
             }
-          } else {
-            console.warn("[PT051] Could not load persisted trainee performance records:", await perfRes.text());
+            const page = await perfRes.json();
+            if (!Array.isArray(page) || page.length === 0) break;
+            persistedAssessments.push(...page);
+            if (page.length < pageSize) break;
+            offset += pageSize;
+          }
+          if (!cancelled && persistedAssessments.length > 0) {
+            console.log(`[PT051] ✅ Loaded ${persistedAssessments.length} persisted trainee performance records`);
+            setPt051Assessments((prev) => {
+              if (cancelled) return prev;
+              const merged = new Map(prev);
+              persistedAssessments.forEach((assessment) => {
+                if (!assessment?.eventId || !assessment?.traineeFullName) return;
+                merged.set(`pt051-${assessment.eventId}-${assessment.traineeFullName}`, assessment);
+              });
+              return merged;
+            });
           }
         } catch (perfErr) {
           console.warn("[PT051] Could not load persisted trainee performance records:", perfErr);
