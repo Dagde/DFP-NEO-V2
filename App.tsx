@@ -16772,10 +16772,25 @@ updates.forEach(update => {
                         );
                         console.log('Trainee/event/date fallback result:', existingAssessment);
                     }
+                    const currentScoreRecord = (scores.get(selectedTraineeForHateSheet.fullName) || []).find(score =>
+                        score.event === eventForPt051.flightNumber ||
+                        score.event === eventForPt051.id ||
+                        score.event === (eventForPt051 as any).syllabus
+                    );
+                    const initialAssessmentForPt051 = existingAssessment && currentScoreRecord && typeof currentScoreRecord.score === 'number' && existingAssessment.overallGrade !== currentScoreRecord.score
+                        ? {
+                            ...existingAssessment,
+                            overallGrade: currentScoreRecord.score as any,
+                            overallResult: currentScoreRecord.score === 0 ? 'F' as const : 'P' as const,
+                            date: currentScoreRecord.date || existingAssessment.date,
+                            instructorName: currentScoreRecord.instructor || existingAssessment.instructorName,
+                        }
+                        : existingAssessment;
                     return <PT051View
+                        key={`${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${initialAssessmentForPt051?.overallGrade ?? 'none'}`}
                         trainee={selectedTraineeForHateSheet}
                         event={eventForPt051}
-                        initialAssessment={existingAssessment}
+                        initialAssessment={initialAssessmentForPt051}
                         instructorLabel={instructorLabel}
                         onBack={() => {
                             handleNavigation('HateSheet');

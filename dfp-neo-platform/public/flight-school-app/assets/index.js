@@ -82583,12 +82583,22 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             );
             console.log("Trainee/event/date fallback result:", existingAssessment);
           }
+          const currentScoreRecord = (scores.get(selectedTraineeForHateSheet.fullName) || []).find(
+            (score) => score.event === eventForPt051.flightNumber || score.event === eventForPt051.id || score.event === eventForPt051.syllabus
+          );
+          const initialAssessmentForPt051 = existingAssessment && currentScoreRecord && typeof currentScoreRecord.score === "number" && existingAssessment.overallGrade !== currentScoreRecord.score ? {
+            ...existingAssessment,
+            overallGrade: currentScoreRecord.score,
+            overallResult: currentScoreRecord.score === 0 ? "F" : "P",
+            date: currentScoreRecord.date || existingAssessment.date,
+            instructorName: currentScoreRecord.instructor || existingAssessment.instructorName
+          } : existingAssessment;
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             PT051View,
             {
               trainee: selectedTraineeForHateSheet,
               event: eventForPt051,
-              initialAssessment: existingAssessment,
+              initialAssessment: initialAssessmentForPt051,
               instructorLabel,
               onBack: () => {
                 handleNavigation("HateSheet");
@@ -82716,7 +82726,8 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
               phraseBank,
               currentUserPin: currentUser2?.pin || "1111",
               canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet)
-            }
+            },
+            `${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}-${initialAssessmentForPt051?.overallGrade ?? "none"}`
           );
         }
         console.error("❌ PT051 View Error - Missing context:", {
