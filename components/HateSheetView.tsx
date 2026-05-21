@@ -63,11 +63,41 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                   return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
               });
 
+              // DISPLAY DEDUP: keep one PT-051 row per trainee/event/date. Older
+              // builds could create synthetic score/mock PT-051 records when the
+              // user clicked a blue LMP score row; those should not surface as a
+              // second PT-051 when a real assessment row exists.
+              const canonicalAssessments = new Map<string, typeof completedAssessments[0]>();
+              completedAssessments.forEach(assessment => {
+                  const key = `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ''}`;
+                  const existing = canonicalAssessments.get(key);
+                  if (!existing) {
+                      canonicalAssessments.set(key, assessment);
+                      return;
+                  }
+
+                  const currentEventId = String(assessment.eventId || assessment.id || '');
+                  const existingEventId = String(existing.eventId || existing.id || '');
+                  const currentIsSynthetic = currentEventId.startsWith('mock-') || currentEventId.startsWith('mock-event-') || currentEventId.startsWith('score-');
+                  const existingIsSynthetic = existingEventId.startsWith('mock-') || existingEventId.startsWith('mock-event-') || existingEventId.startsWith('score-');
+                  const currentHasResult = assessment.overallGrade !== null && assessment.overallGrade !== undefined && assessment.overallGrade !== 'No Grade';
+                  const existingHasResult = existing.overallGrade !== null && existing.overallGrade !== undefined && existing.overallGrade !== 'No Grade';
+
+                  if (
+                      (existingIsSynthetic && !currentIsSynthetic) ||
+                      (!existingHasResult && currentHasResult) ||
+                      ((assessment.date || '') > (existing.date || '') && currentIsSynthetic === existingIsSynthetic)
+                  ) {
+                      canonicalAssessments.set(key, assessment);
+                  }
+              });
+              const dedupedAssessments = Array.from(canonicalAssessments.values());
+
               // DISPLAY DEDUP: For unassessed PT-051s (no overallResult/DCO/DNCO/DPCO checked),
               // keep only the most recently dated one per flightNumber+trainee combination.
               // This handles existing duplicates from rescheduled events already in the DB.
               const seenUnassessed = new Map<string, typeof completedAssessments[0]>();
-              completedAssessments.forEach(assessment => {
+              dedupedAssessments.forEach(assessment => {
                   const isUnassessed = assessment.overallResult === null || assessment.overallResult === undefined || assessment.overallResult === '';
                   if (!isUnassessed) return;
                   const key = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
@@ -77,7 +107,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                   }
               });
               const mostRecentKeys = new Set(Array.from(seenUnassessed.values()).map(a => a.id));
-              const finalAssessments = completedAssessments.filter(assessment => {
+              const finalAssessments = dedupedAssessments.filter(assessment => {
                   const isUnassessed = assessment.overallResult === null || assessment.overallResult === undefined || assessment.overallResult === '';
                   if (!isUnassessed) return true;
                   return mostRecentKeys.has(assessment.id);
@@ -178,11 +208,29 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     const handleRowClick = (item: (typeof combinedHistory)[0]) => {
         // Always navigate to PT-051 for all events (including ground events)
         if (item.type === 'LMP Score') {
+            const existingAssessment = assessments.find(assessment =>
+                assessment.traineeFullName === trainee.fullName &&
+                assessment.flightNumber === item.event &&
+                (
+                    !item.date ||
+                    !assessment.date ||
+                    assessment.date === item.date
+                )
+            ) || assessments.find(assessment =>
+                assessment.traineeFullName === trainee.fullName &&
+                assessment.flightNumber === item.event
+            );
+
+            if (existingAssessment) {
+                onSelectPt051(existingAssessment);
+                return;
+            }
+
             // Create a mock PT-051 assessment for the LMP Score
             const mockAssessment: Pt051Assessment = {
                 id: `mock-${item.event}`,
                 traineeFullName: trainee.fullName,
-                eventId: `mock-event-${item.event}`, // Use a mock event ID
+                eventId: `score-${trainee.id || trainee.fullName}-${item.event}-${item.date || 'undated'}`,
                 flightNumber: item.event,
                 date: item.date,
                 instructorName: item.instructor,

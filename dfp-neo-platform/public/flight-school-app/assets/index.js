@@ -9330,8 +9330,27 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
       const hasDateAndInstructor = assessment.date && assessment.date.trim() !== "" && (assessment.instructorName && assessment.instructorName.trim() !== "");
       return hasGrade || hasResult || hasScoredElements || hasDateAndInstructor;
     });
-    const seenUnassessed = /* @__PURE__ */ new Map();
+    const canonicalAssessments = /* @__PURE__ */ new Map();
     completedAssessments.forEach((assessment) => {
+      const key = `${assessment.traineeFullName}|||${assessment.flightNumber}|||${assessment.date || ""}`;
+      const existing = canonicalAssessments.get(key);
+      if (!existing) {
+        canonicalAssessments.set(key, assessment);
+        return;
+      }
+      const currentEventId = String(assessment.eventId || assessment.id || "");
+      const existingEventId = String(existing.eventId || existing.id || "");
+      const currentIsSynthetic = currentEventId.startsWith("mock-") || currentEventId.startsWith("mock-event-") || currentEventId.startsWith("score-");
+      const existingIsSynthetic = existingEventId.startsWith("mock-") || existingEventId.startsWith("mock-event-") || existingEventId.startsWith("score-");
+      const currentHasResult = assessment.overallGrade !== null && assessment.overallGrade !== void 0 && assessment.overallGrade !== "No Grade";
+      const existingHasResult = existing.overallGrade !== null && existing.overallGrade !== void 0 && existing.overallGrade !== "No Grade";
+      if (existingIsSynthetic && !currentIsSynthetic || !existingHasResult && currentHasResult || (assessment.date || "") > (existing.date || "") && currentIsSynthetic === existingIsSynthetic) {
+        canonicalAssessments.set(key, assessment);
+      }
+    });
+    const dedupedAssessments = Array.from(canonicalAssessments.values());
+    const seenUnassessed = /* @__PURE__ */ new Map();
+    dedupedAssessments.forEach((assessment) => {
       const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
       if (!isUnassessed) return;
       const key = `${assessment.flightNumber}|||${assessment.traineeFullName}`;
@@ -9341,7 +9360,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
       }
     });
     const mostRecentKeys = new Set(Array.from(seenUnassessed.values()).map((a) => a.id));
-    const finalAssessments = completedAssessments.filter((assessment) => {
+    const finalAssessments = dedupedAssessments.filter((assessment) => {
       const isUnassessed = assessment.overallResult === null || assessment.overallResult === void 0 || assessment.overallResult === "";
       if (!isUnassessed) return true;
       return mostRecentKeys.has(assessment.id);
@@ -9412,11 +9431,19 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   };
   const handleRowClick = (item) => {
     if (item.type === "LMP Score") {
+      const existingAssessment = assessments2.find(
+        (assessment) => assessment.traineeFullName === trainee.fullName && assessment.flightNumber === item.event && (!item.date || !assessment.date || assessment.date === item.date)
+      ) || assessments2.find(
+        (assessment) => assessment.traineeFullName === trainee.fullName && assessment.flightNumber === item.event
+      );
+      if (existingAssessment) {
+        onSelectPt051(existingAssessment);
+        return;
+      }
       const mockAssessment = {
         id: `mock-${item.event}`,
         traineeFullName: trainee.fullName,
-        eventId: `mock-event-${item.event}`,
-        // Use a mock event ID
+        eventId: `score-${trainee.id || trainee.fullName}-${item.event}-${item.date || "undated"}`,
         flightNumber: item.event,
         date: item.date,
         instructorName: item.instructor,
@@ -82482,6 +82509,15 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             );
             console.log("Fallback search result:", existingAssessment);
           }
+          if (!existingAssessment) {
+            console.log("Event ID lookup failed, trying trainee/event/date fallback...");
+            existingAssessment = Array.from(pt051Assessments.values()).find(
+              (a) => a.traineeFullName === selectedTraineeForHateSheet.fullName && a.flightNumber === eventForPt051.flightNumber && (!eventForPt051.date || !a.date || a.date === eventForPt051.date)
+            ) || Array.from(pt051Assessments.values()).find(
+              (a) => a.traineeFullName === selectedTraineeForHateSheet.fullName && a.flightNumber === eventForPt051.flightNumber
+            );
+            console.log("Trainee/event/date fallback result:", existingAssessment);
+          }
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
             PT051View,
             {
@@ -82511,7 +82547,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   return;
                 }
                 console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
-                const assessmentKey2 = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+                const assessmentKey2 = `pt051-${existingAssessment?.eventId || eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                 console.log("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
                 const updatedAssessments = new Map(pt051Assessments);
                 const deleted = updatedAssessments.delete(assessmentKey2);
@@ -82532,13 +82568,19 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   ...assessment,
                   isCompleted: !isAutoSave ? true : assessment.isCompleted
                 };
-                const saveKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-                const updatedAssessments = new Map(pt051Assessments).set(saveKey, updatedAssessment);
+                const saveEventId = updatedAssessment.eventId || existingAssessment?.eventId || eventForPt051.id;
+                const saveKey = `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`;
+                const normalizedAssessment = {
+                  ...updatedAssessment,
+                  eventId: saveEventId,
+                  id: updatedAssessment.id || existingAssessment?.id || `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`
+                };
+                const updatedAssessments = new Map(pt051Assessments).set(saveKey, normalizedAssessment);
                 setPt051Assessments(updatedAssessments);
-                void persistPt051AssessmentsForDate(updatedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
+                void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments).catch((err) => {
                   console.warn("[PT051] Failed to persist assessment snapshot:", err);
                 });
-                const performanceSave = persistPt051AssessmentRecord(updatedAssessment).then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
+                const performanceSave = persistPt051AssessmentRecord(normalizedAssessment).then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`)).catch((err) => {
                   console.warn("[PT051] Failed to persist trainee performance record:", err);
                   if (!isAutoSave) {
                     void showDarkAlert2(`PT-051 could not be saved to the database.

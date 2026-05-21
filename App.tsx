@@ -16724,6 +16724,20 @@ updates.forEach(update => {
                         );
                         console.log('Fallback search result:', existingAssessment);
                     }
+                    if (!existingAssessment) {
+                        console.log('Event ID lookup failed, trying trainee/event/date fallback...');
+                        existingAssessment = Array.from(pt051Assessments.values()).find(
+                            a =>
+                                a.traineeFullName === selectedTraineeForHateSheet.fullName &&
+                                a.flightNumber === eventForPt051.flightNumber &&
+                                (!eventForPt051.date || !a.date || a.date === eventForPt051.date)
+                        ) || Array.from(pt051Assessments.values()).find(
+                            a =>
+                                a.traineeFullName === selectedTraineeForHateSheet.fullName &&
+                                a.flightNumber === eventForPt051.flightNumber
+                        );
+                        console.log('Trainee/event/date fallback result:', existingAssessment);
+                    }
                     return <PT051View
                         trainee={selectedTraineeForHateSheet}
                         event={eventForPt051}
@@ -16755,7 +16769,7 @@ updates.forEach(update => {
                             }
                             console.log('🗑️ App.tsx: onDeleteAssessment called with ID:', assessmentId);
                             // Find and delete the PT-051 assessment
-                            const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+                            const assessmentKey = `pt051-${existingAssessment?.eventId || eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
                             console.log('🗑️ App.tsx: Deleting assessment with key:', assessmentKey);
                             const updatedAssessments = new Map(pt051Assessments);
                             const deleted = updatedAssessments.delete(assessmentKey);
@@ -16783,14 +16797,20 @@ updates.forEach(update => {
                             };
 
                             // Save using the correct key format: pt051-${eventId}-${traineeFullName}
-                            const saveKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
-                            const updatedAssessments = new Map(pt051Assessments).set(saveKey, updatedAssessment);
+                            const saveEventId = updatedAssessment.eventId || existingAssessment?.eventId || eventForPt051.id;
+                            const saveKey = `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`;
+                            const normalizedAssessment = {
+                                ...updatedAssessment,
+                                eventId: saveEventId,
+                                id: updatedAssessment.id || existingAssessment?.id || `pt051-${saveEventId}-${selectedTraineeForHateSheet.fullName}`,
+                            };
+                            const updatedAssessments = new Map(pt051Assessments).set(saveKey, normalizedAssessment);
                             setPt051Assessments(updatedAssessments);
-                            void persistPt051AssessmentsForDate(updatedAssessment.date || eventForPt051.date || date, updatedAssessments)
+                            void persistPt051AssessmentsForDate(normalizedAssessment.date || eventForPt051.date || date, updatedAssessments)
                                 .catch(err => {
                                     console.warn('[PT051] Failed to persist assessment snapshot:', err);
                                 });
-                            const performanceSave = persistPt051AssessmentRecord(updatedAssessment)
+                            const performanceSave = persistPt051AssessmentRecord(normalizedAssessment)
                                 .then(() => console.log(`[PT051] Persisted trainee performance record for ${assessment.traineeFullName} ${assessment.flightNumber}`))
                                 .catch(err => {
                                     console.warn('[PT051] Failed to persist trainee performance record:', err);
