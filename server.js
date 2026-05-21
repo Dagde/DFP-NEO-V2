@@ -80,6 +80,7 @@ async function getPrisma() {
     }
     // Ensure TraineePerformance table exists (single source of truth for PT-051 assessments)
     await ensureTraineePerformanceTable(prisma);
+    await migrateLegacyPerformanceIntoTraineePerformance(prisma);
     // Ensure AppSettings table exists (stores all org-level settings including currencies)
     await ensureAppSettingsTable(prisma);
     // Ensure commercial platform configuration tables exist and are seeded from current V2 settings
@@ -10446,6 +10447,237 @@ async function ensureTraineePerformanceTable(db) {
   }
 }
 
+async function migrateLegacyPerformanceIntoTraineePerformance(db, options = {}) {
+  const force = options.force === true;
+  const summary = {
+    success: true,
+    mode: force ? 'forced' : 'startup',
+    sources: {
+      dataBackupRecords: 0,
+      dailySnapshots: 0,
+      candidateAssessments: 0,
+    },
+    inserted: 0,
+    updatedEmpty: 0,
+    preservedExisting: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  try {
+    const marker = await db.dataBackup.findFirst({
+      where: { type: 'migration_trainee_performance_authoritative_v1' },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (marker && !force) {
+      return { ...summary, skipped: 0, alreadyRan: true, marker: marker.data };
+    }
+  } catch (markerErr) {
+    console.warn('[PT051 Migration] Could not read migration marker:', markerErr.message);
+  }
+
+  try {
+    const trainees = await db.trainee.findMany({
+      select: { id: true, fullName: true, course: true },
+    });
+    const traineeByFullName = new Map(trainees.map(t => [t.fullName, t]));
+
+    const candidates = [];
+    const addPayload = (payload, source, sourceDate = null) => {
+      const entries = extractLegacyPt051Assessments(payload);
+      entries.forEach((assessment, index) => {
+        candidates.push({ assessment, source, sourceDate, index });
+      });
+    };
+
+    const pt051Backups = await db.dataBackup.findMany({
+      where: { type: 'historical_pt051_assessments' },
+      orderBy: { createdAt: 'desc' },
+    });
+    summary.sources.dataBackupRecords = pt051Backups.length;
+    pt051Backups.forEach(backup => addPayload(backup.data, 'DataBackup', backup.createdAt));
+
+    const snapshots = await db.dailySnapshot.findMany({
+      select: { date: true, savedAt: true, pt051Assessments: true },
+      orderBy: { savedAt: 'desc' },
+    });
+    summary.sources.dailySnapshots = snapshots.length;
+    snapshots.forEach(snapshot => addPayload(snapshot.pt051Assessments, 'DailySnapshot', snapshot.date));
+
+    summary.sources.candidateAssessments = candidates.length;
+
+    const seenEventIds = new Set();
+    for (const candidate of candidates) {
+      const normalized = normalizeLegacyPt051Assessment(candidate.assessment, traineeByFullName, candidate);
+      if (!normalized) {
+        summary.skipped++;
+        continue;
+      }
+      if (seenEventIds.has(normalized.eventId)) {
+        summary.preservedExisting++;
+        continue;
+      }
+      seenEventIds.add(normalized.eventId);
+
+      try {
+        const result = await insertMigratedTraineePerformanceRecord(db, normalized);
+        summary[result]++;
+      } catch (rowErr) {
+        summary.skipped++;
+        if (summary.errors.length < 10) {
+          summary.errors.push({
+            eventId: normalized.eventId,
+            traineeFullName: normalized.traineeFullName,
+            error: rowErr.message,
+          });
+        }
+      }
+    }
+
+    try {
+      await db.dataBackup.create({
+        data: {
+          type: 'migration_trainee_performance_authoritative_v1',
+          data: {
+            ...summary,
+            ranAt: new Date().toISOString(),
+          },
+        },
+      });
+    } catch (saveMarkerErr) {
+      console.warn('[PT051 Migration] Could not save migration marker:', saveMarkerErr.message);
+    }
+
+    console.log(`[PT051 Migration] candidates=${summary.sources.candidateAssessments}, inserted=${summary.inserted}, updatedEmpty=${summary.updatedEmpty}, preserved=${summary.preservedExisting}, skipped=${summary.skipped}`);
+    return summary;
+  } catch (err) {
+    console.error('❌ PT051 legacy migration failed:', err.message);
+    return { ...summary, success: false, error: err.message };
+  }
+}
+
+function extractLegacyPt051Assessments(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload.filter(Boolean);
+  if (typeof payload !== 'object') return [];
+  return Object.values(payload).filter(Boolean);
+}
+
+function normalizeLegacyPt051Assessment(assessment, traineeByFullName, candidate = {}) {
+  if (!assessment || typeof assessment !== 'object') return null;
+
+  const traineeFullName = assessment.traineeFullName || assessment.trainedFullName || assessment.student || '';
+  const trainee = traineeByFullName.get(traineeFullName);
+  if (!trainee) return null;
+
+  const flightNumber = String(assessment.flightNumber || assessment.eventCode || assessment.event || '').replace('*', '').trim();
+  const date = String(assessment.date || '').slice(0, 10);
+  if (!flightNumber || !date) return null;
+
+  const existingEventId = String(assessment.eventId || '').trim();
+  const assessmentId = String(assessment.id || '').trim();
+  const eventId = existingEventId || assessmentId.replace(/^pt051-/, '').replace(new RegExp(`-${escapeRegExp(traineeFullName)}$`), '') || `legacy-${trainee.id}-${flightNumber}-${date}`;
+  if (!eventId) return null;
+
+  const overallGrade = assessment.overallGrade !== undefined && assessment.overallGrade !== null
+    ? assessment.overallGrade
+    : 'No Grade';
+
+  return {
+    ...assessment,
+    id: `tp-migrated-${safeIdentifier(eventId)}`.slice(0, 180),
+    traineeId: trainee.id,
+    traineeFullName,
+    eventId,
+    eventCode: assessment.eventCode || flightNumber,
+    flightNumber,
+    date,
+    instructorName: assessment.instructorName || assessment.instructor || '',
+    overallGrade,
+    overallResult: assessment.overallResult ?? null,
+    dcoResult: assessment.dcoResult || '',
+    isCompleted: assessment.isCompleted !== false,
+    course: assessment.course || trainee.course || null,
+    createdBy: `legacy-${candidate.source || 'unknown'}`,
+  };
+}
+
+async function insertMigratedTraineePerformanceRecord(db, assessment) {
+  const row = mapAssessmentToRow(assessment);
+  const result = await db.$queryRawUnsafe(`
+    WITH upserted AS (
+      INSERT INTO "TraineePerformance" (
+        "id", "traineeId", "traineeFullName", "eventId", "eventCode", "flightNumber",
+        "eventDescription", "date", "instructorName", "instructorId",
+        "overallGrade", "overallResult", "dcoResult",
+        "startTime", "duration", "endTime", "comments",
+        "elementScores", "isCompleted", "isGroundSchoolAssessment", "groundSchoolResult",
+        "course", "syllabusPhase", "eventSequence", "createdAt", "updatedAt", "createdBy"
+      ) VALUES (
+        $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+        $7::text, $8::text, $9::text, $10::text,
+        $11::text, $12::text, $13::text,
+        $14, $15, $16, $17::text,
+        $18::jsonb, $19::boolean, $20::boolean, $21,
+        $22::text, $23::text, $24, NOW(), NOW(), $25::text
+      )
+      ON CONFLICT ("eventId") DO UPDATE SET
+        "eventCode"                = EXCLUDED."eventCode",
+        "flightNumber"             = EXCLUDED."flightNumber",
+        "eventDescription"         = COALESCE("TraineePerformance"."eventDescription", EXCLUDED."eventDescription"),
+        "date"                     = EXCLUDED."date",
+        "instructorName"           = EXCLUDED."instructorName",
+        "overallGrade"             = EXCLUDED."overallGrade",
+        "overallResult"            = EXCLUDED."overallResult",
+        "dcoResult"                = EXCLUDED."dcoResult",
+        "startTime"                = EXCLUDED."startTime",
+        "duration"                 = EXCLUDED."duration",
+        "endTime"                  = EXCLUDED."endTime",
+        "comments"                 = EXCLUDED."comments",
+        "elementScores"            = EXCLUDED."elementScores",
+        "isCompleted"              = EXCLUDED."isCompleted",
+        "isGroundSchoolAssessment" = EXCLUDED."isGroundSchoolAssessment",
+        "groundSchoolResult"       = EXCLUDED."groundSchoolResult",
+        "course"                   = COALESCE("TraineePerformance"."course", EXCLUDED."course"),
+        "syllabusPhase"            = COALESCE("TraineePerformance"."syllabusPhase", EXCLUDED."syllabusPhase"),
+        "eventSequence"            = COALESCE("TraineePerformance"."eventSequence", EXCLUDED."eventSequence"),
+        "updatedAt"                = NOW(),
+        "updatedBy"                = EXCLUDED."createdBy"
+      WHERE
+        "TraineePerformance"."isCompleted" = false
+        OR "TraineePerformance"."overallGrade" IS NULL
+        OR "TraineePerformance"."overallGrade" = 'No Grade'
+      RETURNING xmax = 0 AS inserted
+    )
+    SELECT
+      COALESCE((SELECT inserted FROM upserted), false) AS inserted,
+      EXISTS (SELECT 1 FROM upserted) AS changed
+  `,
+    row.id, row.traineeId, row.traineeFullName, row.eventId, row.eventCode, row.flightNumber,
+    row.eventDescription, row.date, row.instructorName, row.instructorId,
+    row.overallGrade, row.overallResult, row.dcoResult,
+    row.startTime, row.duration, row.endTime, row.comments,
+    JSON.stringify(row.elementScores), row.isCompleted, row.isGroundSchoolAssessment, row.groundSchoolResult,
+    row.course, row.syllabusPhase, row.eventSequence, row.createdBy
+  );
+
+  const first = result?.[0];
+  if (first?.inserted === true) return 'inserted';
+  if (first?.changed === true) return 'updatedEmpty';
+  return 'preservedExisting';
+}
+
+function safeIdentifier(value) {
+  return String(value || '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || generateSimpleId();
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // GET /api/trainee-performance
 // Query params: traineeId, traineeFullName, instructorName, course, isCompleted, dateFrom, dateTo, limit, offset
 app.get('/api/trainee-performance', async (req, res) => {
@@ -10547,11 +10779,29 @@ app.get('/api/trainee-performance/stats', async (req, res) => {
       GROUP BY course
       ORDER BY course
     `, ...params);
-    const total = rows.reduce((sum, r) => sum + Number(r.count), 0);
-    res.json({ courses: rows, total });
+    const courses = rows.map(r => ({
+      course: r.course,
+      count: Number(r.count || 0),
+      completed: Number(r.completed || 0),
+    }));
+    const total = courses.reduce((sum, r) => sum + r.count, 0);
+    res.json({ courses, total });
   } catch (error) {
     console.error('❌ GET /api/trainee-performance/stats error:', error);
     res.status(500).json({ error: 'Failed to fetch stats', details: error.message });
+  }
+});
+
+// POST /api/trainee-performance/migrate-legacy - backfill legacy PT-051 stores into TraineePerformance
+// IMPORTANT: This must come BEFORE /:eventId to avoid Express matching 'migrate-legacy' as an eventId.
+app.post('/api/trainee-performance/migrate-legacy', async (req, res) => {
+  try {
+    const db = await getPrisma();
+    const result = await migrateLegacyPerformanceIntoTraineePerformance(db, { force: req.body?.force === true });
+    res.json(result);
+  } catch (error) {
+    console.error('❌ POST /api/trainee-performance/migrate-legacy error:', error);
+    res.status(500).json({ error: 'Failed to migrate legacy PT-051 records', details: error.message });
   }
 });
 
