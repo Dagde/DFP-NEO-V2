@@ -207,6 +207,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const [isDirty, setIsDirty] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'Saved' | 'Saving...' | 'Unsaved'>('Saved');
     const isFirstRender = useRef(true);
+    const isInitialCommentHydration = useRef(true);
 
     // --- Speech to Text State & Refs ---
     const [listeningField, setListeningField] = useState<string | null>(null);
@@ -615,6 +616,10 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     };
 
     useEffect(() => {
+        if (isInitialCommentHydration.current) {
+            isInitialCommentHydration.current = false;
+            return;
+        }
         const combined = COMMENT_SECTIONS.map(key => `${key}:\n${commentFields[key]}`).join('\n\n');
         setAssessment(prev => ({
             ...prev,

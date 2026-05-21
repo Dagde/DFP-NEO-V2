@@ -48160,6 +48160,7 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
   const [isDirty, setIsDirty] = reactExports.useState(false);
   const [saveStatus, setSaveStatus] = reactExports.useState("Saved");
   const isFirstRender = reactExports.useRef(true);
+  const isInitialCommentHydration = reactExports.useRef(true);
   const [listeningField, setListeningField] = reactExports.useState(null);
   const sessionPromiseRef = reactExports.useRef(null);
   const audioContextRef = reactExports.useRef(null);
@@ -48501,6 +48502,10 @@ const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEvent
     setCurrentPhraseElement(null);
   };
   reactExports.useEffect(() => {
+    if (isInitialCommentHydration.current) {
+      isInitialCommentHydration.current = false;
+      return;
+    }
     const combined = COMMENT_SECTIONS.map((key) => `${key}:
 ${commentFields[key]}`).join("\n\n");
     setAssessment((prev) => ({
