@@ -6089,21 +6089,12 @@ const App: React.FC = () => {
                                 return merged;
                             });
 
-                            // Load PT-051 assessments from the most recent snapshot
+                            // PT-051 active state is loaded from TraineePerformance only.
+                            // Snapshot payloads may exist from older builds, but they are stale
+                            // backups and must not seed or override live PT-051 results.
                             const mostRecent = snapshots[0];
                             if (mostRecent && mostRecent.pt051Assessments && Object.keys(mostRecent.pt051Assessments).length > 0) {
-                                const assessments = mostRecent.pt051Assessments as Record<string, Pt051Assessment>;
-                                console.log(`[Snapshot] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments from latest snapshot`);
-                                setPt051Assessments(prev => {
-                                    if (cancelled) return prev;
-                                    const merged = new Map(prev);
-                                    Object.entries(assessments).forEach(([key, assessment]) => {
-                                        if (!merged.has(key)) {
-                                            merged.set(key, assessment as Pt051Assessment);
-                                        }
-                                    });
-                                    return merged;
-                                });
+                                console.log(`[Snapshot] Ignored ${Object.keys(mostRecent.pt051Assessments).length} PT-051 snapshot records; TraineePerformance is authoritative`);
                             }
                             // Load alertsData from all snapshots
                             setAlertsDataByDate(prev => {
@@ -6152,18 +6143,7 @@ const App: React.FC = () => {
                 }
 
                 if (data.pt051Assessments && Object.keys(data.pt051Assessments).length > 0) {
-                    const assessments = data.pt051Assessments as Record<string, Pt051Assessment>;
-                    console.log(`[Historical] ✅ Loaded ${Object.keys(assessments).length} PT-051 assessments (legacy)`);
-                    setPt051Assessments(prev => {
-                        if (cancelled) return prev;
-                        const merged = new Map(prev);
-                        Object.entries(assessments).forEach(([key, assessment]) => {
-                            if (!merged.has(key)) {
-                                merged.set(key, assessment);
-                            }
-                        });
-                        return merged;
-                    });
+                    console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
                 }
 
                 try {
@@ -6262,13 +6242,7 @@ const App: React.FC = () => {
         }
 
         if (snap.pt051Assessments && Object.keys(snap.pt051Assessments).length > 0) {
-            setPt051Assessments(prev => {
-                const merged = new Map(prev);
-                Object.entries(snap.pt051Assessments as Record<string, Pt051Assessment>).forEach(([key, assessment]) => {
-                    if (!merged.has(key)) merged.set(key, assessment);
-                });
-                return merged;
-            });
+            console.log(`[Snapshot] Ignored ${Object.keys(snap.pt051Assessments).length} PT-051 snapshot records for ${targetDate}; TraineePerformance is authoritative`);
         }
 
         if (snap.alertsData && Object.keys(snap.alertsData).length > 0) {
@@ -10015,18 +9989,11 @@ const App: React.FC = () => {
             }
         });
 
-        // Convert pt051Assessments Map to plain object
-        const pt051AssessmentsObj: Record<string, any> = {};
-        pt051Assessments.forEach((assessment: any, key: string) => {
-            pt051AssessmentsObj[key] = assessment;
-        });
-
         const snapshotPayload: Record<string, any> = {
             date: snapshotKey,
             scheduleEvents: allEventsForDate,
             staffEvents: staffEventsForDate,
             traineeEvents: traineeEventsForDate,
-            pt051Assessments: pt051AssessmentsObj,
             traineeProfiles: traineeProfilesSnapshot,
             staffProfiles: staffProfilesSnapshot,
             lmpCompletedIds: lmpCompletedIdsMap,
@@ -10065,108 +10032,7 @@ const App: React.FC = () => {
         targetDate: string,
         assessmentsMap: Map<string, Pt051Assessment>
     ) => {
-        const apiBase = getApiBaseUrl();
-        const snapshotKey = getDailySnapshotKey(targetDate);
-        const savedBy = authUser?.userId ?? sessionUser?.userId ?? null;
-        const allEventsForDate = publishedSchedules[targetDate] || (targetDate === date ? eventsForDate : []);
-        const staffEventsForDate = allEventsForDate.filter((e: ScheduleEvent) =>
-            e.instructor && !e.student && e.type !== 'logbook'
-        );
-        const traineeEventsForDate = allEventsForDate.filter((e: ScheduleEvent) => !!e.student);
-
-        const staffCurrencyMap: Record<string, any> = {};
-        instructorsData.forEach((inst: any) => {
-            if (inst.currencyStatus && inst.currencyStatus.length > 0) {
-                staffCurrencyMap[inst.name] = inst.currencyStatus;
-            }
-        });
-
-        const traineeProfilesSnapshot = traineesData.map((t: any) => ({
-            idNumber: t.idNumber,
-            fullName: t.fullName,
-            name: t.name,
-            rank: t.rank,
-            course: t.course,
-            lmpType: t.lmpType,
-            service: t.service,
-            unit: t.unit,
-            primaryInstructor: t.primaryInstructor,
-            currencyStatus: t.currencyStatus || [],
-            isPaused: t.isPaused || false,
-        }));
-
-        const staffProfilesSnapshot = instructorsData.map((inst: any) => ({
-            id: inst.id,
-            idNumber: inst.idNumber,
-            name: inst.name,
-            rank: inst.rank,
-            role: inst.role,
-            unit: inst.unit,
-            location: inst.location,
-            flight: inst.flight,
-            service: inst.service,
-            category: inst.category,
-            isQFI: !!inst.isQFI,
-            isOFI: !!inst.isOFI,
-            isCFI: !!inst.isCFI,
-            isFlyingSupervisor: !!inst.isFlyingSupervisor,
-            isTestingOfficer: !!inst.isTestingOfficer,
-            isCommandingOfficer: !!inst.isCommandingOfficer,
-            isExecutive: !!inst.isExecutive,
-            isPaused: !!inst.isPaused,
-            currencyStatus: inst.currencyStatus || [],
-            snapshotSchool: school,
-            snapshotDate: targetDate,
-        }));
-
-        const lmpCompletedIdsMap: Record<string, string[]> = {};
-        traineesData.forEach((t: any) => {
-            const individualLMP = traineeLMPs.get(t.fullName);
-            if (individualLMP) {
-                const completedIds = (individualLMP as any[])
-                    .filter((item: any) => item.completedAt || item.isComplete)
-                    .map((item: any) => (item.id || item.code || '').replace('*', ''));
-                if (completedIds.length > 0) {
-                    lmpCompletedIdsMap[t.fullName] = completedIds;
-                }
-            }
-        });
-
-        const pt051AssessmentsObj: Record<string, any> = {};
-        assessmentsMap.forEach((assessment: any, key: string) => {
-            pt051AssessmentsObj[key] = assessment;
-        });
-
-        const response = await fetch(`${apiBase}/daily-snapshot/save`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                date: snapshotKey,
-                scheduleEvents: allEventsForDate,
-                staffEvents: staffEventsForDate,
-                traineeEvents: traineeEventsForDate,
-                pt051Assessments: pt051AssessmentsObj,
-                traineeProfiles: traineeProfilesSnapshot,
-                staffProfiles: staffProfilesSnapshot,
-                lmpCompletedIds: lmpCompletedIdsMap,
-                staffCurrency: staffCurrencyMap,
-                staffLogbook: {},
-                savedBy,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || `Failed to persist PT-051 assessments (${response.status})`);
-        }
-
-        const result = await response.json();
-        if (!result.success) {
-            throw new Error(result.error || 'Failed to persist PT-051 assessments');
-        }
-
-        loadedSnapshotDates.current.add(snapshotKey);
-        console.log(`[PT051] ✅ Persisted ${assessmentsMap.size} PT-051 assessments to snapshot ${snapshotKey}`);
+        console.log(`[PT051] Snapshot persistence skipped for ${targetDate}; ${assessmentsMap.size} active records use TraineePerformance`);
     };
 
     const persistPt051AssessmentRecord = async (assessment: Pt051Assessment) => {
@@ -12589,19 +12455,12 @@ const App: React.FC = () => {
                 }
             });
 
-            // Convert pt051Assessments Map to plain object for serialization
-            const pt051AssessmentsObj: Record<string, any> = {};
-            pt051Assessments.forEach((assessment: any, key: string) => {
-                pt051AssessmentsObj[key] = assessment;
-            });
-
             const snapshotKey = getDailySnapshotKey(buildDfpDate);
             const snapshotPayload = {
                 date: snapshotKey,
                 scheduleEvents: newEventsForDate,
                 staffEvents: staffEventsForDate,
                 traineeEvents: traineeEventsForDate,
-                pt051Assessments: pt051AssessmentsObj,
                 traineeProfiles: traineeProfilesSnapshot,
                 staffProfiles: staffProfilesSnapshot,
                 lmpCompletedIds: lmpCompletedIdsMap,
