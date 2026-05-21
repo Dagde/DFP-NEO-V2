@@ -1703,9 +1703,12 @@ function generateDfpInternal(
     setProgress({ message: 'Initializing DFP build...', percentage: 0 });
     console.log('🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active');
 
-    // CRITICAL: Get Active DFP events for the build date to consider existing pilot schedules
-    const activeDfpEvents = publishedSchedules[buildDate] || [];
-    console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
+    // Preserve only explicitly fixed Active DFP events as build constraints.
+    // Carrying the full previous schedule into a rebuild preserves old conflicts
+    // instead of letting the algorithm produce a fresh conflict-free build.
+    const activeDfpEvents = (publishedSchedules[buildDate] || []).filter(event => event.isTimeFixed);
+    const ignoredActiveDfpEvents = (publishedSchedules[buildDate] || []).length - activeDfpEvents.length;
+    console.log(`🔵 Active DFP has ${activeDfpEvents.length} fixed event(s) for ${buildDate}; ignoring ${ignoredActiveDfpEvents} non-fixed event(s) for rebuild`);
 
     // Convert Active DFP events to the format needed (remove date field)
     const activeDfpEventsWithoutDate: Omit<ScheduleEvent, 'date'>[] = activeDfpEvents.map(e => {
@@ -10967,10 +10970,11 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] Pre-Build Step 1: Syncing SCT and Remedial requests...');
         const syncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
 
-        // SECOND STEP: Analyze Active DFP for the build date and preserve ALL existing events
+        // SECOND STEP: Analyze Active DFP for the build date and preserve only explicitly fixed events
         console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
 
         const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
+        const fixedExistingEventsForDate = existingEventsForDate.filter(event => event.isTimeFixed);
 
         console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
 
@@ -10979,15 +10983,16 @@ const App: React.FC = () => {
         let newHighestPriorityEvents = [...syncedPriorityEvents];
         let addedCount = 0;
 
-        if (existingEventsForDate.length > 0) {
-            console.log('DEBUG Existing events details:');
-            existingEventsForDate.forEach((event, index) => {
+        if (fixedExistingEventsForDate.length > 0) {
+            console.log(`DEBUG Preserving ${fixedExistingEventsForDate.length} explicitly fixed Active DFP event(s); ${existingEventsForDate.length - fixedExistingEventsForDate.length} non-fixed event(s) will be rebuilt.`);
+            console.log('DEBUG Fixed existing event details:');
+            fixedExistingEventsForDate.forEach((event, index) => {
                 console.log(`  ${index + 1}. ${event.flightNumber} - ${event.student || event.pilot || 'N/A'} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id}, isTimeFixed: ${event.isTimeFixed})`);
             });
 
-            console.log('AUTOMATICALLY adding ALL these events to Highest Priority to preserve them...');
+            console.log('Adding explicitly fixed Active DFP events to Highest Priority to preserve them...');
 
-            existingEventsForDate.forEach(event => {
+            fixedExistingEventsForDate.forEach(event => {
                 // Check if this event is already in highest priority
                 const alreadyExists = newHighestPriorityEvents.some(hpe =>
                     hpe.id === event.id
@@ -11015,7 +11020,7 @@ const App: React.FC = () => {
                 console.log('DEBUG Pre-Build Complete: All existing events already locked');
             }
         } else {
-            console.log('DEBUG Pre-Build Analysis: No existing events found in Active DFP for this date');
+            console.log(`DEBUG Pre-Build Analysis: No fixed Active DFP events found for this date; ${existingEventsForDate.length} non-fixed event(s) will be rebuilt`);
         }
 
         console.log('DEBUG ===== PRE-BUILD ANALYSIS END =====');

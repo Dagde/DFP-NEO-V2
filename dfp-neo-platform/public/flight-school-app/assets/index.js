@@ -70748,8 +70748,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   setProgress({ message: "Initializing DFP build...", percentage: 0 });
   console.log("🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active");
-  const activeDfpEvents = publishedSchedules[buildDate] || [];
-  console.log(`🔵 Active DFP has ${activeDfpEvents.length} events for ${buildDate}`);
+  const activeDfpEvents = (publishedSchedules[buildDate] || []).filter((event) => event.isTimeFixed);
+  const ignoredActiveDfpEvents = (publishedSchedules[buildDate] || []).length - activeDfpEvents.length;
+  console.log(`🔵 Active DFP has ${activeDfpEvents.length} fixed event(s) for ${buildDate}; ignoring ${ignoredActiveDfpEvents} non-fixed event(s) for rebuild`);
   const activeDfpEventsWithoutDate = activeDfpEvents.map((e) => {
     const { date, ...eventWithoutDate } = e;
     return eventWithoutDate;
@@ -77661,16 +77662,18 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const syncedPriorityEvents = syncPriorityEventsWithSctAndRemedial();
     console.log(`Pre-Build Step 2: Checking Active DFP for ${buildDfpDate}...`);
     const existingEventsForDate = publishedSchedules[buildDfpDate] || [];
+    const fixedExistingEventsForDate = existingEventsForDate.filter((event) => event.isTimeFixed);
     console.log(`DEBUG Active DFP has ${existingEventsForDate.length} events for ${buildDfpDate}`);
     let newHighestPriorityEvents = [...syncedPriorityEvents];
     let addedCount = 0;
-    if (existingEventsForDate.length > 0) {
-      console.log("DEBUG Existing events details:");
-      existingEventsForDate.forEach((event, index) => {
+    if (fixedExistingEventsForDate.length > 0) {
+      console.log(`DEBUG Preserving ${fixedExistingEventsForDate.length} explicitly fixed Active DFP event(s); ${existingEventsForDate.length - fixedExistingEventsForDate.length} non-fixed event(s) will be rebuilt.`);
+      console.log("DEBUG Fixed existing event details:");
+      fixedExistingEventsForDate.forEach((event, index) => {
         console.log(`  ${index + 1}. ${event.flightNumber} - ${event.student || event.pilot || "N/A"} with ${event.instructor} at ${event.startTime.toFixed(2)} (ID: ${event.id}, isTimeFixed: ${event.isTimeFixed})`);
       });
-      console.log("AUTOMATICALLY adding ALL these events to Highest Priority to preserve them...");
-      existingEventsForDate.forEach((event) => {
+      console.log("Adding explicitly fixed Active DFP events to Highest Priority to preserve them...");
+      fixedExistingEventsForDate.forEach((event) => {
         const alreadyExists = newHighestPriorityEvents.some(
           (hpe) => hpe.id === event.id
         );
@@ -77695,7 +77698,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.log("DEBUG Pre-Build Complete: All existing events already locked");
       }
     } else {
-      console.log("DEBUG Pre-Build Analysis: No existing events found in Active DFP for this date");
+      console.log(`DEBUG Pre-Build Analysis: No fixed Active DFP events found for this date; ${existingEventsForDate.length} non-fixed event(s) will be rebuilt`);
     }
     console.log("DEBUG ===== PRE-BUILD ANALYSIS END =====");
     const finalPreservedEvents = newHighestPriorityEvents;
