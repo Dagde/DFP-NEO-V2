@@ -76209,7 +76209,7 @@ ${"=".repeat(60)}`);
   const loadPersistedTraineeLmp = reactExports.useCallback(async (trainee) => {
     const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
     const traineeDbId = trainee.id || matchedTrainee?.id;
-    if (!traineeDbId) return;
+    if (!traineeDbId) return null;
     try {
       const apiBase2 = getApiBaseUrl();
       const response = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
@@ -76217,27 +76217,29 @@ ${"=".repeat(60)}`);
       });
       if (!response.ok) {
         console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, await response.text());
-        return;
+        return null;
       }
       const data = await response.json();
       const persistedLmp = data?.lmp?.events;
-      if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return;
+      if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
       setTraineeLMPs((prev) => {
         const updated = new Map(prev);
         updated.set(trainee.fullName, persistedLmp);
         return updated;
       });
       console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${persistedLmp.length} events)`);
+      return persistedLmp;
     } catch (error) {
       console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
+      return null;
     }
   }, [allTraineesData]);
-  const handleViewTraineeLMP = (trainee) => {
+  const handleViewTraineeLMP = async (trainee) => {
     if (!canViewTraineeLmp(trainee)) {
       denyPlatformAction("Individual LMP");
       return;
     }
-    void loadPersistedTraineeLmp(trainee);
+    await loadPersistedTraineeLmp(trainee);
     setSelectedTraineeForLMP(trainee);
     handleNavigation("TraineeLMP");
   };
@@ -76245,12 +76247,12 @@ ${"=".repeat(60)}`);
     setSelectedPersonForLogbook(person);
     handleNavigation("Logbook");
   }, []);
-  const handleOpenAddRemedialPackage = (trainee) => {
+  const handleOpenAddRemedialPackage = async (trainee) => {
     if (!canAddRemedialPackage) {
       denyPlatformAction("Add Remedial Package");
       return;
     }
-    void loadPersistedTraineeLmp(trainee);
+    await loadPersistedTraineeLmp(trainee);
     setSelectedTraineeForRemedial(trainee);
     setShowAddRemedialPackage(true);
   };

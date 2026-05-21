@@ -8940,10 +8940,10 @@ const App: React.FC = () => {
         handleNavigation('Syllabus');
     };
 
-    const loadPersistedTraineeLmp = useCallback(async (trainee: Trainee) => {
+    const loadPersistedTraineeLmp = useCallback(async (trainee: Trainee): Promise<SyllabusItemDetail[] | null> => {
         const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
         const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
-        if (!traineeDbId) return;
+        if (!traineeDbId) return null;
 
         try {
             const apiBase = getApiBaseUrl();
@@ -8952,12 +8952,12 @@ const App: React.FC = () => {
             });
             if (!response.ok) {
                 console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, await response.text());
-                return;
+                return null;
             }
 
             const data = await response.json();
             const persistedLmp = data?.lmp?.events;
-            if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return;
+            if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return null;
 
             setTraineeLMPs(prev => {
                 const updated = new Map(prev);
@@ -8965,17 +8965,19 @@ const App: React.FC = () => {
                 return updated;
             });
             console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${persistedLmp.length} events)`);
+            return persistedLmp;
         } catch (error) {
             console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
+            return null;
         }
     }, [allTraineesData]);
 
-    const handleViewTraineeLMP = (trainee: Trainee) => {
+    const handleViewTraineeLMP = async (trainee: Trainee) => {
         if (!canViewTraineeLmp(trainee)) {
             denyPlatformAction('Individual LMP');
             return;
         }
-        void loadPersistedTraineeLmp(trainee);
+        await loadPersistedTraineeLmp(trainee);
         setSelectedTraineeForLMP(trainee);
         handleNavigation('TraineeLMP');
     };
@@ -8985,12 +8987,12 @@ const App: React.FC = () => {
         handleNavigation('Logbook');
     }, []);
 
-    const handleOpenAddRemedialPackage = (trainee: Trainee) => {
+    const handleOpenAddRemedialPackage = async (trainee: Trainee) => {
         if (!canAddRemedialPackage) {
             denyPlatformAction('Add Remedial Package');
             return;
         }
-        void loadPersistedTraineeLmp(trainee);
+        await loadPersistedTraineeLmp(trainee);
         setSelectedTraineeForRemedial(trainee);
         setShowAddRemedialPackage(true);
     };
