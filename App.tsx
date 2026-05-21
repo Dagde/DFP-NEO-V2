@@ -8940,11 +8940,42 @@ const App: React.FC = () => {
         handleNavigation('Syllabus');
     };
 
+    const loadPersistedTraineeLmp = useCallback(async (trainee: Trainee) => {
+        const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
+        const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
+        if (!traineeDbId) return;
+
+        try {
+            const apiBase = getApiBaseUrl();
+            const response = await fetch(`${apiBase}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+                credentials: 'include',
+            });
+            if (!response.ok) {
+                console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, await response.text());
+                return;
+            }
+
+            const data = await response.json();
+            const persistedLmp = data?.lmp?.events;
+            if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return;
+
+            setTraineeLMPs(prev => {
+                const updated = new Map(prev);
+                updated.set(trainee.fullName, persistedLmp);
+                return updated;
+            });
+            console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${persistedLmp.length} events)`);
+        } catch (error) {
+            console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
+        }
+    }, [allTraineesData]);
+
     const handleViewTraineeLMP = (trainee: Trainee) => {
         if (!canViewTraineeLmp(trainee)) {
             denyPlatformAction('Individual LMP');
             return;
         }
+        void loadPersistedTraineeLmp(trainee);
         setSelectedTraineeForLMP(trainee);
         handleNavigation('TraineeLMP');
     };
@@ -8959,6 +8990,7 @@ const App: React.FC = () => {
             denyPlatformAction('Add Remedial Package');
             return;
         }
+        void loadPersistedTraineeLmp(trainee);
         setSelectedTraineeForRemedial(trainee);
         setShowAddRemedialPackage(true);
     };

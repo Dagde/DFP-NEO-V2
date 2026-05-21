@@ -76206,11 +76206,38 @@ ${"=".repeat(60)}`);
     setSyllabusBackTarget(activeView);
     handleNavigation("Syllabus");
   };
+  const loadPersistedTraineeLmp = reactExports.useCallback(async (trainee) => {
+    const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
+    const traineeDbId = trainee.id || matchedTrainee?.id;
+    if (!traineeDbId) return;
+    try {
+      const apiBase2 = getApiBaseUrl();
+      const response = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
+        credentials: "include"
+      });
+      if (!response.ok) {
+        console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, await response.text());
+        return;
+      }
+      const data = await response.json();
+      const persistedLmp = data?.lmp?.events;
+      if (!Array.isArray(persistedLmp) || persistedLmp.length === 0) return;
+      setTraineeLMPs((prev) => {
+        const updated = new Map(prev);
+        updated.set(trainee.fullName, persistedLmp);
+        return updated;
+      });
+      console.log(`[Individual LMP] Loaded persisted LMP for ${trainee.fullName} (${persistedLmp.length} events)`);
+    } catch (error) {
+      console.warn(`[Individual LMP] Could not load persisted LMP for ${trainee.fullName}:`, error);
+    }
+  }, [allTraineesData]);
   const handleViewTraineeLMP = (trainee) => {
     if (!canViewTraineeLmp(trainee)) {
       denyPlatformAction("Individual LMP");
       return;
     }
+    void loadPersistedTraineeLmp(trainee);
     setSelectedTraineeForLMP(trainee);
     handleNavigation("TraineeLMP");
   };
@@ -76223,6 +76250,7 @@ ${"=".repeat(60)}`);
       denyPlatformAction("Add Remedial Package");
       return;
     }
+    void loadPersistedTraineeLmp(trainee);
     setSelectedTraineeForRemedial(trainee);
     setShowAddRemedialPackage(true);
   };

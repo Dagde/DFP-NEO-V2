@@ -139,15 +139,20 @@ export async function OPTIONS() {
 // Returns all IndividualLMPs (just traineeFullName + completedEventIds for fast load)
 export async function GET(request: NextRequest) {
   try {
+    const includeEvents = request.nextUrl.searchParams.get('includeEvents') === 'true';
+    const select: Record<string, boolean> = {
+      traineeId: true,
+      traineeFullName: true,
+      lmpType: true,
+      completedEventIds: true,
+      updatedAt: true,
+    };
+    if (includeEvents) {
+      select.events = true;
+    }
+
     const lmps = await (prisma as any).individualLMP.findMany({
-      select: {
-        traineeId: true,
-        traineeFullName: true,
-        lmpType: true,
-        events: true,
-        completedEventIds: true,
-        updatedAt: true,
-      },
+      select,
       orderBy: { traineeFullName: 'asc' },
     });
 

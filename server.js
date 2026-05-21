@@ -3538,15 +3538,20 @@ app.post('/api/fix-pt051-scores', async (req, res) => {
 app.get('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
+    const includeEvents = req.query.includeEvents === 'true';
+    const select = {
+      traineeId: true,
+      traineeFullName: true,
+      lmpType: true,
+      completedEventIds: true,
+      updatedAt: true,
+    };
+    if (includeEvents) {
+      select.events = true;
+    }
+
     const lmps = await db.individualLMP.findMany({
-      select: {
-        traineeId: true,
-        traineeFullName: true,
-        lmpType: true,
-        events: true,
-        completedEventIds: true,
-        updatedAt: true,
-      },
+      select,
       orderBy: { traineeFullName: 'asc' },
     });
     res.json({ lmps, count: lmps.length });
