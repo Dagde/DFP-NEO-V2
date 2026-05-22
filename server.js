@@ -3843,7 +3843,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
 
     const traineePerformanceRows = await db.$queryRawUnsafe(`
-      SELECT "traineeId", "flightNumber", "eventCode", "date", "updatedAt", "overallGrade", "overallResult"
+      SELECT "traineeId", "traineeFullName", "flightNumber", "eventCode", "date", "updatedAt", "overallGrade", "overallResult"
       FROM "TraineePerformance"
       WHERE "isCompleted" = true
       ORDER BY "date" ASC, "updatedAt" ASC
@@ -3889,6 +3889,7 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       const scoreMap = {};
       const performanceRows = performanceByTraineeId.get(trainee.id) || [];
       performanceRows.forEach(row => {
+        if (row.traineeFullName !== trainee.fullName) return;
         const normalizedEvent = String(row.flightNumber || row.eventCode || '').replace('*', '');
         if (normalizedEvent) {
           scoreMap[normalizedEvent] = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
@@ -3901,8 +3902,11 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       // from sequence position alone; that made NEO Build think many trainees
       // had completed the whole LMP.
       {
+        const groundBackfilled = lmpType === 'FIC'
+          ? addPriorGroundCompletionsForSync(scoreMap, masterSyllabus)
+          : [];
         const prereqBackfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, masterSyllabus);
-        const backfilled = [...prereqBackfilled];
+        const backfilled = [...groundBackfilled, ...prereqBackfilled];
         if (backfilled.length > 0) {
           console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} safe derived completion(s): ${backfilled.join(', ')}`);
         }
