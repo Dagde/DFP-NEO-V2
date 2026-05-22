@@ -70054,10 +70054,43 @@ const personnelNamesMatch = (a, b) => {
   const right = normalizePersonnelNameForMatch(b);
   return !!left && left === right;
 };
+const makePersonnelIdentityRef = (label, role) => {
+  const normalizedName = normalizePersonnelNameForMatch(label);
+  if (!normalizedName) return null;
+  return {
+    label: label || "",
+    role,
+    key: `${role}:${normalizedName}`
+  };
+};
+const getPersonnelIdentityRefs = (event) => {
+  const refsByKey = /* @__PURE__ */ new Map();
+  const addRef = (label, role) => {
+    const ref = makePersonnelIdentityRef(label, role);
+    if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
+  };
+  const isSctEvent = event.flightNumber?.startsWith("SCT");
+  if (isSctEvent) {
+    addRef(event.pilot, "staff");
+    addRef(event.crew, "staff");
+  } else if (event.flightType === "Solo") {
+    addRef(event.pilot || event.student, "trainee");
+  } else {
+    addRef(event.instructor || event.pilot, "staff");
+    addRef(event.student, "trainee");
+  }
+  event.attendees?.forEach((personName) => addRef(personName, "trainee"));
+  return Array.from(refsByKey.values());
+};
+const eventHasPersonWithRole = (event, personName, role) => {
+  const ref = makePersonnelIdentityRef(personName, role);
+  if (!ref) return false;
+  return getPersonnelIdentityRefs(event).some((eventRef) => eventRef.key === ref.key);
+};
 const eventHasPerson = (event, personName) => getPersonnel(event).some((p) => personnelNamesMatch(p, personName));
 const getCommonPersonnel = (eventA, eventB) => {
-  const eventBPersonnel = getPersonnel(eventB);
-  return getPersonnel(eventA).filter((person) => eventBPersonnel.some((other) => personnelNamesMatch(person, other)));
+  const eventBPersonnelKeys = new Set(getPersonnelIdentityRefs(eventB).map((person) => person.key));
+  return getPersonnelIdentityRefs(eventA).filter((person) => eventBPersonnelKeys.has(person.key)).map((person) => person.label);
 };
 const normaliseCrewFieldsForSave = (event) => {
   const normalised = { ...event };
@@ -75917,10 +75950,10 @@ ${"=".repeat(60)}`);
     }
     return { hasConflict: false, conflictingEventId: null, conflictType: null, conflictedPersonnel: null };
   }, [flightTurnaround, ftdTurnaround, cptTurnaround, syllabusDetails, buildDfpDate, checkTimeOverlap, commenceNightFlying, ceaseNightFlying, getScheduleEventDayNightClassification]);
-  const enforceDayNightSeparation = (personName, proposedStartTime, proposedDuration = 1.5, eventType = "flight", checkDate, proposedFlightNumber, excludeEventId) => {
+  const enforceDayNightSeparation = (personName, proposedStartTime, proposedDuration = 1.5, eventType = "flight", checkDate, proposedFlightNumber, excludeEventId, personRole) => {
     const analysisDate = checkDate || date;
     const existingEvents = eventsForDate.filter(
-      (e) => e.id !== excludeEventId && eventHasPerson(e, personName) && e.date === analysisDate
+      (e) => e.id !== excludeEventId && (personRole ? eventHasPersonWithRole(e, personName, personRole) : eventHasPerson(e, personName)) && e.date === analysisDate
     );
     const hasDayEvents = existingEvents.some((e) => {
       const classification = getScheduleEventDayNightClassification(e);
@@ -75972,25 +76005,26 @@ ${"=".repeat(60)}`);
     if (originalResult.hasConflict) {
       return originalResult;
     }
-    const personnel = getPersonnel(targetEvent);
+    const personnel = getPersonnelIdentityRefs(targetEvent);
     const analysisDate = checkDate || date;
-    for (const personName of personnel) {
+    for (const person of personnel) {
       const dayNightCheck = enforceDayNightSeparation(
-        personName,
+        person.label,
         targetEvent.startTime,
         targetEvent.duration,
         targetEvent.type,
         analysisDate,
         targetEvent.flightNumber,
-        targetEvent.id
+        targetEvent.id,
         // Exclude the current event from day/night separation check
+        person.role
       );
       if (!dayNightCheck.isAllowed) {
         return {
           hasConflict: true,
           conflictingEventId: targetEvent.id,
           conflictType: "day-night-separation",
-          conflictedPersonnel: personName,
+          conflictedPersonnel: person.label,
           reason: dayNightCheck.reason
         };
       }
@@ -80186,11 +80220,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     setSuccessMessage(successMsg);
     console.log("🎓 [AcademicPublish] ===== handleSaveAcademicEvent COMPLETE =====");
   };
-  const replacementViolatesDayNightSeparation = reactExports.useCallback((personName, candidateEvent, allEvents) => {
+  const replacementViolatesDayNightSeparation = reactExports.useCallback((personName, personRole, candidateEvent, allEvents) => {
     const candidateClassification = getScheduleEventDayNightClassification(candidateEvent);
     if (candidateClassification === "Day/Night") return false;
     return allEvents.some((event) => {
-      if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+      if (event.id === candidateEvent.id || !eventHasPersonWithRole(event, personName, personRole)) return false;
       const eventClassification = getScheduleEventDayNightClassification(event);
       if (eventClassification === "Day/Night") return false;
       return candidateClassification !== eventClassification;
@@ -80222,14 +80256,15 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const isReplacementAvailableForCandidateEvent = reactExports.useCallback((person, personName, candidateEvent, allEvents) => {
     const candidateEventType = candidateEvent.type;
     const eventWindow = getEventBookingWindow(candidateEvent, syllabusDetails);
+    const personRole = "fullName" in person ? "trainee" : "staff";
     if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, candidateEvent.date, candidateEventType)) {
       return false;
     }
-    if (replacementViolatesDayNightSeparation(personName, candidateEvent, allEvents)) {
+    if (replacementViolatesDayNightSeparation(personName, personRole, candidateEvent, allEvents)) {
       return false;
     }
     const replacementHasOverlap = allEvents.some((event) => {
-      if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+      if (event.id === candidateEvent.id || !eventHasPersonWithRole(event, personName, personRole)) return false;
       const otherEventWindow = getEventBookingWindow(event, syllabusDetails);
       return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
     });
@@ -80260,7 +80295,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         continue;
       }
       const daysSinceLastFlight = daysSince(trainee.lastFlightDate, conflictedEvent.date);
-      const traineeEventsToday = allEvents.filter((e) => eventHasPerson(e, trainee.fullName));
+      const traineeEventsToday = allEvents.filter((e) => eventHasPersonWithRole(e, trainee.fullName, "trainee"));
       const flightsToday = traineeEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = traineeEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = traineeEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -80300,7 +80335,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         overlapFailures++;
         continue;
       }
-      const instructorEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && eventHasPerson(e, instructor.name));
+      const instructorEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && eventHasPersonWithRole(e, instructor.name, "staff"));
       const flightsToday = instructorEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = instructorEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = instructorEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -80359,7 +80394,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         overlapFailures++;
         continue;
       }
-      const pilotEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && eventHasPerson(e, pilot.name));
+      const pilotEventsToday = allEvents.filter((e) => e.id !== conflictedEvent.id && eventHasPersonWithRole(e, pilot.name, "staff"));
       const flightsToday = pilotEventsToday.filter((e) => e.type === "flight").length;
       const ftdsToday = pilotEventsToday.filter((e) => e.type === "ftd").length;
       const cptsToday = pilotEventsToday.filter((e) => e.type === "cpt" || e.type === "ground" && e.flightNumber.includes("CPT")).length;
@@ -80391,7 +80426,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
   }, [instructorsData, syllabusDetails, school, buildNeoCandidateEvent, isReplacementAvailableForCandidateEvent]);
   const findClosestTurnaroundFix = (problemEvent, allEvents, context, flyingWindow) => {
-    const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, getPersonnel: getPersonnel2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
+    const { flightTurnaround: flightTurnaround2, ftdTurnaround: ftdTurnaround2, syllabusDetails: syllabusDetails2, getEventBookingWindow: getEventBookingWindow2, isPersonStaticallyUnavailable: isPersonStaticallyUnavailable2, maxCrewDutyPeriod: maxCrewDutyPeriod2 } = context;
     const eventsOnResource = allEvents.filter((e) => e.resourceId === problemEvent.resourceId && e.id !== problemEvent.id).sort((a, b) => a.startTime - b.startTime);
     const prevEvent = eventsOnResource.filter((e) => e.startTime < problemEvent.startTime).pop();
     const nextEvent = eventsOnResource.find((e) => e.startTime > problemEvent.startTime);
@@ -80415,9 +80450,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
       if (prevEvent) {
         let effectiveTurnaround = baseTurnaround;
-        const prevCrew = getPersonnel2(prevEvent);
-        const currentCrew = getPersonnel2(problemEvent);
-        const hasCommonCrew = prevCrew.some((p) => currentCrew.includes(p));
+        const hasCommonCrew = getCommonPersonnel(prevEvent, problemEvent).length > 0;
         if (hasCommonCrew) {
           const prevSyllabus = syllabusDetails2.find((s) => s.id === prevEvent.flightNumber);
           const currentSyllabus = syllabusDetails2.find((s) => s.id === problemEvent.flightNumber);
@@ -80428,9 +80461,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }
       if (nextEvent) {
         let effectiveTurnaround = baseTurnaround;
-        const nextCrew = getPersonnel2(nextEvent);
-        const currentCrew = getPersonnel2(problemEvent);
-        const hasCommonCrew = nextCrew.some((p) => currentCrew.includes(p));
+        const hasCommonCrew = getCommonPersonnel(nextEvent, problemEvent).length > 0;
         if (hasCommonCrew) {
           const currentSyllabus = syllabusDetails2.find((s) => s.id === problemEvent.flightNumber);
           const nextSyllabus = syllabusDetails2.find((s) => s.id === nextEvent.flightNumber);
@@ -80439,19 +80470,20 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         }
         if (newStartTime + problemEvent.duration + effectiveTurnaround > nextEvent.startTime) return false;
       }
-      const originalCrew = getPersonnel2(problemEvent);
-      for (const personName of originalCrew) {
-        const person = [...allInstructorsData, ...allTraineesData].find((p) => personnelNamesMatch("fullName" in p ? p.fullName : p.name, personName));
+      const originalCrew = getPersonnelIdentityRefs(problemEvent);
+      for (const crewMember of originalCrew) {
+        const personName = crewMember.label;
+        const person = crewMember.role === "staff" ? allInstructorsData.find((p) => personnelNamesMatch(p.name, personName)) : allTraineesData.find((p) => personnelNamesMatch(p.fullName, personName));
         if (!person) continue;
         if (isPersonStaticallyUnavailable2(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type)) return false;
         const hasOverlap = allEvents.some((e) => {
           if (e.id === problemEvent.id) return false;
-          if (!eventHasPerson(e, personName)) return false;
+          if (!eventHasPersonWithRole(e, personName, crewMember.role)) return false;
           const otherEventWindow = getEventBookingWindow2(e, syllabusDetails2);
           return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
         });
         if (hasOverlap) return false;
-        const otherEventsForPerson = allEvents.filter((e) => e.id !== problemEvent.id && eventHasPerson(e, personName));
+        const otherEventsForPerson = allEvents.filter((e) => e.id !== problemEvent.id && eventHasPersonWithRole(e, personName, crewMember.role));
         const projectedDuty = calculateProjectedDuty(personName, otherEventsForPerson, tempEvent, syllabusDetails2);
         if (projectedDuty > maxCrewDutyPeriod2) return false;
       }
@@ -80523,7 +80555,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const isTurnaroundViolationOnly = errors.every((e) => e.toLowerCase().includes("turnaround")) && errors.length > 0;
     const instructorIsConflicted = errors.some((e) => eventForNeo.instructor && e.includes(eventForNeo.instructor.split(",")[0]));
     if (isTurnaroundViolationOnly || !instructorIsConflicted) {
-      const context = { flightTurnaround, ftdTurnaround, syllabusDetails, getPersonnel, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
+      const context = { flightTurnaround, ftdTurnaround, syllabusDetails, getEventBookingWindow, isPersonStaticallyUnavailable, maxCrewDutyPeriod };
       const timeRemedy = findClosestTurnaroundFix(eventForNeo, allEvents, context, { start: flyingStartTime, end: flyingEndTime });
       if (timeRemedy) {
         setTimeOnlyRemedyForConfirmation(timeRemedy);

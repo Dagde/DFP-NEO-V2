@@ -241,6 +241,57 @@ const personnelNamesMatch = (a?: string, b?: string): boolean => {
     return !!left && left === right;
 };
 
+type PersonnelIdentityRole = 'staff' | 'trainee';
+
+interface PersonnelIdentityRef {
+    label: string;
+    role: PersonnelIdentityRole;
+    key: string;
+}
+
+const makePersonnelIdentityRef = (label: string | undefined, role: PersonnelIdentityRole): PersonnelIdentityRef | null => {
+    const normalizedName = normalizePersonnelNameForMatch(label);
+    if (!normalizedName) return null;
+    return {
+        label: label || '',
+        role,
+        key: `${role}:${normalizedName}`
+    };
+};
+
+const getPersonnelIdentityRefs = (event: Omit<ScheduleEvent, 'date'> | ScheduleEvent): PersonnelIdentityRef[] => {
+    const refsByKey = new Map<string, PersonnelIdentityRef>();
+    const addRef = (label: string | undefined, role: PersonnelIdentityRole) => {
+        const ref = makePersonnelIdentityRef(label, role);
+        if (ref && !refsByKey.has(ref.key)) refsByKey.set(ref.key, ref);
+    };
+
+    const isSctEvent = event.flightNumber?.startsWith('SCT');
+
+    if (isSctEvent) {
+        addRef(event.pilot, 'staff');
+        addRef(event.crew, 'staff');
+    } else if (event.flightType === 'Solo') {
+        addRef(event.pilot || event.student, 'trainee');
+    } else {
+        addRef(event.instructor || event.pilot, 'staff');
+        addRef(event.student, 'trainee');
+    }
+
+    event.attendees?.forEach(personName => addRef(personName, 'trainee'));
+    return Array.from(refsByKey.values());
+};
+
+const eventHasPersonWithRole = (
+    event: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
+    personName: string | undefined,
+    role: PersonnelIdentityRole
+): boolean => {
+    const ref = makePersonnelIdentityRef(personName, role);
+    if (!ref) return false;
+    return getPersonnelIdentityRefs(event).some(eventRef => eventRef.key === ref.key);
+};
+
 const eventHasPerson = (
     event: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
     personName?: string
@@ -250,8 +301,10 @@ const getCommonPersonnel = (
     eventA: Omit<ScheduleEvent, 'date'> | ScheduleEvent,
     eventB: Omit<ScheduleEvent, 'date'> | ScheduleEvent
 ): string[] => {
-    const eventBPersonnel = getPersonnel(eventB);
-    return getPersonnel(eventA).filter(person => eventBPersonnel.some(other => personnelNamesMatch(person, other)));
+    const eventBPersonnelKeys = new Set(getPersonnelIdentityRefs(eventB).map(person => person.key));
+    return getPersonnelIdentityRefs(eventA)
+        .filter(person => eventBPersonnelKeys.has(person.key))
+        .map(person => person.label);
 };
 
 const normaliseCrewFieldsForSave = (event: ScheduleEvent): ScheduleEvent => {
@@ -8471,14 +8524,15 @@ const App: React.FC = () => {
         eventType: 'flight' | 'ftd' | 'ground' | 'duty_sup' | 'cpt' = 'flight',
         checkDate?: string,
         proposedFlightNumber?: string,
-        excludeEventId?: string
+        excludeEventId?: string,
+        personRole?: PersonnelIdentityRole
     ): { isAllowed: boolean; reason: string; hasDayEvents: boolean; hasNightEvents: boolean } => {
         const analysisDate = checkDate || date;
 
         // Check existing events for this person, excluding the current event being checked
         const existingEvents = eventsForDate.filter(e =>
             e.id !== excludeEventId &&
-            eventHasPerson(e, personName) &&
+            (personRole ? eventHasPersonWithRole(e, personName, personRole) : eventHasPerson(e, personName)) &&
             e.date === analysisDate
         );
 
@@ -8559,18 +8613,19 @@ const App: React.FC = () => {
         }
 
         // Now check for day/night separation violations
-        const personnel = getPersonnel(targetEvent);
+        const personnel = getPersonnelIdentityRefs(targetEvent);
         const analysisDate = checkDate || date;
 
-        for (const personName of personnel) {
+        for (const person of personnel) {
             const dayNightCheck = enforceDayNightSeparation(
-                personName,
+                person.label,
                 targetEvent.startTime,
                 targetEvent.duration,
                 targetEvent.type as any,
                 analysisDate,
                 targetEvent.flightNumber,
-                targetEvent.id  // Exclude the current event from day/night separation check
+                targetEvent.id,  // Exclude the current event from day/night separation check
+                person.role
             );
 
             if (!dayNightCheck.isAllowed) {
@@ -8578,7 +8633,7 @@ const App: React.FC = () => {
                     hasConflict: true,
                     conflictingEventId: targetEvent.id,
                     conflictType: 'day-night-separation',
-                    conflictedPersonnel: personName,
+                    conflictedPersonnel: person.label,
                     reason: dayNightCheck.reason
                 };
             }
@@ -13941,6 +13996,7 @@ updates.forEach(update => {
     // --- NEO ALGORITHM IMPLEMENTATION ---
     const replacementViolatesDayNightSeparation = useCallback((
         personName: string,
+        personRole: PersonnelIdentityRole,
         candidateEvent: ScheduleEvent,
         allEvents: ScheduleEvent[]
     ): boolean => {
@@ -13948,7 +14004,7 @@ updates.forEach(update => {
         if (candidateClassification === 'Day/Night') return false;
 
         return allEvents.some(event => {
-            if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+            if (event.id === candidateEvent.id || !eventHasPersonWithRole(event, personName, personRole)) return false;
             const eventClassification = getScheduleEventDayNightClassification(event);
             if (eventClassification === 'Day/Night') return false;
             return candidateClassification !== eventClassification;
@@ -13996,17 +14052,18 @@ updates.forEach(update => {
     ): boolean => {
         const candidateEventType = candidateEvent.type as 'flight' | 'ground' | 'ftd' | 'duty_sup' | 'cpt';
         const eventWindow = getEventBookingWindow(candidateEvent, syllabusDetails);
+        const personRole: PersonnelIdentityRole = 'fullName' in person ? 'trainee' : 'staff';
 
         if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, candidateEvent.date, candidateEventType)) {
             return false;
         }
 
-        if (replacementViolatesDayNightSeparation(personName, candidateEvent, allEvents)) {
+        if (replacementViolatesDayNightSeparation(personName, personRole, candidateEvent, allEvents)) {
             return false;
         }
 
         const replacementHasOverlap = allEvents.some(event => {
-            if (event.id === candidateEvent.id || !eventHasPerson(event, personName)) return false;
+            if (event.id === candidateEvent.id || !eventHasPersonWithRole(event, personName, personRole)) return false;
             const otherEventWindow = getEventBookingWindow(event, syllabusDetails);
             return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
         });
@@ -14048,7 +14105,7 @@ updates.forEach(update => {
 
             // All checks passed
             const daysSinceLastFlight = daysSince(trainee.lastFlightDate, conflictedEvent.date);
-            const traineeEventsToday = allEvents.filter(e => eventHasPerson(e, trainee.fullName));
+            const traineeEventsToday = allEvents.filter(e => eventHasPersonWithRole(e, trainee.fullName, 'trainee'));
             const flightsToday = traineeEventsToday.filter(e => e.type === 'flight').length;
             const ftdsToday = traineeEventsToday.filter(e => e.type === 'ftd').length;
             const cptsToday = traineeEventsToday.filter(e => e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))).length;
@@ -14096,7 +14153,7 @@ updates.forEach(update => {
             }
 
             // All checks passed, add as a remedy
-            const instructorEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPerson(e, instructor.name));
+            const instructorEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPersonWithRole(e, instructor.name, 'staff'));
             const flightsToday = instructorEventsToday.filter(e => e.type === 'flight').length;
             const ftdsToday = instructorEventsToday.filter(e => e.type === 'ftd').length;
             const cptsToday = instructorEventsToday.filter(e => e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))).length;
@@ -14170,7 +14227,7 @@ updates.forEach(update => {
             }
 
             // All checks passed, add as a remedy
-            const pilotEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPerson(e, pilot.name));
+            const pilotEventsToday = allEvents.filter(e => e.id !== conflictedEvent.id && eventHasPersonWithRole(e, pilot.name, 'staff'));
             const flightsToday = pilotEventsToday.filter(e => e.type === 'flight').length;
             const ftdsToday = pilotEventsToday.filter(e => e.type === 'ftd').length;
             const cptsToday = pilotEventsToday.filter(e => e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))).length;
@@ -14248,9 +14305,7 @@ updates.forEach(update => {
 
             if (prevEvent) {
                 let effectiveTurnaround = baseTurnaround;
-                const prevCrew = getPersonnel(prevEvent);
-                const currentCrew = getPersonnel(problemEvent);
-                const hasCommonCrew = prevCrew.some(p => currentCrew.includes(p));
+                const hasCommonCrew = getCommonPersonnel(prevEvent, problemEvent).length > 0;
                 if (hasCommonCrew) {
                     const prevSyllabus = syllabusDetails.find(s => s.id === prevEvent.flightNumber);
                     const currentSyllabus = syllabusDetails.find(s => s.id === problemEvent.flightNumber);
@@ -14262,9 +14317,7 @@ updates.forEach(update => {
 
             if (nextEvent) {
                  let effectiveTurnaround = baseTurnaround;
-                 const nextCrew = getPersonnel(nextEvent);
-                 const currentCrew = getPersonnel(problemEvent);
-                 const hasCommonCrew = nextCrew.some(p => currentCrew.includes(p));
+                 const hasCommonCrew = getCommonPersonnel(nextEvent, problemEvent).length > 0;
                  if (hasCommonCrew) {
                     const currentSyllabus = syllabusDetails.find(s => s.id === problemEvent.flightNumber);
                     const nextSyllabus = syllabusDetails.find(s => s.id === nextEvent.flightNumber);
@@ -14274,22 +14327,25 @@ updates.forEach(update => {
                 if (newStartTime + problemEvent.duration + effectiveTurnaround > nextEvent.startTime) return false;
             }
 
-            const originalCrew = getPersonnel(problemEvent);
-            for (const personName of originalCrew) {
-                const person = [...allInstructorsData, ...allTraineesData].find(p => personnelNamesMatch('fullName' in p ? p.fullName : p.name, personName));
+            const originalCrew = getPersonnelIdentityRefs(problemEvent);
+            for (const crewMember of originalCrew) {
+                const personName = crewMember.label;
+                const person = crewMember.role === 'staff'
+                    ? allInstructorsData.find(p => personnelNamesMatch(p.name, personName))
+                    : allTraineesData.find(p => personnelNamesMatch(p.fullName, personName));
                 if (!person) continue;
 
                 if (isPersonStaticallyUnavailable(person, eventWindow.start, eventWindow.end, problemEvent.date, problemEvent.type as any)) return false;
 
                 const hasOverlap = allEvents.some(e => {
                     if (e.id === problemEvent.id) return false;
-                    if (!eventHasPerson(e, personName)) return false;
+                    if (!eventHasPersonWithRole(e, personName, crewMember.role)) return false;
                     const otherEventWindow = getEventBookingWindow(e, syllabusDetails);
                     return eventWindow.start < otherEventWindow.end && eventWindow.end > otherEventWindow.start;
                 });
                 if (hasOverlap) return false;
 
-                const otherEventsForPerson = allEvents.filter(e => e.id !== problemEvent.id && eventHasPerson(e, personName));
+                const otherEventsForPerson = allEvents.filter(e => e.id !== problemEvent.id && eventHasPersonWithRole(e, personName, crewMember.role));
                 const projectedDuty = calculateProjectedDuty(personName, otherEventsForPerson, tempEvent, syllabusDetails);
                 if (projectedDuty > maxCrewDutyPeriod) return false;
             }
