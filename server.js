@@ -3666,6 +3666,36 @@ const addDirectLmpPrerequisiteCompletionsForSync = (scoreMap, lmpEvents) => {
   return backfilled;
 };
 
+const addPriorGroundCompletionsForSync = (scoreMap, lmpEvents) => {
+  const events = Array.isArray(lmpEvents) ? lmpEvents : [];
+  if (events.length === 0) return [];
+
+  let highestCompletedFlyingIndex = -1;
+  events.forEach((item, index) => {
+    const isFlyingOrSim = item?.type === 'Flight' || item?.type === 'FTD';
+    if (isFlyingOrSim && getLmpCompletionTimestampForSync(item, scoreMap)) {
+      highestCompletedFlyingIndex = Math.max(highestCompletedFlyingIndex, index);
+    }
+  });
+
+  if (highestCompletedFlyingIndex <= 0) return [];
+
+  const completedAt = new Date().toISOString();
+  const backfilled = [];
+  for (let i = 0; i < highestCompletedFlyingIndex; i++) {
+    const item = events[i];
+    if (item?.type !== 'Ground School') continue;
+
+    const canonicalKey = getLmpCanonicalCompletionKeyForSync(item);
+    if (canonicalKey && !getLmpCompletionTimestampForSync(item, scoreMap)) {
+      scoreMap[canonicalKey] = completedAt;
+      backfilled.push(canonicalKey);
+    }
+  }
+
+  return backfilled;
+};
+
 const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, scoreMap) => {
   const stampedMaster = stampMasterLmpItemsForSync(masterSyllabus);
   if (!existingEvents || existingEvents.length === 0) {
@@ -3900,13 +3930,17 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
 
       let completedEventIds = Object.keys(scoreMap);
 
-      // Backfill only explicit prerequisite links, never every event before the
-      // highest completed item. A broad high-watermark backfill can make NEO
-      // Build believe a trainee has completed the full LMP.
+      // Backfill only safe derived completions. Never mark earlier flying/sim
+      // events complete from sequence position alone; that made NEO Build think
+      // many trainees had completed the whole LMP. We do allow earlier
+      // Ground/CPT items to be filled when later flying is already complete,
+      // because those inserted ground items otherwise block current progression.
       {
-        const backfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, masterSyllabus);
+        const groundBackfilled = addPriorGroundCompletionsForSync(scoreMap, masterSyllabus);
+        const prereqBackfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, masterSyllabus);
+        const backfilled = [...groundBackfilled, ...prereqBackfilled];
         if (backfilled.length > 0) {
-          console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} explicit prerequisite(s): ${backfilled.join(', ')}`);
+          console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} safe derived completion(s): ${backfilled.join(', ')}`);
         }
         completedEventIds = Object.keys(scoreMap);
       }
@@ -4449,10 +4483,12 @@ app.post('/api/scores', async (req, res) => {
             const normalized = normalizeLmpCompletionKeyForSync(id);
             if (normalized) scoreMap[normalized] = new Date().toISOString();
           });
-          const backfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, lmpEvents);
+          const groundBackfilled = addPriorGroundCompletionsForSync(scoreMap, lmpEvents);
+          const prereqBackfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, lmpEvents);
+          const backfilled = [...groundBackfilled, ...prereqBackfilled];
           backfilled.forEach(id => updatedSet.add(id));
           if (backfilled.length > 0) {
-            console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled explicit prerequisites: ${backfilled.join(', ')}`);
+            console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled safe derived completions: ${backfilled.join(', ')}`);
           }
         }
         // --- END BACKFILL ---
