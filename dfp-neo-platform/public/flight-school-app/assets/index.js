@@ -10221,6 +10221,7 @@ const TraineeProfileFlyout = ({
   canEditPt051 = true,
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
+  onDeleteRemedialItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
@@ -10956,7 +10957,8 @@ const TraineeProfileFlyout = ({
                 trainee,
                 traineeLmp: individualLMP || [],
                 scores: traineeScores,
-                onBack: () => setActiveTab(null)
+                onBack: () => setActiveTab(null),
+                onDeleteRemedialItem
               }
             ) });
           })(),
@@ -11882,6 +11884,7 @@ const CourseRosterView = ({
   canEditTraineePt051 = () => true,
   canViewTraineeLmp = () => true,
   canAddRemedialPackageForTrainee = () => true,
+  onDeleteRemedialItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings
@@ -12179,6 +12182,7 @@ const CourseRosterView = ({
         canEditPt051: canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canViewIndividualLmp: canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canAddRemedialPackage: canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
+        onDeleteRemedialItem,
         onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
@@ -81721,6 +81725,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             canEditTraineePt051,
             canViewTraineeLmp,
             canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
+            onDeleteRemedialItem: handleDeleteRemedialLmpItem,
             onAccessDenied: denyPlatformAction,
             locations,
             units,

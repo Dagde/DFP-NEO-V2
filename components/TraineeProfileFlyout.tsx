@@ -63,6 +63,7 @@ interface TraineeProfileFlyoutProps {
   canEditPt051?: boolean;
   canViewIndividualLmp?: boolean;
   canAddRemedialPackage?: boolean;
+  onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
@@ -294,6 +295,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   canEditPt051 = true,
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
+  onDeleteRemedialItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -1199,6 +1201,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             traineeLmp={individualLMP || []}
                             scores={traineeScores}
                             onBack={() => setActiveTab(null)}
+                            onDeleteRemedialItem={onDeleteRemedialItem}
                           />
                         </div>
                       );

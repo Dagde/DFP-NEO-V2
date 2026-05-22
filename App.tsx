@@ -15843,6 +15843,7 @@ updates.forEach(update => {
                             canEditTraineePt051={canEditTraineePt051}
                             canViewTraineeLmp={canViewTraineeLmp}
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
+                            onDeleteRemedialItem={handleDeleteRemedialLmpItem}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
