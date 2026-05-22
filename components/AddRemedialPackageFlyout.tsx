@@ -41,6 +41,8 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [ftdState, setFtdState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
   const [flightState, setFlightState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
 
+  const getRemedialBaseEventCode = (event: SyllabusItemDetail): string =>
+    String(event.code || event.id || event.masterEventId || '').replace(/-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i, '');
 
   const eventMatchesLmpItem = (eventCode: string | undefined, item: SyllabusItemDetail) => {
     if (!eventCode) return false;
@@ -170,10 +172,11 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
   const reFlyEvent = useMemo(() => {
     if (!eventToRemediate) return null;
+    const reFlyCode = `${getRemedialBaseEventCode(eventToRemediate)}-RF1`;
     return {
       ...eventToRemediate,
-      code: `${eventToRemediate.code}-RF`,
-      eventDescription: `Re-Fly: ${eventToRemediate.eventDescription}`,
+      code: reFlyCode,
+      eventDescription: reFlyCode,
     };
   }, [eventToRemediate]);
 
@@ -400,7 +403,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                 <fieldset className="p-4 border border-gray-600 rounded-lg">
                     <legend className="px-2 text-sm font-semibold text-gray-300">Step 3: Review Auto-Generated Re-Fly</legend>
                     <div className="mt-2 p-3 bg-gray-700/30 rounded-lg">
-                        <p className="text-white font-semibold">{reFlyEvent.code} - {reFlyEvent.eventDescription}</p>
+                        <p className="text-white font-semibold">{reFlyEvent.code}</p>
                         <p className="text-sm text-gray-400 mt-1">This is a copy of the original event and will be added as the final step of the package.</p>
                     </div>
                 </fieldset>

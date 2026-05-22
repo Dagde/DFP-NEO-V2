@@ -465,6 +465,22 @@ const getMasterEventId = (item: Partial<SyllabusItemDetail>): string =>
     item.masterEventId || item.id || item.code || '';
 
 const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
+const REMEDIAL_EARLIEST_START = 10.0;
+const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i;
+
+const isRemedialEventCode = (value?: string): boolean =>
+    !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
+
+const getRemedialBaseEventCode = (item: Partial<SyllabusItemDetail>): string =>
+    String(item.code || item.id || item.masterEventId || '').replace(REMEDIAL_EVENT_CODE_REGEX, '');
+
+const isRemedialSyllabusItem = (item?: Partial<SyllabusItemDetail>): boolean =>
+    !!item && (
+        item.lmpSource === 'remedial' ||
+        item.isRemedial === true ||
+        isRemedialEventCode(item.id) ||
+        isRemedialEventCode(item.code)
+    );
 
 const stampMasterLmpItems = (masterLMP: SyllabusItemDetail[]): SyllabusItemDetail[] =>
     masterLMP.map((item, index) => ({
@@ -480,9 +496,9 @@ const isLmpOverlayItem = (item: SyllabusItemDetail): boolean =>
     item.lmpSource === 'custom' ||
     item.isRemedial === true ||
     item.id?.includes('REM') ||
-    item.id?.endsWith('-RF') ||
+    isRemedialEventCode(item.id) ||
     item.code?.includes('REM') ||
-    item.code?.endsWith('-RF') ||
+    isRemedialEventCode(item.code) ||
     item.id?.endsWith('-CUR') ||
     item.code?.endsWith('-CUR');
 
@@ -2779,7 +2795,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     continue;
                 }
 
-                let searchStartTime = startTimeBoundary;
+                const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
+                let searchStartTime = isRemedialItem
+                    ? Math.max(startTimeBoundary, REMEDIAL_EARLIEST_START)
+                    : startTimeBoundary;
 
                 // Plus-One Rule: Plus-one events are scheduled "after their primary"
                 // This means after the trainee's first scheduled event (their Next Event)
@@ -2796,7 +2815,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         continue;
                     }
                     // Start search after primary event ends
-                    searchStartTime = Math.max(startTimeBoundary, nextEvent.startTime + nextEvent.duration);
+                    searchStartTime = Math.max(searchStartTime, nextEvent.startTime + nextEvent.duration);
                 }
 
                 const segmentSearchOrder = [...segments].sort((a, b) => a.count - b.count || a.start - b.start);
@@ -2907,6 +2926,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const _isNext = !isPlusOne;
         const _fbEnd = startTime + syllabusItem.duration;
         const traineeCounts = eventCounts.get(trainee.fullName)!;
+
+        if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
+            return null;
+        }
 
         if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
             buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
@@ -3923,6 +3946,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 if (!syllabusItem) continue;
 
                 let placed = false;
+                const soloSearchStart = isRemedialSyllabusItem(syllabusItem)
+                    ? Math.max(groupSearchStart, REMEDIAL_EARLIEST_START)
+                    : groupSearchStart;
 
                 // Two-pass search matching scheduleList priority logic
                 const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup)
@@ -3931,7 +3957,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
                 for (const primaryOnly of passModes) {
                     if (placed) break;
-                    for (let time = groupSearchStart;
+                    for (let time = soloSearchStart;
                          time <= Math.min(flyingEndTime, SOLO_WINDOW_END) - syllabusItem.duration + 0.001;
                          time += TIME_INCREMENT) {
                         const result = scheduleEvent(trainee, syllabusItem, time, 'flight', false, false, primaryOnly);
@@ -4383,7 +4409,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // Try to find a slot with an instructor
             let placed = false;
-            for (let time = flyingStartTime; time < flyingEndTime; time += timeIncrement) {
+            const stbySearchStart = isRemedialSyllabusItem(next)
+                ? Math.max(flyingStartTime, REMEDIAL_EARLIEST_START)
+                : flyingStartTime;
+            for (let time = stbySearchStart; time < flyingEndTime; time += timeIncrement) {
                 if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
                 if (hasFlightStartTime(time, generatedEvents)) continue;
                 const flightEndTime = time + next.duration;
@@ -4453,7 +4482,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             for (const primaryOnly of passModes) {
                 if (placedOnFtd) break;
-                for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 0.001; time += ftdRecoveryIncrement) {
+                const recoveryStart = isRemedialSyllabusItem(next)
+                    ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START)
+                    : ftdStartTime;
+                for (let time = recoveryStart; time <= ftdEndTime - next.duration + 0.001; time += ftdRecoveryIncrement) {
                     if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
                     const result = scheduleEvent(trainee, next, time, 'ftd', false, false, primaryOnly);
                     if (result && result.resourceId?.startsWith('FTD ')) {
@@ -4506,7 +4538,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const recoveryIncrement = 15 / 60;
         let placedOnRealFtd = false;
 
-        for (let time = ftdStartTime; time <= ftdEndTime - next.duration + 0.001; time += recoveryIncrement) {
+        const recoveryStart = isRemedialSyllabusItem(next)
+            ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START)
+            : ftdStartTime;
+        for (let time = recoveryStart; time <= ftdEndTime - next.duration + 0.001; time += recoveryIncrement) {
             if (!canAssignPersonForScheduledWindow(trainee.fullName, time)) continue;
             const bookingWindow = getEventBookingWindowForAlgo({ startTime: time, flightNumber: next.code, duration: next.duration }, syllabusDetails);
             if (isPersonStaticallyUnavailable(trainee, bookingWindow.start, bookingWindow.end, buildDate, 'ftd')) continue;
@@ -4574,6 +4609,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         for (const trainee of traineesStillNeedingStbyFtd) {
             const { next } = traineeNextEventMap.get(trainee.fullName)!;
             if (!next) continue;
+            if (isRemedialSyllabusItem(next) && currentTime < REMEDIAL_EARLIEST_START) {
+                currentTime = REMEDIAL_EARLIEST_START;
+            }
 
             let placed = false;
 
@@ -4624,12 +4662,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     } else {
                         // Conflict on this line, move to next STBY line
                         currentStbyLine++;
-                        currentTime = ftdStartTime; // Reset time for new line
+                        currentTime = isRemedialSyllabusItem(next)
+                            ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START)
+                            : ftdStartTime; // Reset time for new line
                     }
                 } else {
                     // Reached end of FTD window on this line, move to next STBY line
                     currentStbyLine++;
-                    currentTime = ftdStartTime; // Reset time for new line
+                    currentTime = isRemedialSyllabusItem(next)
+                        ? Math.max(ftdStartTime, REMEDIAL_EARLIEST_START)
+                        : ftdStartTime; // Reset time for new line
                 }
             }
 
@@ -9539,19 +9581,24 @@ const App: React.FC = () => {
         // Req 3.2, 3.3.1-3.3.3: Create all new remedial items and the re-fly event.
         let lastNewEventId = eventToRemediate.id;
         const remedialPackageItems: SyllabusItemDetail[] = [];
+        const baseEventCode = getRemedialBaseEventCode(eventToRemediate);
+        const typeCounts = { TUT: 0, FTD: 0, Flight: 0 };
 
-        newEvents.forEach((remEvent, index) => {
+        newEvents.forEach((remEvent) => {
             let codeSuffix = '';
             let type: SyllabusItemDetail['type'] = 'Flight';
-            if (remEvent.type === 'TUT') { codeSuffix = `REM-T${index + 1}`; type = 'Ground School'; }
-            else if (remEvent.type === 'FTD') { codeSuffix = `REM-FTD${index + 1}`; type = 'FTD'; }
-            else if (remEvent.type === 'Flight') { codeSuffix = `REM-F${index + 1}`; type = 'Flight'; }
+            typeCounts[remEvent.type]++;
+            if (remEvent.type === 'TUT') { codeSuffix = `T${typeCounts.TUT}`; type = 'Ground School'; }
+            else if (remEvent.type === 'FTD') { codeSuffix = `FTD${typeCounts.FTD}`; type = 'FTD'; }
+            else if (remEvent.type === 'Flight') { codeSuffix = `F${typeCounts.Flight}`; type = 'Flight'; }
+
+            const remedialCode = `${baseEventCode}-${codeSuffix}`;
 
             const newItem: SyllabusItemDetail = {
                 ...eventToRemediate,
-                id: `${eventToRemediate.code}-${codeSuffix}`, code: `${eventToRemediate.code}-${codeSuffix}`,
+                id: remedialCode, code: remedialCode,
                 isRemedial: true, // Req 2.3.3
-                eventDescription: `Remedial ${remEvent.type} for ${eventToRemediate.code}`,
+                eventDescription: remedialCode,
                 module: 'Remedial', prerequisites: [lastNewEventId],
                 duration: remEvent.duration, flightOrSimHours: remEvent.duration,
                 totalEventHours: remEvent.duration + (type === 'Ground School' ? 0.25 : 1.0), type,
@@ -9564,17 +9611,20 @@ const App: React.FC = () => {
             lastNewEventId = newItem.id;
         });
 
+        const reFlyCode = `${baseEventCode}-RF1`;
         const reFlyEvent: SyllabusItemDetail = {
-            ...eventToRemediate, id: `${eventToRemediate.code}-RF`, code: `${eventToRemediate.code}-RF`,
+            ...eventToRemediate, id: reFlyCode, code: reFlyCode,
             isRemedial: true,
-            eventDescription: `Re-Fly: ${eventToRemediate.eventDescription}`, module: 'Remedial',
+            eventDescription: reFlyCode, module: 'Remedial',
             prerequisites: [lastNewEventId], prerequisitesGround: [], prerequisitesFlying: [],
         };
         remedialPackageItems.push(reFlyEvent);
 
         const newRemedialIds = new Set(remedialPackageItems.map(item => item.id));
+        const isSameRemedialPackageItem = (item: SyllabusItemDetail): boolean =>
+            isRemedialSyllabusItem(item) && getRemedialBaseEventCode(item) === baseEventCode;
         const cleanedLmp: SyllabusItemDetail[] = originalTraineeLMP
-            .filter(item => !newRemedialIds.has(item.id))
+            .filter(item => !newRemedialIds.has(item.id) && !isSameRemedialPackageItem(item))
             .map(item => ({ ...item, prerequisites: [...(item.prerequisites || [])] }));
 
         const insertionIndex = cleanedLmp.findIndex(item =>
@@ -11383,9 +11433,9 @@ const App: React.FC = () => {
                             student: trainee.fullName,
                             flightNumber: syllabusItem.code,
                             duration: duration,
-                            startTime: 8.0, // Default start time
+                            startTime: REMEDIAL_EARLIEST_START,
                             resourceId: '', // Will be assigned during scheduling
-                            color: 'bg-orange-500/80', // Highlight as remedial
+                            color: courseColors[trainee.course] || 'bg-gray-500',
                             flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
                             locationType: 'Local',
                             origin: school,
