@@ -78425,6 +78425,53 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     } catch (elceErr) {
       console.warn("[ELCE] Bulk fetch threw — falling back to DFP-scan ELCE:", elceErr);
     }
+    let buildTraineeLMPs = traineeLMPs;
+    try {
+      const apiBase2 = getApiBaseUrl();
+      const bpcIpcSyllabus = syllabusDetails.filter(
+        (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
+      );
+      const ficSyllabus = syllabusDetails.filter(
+        (item) => item.courses && item.courses.includes("FIC")
+      );
+      const syllabusData = {
+        "BPC+IPC": bpcIpcSyllabus,
+        "FIC": ficSyllabus
+      };
+      console.log("[NEO-Build] Refreshing composed Individual LMPs before build...");
+      const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ syllabusData })
+      });
+      if (!syncRes.ok) {
+        console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
+      }
+      const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`, {
+        credentials: "include"
+      });
+      if (lmpRes.ok) {
+        const lmpData = await lmpRes.json();
+        const freshLMPs = /* @__PURE__ */ new Map();
+        (lmpData.lmps || []).forEach((lmp) => {
+          if (lmp.traineeFullName && Array.isArray(lmp.events)) {
+            freshLMPs.set(lmp.traineeFullName, lmp.events);
+          }
+        });
+        if (freshLMPs.size > 0) {
+          buildTraineeLMPs = freshLMPs;
+          setTraineeLMPs(freshLMPs);
+          console.log(`[NEO-Build] ✅ Loaded ${freshLMPs.size} fresh composed Individual LMPs for build`);
+        } else {
+          console.warn("[NEO-Build] Pre-build LMP refresh returned no events; using current in-memory LMPs");
+        }
+      } else {
+        console.warn(`[NEO-Build] Pre-build LMP fetch failed (${lmpRes.status}); using current in-memory LMPs`);
+      }
+    } catch (lmpRefreshErr) {
+      console.warn("[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:", lmpRefreshErr);
+    }
     console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
     const instructorsInBuild = instructorsData;
     const traineesInBuild = traineesData;
@@ -78454,7 +78501,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       buildDate: buildDfpDate,
       highestPriorityEvents: eventsToUse,
       instructorPriority,
-      traineeLMPs,
+      traineeLMPs: buildTraineeLMPs,
       flightTurnaround,
       ftdTurnaround,
       cptTurnaround,
@@ -78495,7 +78542,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           neoAvailableAircraftCount,
           buildDfpDate,
           allTraineesData,
-          traineeLMPs,
+          buildTraineeLMPs,
           scores,
           syllabusDetails,
           publishedSchedules

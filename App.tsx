@@ -11728,6 +11728,56 @@ const App: React.FC = () => {
             console.warn('[ELCE] Bulk fetch threw — falling back to DFP-scan ELCE:', elceErr);
         }
 
+        let buildTraineeLMPs = traineeLMPs;
+        try {
+            const apiBase = getApiBaseUrl();
+            const bpcIpcSyllabus = syllabusDetails.filter(
+                (item: any) => (!item.lmpType || item.lmpType === 'Master LMP') && item.type !== 'Academics'
+            );
+            const ficSyllabus = syllabusDetails.filter(
+                (item: any) => item.courses && item.courses.includes('FIC')
+            );
+            const syllabusData: Record<string, any[]> = {
+                'BPC+IPC': bpcIpcSyllabus,
+                'FIC': ficSyllabus,
+            };
+
+            console.log('[NEO-Build] Refreshing composed Individual LMPs before build...');
+            const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ syllabusData }),
+            });
+            if (!syncRes.ok) {
+                console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
+            }
+
+            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`, {
+                credentials: 'include',
+            });
+            if (lmpRes.ok) {
+                const lmpData = await lmpRes.json();
+                const freshLMPs = new Map<string, SyllabusItemDetail[]>();
+                (lmpData.lmps || []).forEach((lmp: any) => {
+                    if (lmp.traineeFullName && Array.isArray(lmp.events)) {
+                        freshLMPs.set(lmp.traineeFullName, lmp.events);
+                    }
+                });
+                if (freshLMPs.size > 0) {
+                    buildTraineeLMPs = freshLMPs;
+                    setTraineeLMPs(freshLMPs);
+                    console.log(`[NEO-Build] ✅ Loaded ${freshLMPs.size} fresh composed Individual LMPs for build`);
+                } else {
+                    console.warn('[NEO-Build] Pre-build LMP refresh returned no events; using current in-memory LMPs');
+                }
+            } else {
+                console.warn(`[NEO-Build] Pre-build LMP fetch failed (${lmpRes.status}); using current in-memory LMPs`);
+            }
+        } catch (lmpRefreshErr) {
+            console.warn('[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:', lmpRefreshErr);
+        }
+
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
 
         const instructorsInBuild = instructorsData;
@@ -11759,7 +11809,7 @@ const App: React.FC = () => {
             buildDate: buildDfpDate,
             highestPriorityEvents: eventsToUse,
             instructorPriority,
-            traineeLMPs,
+            traineeLMPs: buildTraineeLMPs,
             flightTurnaround,
             ftdTurnaround,
             cptTurnaround,
@@ -11804,7 +11854,7 @@ const App: React.FC = () => {
                     neoAvailableAircraftCount,
                     buildDfpDate,
                     allTraineesData,
-                    traineeLMPs,
+                    buildTraineeLMPs,
                     scores,
                     syllabusDetails,
                     publishedSchedules
