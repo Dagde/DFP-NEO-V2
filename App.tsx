@@ -2126,6 +2126,7 @@ function generateDfpInternal(
 
     let includedCount = 0;
     let skippedCount = 0;
+    const flexiblePriorityRemedialEvents: ScheduleEvent[] = [];
 
     highestPriorityEvents.forEach(event => {
         buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'} (ID: ${event.id})`);
@@ -2133,6 +2134,11 @@ function generateDfpInternal(
         buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
 
         if(event.date === buildDate && event.isTimeFixed) {
+            if (event.isRemedial) {
+                flexiblePriorityRemedialEvents.push(event);
+                buildDebugLog(`  ↻ DEBUG DEFERRED remedial priority event for flexible scheduling after ${REMEDIAL_EARLIEST_START.toFixed(2)} (ID: ${event.id})`);
+                return;
+            }
             const { date, ...eventWithoutDate } = event;
                // Ensure pilot field is set for existing events
                if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
@@ -2167,7 +2173,7 @@ function generateDfpInternal(
         }
     });
 
-    buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
+    buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED, ${flexiblePriorityRemedialEvents.length} remedials deferred for flexible scheduling`);
     buildDebugLog('DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====');
 
     // CRITICAL FIX: Assign resources to highest priority events that don't have resourceId
@@ -3132,7 +3138,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const _afterQualFilter = candidates.length;
 
             // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
-            candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+            const assignedRemedialInstructors = isRemedialSyllabusItem(syllabusItemForCheck)
+                ? (syllabusItemForCheck.resourcesHuman || []).filter(Boolean)
+                : [];
+            candidates = assignedRemedialInstructors.length > 0
+                ? candidates.filter(ip => assignedRemedialInstructors.includes(ip.name))
+                : candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
 
             // ── DIAGNOSTIC: after unit filter ──
             const _afterUnitFilter = candidates.length;
@@ -3639,6 +3650,107 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return result;
     };
 
+    const scheduleFlexiblePriorityRemedials = (allowedTypes: Array<'flight' | 'ftd' | 'ground' | 'cpt'>) => {
+        if (flexiblePriorityRemedialEvents.length === 0) return;
+
+        recordProgress({ message: 'Scheduling remedial package events...', percentage: 43 });
+        const incrementForType = (eventType: 'flight' | 'ftd' | 'ground' | 'cpt') => eventType === 'flight' ? 5 / 60 : 15 / 60;
+        const windowForType = (eventType: 'flight' | 'ftd' | 'ground' | 'cpt') => ({
+            start: Math.max(eventType === 'ftd' ? ftdStartTime : flyingStartTime, REMEDIAL_EARLIEST_START),
+            end: eventType === 'ftd' ? ftdEndTime : flyingEndTime,
+        });
+
+        for (const remedialEvent of flexiblePriorityRemedialEvents) {
+            const trainee = trainees.find(t => t.fullName === remedialEvent.student || t.fullName === remedialEvent.pilot);
+            if (!trainee) {
+                buildDebugLog(`[REMEDIAL] Could not schedule ${remedialEvent.flightNumber}: trainee not found (${remedialEvent.student || remedialEvent.pilot || 'unknown'})`);
+                continue;
+            }
+
+            const individualLmp = traineeLMPs.get(trainee.fullName) || [];
+            const baseSyllabusItem = individualLmp.find(item =>
+                item.id === remedialEvent.flightNumber ||
+                item.code === remedialEvent.flightNumber ||
+                item.id === remedialEvent.id ||
+                item.code === remedialEvent.id
+            );
+
+            if (!baseSyllabusItem) {
+                buildDebugLog(`[REMEDIAL] Could not schedule ${remedialEvent.flightNumber}: Individual LMP item not found for ${trainee.fullName}`);
+                continue;
+            }
+
+            const scheduleType = remedialEvent.type === 'ftd'
+                ? 'ftd'
+                : remedialEvent.type === 'ground'
+                    ? 'ground'
+                    : remedialEvent.type === 'cpt'
+                        ? 'cpt'
+                        : 'flight';
+            if (!allowedTypes.includes(scheduleType)) continue;
+            if (generatedEvents.some(existing =>
+                existing.id === remedialEvent.id ||
+                (existing.flightNumber === remedialEvent.flightNumber && existing.student === remedialEvent.student)
+            )) {
+                continue;
+            }
+            const syllabusItemForSchedule: SyllabusItemDetail = {
+                ...baseSyllabusItem,
+                duration: remedialEvent.duration || baseSyllabusItem.duration,
+                resourcesHuman: remedialEvent.instructor
+                    ? [remedialEvent.instructor]
+                    : (baseSyllabusItem.resourcesHuman || []),
+            };
+            const searchWindow = windowForType(scheduleType);
+            const increment = incrementForType(scheduleType);
+            const latestStart = searchWindow.end - syllabusItemForSchedule.duration;
+            let placed = false;
+
+            const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup) && scheduleType !== 'ground'
+                ? [true, false]
+                : [false];
+
+            for (const primaryOnly of passModes) {
+                if (placed) break;
+                for (let time = searchWindow.start; time <= latestStart + 0.001; time += increment) {
+                    const result = scheduleEvent(trainee, syllabusItemForSchedule, time, scheduleType, false, false, primaryOnly);
+                    if (result && typeof result === 'object' && 'id' in result) {
+                        generatedEvents.push({
+                            ...result,
+                            id: remedialEvent.id,
+                            isRemedial: true,
+                            isTimeFixed: false,
+                            _source: 'highest-priority-remedial',
+                            _isNext: undefined,
+                            _traineeName: trainee.fullName,
+                        });
+
+                        const traineeCounts = eventCounts.get(trainee.fullName);
+                        const instructorCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+                        if (scheduleType === 'flight' || scheduleType === 'ftd') {
+                            if (traineeCounts) traineeCounts.flightFtd++;
+                            if (instructorCounts) instructorCounts.flightFtd++;
+                        } else if (scheduleType === 'ground') {
+                            if (traineeCounts) traineeCounts.ground++;
+                            if (instructorCounts) instructorCounts.ground++;
+                        } else if (scheduleType === 'cpt') {
+                            if (traineeCounts) traineeCounts.cpt++;
+                            if (instructorCounts) instructorCounts.cpt++;
+                        }
+
+                        placed = true;
+                        buildDebugLog(`[REMEDIAL] Scheduled ${remedialEvent.flightNumber} for ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
+                        break;
+                    }
+                }
+            }
+
+            if (!placed) {
+                buildDebugLog(`[REMEDIAL] Could not find a valid slot for ${remedialEvent.flightNumber} after ${REMEDIAL_EARLIEST_START.toFixed(2)}`);
+            }
+        }
+    };
+
     // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
     recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
 
@@ -3873,7 +3985,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
     // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
     recordProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
-    // Highest Priority Flight Events are already added at the start
+    scheduleFlexiblePriorityRemedials(['flight']);
 
     recordProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
 
@@ -4017,7 +4129,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
-    // Highest Priority FTD Events are already added at the start
+    scheduleFlexiblePriorityRemedials(['ftd']);
 
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
     scheduleList(
@@ -4032,7 +4144,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
-    // Highest Priority CPT Events are already added at the start
+    scheduleFlexiblePriorityRemedials(['cpt']);
 
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
     scheduleList(
@@ -4046,7 +4158,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
-    // Highest Priority Ground Events are already added at the start
+    scheduleFlexiblePriorityRemedials(['ground']);
 
     recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
     scheduleList(

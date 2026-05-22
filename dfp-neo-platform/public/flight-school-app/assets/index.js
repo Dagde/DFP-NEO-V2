@@ -10075,38 +10075,17 @@ const TraineeLmpView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 border-r border-gray-700 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
-            const isRemedial = isRemedialLmpItem(item);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "button",
-                {
-                  onClick: () => setSelectedItem(item),
-                  className: "min-w-0 flex-1 text-left p-2 flex items-center space-x-2",
-                  children: [
-                    isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.code })
-                  ]
-                }
-              ),
-              isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  type: "button",
-                  title: `Delete remedial event ${item.code}`,
-                  disabled: !onDeleteRemedialItem,
-                  onClick: async (event) => {
-                    event.stopPropagation();
-                    if (!onDeleteRemedialItem) return;
-                    const deleted = await onDeleteRemedialItem(trainee, item);
-                    if (deleted && selectedItem?.code === item.code) {
-                      setSelectedItem(null);
-                    }
-                  },
-                  className: `mr-1 flex-shrink-0 rounded-md border px-2 py-1 text-[10px] font-semibold ${onDeleteRemedialItem ? "border-red-500/50 bg-red-950/30 text-red-200 hover:bg-red-900/60" : "border-gray-600 bg-gray-800 text-gray-500 cursor-not-allowed"}`,
-                  children: "Delete"
-                }
-              )
-            ] }) }, item.code);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                onClick: () => setSelectedItem(item),
+                className: "min-w-0 flex-1 text-left p-2 flex items-center space-x-2",
+                children: [
+                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.code })
+                ]
+              }
+            ) }) }, item.code);
           }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             DetailView$1,
@@ -71278,11 +71257,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog(`DEBUG Build Date: ${buildDate}`);
   let includedCount = 0;
   let skippedCount = 0;
+  const flexiblePriorityRemedialEvents = [];
   highestPriorityEvents.forEach((event) => {
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
     buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (event.date === buildDate && event.isTimeFixed) {
+      if (event.isRemedial) {
+        flexiblePriorityRemedialEvents.push(event);
+        buildDebugLog(`  ↻ DEBUG DEFERRED remedial priority event for flexible scheduling after ${REMEDIAL_EARLIEST_START.toFixed(2)} (ID: ${event.id})`);
+        return;
+      }
       const { date, ...eventWithoutDate } = event;
       if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
         eventWithoutDate.pilot = eventWithoutDate.instructor;
@@ -71318,7 +71303,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? "date mismatch" : "isTimeFixed is false"}`);
     }
   });
-  buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
+  buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED, ${flexiblePriorityRemedialEvents.length} remedials deferred for flexible scheduling`);
   buildDebugLog("DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====");
   buildDebugLog("DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====");
   generatedEvents.forEach((event) => {
@@ -72037,7 +72022,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return canAssignPersonForScheduledWindow(ip.name, startTime);
       });
       const _afterQualFilter = candidates.length;
-      candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
+      const assignedRemedialInstructors = isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).filter(Boolean) : [];
+      candidates = assignedRemedialInstructors.length > 0 ? candidates.filter((ip) => assignedRemedialInstructors.includes(ip.name)) : candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
       const _afterUnitFilter = candidates.length;
       const workloadOf = (i) => {
         const c = eventCounts.get(i.name);
@@ -72432,6 +72418,82 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return result;
   };
+  const scheduleFlexiblePriorityRemedials = (allowedTypes) => {
+    if (flexiblePriorityRemedialEvents.length === 0) return;
+    recordProgress({ message: "Scheduling remedial package events...", percentage: 43 });
+    const incrementForType = (eventType) => eventType === "flight" ? 5 / 60 : 15 / 60;
+    const windowForType = (eventType) => ({
+      start: Math.max(eventType === "ftd" ? ftdStartTime : flyingStartTime, REMEDIAL_EARLIEST_START),
+      end: eventType === "ftd" ? ftdEndTime : flyingEndTime
+    });
+    for (const remedialEvent of flexiblePriorityRemedialEvents) {
+      const trainee = trainees.find((t) => t.fullName === remedialEvent.student || t.fullName === remedialEvent.pilot);
+      if (!trainee) {
+        buildDebugLog(`[REMEDIAL] Could not schedule ${remedialEvent.flightNumber}: trainee not found (${remedialEvent.student || remedialEvent.pilot || "unknown"})`);
+        continue;
+      }
+      const individualLmp = traineeLMPs.get(trainee.fullName) || [];
+      const baseSyllabusItem = individualLmp.find(
+        (item) => item.id === remedialEvent.flightNumber || item.code === remedialEvent.flightNumber || item.id === remedialEvent.id || item.code === remedialEvent.id
+      );
+      if (!baseSyllabusItem) {
+        buildDebugLog(`[REMEDIAL] Could not schedule ${remedialEvent.flightNumber}: Individual LMP item not found for ${trainee.fullName}`);
+        continue;
+      }
+      const scheduleType = remedialEvent.type === "ftd" ? "ftd" : remedialEvent.type === "ground" ? "ground" : remedialEvent.type === "cpt" ? "cpt" : "flight";
+      if (!allowedTypes.includes(scheduleType)) continue;
+      if (generatedEvents.some(
+        (existing) => existing.id === remedialEvent.id || existing.flightNumber === remedialEvent.flightNumber && existing.student === remedialEvent.student
+      )) {
+        continue;
+      }
+      const syllabusItemForSchedule = {
+        ...baseSyllabusItem,
+        duration: remedialEvent.duration || baseSyllabusItem.duration,
+        resourcesHuman: remedialEvent.instructor ? [remedialEvent.instructor] : baseSyllabusItem.resourcesHuman || []
+      };
+      const searchWindow = windowForType(scheduleType);
+      const increment = incrementForType(scheduleType);
+      const latestStart = searchWindow.end - syllabusItemForSchedule.duration;
+      let placed = false;
+      const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) && scheduleType !== "ground" ? [true, false] : [false];
+      for (const primaryOnly of passModes) {
+        if (placed) break;
+        for (let time = searchWindow.start; time <= latestStart + 1e-3; time += increment) {
+          const result = scheduleEvent(trainee, syllabusItemForSchedule, time, scheduleType, false, false, primaryOnly);
+          if (result && typeof result === "object" && "id" in result) {
+            generatedEvents.push({
+              ...result,
+              id: remedialEvent.id,
+              isRemedial: true,
+              isTimeFixed: false,
+              _source: "highest-priority-remedial",
+              _isNext: void 0,
+              _traineeName: trainee.fullName
+            });
+            const traineeCounts = eventCounts.get(trainee.fullName);
+            const instructorCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+            if (scheduleType === "flight" || scheduleType === "ftd") {
+              if (traineeCounts) traineeCounts.flightFtd++;
+              if (instructorCounts) instructorCounts.flightFtd++;
+            } else if (scheduleType === "ground") {
+              if (traineeCounts) traineeCounts.ground++;
+              if (instructorCounts) instructorCounts.ground++;
+            } else if (scheduleType === "cpt") {
+              if (traineeCounts) traineeCounts.cpt++;
+              if (instructorCounts) instructorCounts.cpt++;
+            }
+            placed = true;
+            buildDebugLog(`[REMEDIAL] Scheduled ${remedialEvent.flightNumber} for ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
+            break;
+          }
+        }
+      }
+      if (!placed) {
+        buildDebugLog(`[REMEDIAL] Could not find a valid slot for ${remedialEvent.flightNumber} after ${REMEDIAL_EARLIEST_START.toFixed(2)}`);
+      }
+    }
+  };
   recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
   generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
   const dutySupStartTime = flyingStartTime;
@@ -72617,6 +72679,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
   }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
+  scheduleFlexiblePriorityRemedials(["flight"]);
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
     const next = traineeNextEventMap.get(trainee.fullName)?.next;
@@ -72700,6 +72763,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
   }
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+  scheduleFlexiblePriorityRemedials(["ftd"]);
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
@@ -72711,6 +72775,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+  scheduleFlexiblePriorityRemedials(["cpt"]);
   recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
@@ -72722,6 +72787,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
+  scheduleFlexiblePriorityRemedials(["ground"]);
   recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),

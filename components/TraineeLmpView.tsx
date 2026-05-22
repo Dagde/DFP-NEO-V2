@@ -639,7 +639,6 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             <ul className="p-2 space-y-1">
                                 {traineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
-                                    const isRemedial = isRemedialLmpItem(item);
                                     return (
                                         <li key={item.code}>
                                             <div className={`group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700/50'}`}>
@@ -650,28 +649,6 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                                     {isCompleted ? <CheckIcon /> : <div className="w-4 h-4 flex-shrink-0"></div>}
                                                     <span className="truncate">{item.code}</span>
                                                 </button>
-                                                {isRemedial && (
-                                                    <button
-                                                        type="button"
-                                                        title={`Delete remedial event ${item.code}`}
-                                                        disabled={!onDeleteRemedialItem}
-                                                        onClick={async (event) => {
-                                                            event.stopPropagation();
-                                                            if (!onDeleteRemedialItem) return;
-                                                            const deleted = await onDeleteRemedialItem(trainee, item);
-                                                            if (deleted && selectedItem?.code === item.code) {
-                                                                setSelectedItem(null);
-                                                            }
-                                                        }}
-                                                        className={`mr-1 flex-shrink-0 rounded-md border px-2 py-1 text-[10px] font-semibold ${
-                                                            onDeleteRemedialItem
-                                                                ? 'border-red-500/50 bg-red-950/30 text-red-200 hover:bg-red-900/60'
-                                                                : 'border-gray-600 bg-gray-800 text-gray-500 cursor-not-allowed'
-                                                        }`}
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                )}
                                             </div>
                                         </li>
                                     );
