@@ -28158,6 +28158,7 @@ const TraineeView = (props) => {
           traineeLMPs: props.traineeLMPs,
           onViewLogbook: props.onViewLogbook,
           onDeleteTrainee: props.onDeleteTrainee,
+          onDeleteRemedialItem: props.onDeleteRemedialItem,
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
           onUpdateCourseUnit: props.onUpdateCourseUnit,
