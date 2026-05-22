@@ -9317,7 +9317,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied: onAccessDenied2, isLoading = false }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
   const { isFrozen } = useSystemFreeze();
   const [isDragging, setIsDragging] = reactExports.useState(false);
   const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
@@ -9467,7 +9467,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   const handleDragStart = (e) => {
     if (!canEditPt051) {
       e.preventDefault();
-      onAccessDenied2?.("insert PT-051 assessment");
+      onAccessDenied?.("insert PT-051 assessment");
       return;
     }
     console.log("🟢 DRAG STARTED - PT-051 drag initiated");
@@ -9495,7 +9495,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   const handleDrop = (e, index) => {
     e.preventDefault();
     if (!canEditPt051) {
-      onAccessDenied2?.("insert PT-051 assessment");
+      onAccessDenied?.("insert PT-051 assessment");
       handleDragEnd();
       return;
     }
@@ -9642,6 +9642,8 @@ const formatDisplayType = (displayType, resourceDisplayNames) => {
   if (displayType === "CPT") return resourceDisplayNames.cpt;
   return displayType;
 };
+const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+const isRemedialLmpItem = (item) => item.lmpSource === "remedial" || item.isRemedial === true || REMEDIAL_EVENT_CODE_REGEX$2.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || "");
 const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
@@ -9715,8 +9717,8 @@ const AcademicLmpTab = ({
   syllabusDetails,
   allTraineesData,
   onOpenPt051ForLesson,
-  canOpenPt051: canOpenPt0512 = true,
-  onAccessDenied: onAccessDenied2
+  canOpenPt051 = true,
+  onAccessDenied
 }) => {
   const [selectedLesson, setSelectedLesson] = reactExports.useState(null);
   const academicSyllabus = reactExports.useMemo(() => {
@@ -9939,15 +9941,15 @@ const AcademicLmpTab = ({
           "button",
           {
             onClick: () => {
-              if (!canOpenPt0512) {
-                onAccessDenied2?.("PT-051 from Individual LMP");
+              if (!canOpenPt051) {
+                onAccessDenied?.("PT-051 from Individual LMP");
                 return;
               }
               handleOpenPt051(selectedLesson);
             },
-            disabled: !canOpenPt0512,
-            title: canOpenPt0512 ? void 0 : "Your permission profile does not allow opening PT-051 records",
-            className: `w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt0512 ? "opacity-50 cursor-not-allowed" : ""}`,
+            disabled: !canOpenPt051,
+            title: canOpenPt051 ? void 0 : "Your permission profile does not allow opening PT-051 records",
+            className: `w-[140px] h-[41px] flex items-center justify-center text-center px-2 py-1 text-[11px] font-semibold rounded-md btn-aluminium-brushed ${!canOpenPt051 ? "opacity-50 cursor-not-allowed" : ""}`,
             children: completedLessonCodes.has(selectedLesson.code) ? "View / Edit PT-051" : "Open PT-051"
           }
         ),
@@ -9987,7 +9989,10 @@ const TraineeLmpView = ({
   syllabusDetails,
   allTraineesData,
   onOpenPt051ForLesson,
-  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES
+  resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+  canOpenPt051 = true,
+  onAccessDenied,
+  onDeleteRemedialItem
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
@@ -10054,17 +10059,36 @@ const TraineeLmpView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 border-r border-gray-700 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-              "button",
-              {
-                onClick: () => setSelectedItem(item),
-                className: `w-full text-left p-2 rounded-md transition-colors text-sm flex items-center space-x-2 ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`,
-                children: [
-                  isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: item.code })
-                ]
-              }
-            ) }, item.code);
+            const isRemedial = isRemedialLmpItem(item);
+            return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "button",
+                {
+                  onClick: () => setSelectedItem(item),
+                  className: "min-w-0 flex-1 text-left p-2 flex items-center space-x-2",
+                  children: [
+                    isCompleted ? /* @__PURE__ */ jsxRuntimeExports.jsx(CheckIcon, {}) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-4 h-4 flex-shrink-0" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.code })
+                  ]
+                }
+              ),
+              isRemedial && onDeleteRemedialItem && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  title: `Delete remedial event ${item.code}`,
+                  onClick: async (event) => {
+                    event.stopPropagation();
+                    const deleted = await onDeleteRemedialItem(trainee, item);
+                    if (deleted && selectedItem?.code === item.code) {
+                      setSelectedItem(null);
+                    }
+                  },
+                  className: "mr-1 h-7 w-7 flex-shrink-0 rounded border border-red-500/30 text-red-300 opacity-70 hover:opacity-100 hover:bg-red-900/40",
+                  children: "×"
+                }
+              )
+            ] }) }, item.code);
           }) }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             DetailView$1,
@@ -10182,7 +10206,7 @@ const TraineeProfileFlyout = ({
   canEditPt051 = true,
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
-  onAccessDenied: onAccessDenied2,
+  onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
 }) => {
@@ -10513,7 +10537,7 @@ const TraineeProfileFlyout = ({
   };
   const handleHateSheetClick = () => {
     if (!canViewPt051) {
-      onAccessDenied2?.("PT-051 performance history");
+      onAccessDenied?.("PT-051 performance history");
       return;
     }
     if (pt051Assessments !== void 0) {
@@ -10528,7 +10552,7 @@ const TraineeProfileFlyout = ({
   };
   const handleIndividualLMPClick = () => {
     if (!canViewIndividualLmp) {
-      onAccessDenied2?.("Individual LMP");
+      onAccessDenied?.("Individual LMP");
       return;
     }
     if (traineeLMPs !== void 0) {
@@ -11843,7 +11867,7 @@ const CourseRosterView = ({
   canEditTraineePt051 = () => true,
   canViewTraineeLmp = () => true,
   canAddRemedialPackageForTrainee = () => true,
-  onAccessDenied: onAccessDenied2,
+  onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings
 }) => {
@@ -11862,7 +11886,7 @@ const CourseRosterView = ({
   reactExports.useEffect(() => {
     if (selectedPersonForProfile) {
       if (!canViewTraineeProfile(selectedPersonForProfile)) {
-        onAccessDenied2?.("trainee profile");
+        onAccessDenied?.("trainee profile");
         onProfileOpened?.();
         return;
       }
@@ -11870,7 +11894,7 @@ const CourseRosterView = ({
       setIsCreatingNew(false);
       onProfileOpened?.();
     }
-  }, [selectedPersonForProfile, onProfileOpened, canViewTraineeProfile, onAccessDenied2]);
+  }, [selectedPersonForProfile, onProfileOpened, canViewTraineeProfile, onAccessDenied]);
   const groupedTrainees = reactExports.useMemo(() => {
     const groups = {};
     traineesData.forEach((trainee) => {
@@ -12060,7 +12084,7 @@ const CourseRosterView = ({
                     {
                       onClick: () => {
                         if (!canViewTraineeProfile(trainee)) {
-                          onAccessDenied2?.("trainee profile");
+                          onAccessDenied?.("trainee profile");
                           return;
                         }
                         setSelectedTrainee(trainee);
@@ -12144,7 +12168,7 @@ const CourseRosterView = ({
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
         ),
-        onAccessDenied: onAccessDenied2
+        onAccessDenied
       }
     ),
     hoveredTrainee && flyoutPosition && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -63178,11 +63202,11 @@ const AddRemedialPackageFlyout = ({
   const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "" });
   const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
   const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
-  const getRemedialBaseEventCode2 = (event) => String(event.code || event.id || event.masterEventId || "").replace(/-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i, "");
+  const getRemedialBaseEventCode2 = (event) => String(event.code || event.id || event.masterEventId || "").replace(/-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i, "");
   const getRemedialCodePrefix = (type) => {
-    if (type === "TUT") return "T";
-    if (type === "FTD") return "FTD";
-    return "F";
+    if (type === "TUT") return "RT";
+    if (type === "FTD") return "RFTD";
+    return "RF";
   };
   const buildRemedialEventCode = (baseCode, type, sequence) => `${baseCode}-${getRemedialCodePrefix(type)}${sequence}`;
   const getNextRemedialSequence = (existingEvents, baseCode, type) => {
@@ -63273,7 +63297,7 @@ const AddRemedialPackageFlyout = ({
   }, [eventToRemediateId, traineeLmp]);
   const reFlyEvent = reactExports.useMemo(() => {
     if (!eventToRemediate) return null;
-    const reFlyCode = `${getRemedialBaseEventCode2(eventToRemediate)}-RF1`;
+    const reFlyCode = `${getRemedialBaseEventCode2(eventToRemediate)}-RRF1`;
     return {
       ...eventToRemediate,
       code: reFlyCode,
@@ -63975,6 +63999,8 @@ const CourseGraph = ({ data }) => {
     ] })
   ] });
 };
+const REMEDIAL_EVENT_CODE_REGEX$1 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+const isRemedialEventCode$1 = (value) => !!value && REMEDIAL_EVENT_CODE_REGEX$1.test(value);
 const CourseProgressView = ({
   traineesData,
   courseColors,
@@ -64031,7 +64057,7 @@ const CourseProgressView = ({
     const completedByCourse = new Map(activeCourses.map((course) => [course.name, 0]));
     activeTrainees.forEach((trainee) => {
       const traineeName = trainee.fullName || trainee.name;
-      const completedEvents = (scores.get(traineeName) || []).filter((score) => !score.event.includes("MB") && !score.event.includes("-REM-") && !score.event.includes("-RF")).length;
+      const completedEvents = (scores.get(traineeName) || []).filter((score) => !score.event.includes("MB") && !isRemedialEventCode$1(score.event)).length;
       completedByCourse.set(trainee.course, (completedByCourse.get(trainee.course) || 0) + completedEvents);
     });
     return activeCourses.slice().sort((a, b) => (completedByCourse.get(b.name) || 0) - (completedByCourse.get(a.name) || 0) || a.name.localeCompare(b.name))[0]?.name || "";
@@ -70189,7 +70215,7 @@ const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
 const getMasterEventId = (item) => item.masterEventId || item.id || item.code || "";
 const createLmpOrderKey = (index) => String(index + 1).padStart(5, "0");
 const REMEDIAL_EARLIEST_START = 10;
-const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i;
+const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCode = (value) => !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
 const getRemedialBaseEventCode = (item) => String(item.code || item.id || item.masterEventId || "").replace(REMEDIAL_EVENT_CODE_REGEX, "");
 const isRemedialSyllabusItem = (item) => !!item && (item.lmpSource === "remedial" || item.isRemedial === true || isRemedialEventCode(item.id) || isRemedialEventCode(item.code));
@@ -71339,7 +71365,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const getMedianProgress = (courseName) => {
     const courseTrainees = activeTrainees.filter((t) => t.course === courseName);
     if (courseTrainees.length === 0) return 0;
-    const progressCounts = courseTrainees.map((t) => (scores.get(t.fullName) || []).filter((s) => !s.event.includes("-REM-") && !s.event.includes("-RF")).length).sort((a, b) => a - b);
+    const progressCounts = courseTrainees.map((t) => (scores.get(t.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length).sort((a, b) => a - b);
     const mid = Math.floor(progressCounts.length / 2);
     return progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
   };
@@ -71360,8 +71386,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (daysSinceFlightA !== daysSinceFlightB) return daysSinceFlightB - daysSinceFlightA;
     const medianA = courseMedians.get(a.course) || 0;
     const medianB = courseMedians.get(b.course) || 0;
-    const progressA = (scores.get(a.fullName) || []).filter((s) => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
-    const progressB = (scores.get(b.fullName) || []).filter((s) => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+    const progressA = (scores.get(a.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length;
+    const progressB = (scores.get(b.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length;
     const behindA = medianA - progressA;
     const behindB = medianB - progressB;
     if (behindA !== behindB) return behindB - behindA;
@@ -73636,6 +73662,26 @@ const App = () => {
           setDarkMessageModal(null);
           resolve();
         }
+      });
+    });
+  };
+  const showDarkConfirm2 = (message, title = "Confirm", variant = "warning") => {
+    return new Promise((resolve) => {
+      setDarkMessageModal({
+        type: "confirm",
+        title,
+        message,
+        variant,
+        onConfirm: () => {
+          setDarkMessageModal(null);
+          resolve(true);
+        },
+        onCancel: () => {
+          setDarkMessageModal(null);
+          resolve(false);
+        },
+        confirmText: "Yes",
+        cancelText: "Cancel"
       });
     });
   };
@@ -76747,27 +76793,29 @@ ${"=".repeat(60)}`);
     const remedialPackageItems = [];
     const baseEventCode = getRemedialBaseEventCode(eventToRemediate);
     const typeCounts = { TUT: 0, FTD: 0, Flight: 0 };
+    const { completedAt: _completedAt, isComplete: _isComplete, completed: _completed, ...remedialTemplate } = eventToRemediate;
     newEvents.forEach((remEvent) => {
       let codeSuffix = "";
       let type = "Flight";
       typeCounts[remEvent.type]++;
       if (remEvent.type === "TUT") {
-        codeSuffix = `T${typeCounts.TUT}`;
+        codeSuffix = `RT${typeCounts.TUT}`;
         type = "Ground School";
       } else if (remEvent.type === "FTD") {
-        codeSuffix = `FTD${typeCounts.FTD}`;
+        codeSuffix = `RFTD${typeCounts.FTD}`;
         type = "FTD";
       } else if (remEvent.type === "Flight") {
-        codeSuffix = `F${typeCounts.Flight}`;
+        codeSuffix = `RF${typeCounts.Flight}`;
         type = "Flight";
       }
       const remedialCode = remEvent.code || `${baseEventCode}-${codeSuffix}`;
       const newItem = {
-        ...eventToRemediate,
+        ...remedialTemplate,
         id: remedialCode,
         code: remedialCode,
         isRemedial: true,
         // Req 2.3.3
+        completedAt: null,
         eventDescription: remedialCode,
         module: "Remedial",
         prerequisites: [lastNewEventId],
@@ -76790,12 +76838,13 @@ ${"=".repeat(60)}`);
       remedialPackageItems.push(newItem);
       lastNewEventId = newItem.id;
     });
-    const reFlyCode = `${baseEventCode}-RF1`;
+    const reFlyCode = `${baseEventCode}-RRF1`;
     const reFlyEvent = {
-      ...eventToRemediate,
+      ...remedialTemplate,
       id: reFlyCode,
       code: reFlyCode,
       isRemedial: true,
+      completedAt: null,
       eventDescription: reFlyCode,
       module: "Remedial",
       prerequisites: [lastNewEventId],
@@ -76917,6 +76966,52 @@ ${error instanceof Error ? error.message : String(error)}`,
         "Individual LMP Save Failed",
         "error"
       );
+    }
+  };
+  const handleDeleteRemedialLmpItem = async (trainee, item) => {
+    const confirmed = await showDarkConfirm2(
+      `Delete remedial event ${item.code} from ${trainee.fullName}'s Individual LMP?
+
+This will remove the remedial event from the package sequence and cannot be undone.`,
+      "Delete Remedial Event",
+      "warning"
+    );
+    if (!confirmed) return false;
+    const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+    if (!originalTraineeLMP) {
+      await showDarkAlert2(`Could not delete ${item.code}: Individual LMP not found for ${trainee.fullName}.`, "Individual LMP Delete Failed", "error");
+      return false;
+    }
+    const itemId = item.id || item.code;
+    const itemCode = item.code || item.id;
+    const updatedLmp = originalTraineeLMP.filter((lmpItem) => (lmpItem.id || lmpItem.code) !== itemId && (lmpItem.code || lmpItem.id) !== itemCode).map((lmpItem) => ({
+      ...lmpItem,
+      prerequisites: (lmpItem.prerequisites || []).filter((prerequisite) => prerequisite !== itemId && prerequisite !== itemCode)
+    }));
+    setTraineeLMPs((prevLMPs) => {
+      const newLMPs = new Map(prevLMPs);
+      newLMPs.set(trainee.fullName, updatedLmp);
+      return newLMPs;
+    });
+    try {
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prevLMPs) => {
+        const newLMPs = new Map(prevLMPs);
+        newLMPs.set(trainee.fullName, persistedLmp);
+        return newLMPs;
+      });
+      setSuccessMessage(`Deleted remedial event ${item.code}.`);
+      return true;
+    } catch (error) {
+      console.error("[Individual LMP] Failed to delete remedial item:", error);
+      await showDarkAlert2(
+        `Remedial event ${item.code} was removed locally, but could not be saved to the database. Please try again before refreshing.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Individual LMP Delete Failed",
+        "error"
+      );
+      return false;
     }
   };
   const handleUnsavedConfirm = (action) => {
@@ -78841,7 +78936,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       const courseTrainees = allTraineesData.filter((t) => t.course === courseName && !t.isPaused);
       if (courseTrainees.length === 0) return 0;
       const progresses = courseTrainees.map(
-        (t) => (scores.get(t.fullName) || []).filter((s) => !s.event.includes("-REM-") && !s.event.includes("-RF")).length
+        (t) => (scores.get(t.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length
       );
       progresses.sort((a, b) => a - b);
       const mid = Math.floor(progresses.length / 2);
@@ -78903,7 +78998,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         if (!nextEvent) continue;
         const eventType = syllabusTypeToEventType(nextEvent.type || "", cancelledEvent.type);
         const courseMedian = localCourseMedians.get(trainee.course) || 0;
-        const traineeProgress = (scores.get(trainee.fullName) || []).filter((s) => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+        const traineeProgress = (scores.get(trainee.fullName) || []).filter((s) => !isRemedialEventCode(s.event)).length;
         const isRemedial = nextEvent.isRemedial || false;
         const priorityScore = calculateTraineePriorityScore(
           trainee,
@@ -82816,7 +82911,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   handleNavigation("PT051");
                 },
                 canOpenPt051: canViewTraineePt051(selectedTraineeForLMP),
-                onAccessDenied: denyPlatformAction
+                onAccessDenied: denyPlatformAction,
+                onDeleteRemedialItem: handleDeleteRemedialLmpItem
               }
             );
           }

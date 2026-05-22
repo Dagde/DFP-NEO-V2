@@ -8,6 +8,10 @@ import FullPageProgressGraph from './FullPageProgressGraph';
 import { logAudit } from '../utils/auditLogger';
 import { CourseRiskThresholds } from '../utils/courseProgressMetrics';
 
+const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+const isRemedialEventCode = (value?: string): boolean =>
+    !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
+
 interface CourseProgressViewProps {
     traineesData: Trainee[];
     courseColors: { [key: string]: string };
@@ -106,7 +110,7 @@ const CourseProgressView: React.FC<CourseProgressViewProps> = ({
         activeTrainees.forEach(trainee => {
             const traineeName = trainee.fullName || trainee.name;
             const completedEvents = (scores.get(traineeName) || [])
-                .filter(score => !score.event.includes('MB') && !score.event.includes('-REM-') && !score.event.includes('-RF')).length;
+                .filter(score => !score.event.includes('MB') && !isRemedialEventCode(score.event)).length;
             completedByCourse.set(trainee.course, (completedByCourse.get(trainee.course) || 0) + completedEvents);
         });
 

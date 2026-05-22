@@ -17,6 +17,7 @@ interface TraineeLmpViewProps {
   canOpenPt051?: boolean;
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
+  onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
 }
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
@@ -68,6 +69,14 @@ const formatDisplayType = (displayType: ReturnType<typeof getDisplayType>, resou
     if (displayType === 'CPT') return resourceDisplayNames.cpt;
     return displayType;
 };
+
+const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+
+const isRemedialLmpItem = (item: SyllabusItemDetail): boolean =>
+    item.lmpSource === 'remedial' ||
+    item.isRemedial === true ||
+    REMEDIAL_EVENT_CODE_REGEX.test(item.id || '') ||
+    REMEDIAL_EVENT_CODE_REGEX.test(item.code || '');
 
 const DetailView: React.FC<{
     item: SyllabusItemDetail;
@@ -510,6 +519,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     allTraineesData,
     onOpenPt051ForLesson,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
+    canOpenPt051 = true,
+    onAccessDenied,
+    onDeleteRemedialItem,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -602,15 +614,34 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             <ul className="p-2 space-y-1">
                                 {traineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
+                                    const isRemedial = isRemedialLmpItem(item);
                                     return (
                                         <li key={item.code}>
-                                            <button
-                                                onClick={() => setSelectedItem(item)}
-                                                className={`w-full text-left p-2 rounded-md transition-colors text-sm flex items-center space-x-2 ${selectedItem?.code === item.code ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700/50'}`}
-                                            >
-                                                {isCompleted ? <CheckIcon /> : <div className="w-4 h-4 flex-shrink-0"></div>}
-                                                <span>{item.code}</span>
-                                            </button>
+                                            <div className={`group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700/50'}`}>
+                                                <button
+                                                    onClick={() => setSelectedItem(item)}
+                                                    className="min-w-0 flex-1 text-left p-2 flex items-center space-x-2"
+                                                >
+                                                    {isCompleted ? <CheckIcon /> : <div className="w-4 h-4 flex-shrink-0"></div>}
+                                                    <span className="truncate">{item.code}</span>
+                                                </button>
+                                                {isRemedial && onDeleteRemedialItem && (
+                                                    <button
+                                                        type="button"
+                                                        title={`Delete remedial event ${item.code}`}
+                                                        onClick={async (event) => {
+                                                            event.stopPropagation();
+                                                            const deleted = await onDeleteRemedialItem(trainee, item);
+                                                            if (deleted && selectedItem?.code === item.code) {
+                                                                setSelectedItem(null);
+                                                            }
+                                                        }}
+                                                        className="mr-1 h-7 w-7 flex-shrink-0 rounded border border-red-500/30 text-red-300 opacity-70 hover:opacity-100 hover:bg-red-900/40"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                )}
+                                            </div>
                                         </li>
                                     );
                                 })}

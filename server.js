@@ -3667,7 +3667,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
 
 const getLmpMasterEventId = (item) => item?.masterEventId || item?.id || item?.code || '';
 const createLmpOrderKeyForSync = (index) => String(index + 1).padStart(5, '0');
-const REMEDIAL_EVENT_CODE_REGEX_FOR_SYNC = /-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i;
+const REMEDIAL_EVENT_CODE_REGEX_FOR_SYNC = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialEventCodeForSync = (value) =>
   !!value && REMEDIAL_EVENT_CODE_REGEX_FOR_SYNC.test(String(value));
 const isLmpOverlayItemForSync = (item) =>
@@ -8006,7 +8006,7 @@ async function upsertTraineeLmpOverlays(db, traineeId, traineeFullName, events, 
 
 function deriveRemedialPackageId(item) {
   const code = item?.code || item?.id || '';
-  const match = String(code).match(/^(.*?)-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i);
+  const match = String(code).match(/^(.*?)-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i);
   return match ? `${match[1]}-REMEDIAL` : null;
 }
 

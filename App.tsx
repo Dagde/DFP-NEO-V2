@@ -466,7 +466,7 @@ const getMasterEventId = (item: Partial<SyllabusItemDetail>): string =>
 
 const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
 const REMEDIAL_EARLIEST_START = 10.0;
-const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i;
+const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 
 const isRemedialEventCode = (value?: string): boolean =>
     !!value && REMEDIAL_EVENT_CODE_REGEX.test(value);
@@ -2272,7 +2272,7 @@ function generateDfpInternal(
     const getMedianProgress = (courseName: string): number => {
         const courseTrainees = activeTrainees.filter(t => t.course === courseName);
         if (courseTrainees.length === 0) return 0;
-        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length).sort((a,b) => a-b);
+        const progressCounts = courseTrainees.map(t => (scores.get(t.fullName) || []).filter(s => !isRemedialEventCode(s.event)).length).sort((a,b) => a-b);
         const mid = Math.floor(progressCounts.length / 2);
         return progressCounts.length % 2 !== 0 ? progressCounts[mid] : (progressCounts[mid - 1] + progressCounts[mid]) / 2;
     };
@@ -2297,8 +2297,8 @@ function generateDfpInternal(
 
         const medianA = courseMedians.get(a.course) || 0;
         const medianB = courseMedians.get(b.course) || 0;
-        const progressA = (scores.get(a.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
-        const progressB = (scores.get(b.fullName) || []).filter(s => !s.event.includes("-REM-") && !s.event.includes("-RF")).length;
+        const progressA = (scores.get(a.fullName) || []).filter(s => !isRemedialEventCode(s.event)).length;
+        const progressB = (scores.get(b.fullName) || []).filter(s => !isRemedialEventCode(s.event)).length;
         const behindA = medianA - progressA;
         const behindB = medianB - progressB;
         if (behindA !== behindB) return behindB - behindA;
@@ -9583,21 +9583,23 @@ const App: React.FC = () => {
         const remedialPackageItems: SyllabusItemDetail[] = [];
         const baseEventCode = getRemedialBaseEventCode(eventToRemediate);
         const typeCounts = { TUT: 0, FTD: 0, Flight: 0 };
+        const { completedAt: _completedAt, isComplete: _isComplete, completed: _completed, ...remedialTemplate } = eventToRemediate as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
 
         newEvents.forEach((remEvent) => {
             let codeSuffix = '';
             let type: SyllabusItemDetail['type'] = 'Flight';
             typeCounts[remEvent.type]++;
-            if (remEvent.type === 'TUT') { codeSuffix = `T${typeCounts.TUT}`; type = 'Ground School'; }
-            else if (remEvent.type === 'FTD') { codeSuffix = `FTD${typeCounts.FTD}`; type = 'FTD'; }
-            else if (remEvent.type === 'Flight') { codeSuffix = `F${typeCounts.Flight}`; type = 'Flight'; }
+            if (remEvent.type === 'TUT') { codeSuffix = `RT${typeCounts.TUT}`; type = 'Ground School'; }
+            else if (remEvent.type === 'FTD') { codeSuffix = `RFTD${typeCounts.FTD}`; type = 'FTD'; }
+            else if (remEvent.type === 'Flight') { codeSuffix = `RF${typeCounts.Flight}`; type = 'Flight'; }
 
             const remedialCode = remEvent.code || `${baseEventCode}-${codeSuffix}`;
 
             const newItem: SyllabusItemDetail = {
-                ...eventToRemediate,
+                ...remedialTemplate,
                 id: remedialCode, code: remedialCode,
                 isRemedial: true, // Req 2.3.3
+                completedAt: null,
                 eventDescription: remedialCode,
                 module: 'Remedial', prerequisites: [lastNewEventId],
                 duration: remEvent.duration, flightOrSimHours: remEvent.duration,
@@ -9611,10 +9613,11 @@ const App: React.FC = () => {
             lastNewEventId = newItem.id;
         });
 
-        const reFlyCode = `${baseEventCode}-RF1`;
+        const reFlyCode = `${baseEventCode}-RRF1`;
         const reFlyEvent: SyllabusItemDetail = {
-            ...eventToRemediate, id: reFlyCode, code: reFlyCode,
+            ...remedialTemplate, id: reFlyCode, code: reFlyCode,
             isRemedial: true,
+            completedAt: null,
             eventDescription: reFlyCode, module: 'Remedial',
             prerequisites: [lastNewEventId], prerequisitesGround: [], prerequisitesFlying: [],
         };
@@ -9767,6 +9770,55 @@ const App: React.FC = () => {
                 'Individual LMP Save Failed',
                 'error'
             );
+        }
+    };
+
+    const handleDeleteRemedialLmpItem = async (trainee: Trainee, item: SyllabusItemDetail): Promise<boolean> => {
+        const confirmed = await showDarkConfirm(
+            `Delete remedial event ${item.code} from ${trainee.fullName}'s Individual LMP?\n\nThis will remove the remedial event from the package sequence and cannot be undone.`,
+            'Delete Remedial Event',
+            'warning'
+        );
+        if (!confirmed) return false;
+
+        const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+        if (!originalTraineeLMP) {
+            await showDarkAlert(`Could not delete ${item.code}: Individual LMP not found for ${trainee.fullName}.`, 'Individual LMP Delete Failed', 'error');
+            return false;
+        }
+
+        const itemId = item.id || item.code;
+        const itemCode = item.code || item.id;
+        const updatedLmp = originalTraineeLMP
+            .filter(lmpItem => (lmpItem.id || lmpItem.code) !== itemId && (lmpItem.code || lmpItem.id) !== itemCode)
+            .map(lmpItem => ({
+                ...lmpItem,
+                prerequisites: (lmpItem.prerequisites || []).filter(prerequisite => prerequisite !== itemId && prerequisite !== itemCode),
+            }));
+
+        setTraineeLMPs(prevLMPs => {
+            const newLMPs = new Map(prevLMPs);
+            newLMPs.set(trainee.fullName, updatedLmp);
+            return newLMPs;
+        });
+
+        try {
+            const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            setTraineeLMPs(prevLMPs => {
+                const newLMPs = new Map(prevLMPs);
+                newLMPs.set(trainee.fullName, persistedLmp);
+                return newLMPs;
+            });
+            setSuccessMessage(`Deleted remedial event ${item.code}.`);
+            return true;
+        } catch (error) {
+            console.error('[Individual LMP] Failed to delete remedial item:', error);
+            await showDarkAlert(
+                `Remedial event ${item.code} was removed locally, but could not be saved to the database. Please try again before refreshing.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Individual LMP Delete Failed',
+                'error'
+            );
+            return false;
         }
     };
 
@@ -12248,7 +12300,7 @@ const App: React.FC = () => {
             const courseTrainees = allTraineesData.filter((t: Trainee) => t.course === courseName && !t.isPaused);
             if (courseTrainees.length === 0) return 0;
             const progresses = courseTrainees.map((t: Trainee) =>
-                (scores.get(t.fullName) || []).filter((s: Score) => !s.event.includes('-REM-') && !s.event.includes('-RF')).length
+                (scores.get(t.fullName) || []).filter((s: Score) => !isRemedialEventCode(s.event)).length
             );
             progresses.sort((a: number, b: number) => a - b);
             const mid = Math.floor(progresses.length / 2);
@@ -12333,7 +12385,7 @@ const App: React.FC = () => {
 
                 const courseMedian = localCourseMedians.get(trainee.course) || 0;
                 const traineeProgress = (scores.get(trainee.fullName) || [])
-                    .filter((s: Score) => !s.event.includes('-REM-') && !s.event.includes('-RF')).length;
+                    .filter((s: Score) => !isRemedialEventCode(s.event)).length;
                 const isRemedial = nextEvent.isRemedial || false;
                 const priorityScore = calculateTraineePriorityScore(
                     trainee, pauseDate, courseMedian, traineeProgress, isRemedial
@@ -17074,6 +17126,7 @@ updates.forEach(update => {
                             }}
                             canOpenPt051={canViewTraineePt051(selectedTraineeForLMP)}
                             onAccessDenied={denyPlatformAction}
+                            onDeleteRemedialItem={handleDeleteRemedialLmpItem}
                         />;
                     }
                 }

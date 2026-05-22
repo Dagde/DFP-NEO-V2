@@ -43,12 +43,12 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [flightState, setFlightState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
 
   const getRemedialBaseEventCode = (event: SyllabusItemDetail): string =>
-    String(event.code || event.id || event.masterEventId || '').replace(/-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i, '');
+    String(event.code || event.id || event.masterEventId || '').replace(/-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i, '');
 
   const getRemedialCodePrefix = (type: RemedialPackageEvent['type']) => {
-    if (type === 'TUT') return 'T';
-    if (type === 'FTD') return 'FTD';
-    return 'F';
+    if (type === 'TUT') return 'RT';
+    if (type === 'FTD') return 'RFTD';
+    return 'RF';
   };
 
   const buildRemedialEventCode = (baseCode: string, type: RemedialPackageEvent['type'], sequence: number): string =>
@@ -195,7 +195,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
   const reFlyEvent = useMemo(() => {
     if (!eventToRemediate) return null;
-    const reFlyCode = `${getRemedialBaseEventCode(eventToRemediate)}-RF1`;
+    const reFlyCode = `${getRemedialBaseEventCode(eventToRemediate)}-RRF1`;
     return {
       ...eventToRemediate,
       code: reFlyCode,
@@ -243,11 +243,6 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   
   const handleRemoveEvent = (id: string) => {
     setRemedialEvents(prev => prev.filter(e => e.id !== id));
-  };
-
-  const getRemedialEventDisplayType = (type: 'TUT' | 'FTD' | 'Flight') => {
-    if (type === 'FTD') return resourceDisplayNames.ftd;
-    return type;
   };
 
   const handleSavePackage = () => {
