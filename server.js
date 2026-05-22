@@ -3608,12 +3608,25 @@ const stampMasterLmpItemsForSync = (masterSyllabus) =>
     placementNeedsReview: false,
   }));
 
+const normalizeLmpCompletionKeyForSync = (value) => String(value || '').replace(/\*/g, '').trim();
+const getLmpCompletionTimestampForSync = (item, scoreMap) => {
+  const keys = [
+    item?.id,
+    item?.code,
+    item?.masterEventId,
+  ].map(normalizeLmpCompletionKeyForSync).filter(Boolean);
+  for (const key of keys) {
+    if (scoreMap[key]) return scoreMap[key];
+  }
+  return null;
+};
+
 const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, scoreMap) => {
   const stampedMaster = stampMasterLmpItemsForSync(masterSyllabus);
   if (!existingEvents || existingEvents.length === 0) {
     return stampedMaster.map(item => ({
       ...item,
-      completedAt: scoreMap[item.id || item.code] || null,
+      completedAt: getLmpCompletionTimestampForSync(item, scoreMap),
     }));
   }
 
@@ -3629,7 +3642,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
     const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
     return {
       ...masterItem,
-      completedAt: scoreMap[masterItem.id || masterItem.code] || existingItem?.completedAt || null,
+      completedAt: getLmpCompletionTimestampForSync(masterItem, scoreMap) || existingItem?.completedAt || null,
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
       placementNeedsReview: false,

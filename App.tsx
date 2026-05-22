@@ -789,6 +789,36 @@ const getEffectiveLastCompletedEvent = (
     return lastEvent.flightNumber;
 };
 
+const normalizeLmpEventId = (value?: string | null): string => {
+    return String(value || '').replace(/\*/g, '').trim();
+};
+
+const addLmpCompletionAlias = (completedEventIds: Set<string>, value?: string | null): void => {
+    const raw = String(value || '').trim();
+    const normalized = normalizeLmpEventId(raw);
+    if (raw) completedEventIds.add(raw);
+    if (normalized) completedEventIds.add(normalized);
+};
+
+const isCompletedLmpItem = (item: SyllabusItemDetail, completedEventIds: Set<string>): boolean => {
+    const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
+    return Boolean(
+        item.completedAt ||
+        maybeCompleted.isComplete ||
+        maybeCompleted.completed ||
+        completedEventIds.has(normalizeLmpEventId(item.id)) ||
+        completedEventIds.has(normalizeLmpEventId(item.code)) ||
+        completedEventIds.has(normalizeLmpEventId(item.masterEventId))
+    );
+};
+
+const areLmpPrerequisitesMet = (item: SyllabusItemDetail, completedEventIds: Set<string>): boolean => {
+    return (item.prerequisites || []).every(prerequisite => {
+        const normalized = normalizeLmpEventId(prerequisite);
+        return !normalized || completedEventIds.has(normalized);
+    });
+};
+
 // Centralized logic for determining a trainee's next event(s)
 const computeNextEventsForTrainee = (
     trainee: Trainee,
@@ -818,7 +848,20 @@ const computeNextEventsForTrainee = (
     }
 
     const traineeScores = scores.get(trainee.fullName) || [];
-    const completedEventIds = new Set(traineeScores.map(s => s.event));
+    const completedEventIds = new Set<string>();
+    traineeScores.forEach(score => addLmpCompletionAlias(completedEventIds, score.event));
+
+    // The Individual LMP is now composed from the Master LMP plus overlay rows.
+    // Use its completion flags directly so NEO Build does not depend on stale
+    // score-map timing or legacy PT-051 tables.
+    individualLMP.forEach(item => {
+        const maybeCompleted = item as SyllabusItemDetail & { isComplete?: boolean; completed?: boolean };
+        if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed) {
+            addLmpCompletionAlias(completedEventIds, item.id);
+            addLmpCompletionAlias(completedEventIds, item.code);
+            addLmpCompletionAlias(completedEventIds, item.masterEventId);
+        }
+    });
 
     // ── Source 1: DB-backed ELCE from EventCompletion table (preferred) ──────
     // This is written the moment the post-flight form is saved, before PT-051
@@ -826,7 +869,7 @@ const computeNextEventsForTrainee = (
     // the next-event pointer.
     const dbElce = dbElceMap?.get(trainee.fullName);
     if (dbElce && (dbElce.dcoResult === 'DCO' || dbElce.dcoResult === 'DPCO')) {
-        completedEventIds.add(dbElce.eventCode);
+        addLmpCompletionAlias(completedEventIds, dbElce.eventCode);
         console.log(
             `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} (${dbElce.dcoResult}) ` +
             `completed ${dbElce.eventDate} — added to completedEventIds`
@@ -845,7 +888,7 @@ const computeNextEventsForTrainee = (
     if (!dbElce && publishedSchedules && buildDate) {
         const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
         if (elce) {
-            completedEventIds.add(elce);
+            addLmpCompletionAlias(completedEventIds, elce);
             console.log(`[ELCE/DFP] ${trainee.fullName}: ${elce} — DFP-scan fallback (no DB ELCE found)`);
         }
     }
@@ -857,11 +900,11 @@ const computeNextEventsForTrainee = (
     // Find Next Event
     for (let i = 0; i < individualLMP.length; i++) {
         const item = individualLMP[i];
-        if (completedEventIds.has(item.id) || completedEventIds.has(item.code) || item.code.includes(' MB')) {
+        if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(' MB')) {
             continue;
         }
 
-        const prereqsMet = item.prerequisites.every(p => completedEventIds.has(p) || completedEventIds.has(p));
+        const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
         if (prereqsMet) {
             nextEvt = item;
             nextEventIndex = i;
@@ -879,7 +922,7 @@ const computeNextEventsForTrainee = (
         for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
             const item = individualLMP[i];
             // Skip non-schedulable events
-            if (!item.code.includes(' MB')) {
+            if (!item.code.includes(' MB') && !isCompletedLmpItem(item, completedEventIds)) {
                 plusOneEvt = item;
                 break;
             }
@@ -5831,7 +5874,10 @@ const App: React.FC = () => {
                                             // Update completedAt field for each event in the Individual LMP
                                             const lmpSource = lmp.events && lmp.events.length > 0 ? lmp.events : existingLMP;
                                             const updatedLMP = lmpSource.map(item => {
-                                                const isCompleted = normalizedCompletedIds.includes(item.id || item.code);
+                                                const itemCompletionKeys = [item.id, item.code, item.masterEventId]
+                                                    .map((key: string | undefined) => (key || '').replace(/\*/g, ''))
+                                                    .filter(Boolean);
+                                                const isCompleted = itemCompletionKeys.some((key: string) => normalizedCompletedIds.includes(key));
                                                 return {
                                                     ...item,
                                                     completedAt: isCompleted ? (item.completedAt || new Date().toISOString()) : null,

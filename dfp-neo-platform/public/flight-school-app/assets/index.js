@@ -70326,6 +70326,27 @@ const getEffectiveLastCompletedEvent = (traineeName, publishedSchedules, buildDa
   console.log(`✓ ELCE for ${traineeName}: ${lastEvent.flightNumber} (completed ${yesterdayStr})`);
   return lastEvent.flightNumber;
 };
+const normalizeLmpEventId = (value) => {
+  return String(value || "").replace(/\*/g, "").trim();
+};
+const addLmpCompletionAlias = (completedEventIds, value) => {
+  const raw = String(value || "").trim();
+  const normalized = normalizeLmpEventId(raw);
+  if (raw) completedEventIds.add(raw);
+  if (normalized) completedEventIds.add(normalized);
+};
+const isCompletedLmpItem = (item, completedEventIds) => {
+  const maybeCompleted = item;
+  return Boolean(
+    item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed || completedEventIds.has(normalizeLmpEventId(item.id)) || completedEventIds.has(normalizeLmpEventId(item.code)) || completedEventIds.has(normalizeLmpEventId(item.masterEventId))
+  );
+};
+const areLmpPrerequisitesMet = (item, completedEventIds) => {
+  return (item.prerequisites || []).every((prerequisite) => {
+    const normalized = normalizeLmpEventId(prerequisite);
+    return !normalized || completedEventIds.has(normalized);
+  });
+};
 const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap) => {
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
   const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
@@ -70341,10 +70362,19 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
     return { next: null, plusOne: null };
   }
   const traineeScores = scores.get(trainee.fullName) || [];
-  const completedEventIds = new Set(traineeScores.map((s) => s.event));
+  const completedEventIds = /* @__PURE__ */ new Set();
+  traineeScores.forEach((score) => addLmpCompletionAlias(completedEventIds, score.event));
+  individualLMP.forEach((item) => {
+    const maybeCompleted = item;
+    if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed) {
+      addLmpCompletionAlias(completedEventIds, item.id);
+      addLmpCompletionAlias(completedEventIds, item.code);
+      addLmpCompletionAlias(completedEventIds, item.masterEventId);
+    }
+  });
   const dbElce = dbElceMap?.get(trainee.fullName);
   if (dbElce && (dbElce.dcoResult === "DCO" || dbElce.dcoResult === "DPCO")) {
-    completedEventIds.add(dbElce.eventCode);
+    addLmpCompletionAlias(completedEventIds, dbElce.eventCode);
     console.log(
       `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} (${dbElce.dcoResult}) completed ${dbElce.eventDate} — added to completedEventIds`
     );
@@ -70356,7 +70386,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   if (!dbElce && publishedSchedules && buildDate) {
     const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
     if (elce) {
-      completedEventIds.add(elce);
+      addLmpCompletionAlias(completedEventIds, elce);
       console.log(`[ELCE/DFP] ${trainee.fullName}: ${elce} — DFP-scan fallback (no DB ELCE found)`);
     }
   }
@@ -70365,10 +70395,10 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   let nextEventIndex = -1;
   for (let i = 0; i < individualLMP.length; i++) {
     const item = individualLMP[i];
-    if (completedEventIds.has(item.id) || completedEventIds.has(item.code) || item.code.includes(" MB")) {
+    if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
       continue;
     }
-    const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p) || completedEventIds.has(p));
+    const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
     if (prereqsMet) {
       nextEvt = item;
       nextEventIndex = i;
@@ -70381,7 +70411,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   if (nextEventIndex !== -1) {
     for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
       const item = individualLMP[i];
-      if (!item.code.includes(" MB")) {
+      if (!item.code.includes(" MB") && !isCompletedLmpItem(item, completedEventIds)) {
         plusOneEvt = item;
         break;
       }
@@ -73813,7 +73843,8 @@ const App = () => {
                       const normalizedCompletedIds = lmp.completedEventIds.map((id) => id.replace("*", ""));
                       const lmpSource = lmp.events && lmp.events.length > 0 ? lmp.events : existingLMP;
                       const updatedLMP = lmpSource.map((item) => {
-                        const isCompleted = normalizedCompletedIds.includes(item.id || item.code);
+                        const itemCompletionKeys = [item.id, item.code, item.masterEventId].map((key) => (key || "").replace(/\*/g, "")).filter(Boolean);
+                        const isCompleted = itemCompletionKeys.some((key) => normalizedCompletedIds.includes(key));
                         return {
                           ...item,
                           completedAt: isCompleted ? item.completedAt || (/* @__PURE__ */ new Date()).toISOString() : null
