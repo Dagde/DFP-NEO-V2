@@ -70506,17 +70506,31 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   let nextEventIndex = -1;
   for (let i = 0; i < individualLMP.length; i++) {
     const item = individualLMP[i];
-    if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
+    if (!isRemedialSyllabusItem(item) || isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
       continue;
     }
     const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
     if (prereqsMet) {
       nextEvt = item;
       nextEventIndex = i;
-      if (verboseNeoBuild && item.isRemedial) {
+      if (verboseNeoBuild) {
         console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
       }
       break;
+    }
+  }
+  if (!nextEvt) {
+    for (let i = 0; i < individualLMP.length; i++) {
+      const item = individualLMP[i];
+      if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
+        continue;
+      }
+      const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
+      if (prereqsMet) {
+        nextEvt = item;
+        nextEventIndex = i;
+        break;
+      }
     }
   }
   if (nextEventIndex !== -1) {
@@ -71915,7 +71929,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
-      const isBnfEvent2 = syllabusItemForCheck.code.startsWith("BNF");
+      const isBnfEvent2 = type === "flight" && syllabusItemForCheck.code.startsWith("BNF");
       if (isBnfEvent2) {
         const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
         if (!pairedInstructorName) return null;
@@ -72418,7 +72432,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return result;
   };
-  const scheduleFlexiblePriorityRemedials = (allowedTypes) => {
+  const scheduleFlexiblePriorityRemedials = () => {
     if (flexiblePriorityRemedialEvents.length === 0) return;
     recordProgress({ message: "Scheduling remedial package events...", percentage: 43 });
     const incrementForType = (eventType) => eventType === "flight" ? 5 / 60 : 15 / 60;
@@ -72441,7 +72455,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         continue;
       }
       const scheduleType = remedialEvent.type === "ftd" ? "ftd" : remedialEvent.type === "ground" ? "ground" : remedialEvent.type === "cpt" ? "cpt" : "flight";
-      if (!allowedTypes.includes(scheduleType)) continue;
       if (generatedEvents.some(
         (existing) => existing.id === remedialEvent.id || existing.flightNumber === remedialEvent.flightNumber && existing.student === remedialEvent.student
       )) {
@@ -72494,6 +72507,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   };
+  scheduleFlexiblePriorityRemedials();
   recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
   generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
   const dutySupStartTime = flyingStartTime;
@@ -72679,7 +72693,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
   }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
-  scheduleFlexiblePriorityRemedials(["flight"]);
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
     const next = traineeNextEventMap.get(trainee.fullName)?.next;
@@ -72763,7 +72776,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
   }
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
-  scheduleFlexiblePriorityRemedials(["ftd"]);
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
@@ -72775,7 +72787,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
-  scheduleFlexiblePriorityRemedials(["cpt"]);
   recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
@@ -72787,7 +72798,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
-  scheduleFlexiblePriorityRemedials(["ground"]);
   recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),

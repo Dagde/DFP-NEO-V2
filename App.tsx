@@ -1031,10 +1031,11 @@ const computeNextEventsForTrainee = (
     let plusOneEvt: SyllabusItemDetail | null = null;
     let nextEventIndex = -1;
 
-    // Find Next Event
+    // Remedial package events become the trainee's next schedulable work until
+    // the package sequence is complete, regardless of later normal LMP items.
     for (let i = 0; i < individualLMP.length; i++) {
         const item = individualLMP[i];
-        if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(' MB')) {
+        if (!isRemedialSyllabusItem(item) || isCompletedLmpItem(item, completedEventIds) || item.code.includes(' MB')) {
             continue;
         }
 
@@ -1043,11 +1044,27 @@ const computeNextEventsForTrainee = (
             nextEvt = item;
             nextEventIndex = i;
 
-            // Debug logging for remedial events
-            if (verboseNeoBuild && item.isRemedial) {
+            if (verboseNeoBuild) {
                 console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
             }
             break;
+        }
+    }
+
+    // Find Next Event
+    if (!nextEvt) {
+        for (let i = 0; i < individualLMP.length; i++) {
+            const item = individualLMP[i];
+            if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(' MB')) {
+                continue;
+            }
+
+            const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
+            if (prereqsMet) {
+                nextEvt = item;
+                nextEventIndex = i;
+                break;
+            }
         }
     }
 
@@ -2987,7 +3004,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             isPlusOneCheck: boolean,
             primaryOnlyMode: boolean = false
         ): Instructor | null => {
-            const isBnfEvent = syllabusItemForCheck.code.startsWith('BNF');
+            const isBnfEvent = type === 'flight' && syllabusItemForCheck.code.startsWith('BNF');
 
             if (isBnfEvent) {
                 const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
@@ -3650,7 +3667,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         return result;
     };
 
-    const scheduleFlexiblePriorityRemedials = (allowedTypes: Array<'flight' | 'ftd' | 'ground' | 'cpt'>) => {
+    const scheduleFlexiblePriorityRemedials = () => {
         if (flexiblePriorityRemedialEvents.length === 0) return;
 
         recordProgress({ message: 'Scheduling remedial package events...', percentage: 43 });
@@ -3687,7 +3704,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     : remedialEvent.type === 'cpt'
                         ? 'cpt'
                         : 'flight';
-            if (!allowedTypes.includes(scheduleType)) continue;
             if (generatedEvents.some(existing =>
                 existing.id === remedialEvent.id ||
                 (existing.flightNumber === remedialEvent.flightNumber && existing.student === remedialEvent.student)
@@ -3750,6 +3766,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             }
         }
     };
+
+    // Remedial package work is the trainee's highest-priority sequence. Place it
+    // before Duty Sup and ordinary LMP work so those later allocations work around
+    // the remedial, while scheduleEvent still enforces normal build rules.
+    scheduleFlexiblePriorityRemedials();
 
     // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
     recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
@@ -3985,7 +4006,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
     // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
     recordProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
-    scheduleFlexiblePriorityRemedials(['flight']);
 
     recordProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
 
@@ -4129,7 +4149,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
-    scheduleFlexiblePriorityRemedials(['ftd']);
 
     recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
     scheduleList(
@@ -4144,7 +4163,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
-    scheduleFlexiblePriorityRemedials(['cpt']);
 
     recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
     scheduleList(
@@ -4158,7 +4176,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
-    scheduleFlexiblePriorityRemedials(['ground']);
 
     recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
     scheduleList(
