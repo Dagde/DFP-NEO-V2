@@ -73939,7 +73939,7 @@ const App = () => {
           console.log("🎓 No courses in DB yet - keeping existing course state");
         }
         {
-          console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
+          console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
           try {
             const bpcIpcSyllabus = syllabusDetails.filter(
               (item) => (!item.lmpType || item.lmpType === "Master LMP") && item.type !== "Academics"
@@ -73952,24 +73952,10 @@ const App = () => {
               "FIC": ficSyllabus
             };
             const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
-            const pt051Completions = {};
-            pt051Assessments.forEach((assessment, _key) => {
-              if (assessment.isCompleted && assessment.flightNumber && assessment.traineeFullName) {
-                const name = assessment.traineeFullName;
-                if (!pt051Completions[name]) pt051Completions[name] = [];
-                if (!pt051Completions[name].includes(assessment.flightNumber)) {
-                  pt051Completions[name].push(assessment.flightNumber);
-                }
-              }
-            });
-            const pt051CompletionCount = Object.values(pt051Completions).reduce((sum, arr) => sum + arr.length, 0);
-            if (pt051CompletionCount > 0) {
-              console.log(`[LMP Sync] Including ${pt051CompletionCount} PT-051 completions from snapshots for ${Object.keys(pt051Completions).length} trainees`);
-            }
             const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ syllabusData, pt051Completions })
+              body: JSON.stringify({ syllabusData })
             });
             if (syncRes.ok) {
               const syncData = await syncRes.json();

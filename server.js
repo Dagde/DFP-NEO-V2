@@ -3785,14 +3785,14 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
   return [...result, ...appendOverlays.sort((a, b) => (a.orderKey || '').localeCompare(b.orderKey || ''))];
 };
 
-// POST /api/trainees/lmp-sync - Sync all trainees' PT-051 Score records → IndividualLMP
-// Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]>, pt051Completions?: Record<traineeFullName, string[]> }
+// POST /api/trainees/lmp-sync - Sync all trainees' authoritative PT-051 records → IndividualLMP
+// Body: { syllabusData?: Record<lmpType, SyllabusItemDetail[]> }
 // syllabusData is OPTIONAL - server loads syllabus directly from DB for accurate backfill.
 // Client-provided syllabusData is used as a fallback only if DB syllabus is empty.
 app.post('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { syllabusData: clientSyllabusData, pt051Completions } = req.body;
+    const { syllabusData: clientSyllabusData } = req.body;
 
     // --- ALWAYS load syllabus from DB so the server has authoritative data ---
     // The client may send mockData syllabus (missing FIC GND1/2/3) which would
@@ -3829,14 +3829,13 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       return res.status(400).json({ error: 'Missing syllabusData: not in request body and DB syllabus is empty' });
     }
 
-    // Fetch all active trainees with their scores and existing LMP
+    // Fetch all active trainees with their existing LMP. PT-051 progress is
+    // sourced exclusively from TraineePerformance below; legacy Score rows and
+    // snapshot PT-051 payloads can contain imported/stale completions and must
+    // not drive LMP progression.
     const trainees = await db.trainee.findMany({
       where: { isActive: true },
       include: {
-        scores: {
-          select: { event: true, date: true, score: true },
-          orderBy: { date: 'asc' },
-        },
         individualLMP: true,
       },
     });
@@ -3844,9 +3843,10 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
     console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
 
     const traineePerformanceRows = await db.$queryRawUnsafe(`
-      SELECT "traineeId", "flightNumber", "eventCode", "date"
+      SELECT "traineeId", "flightNumber", "eventCode", "date", "updatedAt", "overallGrade", "overallResult"
       FROM "TraineePerformance"
       WHERE "isCompleted" = true
+      ORDER BY "date" ASC, "updatedAt" ASC
     `);
     const performanceByTraineeId = new Map();
     (traineePerformanceRows || []).forEach(row => {
@@ -3883,62 +3883,26 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         continue;
       }
 
-      // Build set of completed event IDs from PT-051 Score records
+      // Build set of completed event IDs from the authoritative PT-051 table.
+      // Do not merge legacy Score rows: they are retained for compatibility
+      // views, but using them here can falsely complete an entire LMP.
       const scoreMap = {};
-      trainee.scores.forEach(s => {
-        // Strip asterisks from event codes for matching (e.g., 'BIF FTD1*' -> 'BIF FTD1')
-        const normalizedEvent = (s.event || '').replace('*', '');
-        scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
-      });
-
       const performanceRows = performanceByTraineeId.get(trainee.id) || [];
       performanceRows.forEach(row => {
         const normalizedEvent = String(row.flightNumber || row.eventCode || '').replace('*', '');
-        if (normalizedEvent && !scoreMap[normalizedEvent]) {
+        if (normalizedEvent) {
           scoreMap[normalizedEvent] = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
         }
       });
 
-      // Merge PT-051 completions from DailySnapshot (passed by frontend)
-      const pt051Map = pt051Completions || {};
-      const pt051Events = pt051Map[trainee.fullName] || [];
-      if (pt051Events.length > 0) {
-        console.log(`[LMP Sync] ${trainee.fullName}: merging ${pt051Events.length} PT-051 completions: ${pt051Events.join(', ')}`);
-        pt051Events.forEach(eventId => {
-          const normalized = (eventId || '').replace('*', '');
-          if (normalized && !scoreMap[normalized]) {
-            scoreMap[normalized] = new Date().toISOString();
-            db.score.findFirst({ where: { traineeId: trainee.id, event: normalized } })
-              .then(existing => {
-                if (!existing) {
-                  return db.score.create({
-                    data: {
-                      traineeId: trainee.id,
-                      event: normalized,
-                      score: 3,
-                      date: new Date(),
-                      instructor: 'DCO',
-                      notes: 'Auto-created from PT-051 assessment during LMP sync',
-                    },
-                  });
-                }
-              })
-              .catch(err => console.warn(`[LMP Sync] Could not persist score for ${trainee.fullName} ${normalized}:`, err.message));
-          }
-        });
-      }
-
       let completedEventIds = Object.keys(scoreMap);
 
-      // Backfill only safe derived completions. Never mark earlier flying/sim
-      // events complete from sequence position alone; that made NEO Build think
-      // many trainees had completed the whole LMP. We do allow earlier
-      // Ground/CPT items to be filled when later flying is already complete,
-      // because those inserted ground items otherwise block current progression.
+      // Backfill only direct prerequisites. Never mark earlier events complete
+      // from sequence position alone; that made NEO Build think many trainees
+      // had completed the whole LMP.
       {
-        const groundBackfilled = addPriorGroundCompletionsForSync(scoreMap, masterSyllabus);
         const prereqBackfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, masterSyllabus);
-        const backfilled = [...groundBackfilled, ...prereqBackfilled];
+        const backfilled = [...prereqBackfilled];
         if (backfilled.length > 0) {
           console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} safe derived completion(s): ${backfilled.join(', ')}`);
         }
@@ -4483,9 +4447,8 @@ app.post('/api/scores', async (req, res) => {
             const normalized = normalizeLmpCompletionKeyForSync(id);
             if (normalized) scoreMap[normalized] = new Date().toISOString();
           });
-          const groundBackfilled = addPriorGroundCompletionsForSync(scoreMap, lmpEvents);
           const prereqBackfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, lmpEvents);
-          const backfilled = [...groundBackfilled, ...prereqBackfilled];
+          const backfilled = [...prereqBackfilled];
           backfilled.forEach(id => updatedSet.add(id));
           if (backfilled.length > 0) {
             console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled safe derived completions: ${backfilled.join(', ')}`);

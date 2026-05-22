@@ -5930,15 +5930,14 @@ const App: React.FC = () => {
                 }
 
                 // --- Individual LMP Sync ---
-                // For each trainee, read their completed PT-051 Score records from DB,
-                // mark those events as complete in their Individual LMP (persisted in DB),
-                // then load the completedEventIds back into scores state so
-                // computeNextEventsForTrainee advances them to their correct next event.
+                // For each trainee, read authoritative TraineePerformance PT-051
+                // records from DB, mark those events as complete in their
+                // Individual LMP, then load the composed LMP back into state.
                 //
                 // This runs on every app load to keep LMPs in sync with PT-051 records.
-                // Always run sync unconditionally — server reads PT-051 scores directly from DB.
+                // Always run sync unconditionally — server reads TraineePerformance directly from DB.
                 {
-                    console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads scores from DB)...`);
+                    console.log(`[LMP Sync] Starting Individual LMP sync (unconditional — server reads TraineePerformance from DB)...`);
                     try {
                         // Build syllabusData payload — master syllabus split by lmpType
                         // The backend has no knowledge of syllabus structure, so we send it from the frontend.
@@ -5957,28 +5956,10 @@ const App: React.FC = () => {
                             ? '/api'
                             : 'https://dfp-neo-v2-production.up.railway.app/api';
 
-                        // Build pt051Completions map: traineeFullName → [completedFlightNumbers]
-                        // This covers PT-051 assessments saved in DailySnapshot that may not yet
-                        // have Score DB records (e.g. Carter, Chris FIC3/4/5).
-                        const pt051Completions: Record<string, string[]> = {};
-                        pt051Assessments.forEach((assessment: any, _key: string) => {
-                            if (assessment.isCompleted && assessment.flightNumber && assessment.traineeFullName) {
-                                const name = assessment.traineeFullName;
-                                if (!pt051Completions[name]) pt051Completions[name] = [];
-                                if (!pt051Completions[name].includes(assessment.flightNumber)) {
-                                    pt051Completions[name].push(assessment.flightNumber);
-                                }
-                            }
-                        });
-                        const pt051CompletionCount = Object.values(pt051Completions).reduce((sum, arr) => sum + arr.length, 0);
-                        if (pt051CompletionCount > 0) {
-                            console.log(`[LMP Sync] Including ${pt051CompletionCount} PT-051 completions from snapshots for ${Object.keys(pt051Completions).length} trainees`);
-                        }
-
                         const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ syllabusData, pt051Completions }),
+                            body: JSON.stringify({ syllabusData }),
                         });
 
                         if (syncRes.ok) {
