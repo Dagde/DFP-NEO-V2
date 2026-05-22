@@ -2211,13 +2211,8 @@ function generateDfpInternal(
         buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
 
         if(event.date === buildDate && event.isTimeFixed) {
-            if (event.isRemedial) {
-                skippedCount++;
-                buildDebugLog(`  ↷ DEBUG DEFERRED remedial priority event to normal scheduler so it remains highest priority without becoming a fixed 1000 tile`);
-                return;
-            }
-
-            const { date, ...eventWithoutDate } = event;
+            const { date, ...rawEventWithoutDate } = event;
+            const eventWithoutDate = placeRemedialPriorityEvent(rawEventWithoutDate);
                // Ensure pilot field is set for existing events
                if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
                    eventWithoutDate.pilot = eventWithoutDate.instructor;
@@ -2359,16 +2354,6 @@ function generateDfpInternal(
             const eventCodes = directedRemedialRequestsByTrainee.get(request.traineeId) || new Set<string>();
             eventCodes.add(normalizeLmpEventId(request.eventCode));
             directedRemedialRequestsByTrainee.set(request.traineeId, eventCodes);
-        });
-    highestPriorityEvents
-        .filter(event => event.date === buildDate && event.isRemedial)
-        .forEach(event => {
-            const traineeName = event.student || event.pilot || '';
-            const trainee = activeTrainees.find(t => t.fullName === traineeName);
-            if (!trainee) return;
-            const eventCodes = directedRemedialRequestsByTrainee.get(trainee.idNumber) || new Set<string>();
-            eventCodes.add(normalizeLmpEventId(event.flightNumber));
-            directedRemedialRequestsByTrainee.set(trainee.idNumber, eventCodes);
         });
 
     const isDirectedRemedialNextEvent = (trainee: Trainee): boolean => {
@@ -11398,7 +11383,8 @@ const App: React.FC = () => {
         console.log('\ud83d\udccb Starting sync of priority events with SCT and remedial requests...');
 
         let added = 0;
-        const newPriorityEvents = [...highestPriorityEvents];
+        const staleRemedialPriorityEvents = highestPriorityEvents.filter(event => event.isRemedial).length;
+        const newPriorityEvents = highestPriorityEvents.filter(event => !event.isRemedial);
 
         // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
         console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
@@ -11564,94 +11550,15 @@ const App: React.FC = () => {
             }
         });
 
-        // 2. Auto-add Force Schedule remedial events to the visible Highest Priority list.
-        // Build-time handling interprets these as highest-priority scheduling candidates,
-        // not fixed 1000 tiles.
+        // 2. Directed remedials are build priorities, not fixed schedule tiles.
+        // They are scheduled by generateDfpInternal through the normal scheduler so
+        // turnaround, pre/post windows, and the no-before-1000 rule all apply.
         console.log(`🔍 Checking ${remedialRequests.length} remedial requests for Force Schedule...`);
         const forceScheduledRemedials = remedialRequests.filter(r => r.forceSchedule);
-        console.log(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
-
-        remedialRequests.forEach(remedialReq => {
-            if (remedialReq.forceSchedule) {
-                console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
-
-                const existingEvent = newPriorityEvents.find(e =>
-                    e.id === `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}` &&
-                    e.isRemedial
-                );
-
-                if (existingEvent) {
-                    console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
-                } else if (!existingEvent) {
-                    const trainee = allTraineesData.find(t => t.idNumber === remedialReq.traineeId);
-                    let syllabusItem = null;
-
-                    if (trainee) {
-                        const individualLMP = traineeLMPs.get(trainee.fullName);
-                        if (individualLMP) {
-                            syllabusItem = individualLMP.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-                            if (syllabusItem) {
-                                console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
-                            }
-                        }
-                    }
-
-                    if (!syllabusItem) {
-                        syllabusItem = syllabusDetails.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-                        if (syllabusItem) {
-                            console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
-                        }
-                    }
-
-                    const duration = syllabusItem?.duration || 1.5;
-
-                    if (!syllabusItem) {
-                        console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
-                    }
-                    if (!trainee) {
-                        console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
-                    }
-
-                    if (trainee && syllabusItem) {
-                        const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0
-                            ? syllabusItem.resourcesHuman[0]
-                            : '';
-
-                        console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || 'None'}`);
-
-                        const newEvent: ScheduleEvent = {
-                            id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
-                            date: buildDfpDate,
-                            type: syllabusItem.type === 'FTD' ? 'ftd' :
-                                  syllabusItem.type === 'Ground School' ? 'ground' :
-                                  syllabusItem.type === 'Flight' ? 'flight' : 'flight',
-                            instructor: allocatedInstructor,
-                            student: trainee.fullName,
-                            flightNumber: syllabusItem.code,
-                            duration: duration,
-                            startTime: REMEDIAL_EARLIEST_START,
-                            resourceId: '',
-                            color: courseColors[trainee.course] || 'bg-gray-500',
-                            flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
-                            locationType: 'Local',
-                            origin: school,
-                            destination: school,
-                            preStart: syllabusItem.preFlightTime,
-                            postEnd: syllabusItem.postFlightTime,
-                            isTimeFixed: true,
-                            isRemedial: true
-                        };
-
-                        newPriorityEvents.push(newEvent);
-                        added++;
-                        console.log('✅ Added Force Schedule remedial:', syllabusItem.code, 'for', trainee.fullName);
-                    }
-                }
-            }
-        });
+        console.log(`📌 Found ${forceScheduledRemedials.length} directed remedial event(s); removed ${staleRemedialPriorityEvents} stale fixed remedial priority tile(s)`);
 
         // Always update state if there are any changes (additions or updates)
-        const hasChanges = added > 0 || JSON.stringify(newPriorityEvents) !== JSON.stringify(highestPriorityEvents);
+        const hasChanges = added > 0 || staleRemedialPriorityEvents > 0 || JSON.stringify(newPriorityEvents) !== JSON.stringify(highestPriorityEvents);
 
         if (hasChanges) {
             setHighestPriorityEvents(newPriorityEvents);

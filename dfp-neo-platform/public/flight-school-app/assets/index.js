@@ -71257,17 +71257,70 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog(`DEBUG Build Date: ${buildDate}`);
   let includedCount = 0;
   let skippedCount = 0;
+  const getPriorityTurnaround = (event) => {
+    if (event.type === "flight") return flightTurnaround;
+    if (event.type === "ftd") return ftdTurnaround;
+    if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
+    return 0;
+  };
+  const getPriorityResourceOptions = (event) => {
+    const resourcePrefix = event.type === "flight" ? "PC-21 " : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
+    const resourceCount = event.type === "flight" ? availableAircraftCount : event.type === "ftd" ? ftdCount : event.type === "cpt" ? cptCount : 6;
+    return Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
+  };
+  const priorityResourceConflict = (candidate, existing) => {
+    if (!candidate.resourceId || candidate.resourceId !== existing.resourceId) return false;
+    const candidateTurnaround = getPriorityTurnaround(candidate);
+    const existingTurnaround = getPriorityTurnaround(existing);
+    const candidateEndWithTurnaround = candidate.startTime + candidate.duration + candidateTurnaround;
+    const existingEndWithTurnaround = existing.startTime + existing.duration + existingTurnaround;
+    return candidate.startTime < existingEndWithTurnaround && existing.startTime < candidateEndWithTurnaround;
+  };
+  const priorityPersonnelConflict = (candidate, existing) => {
+    if (!getPersonnel(candidate).some((person) => person && eventHasPerson(existing, person))) return false;
+    const getPriorityBookingWindow = (event) => {
+      if (typeof event.preStart === "number" || typeof event.postEnd === "number") {
+        return {
+          start: event.startTime - (event.preStart || 0),
+          end: event.startTime + event.duration + (event.postEnd || 0)
+        };
+      }
+      return getEventBookingWindowForAlgo(event, syllabusDetails);
+    };
+    const candidateWindow = getPriorityBookingWindow(candidate);
+    const existingWindow = getPriorityBookingWindow(existing);
+    return candidateWindow.start < existingWindow.end && candidateWindow.end > existingWindow.start;
+  };
+  const placeRemedialPriorityEvent = (event) => {
+    if (!event.isRemedial) return event;
+    const searchStart = Math.max(event.startTime || 0, REMEDIAL_EARLIEST_START);
+    const searchEnd = event.type === "ftd" ? ftdEndTime : flyingEndTime;
+    const timeIncrement = event.type === "flight" ? 5 / 60 : 15 / 60;
+    const resourceOptions = getPriorityResourceOptions(event);
+    for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
+      for (const resourceId of resourceOptions) {
+        const candidate = { ...event, startTime, resourceId };
+        const conflicts = generatedEvents.some(
+          (existing) => priorityResourceConflict(candidate, existing) || priorityPersonnelConflict(candidate, existing)
+        );
+        if (!conflicts) {
+          if (startTime !== event.startTime || resourceId !== event.resourceId) {
+            buildDebugLog(`  ↻ DEBUG MOVED remedial ${event.flightNumber} from ${event.startTime.toFixed(2)} to ${startTime.toFixed(2)} on ${resourceId} to respect turnaround/pre-post windows`);
+          }
+          return candidate;
+        }
+      }
+    }
+    buildDebugLog(`  ⚠ DEBUG could not move remedial ${event.flightNumber}; leaving original priority time/resource`);
+    return { ...event, startTime: searchStart };
+  };
   highestPriorityEvents.forEach((event) => {
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
     buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (event.date === buildDate && event.isTimeFixed) {
-      if (event.isRemedial) {
-        skippedCount++;
-        buildDebugLog(`  ↷ DEBUG DEFERRED remedial priority event to normal scheduler so it remains highest priority without becoming a fixed 1000 tile`);
-        return;
-      }
-      const { date, ...eventWithoutDate } = event;
+      const { date, ...rawEventWithoutDate } = event;
+      const eventWithoutDate = placeRemedialPriorityEvent(rawEventWithoutDate);
       if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
         eventWithoutDate.pilot = eventWithoutDate.instructor;
       }
@@ -71378,14 +71431,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const eventCodes = directedRemedialRequestsByTrainee.get(request.traineeId) || /* @__PURE__ */ new Set();
     eventCodes.add(normalizeLmpEventId(request.eventCode));
     directedRemedialRequestsByTrainee.set(request.traineeId, eventCodes);
-  });
-  highestPriorityEvents.filter((event) => event.date === buildDate && event.isRemedial).forEach((event) => {
-    const traineeName = event.student || event.pilot || "";
-    const trainee = activeTrainees.find((t) => t.fullName === traineeName);
-    if (!trainee) return;
-    const eventCodes = directedRemedialRequestsByTrainee.get(trainee.idNumber) || /* @__PURE__ */ new Set();
-    eventCodes.add(normalizeLmpEventId(event.flightNumber));
-    directedRemedialRequestsByTrainee.set(trainee.idNumber, eventCodes);
   });
   const isDirectedRemedialNextEvent = (trainee) => {
     const requestedCodes = directedRemedialRequestsByTrainee.get(trainee.idNumber);
@@ -78162,7 +78207,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const syncPriorityEventsWithSctAndRemedial = () => {
     console.log("📋 Starting sync of priority events with SCT and remedial requests...");
     let added = 0;
-    const newPriorityEvents = [...highestPriorityEvents];
+    const staleRemedialPriorityEvents = highestPriorityEvents.filter((event) => event.isRemedial).length;
+    const newPriorityEvents = highestPriorityEvents.filter((event) => !event.isRemedial);
     console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
       (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.currency.trim() !== ""
@@ -78315,71 +78361,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
     console.log(`🔍 Checking ${remedialRequests.length} remedial requests for Force Schedule...`);
     const forceScheduledRemedials = remedialRequests.filter((r) => r.forceSchedule);
-    console.log(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
-    remedialRequests.forEach((remedialReq) => {
-      if (remedialReq.forceSchedule) {
-        console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
-        const existingEvent = newPriorityEvents.find(
-          (e) => e.id === `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}` && e.isRemedial
-        );
-        if (existingEvent) {
-          console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
-        } else if (!existingEvent) {
-          const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
-          let syllabusItem = null;
-          if (trainee) {
-            const individualLMP = traineeLMPs.get(trainee.fullName);
-            if (individualLMP) {
-              syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-              if (syllabusItem) {
-                console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
-              }
-            }
-          }
-          if (!syllabusItem) {
-            syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-            if (syllabusItem) {
-              console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
-            }
-          }
-          const duration = syllabusItem?.duration || 1.5;
-          if (!syllabusItem) {
-            console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
-          }
-          if (!trainee) {
-            console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
-          }
-          if (trainee && syllabusItem) {
-            const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : "";
-            console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
-            const newEvent = {
-              id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
-              date: buildDfpDate,
-              type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : "flight",
-              instructor: allocatedInstructor,
-              student: trainee.fullName,
-              flightNumber: syllabusItem.code,
-              duration,
-              startTime: REMEDIAL_EARLIEST_START,
-              resourceId: "",
-              color: courseColors[trainee.course] || "bg-gray-500",
-              flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
-              locationType: "Local",
-              origin: school,
-              destination: school,
-              preStart: syllabusItem.preFlightTime,
-              postEnd: syllabusItem.postFlightTime,
-              isTimeFixed: true,
-              isRemedial: true
-            };
-            newPriorityEvents.push(newEvent);
-            added++;
-            console.log("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee.fullName);
-          }
-        }
-      }
-    });
-    const hasChanges = added > 0 || JSON.stringify(newPriorityEvents) !== JSON.stringify(highestPriorityEvents);
+    console.log(`📌 Found ${forceScheduledRemedials.length} directed remedial event(s); removed ${staleRemedialPriorityEvents} stale fixed remedial priority tile(s)`);
+    const hasChanges = added > 0 || staleRemedialPriorityEvents > 0 || JSON.stringify(newPriorityEvents) !== JSON.stringify(highestPriorityEvents);
     if (hasChanges) {
       setHighestPriorityEvents(newPriorityEvents);
       if (added > 0) {
