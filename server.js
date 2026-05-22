@@ -3609,16 +3609,61 @@ const stampMasterLmpItemsForSync = (masterSyllabus) =>
   }));
 
 const normalizeLmpCompletionKeyForSync = (value) => String(value || '').replace(/\*/g, '').trim();
+const getLmpCompletionKeysForSync = (item) => [
+  item?.id,
+  item?.code,
+  item?.masterEventId,
+].map(normalizeLmpCompletionKeyForSync).filter(Boolean);
+
 const getLmpCompletionTimestampForSync = (item, scoreMap) => {
-  const keys = [
-    item?.id,
-    item?.code,
-    item?.masterEventId,
-  ].map(normalizeLmpCompletionKeyForSync).filter(Boolean);
+  const keys = getLmpCompletionKeysForSync(item);
   for (const key of keys) {
     if (scoreMap[key]) return scoreMap[key];
   }
   return null;
+};
+
+const getLmpCanonicalCompletionKeyForSync = (item) =>
+  normalizeLmpCompletionKeyForSync(item?.code) ||
+  normalizeLmpCompletionKeyForSync(item?.masterEventId) ||
+  normalizeLmpCompletionKeyForSync(item?.id);
+
+const addDirectLmpPrerequisiteCompletionsForSync = (scoreMap, lmpEvents) => {
+  const events = Array.isArray(lmpEvents) ? lmpEvents : [];
+  if (events.length === 0) return [];
+
+  const itemByKey = new Map();
+  events.forEach(item => {
+    getLmpCompletionKeysForSync(item).forEach(key => itemByKey.set(key, item));
+  });
+
+  const backfilled = [];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const item of events) {
+      const completedAt = getLmpCompletionTimestampForSync(item, scoreMap);
+      if (!completedAt) continue;
+
+      (item?.prerequisites || []).forEach(prerequisite => {
+        const prerequisiteKey = normalizeLmpCompletionKeyForSync(prerequisite);
+        if (!prerequisiteKey) return;
+
+        const prerequisiteItem = itemByKey.get(prerequisiteKey);
+        const canonicalKey = prerequisiteItem
+          ? getLmpCanonicalCompletionKeyForSync(prerequisiteItem)
+          : prerequisiteKey;
+
+        if (canonicalKey && !scoreMap[canonicalKey]) {
+          scoreMap[canonicalKey] = completedAt;
+          backfilled.push(canonicalKey);
+          changed = true;
+        }
+      });
+    }
+  }
+
+  return backfilled;
 };
 
 const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, scoreMap) => {
@@ -3642,7 +3687,7 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
     const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
     return {
       ...masterItem,
-      completedAt: getLmpCompletionTimestampForSync(masterItem, scoreMap) || existingItem?.completedAt || null,
+      completedAt: getLmpCompletionTimestampForSync(masterItem, scoreMap),
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),
       placementNeedsReview: false,
@@ -3855,50 +3900,16 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
 
       let completedEventIds = Object.keys(scoreMap);
 
-      // --- ENDURING PREREQUISITE BACKFILL ---
-      // If any event N is complete, all syllabus items that appear BEFORE it in the
-      // master syllabus (by sortOrder) must also be complete.
-      // This prevents regressions when new ground-school or prerequisite events are
-      // added to the DB syllabus AFTER trainees have already completed later events.
-      // Example: FIC GND1/2/3 added to DB syllabus after FIC1-FIC5 already completed.
+      // Backfill only explicit prerequisite links, never every event before the
+      // highest completed item. A broad high-watermark backfill can make NEO
+      // Build believe a trainee has completed the full LMP.
       {
-        const sorted = [...masterSyllabus].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-
-        // Find the highest-sortOrder completed item index (high-water mark)
-        let highWatermark = -1;
-        let highWatermarkDate = null;
-        for (let i = 0; i < sorted.length; i++) {
-          const item = sorted[i];
-          const itemKey = (item.id || item.code || '').replace('*', '');
-          const itemCode = (item.code || '').replace('*', '');
-          if (scoreMap[itemKey] || scoreMap[itemCode]) {
-            highWatermark = i;
-            highWatermarkDate = scoreMap[itemKey] || scoreMap[itemCode];
-          }
+        const backfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, masterSyllabus);
+        if (backfilled.length > 0) {
+          console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} explicit prerequisite(s): ${backfilled.join(', ')}`);
         }
-
-        // Backfill every item before the high-water mark
-        if (highWatermark > 0) {
-          const backfilled = [];
-          for (let i = 0; i < highWatermark; i++) {
-            const item = sorted[i];
-            const itemKey = (item.id || item.code || '').replace('*', '');
-            const itemCode = (item.code || '').replace('*', '');
-            const canonicalKey = itemCode || itemKey;
-            if (canonicalKey && !scoreMap[itemKey] && !scoreMap[itemCode]) {
-              scoreMap[canonicalKey] = highWatermarkDate;
-              backfilled.push(canonicalKey);
-            }
-          }
-          if (backfilled.length > 0) {
-            console.log(`[LMP Sync] ${trainee.fullName}: Backfilled ${backfilled.length} prerequisite(s): ${backfilled.join(', ')}`);
-          }
-        }
-
-        // Rebuild completedEventIds from the augmented scoreMap
         completedEventIds = Object.keys(scoreMap);
       }
-      // --- END PREREQUISITE BACKFILL ---
 
       // Check what was previously marked
       const existing = trainee.individualLMP;
@@ -4433,31 +4444,15 @@ app.post('/api/scores', async (req, res) => {
         // --- PREREQUISITE BACKFILL (real-time) ---
         const lmpEvents = Array.isArray(lmp.events) ? lmp.events : [];
         if (lmpEvents.length > 0) {
-          let highWatermark = -1;
-          const allCompleted = new Set(updatedSet);
-          for (let i = 0; i < lmpEvents.length; i++) {
-            const item = lmpEvents[i];
-            const itemId = (item.id || item.code || '').replace('*', '');
-            const itemCode = (item.code || '').replace('*', '');
-            if (allCompleted.has(itemId) || allCompleted.has(itemCode)) {
-              highWatermark = i;
-            }
-          }
-          if (highWatermark > 0) {
-            const backfilled = [];
-            for (let i = 0; i < highWatermark; i++) {
-              const item = lmpEvents[i];
-              const itemCode = (item.code || '').replace('*', '');
-              const itemId = (item.id || item.code || '').replace('*', '');
-              const canonicalKey = itemCode || itemId;
-              if (canonicalKey && !allCompleted.has(itemCode) && !allCompleted.has(itemId)) {
-                updatedSet.add(canonicalKey);
-                backfilled.push(canonicalKey);
-              }
-            }
-            if (backfilled.length > 0) {
-              console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled prerequisites: ${backfilled.join(', ')}`);
-            }
+          const scoreMap = {};
+          updatedSet.forEach(id => {
+            const normalized = normalizeLmpCompletionKeyForSync(id);
+            if (normalized) scoreMap[normalized] = new Date().toISOString();
+          });
+          const backfilled = addDirectLmpPrerequisiteCompletionsForSync(scoreMap, lmpEvents);
+          backfilled.forEach(id => updatedSet.add(id));
+          if (backfilled.length > 0) {
+            console.log(`[POST /api/scores] ${resolvedTraineeId}: Backfilled explicit prerequisites: ${backfilled.join(', ')}`);
           }
         }
         // --- END BACKFILL ---
