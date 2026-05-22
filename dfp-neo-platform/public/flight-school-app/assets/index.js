@@ -71401,7 +71401,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   activeTrainees.forEach((trainee) => {
     const { next, plusOne } = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
     if (next) {
-      if (next.code.startsWith("BNF") && next.type === "Flight") {
+      const isNextRemedial = isRemedialSyllabusItem(next);
+      if (!isNextRemedial && next.code.startsWith("BNF") && next.type === "Flight") {
         if (isPersonScheduledForDayEvents(trainee.fullName)) {
           buildDebugLog(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
           nextEventLists.flight.push(trainee);
@@ -71425,6 +71426,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   });
+  const directedRemedialRequestsByTrainee = /* @__PURE__ */ new Map();
+  remedialRequests.filter((request) => request.forceSchedule).forEach((request) => {
+    const eventCodes = directedRemedialRequestsByTrainee.get(request.traineeId) || /* @__PURE__ */ new Set();
+    eventCodes.add(normalizeLmpEventId(request.eventCode));
+    directedRemedialRequestsByTrainee.set(request.traineeId, eventCodes);
+  });
+  const isDirectedRemedialNextEvent = (trainee) => {
+    const requestedCodes = directedRemedialRequestsByTrainee.get(trainee.idNumber);
+    if (!requestedCodes || requestedCodes.size === 0) return false;
+    const next = traineeNextEventMap.get(trainee.fullName)?.next;
+    if (!next || !isRemedialSyllabusItem(next)) return false;
+    return requestedCodes.has(normalizeLmpEventId(next.id)) || requestedCodes.has(normalizeLmpEventId(next.code));
+  };
+  const directedRemedialTraineeNames = new Set(
+    activeTrainees.filter(isDirectedRemedialNextEvent).map((trainee) => trainee.fullName)
+  );
+  const excludeDirectedRemedials = (list) => list.filter((trainee) => !directedRemedialTraineeNames.has(trainee.fullName));
   new Set(nextEventLists.bnf.map((t) => t.fullName));
   recordProgress({ message: "Ranking trainees...", percentage: 20 });
   const getMedianProgress = (courseName) => {
@@ -71443,6 +71461,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return Math.floor((today.getTime() - eventDate.getTime()) / (1e3 * 3600 * 24));
   };
   const sortTrainees = (a, b) => {
+    const aDirectedRemedial = isDirectedRemedialNextEvent(a);
+    const bDirectedRemedial = isDirectedRemedialNextEvent(b);
+    if (aDirectedRemedial !== bDirectedRemedial) return aDirectedRemedial ? -1 : 1;
+    const aNext = traineeNextEventMap.get(a.fullName)?.next;
+    const bNext = traineeNextEventMap.get(b.fullName)?.next;
+    const aIsRemedial = isRemedialSyllabusItem(aNext || void 0);
+    const bIsRemedial = isRemedialSyllabusItem(bNext || void 0);
+    if (aIsRemedial !== bIsRemedial) return aIsRemedial ? -1 : 1;
     const daysSinceA = daysSince2(a.lastEventDate);
     const daysSinceB = daysSince2(b.lastEventDate);
     if (daysSinceA !== daysSinceB) return daysSinceB - daysSinceA;
@@ -71928,7 +71954,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + syllabusItem.duration;
     const traineeCounts = eventCounts.get(trainee.fullName);
-    if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
+    if (isRemedialSyllabusItem(syllabusItem) && startTime <= REMEDIAL_EARLIEST_START) {
       return null;
     }
     if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
@@ -72659,7 +72685,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const next = traineeNextEventMap.get(trainee.fullName)?.next;
     return !!(next && (next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id)));
   };
-  const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+  const directedRemedialFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter(isDirectedRemedialNextEvent)));
+  const directedRemedialFtdList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd.filter(isDirectedRemedialNextEvent)));
+  const directedRemedialCptList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt.filter(isDirectedRemedialNextEvent)));
+  const directedRemedialGroundList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground.filter(isDirectedRemedialNextEvent)));
+  if (directedRemedialTraineeNames.size > 0) {
+    recordProgress({ message: "Scheduling Directed Remedials...", percentage: 44 });
+    buildDebugLog(`[REMEDIAL] Directed remedial priority pass: flight=${directedRemedialFlightList.length}, ftd=${directedRemedialFtdList.length}, cpt=${directedRemedialCptList.length}, ground=${directedRemedialGroundList.length}`);
+    scheduleList(directedRemedialFlightList, "flight", false, REMEDIAL_EARLIEST_START, flyingEndTime, null, false);
+    scheduleList(directedRemedialFtdList, "ftd", false, REMEDIAL_EARLIEST_START, ftdEndTime, null, false);
+    scheduleList(directedRemedialCptList, "cpt", false, REMEDIAL_EARLIEST_START, flyingEndTime, null, false);
+    scheduleList(directedRemedialGroundList, "ground", false, REMEDIAL_EARLIEST_START, flyingEndTime, null, false);
+  }
+  const _allFlightList = applyCoursePriority(filterOutBnfTrainees(excludeDirectedRemedials(nextEventLists.flight)));
   const _dualFlightList = _allFlightList.filter((t) => !_isSoloTrainee(t));
   const _soloFlightList = _allFlightList.filter((t) => _isSoloTrainee(t));
   buildDebugLog(`
@@ -72739,7 +72777,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
   scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
+    applyCoursePriority(filterOutBnfTrainees(excludeDirectedRemedials(nextEventLists.ftd))),
     "ftd",
     false,
     ftdStartTime,
@@ -72750,7 +72788,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
   recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
   scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
+    applyCoursePriority(filterOutBnfTrainees(excludeDirectedRemedials(nextEventLists.cpt))),
     "cpt",
     false,
     flyingStartTime,
@@ -72761,7 +72799,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
   recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
   scheduleList(
-    applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),
+    applyCoursePriority(filterOutBnfTrainees(excludeDirectedRemedials(nextEventLists.ground))),
     "ground",
     false,
     flyingStartTime,
@@ -78169,7 +78207,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   const syncPriorityEventsWithSctAndRemedial = () => {
     console.log("📋 Starting sync of priority events with SCT and remedial requests...");
     let added = 0;
-    const newPriorityEvents = [...highestPriorityEvents];
+    const staleRemedialPriorityEvents = highestPriorityEvents.filter((event) => event.isRemedial).length;
+    const newPriorityEvents = highestPriorityEvents.filter((event) => !event.isRemedial);
     console.log("🔍 SCT Sync - buildDfpDate:", buildDfpDate);
     const highPrioritySctFlights = sctFlights.filter(
       (req) => (req.priority === "High" || req.includeInBuild) && req.name.trim() !== "" && req.currency.trim() !== ""
@@ -78322,73 +78361,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     });
     console.log(`🔍 Checking ${remedialRequests.length} remedial requests for Force Schedule...`);
     const forceScheduledRemedials = remedialRequests.filter((r) => r.forceSchedule);
-    console.log(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
-    remedialRequests.forEach((remedialReq) => {
-      if (remedialReq.forceSchedule) {
-        console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
-        const existingEvent = newPriorityEvents.find(
-          (e) => e.flightNumber === remedialReq.eventCode && e.isRemedial
-        );
-        if (existingEvent) {
-          console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
-        } else if (!existingEvent) {
-          const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
-          let syllabusItem = null;
-          if (trainee) {
-            const individualLMP = traineeLMPs.get(trainee.fullName);
-            if (individualLMP) {
-              syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-              if (syllabusItem) {
-                console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
-              }
-            }
-          }
-          if (!syllabusItem) {
-            syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-            if (syllabusItem) {
-              console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
-            }
-          }
-          const duration = syllabusItem?.duration || 1.5;
-          if (!syllabusItem) {
-            console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
-          }
-          if (!trainee) {
-            console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
-          }
-          if (trainee && syllabusItem) {
-            const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : "";
-            console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
-            const newEvent = {
-              id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
-              date: buildDfpDate,
-              type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : "flight",
-              instructor: allocatedInstructor,
-              // Use allocated instructor from remedial package
-              student: trainee.fullName,
-              flightNumber: syllabusItem.code,
-              duration,
-              startTime: REMEDIAL_EARLIEST_START,
-              resourceId: "",
-              // Will be assigned during scheduling
-              color: courseColors[trainee.course] || "bg-gray-500",
-              flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
-              locationType: "Local",
-              origin: school,
-              destination: school,
-              preStart: syllabusItem.preFlightTime,
-              postEnd: syllabusItem.postFlightTime,
-              isTimeFixed: true,
-              isRemedial: true
-            };
-            newPriorityEvents.push(newEvent);
-            added++;
-            console.log("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee.fullName);
-          }
-        }
-      }
-    });
-    const hasChanges = added > 0 || JSON.stringify(newPriorityEvents) !== JSON.stringify(highestPriorityEvents);
+    console.log(`📌 Found ${forceScheduledRemedials.length} directed remedial event(s); removed ${staleRemedialPriorityEvents} stale fixed remedial priority tile(s)`);
+    const hasChanges = added > 0 || staleRemedialPriorityEvents > 0 || JSON.stringify(newPriorityEvents) !== JSON.stringify(highestPriorityEvents);
     if (hasChanges) {
       setHighestPriorityEvents(newPriorityEvents);
       if (added > 0) {
