@@ -5771,7 +5771,7 @@ const App: React.FC = () => {
 
                             // Now load back completed event IDs from DB LMPs into scores state
                             // so computeNextEventsForTrainee knows which events are done
-                            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync`);
+                            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`);
                             if (lmpRes.ok) {
                                 const lmpData = await lmpRes.json();
                                 const lmps = lmpData.lmps as Array<{

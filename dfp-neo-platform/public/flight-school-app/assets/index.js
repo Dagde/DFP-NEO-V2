@@ -73772,7 +73772,7 @@ const App = () => {
             if (syncRes.ok) {
               const syncData = await syncRes.json();
               console.log(`[LMP Sync] ✅ Backend sync complete:`, syncData.summary);
-              const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync`);
+              const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`);
               if (lmpRes.ok) {
                 const lmpData = await lmpRes.json();
                 const lmps = lmpData.lmps;

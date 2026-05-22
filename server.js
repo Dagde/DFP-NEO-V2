@@ -3543,6 +3543,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
     const db = await getPrisma();
     const includeEvents = req.query.includeEvents === 'true';
     const select = {
+      id: true,
       traineeId: true,
       traineeFullName: true,
       lmpType: true,
@@ -3557,7 +3558,28 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
       select,
       orderBy: { traineeFullName: 'asc' },
     });
-    res.json({ lmps, count: lmps.length });
+    if (!includeEvents) {
+      return res.json({ lmps, count: lmps.length });
+    }
+
+    const composedLmps = [];
+    for (const lmp of lmps) {
+      const masterSyllabus = await loadMasterSyllabusForLmpType(db, lmp.lmpType);
+      const overlayEvents = await loadTraineeLmpOverlays(db, lmp.traineeId);
+      composedLmps.push({
+        ...lmp,
+        events: composeIndividualLmpEvents(
+          Array.isArray(lmp.events) ? lmp.events : [],
+          masterSyllabus,
+          overlayEvents,
+          lmp.completedEventIds || []
+        ),
+        overlayCount: overlayEvents.length,
+        composedFromMaster: masterSyllabus.length > 0,
+      });
+    }
+
+    res.json({ lmps: composedLmps, count: composedLmps.length });
   } catch (error) {
     console.error('❌ GET /api/trainees/lmp-sync error:', error);
     res.status(500).json({ error: 'Failed to fetch LMP completions', details: error.message });
