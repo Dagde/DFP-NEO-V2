@@ -75,6 +75,7 @@ const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|
 const isRemedialLmpItem = (item: SyllabusItemDetail): boolean =>
     item.lmpSource === 'remedial' ||
     item.isRemedial === true ||
+    item.module === 'Remedial' ||
     REMEDIAL_EVENT_CODE_REGEX.test(item.id || '') ||
     REMEDIAL_EVENT_CODE_REGEX.test(item.code || '');
 
@@ -82,11 +83,23 @@ const DetailView: React.FC<{
     item: SyllabusItemDetail;
     score: Score | undefined;
     resourceDisplayNames?: ResourceDisplayNames;
-}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES }) => (
+    onDelete?: (item: SyllabusItemDetail) => void;
+}> = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onDelete }) => (
     <div className="space-y-6">
-        <div>
-            <h2 className="text-3xl font-bold text-white">{item.code}</h2>
-            <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
+        <div className="flex items-start justify-between gap-4">
+            <div>
+                <h2 className="text-3xl font-bold text-white">{item.code}</h2>
+                <p className="text-lg text-gray-400 mt-1">{item.eventDescription}</p>
+            </div>
+            {onDelete && (
+                <button
+                    type="button"
+                    onClick={() => onDelete(item)}
+                    className="flex-shrink-0 rounded-md border border-red-500/50 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-900/60"
+                >
+                    Delete
+                </button>
+            )}
         </div>
         
         <fieldset className="p-4 border border-gray-700 rounded-lg">
@@ -636,9 +649,9 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                                                 setSelectedItem(null);
                                                             }
                                                         }}
-                                                        className="mr-1 h-7 w-7 flex-shrink-0 rounded border border-red-500/30 text-red-300 opacity-70 hover:opacity-100 hover:bg-red-900/40"
+                                                        className="mr-1 flex-shrink-0 rounded-md border border-red-500/50 bg-red-950/30 px-2 py-1 text-[10px] font-semibold text-red-200 hover:bg-red-900/60"
                                                     >
-                                                        ×
+                                                        Delete
                                                     </button>
                                                 )}
                                             </div>
@@ -656,6 +669,13 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                                         item={selectedItem}
                                         score={scores.find(s => s.event === selectedItem.code)}
                                         resourceDisplayNames={resourceDisplayNames}
+                                        onDelete={isRemedialLmpItem(selectedItem) && onDeleteRemedialItem
+                                            ? async (item) => {
+                                                const deleted = await onDeleteRemedialItem(trainee, item);
+                                                if (deleted) setSelectedItem(null);
+                                            }
+                                            : undefined
+                                        }
                                     />
                                 ) : (
                                     <div className="flex items-center justify-center h-full">
