@@ -63,6 +63,8 @@ async function getPrisma() {
     await seedCancellationCodesIfEmpty(prisma);
     // Ensure IndividualLMP table exists (create if missing)
     await ensureIndividualLMPTable(prisma);
+    await ensureTraineeLmpOverlayTable(prisma);
+    await migrateIndividualLmpOverlays(prisma);
     // Ensure DailySnapshot table exists (create if missing)
     await ensureDailySnapshotTable(prisma);
     // Ensure instructor fields are TEXT[] arrays (migrate from String if needed)
@@ -3731,6 +3733,18 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
 
     console.log(`[LMP Sync] Processing ${trainees.length} trainees...`);
 
+    const traineePerformanceRows = await db.$queryRawUnsafe(`
+      SELECT "traineeId", "flightNumber", "eventCode", "date"
+      FROM "TraineePerformance"
+      WHERE "isCompleted" = true
+    `);
+    const performanceByTraineeId = new Map();
+    (traineePerformanceRows || []).forEach(row => {
+      if (!row.traineeId) return;
+      if (!performanceByTraineeId.has(row.traineeId)) performanceByTraineeId.set(row.traineeId, []);
+      performanceByTraineeId.get(row.traineeId).push(row);
+    });
+
     const results = [];
 
     for (const trainee of trainees) {
@@ -3765,6 +3779,14 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
         // Strip asterisks from event codes for matching (e.g., 'BIF FTD1*' -> 'BIF FTD1')
         const normalizedEvent = (s.event || '').replace('*', '');
         scoreMap[normalizedEvent] = s.date ? s.date.toISOString() : null;
+      });
+
+      const performanceRows = performanceByTraineeId.get(trainee.id) || [];
+      performanceRows.forEach(row => {
+        const normalizedEvent = String(row.flightNumber || row.eventCode || '').replace('*', '');
+        if (normalizedEvent && !scoreMap[normalizedEvent]) {
+          scoreMap[normalizedEvent] = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
+        }
       });
 
       // Merge PT-051 completions from DailySnapshot (passed by frontend)
@@ -3846,7 +3868,10 @@ app.post('/api/trainees/lmp-sync', async (req, res) => {
       // Check what was previously marked
       const existing = trainee.individualLMP;
       const existingEvents = Array.isArray(existing?.events) ? existing.events : [];
-      const lmpEvents = mergeIndividualLmpWithMasterForSync(existingEvents, masterSyllabus, scoreMap);
+      const overlayEvents = existing ? await loadTraineeLmpOverlays(db, trainee.id) : [];
+      const existingMasterEvents = existingEvents.filter(item => !isLmpOverlayItemForSync(item));
+      const lmpEvents = mergeIndividualLmpWithMasterForSync([...existingMasterEvents, ...overlayEvents], masterSyllabus, scoreMap);
+      await upsertTraineeLmpOverlays(db, trainee.id, trainee.fullName, lmpEvents, { deactivateMissing: false });
       const existingCompleted = existing ? (existing.completedEventIds || []) : [];
       const newlyMarked = completedEventIds.filter(id => !existingCompleted.includes(id));
 
@@ -3919,7 +3944,27 @@ app.get('/api/trainees/:id/lmp', async (req, res) => {
       },
     });
 
-    res.json({ lmp: lmp || null });
+    if (!lmp) {
+      return res.json({ lmp: null });
+    }
+
+    const masterSyllabus = await loadMasterSyllabusForLmpType(db, lmp.lmpType);
+    const overlayEvents = await loadTraineeLmpOverlays(db, lmp.traineeId);
+    const composedEvents = composeIndividualLmpEvents(
+      Array.isArray(lmp.events) ? lmp.events : [],
+      masterSyllabus,
+      overlayEvents,
+      lmp.completedEventIds || []
+    );
+
+    res.json({
+      lmp: {
+        ...lmp,
+        events: composedEvents,
+        overlayCount: overlayEvents.length,
+        composedFromMaster: masterSyllabus.length > 0,
+      }
+    });
   } catch (error) {
     console.error('❌ GET /api/trainees/:id/lmp error:', error);
     res.status(500).json({ error: 'Failed to fetch LMP', details: error.message });
@@ -3953,12 +3998,18 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
     }
 
     const resolvedTraineeId = trainee.id;
+    await upsertTraineeLmpOverlays(db, resolvedTraineeId, traineeFullName, events, { deactivateMissing: true });
+
+    const masterSyllabus = await loadMasterSyllabusForLmpType(db, lmpType);
+    const overlayEvents = await loadTraineeLmpOverlays(db, resolvedTraineeId);
+    const composedEvents = composeIndividualLmpEvents(events, masterSyllabus, overlayEvents, completedEventIds || []);
+
     const lmp = await db.individualLMP.upsert({
       where: { traineeId: resolvedTraineeId },
       update: {
         traineeFullName,
         lmpType,
-        events,
+        events: composedEvents,
         completedEventIds: completedEventIds || [],
         updatedAt: new Date(),
       },
@@ -3966,12 +4017,12 @@ app.put('/api/trainees/:id/lmp', async (req, res) => {
         traineeId: resolvedTraineeId,
         traineeFullName,
         lmpType,
-        events,
+        events: composedEvents,
         completedEventIds: completedEventIds || [],
       },
     });
 
-    console.log(`✅ PUT /api/trainees/${resolvedTraineeId}/lmp - ${traineeFullName}: ${(completedEventIds || []).length} events complete`);
+    console.log(`✅ PUT /api/trainees/${resolvedTraineeId}/lmp - ${traineeFullName}: ${(completedEventIds || []).length} events complete, ${overlayEvents.length} overlay(s)`);
     res.json({ success: true, lmp });
   } catch (error) {
     console.error('❌ PUT /api/trainees/:id/lmp error:', error);
@@ -4023,6 +4074,7 @@ app.post('/api/trainees', async (req, res) => {
         }
       });
       console.log(`✅ POST /api/trainees - updated existing: ${updated.name} (${updated.idNumber})`);
+      await ensureInitialIndividualLmpForTrainee(db, updated);
       return res.json({ success: true, trainee: updated, action: 'updated' });
     }
 
@@ -4053,6 +4105,7 @@ app.post('/api/trainees', async (req, res) => {
     });
 
     console.log(`✅ POST /api/trainees - created: ${created.name} (${created.idNumber})`);
+    await ensureInitialIndividualLmpForTrainee(db, created);
     res.status(201).json({ success: true, trainee: created, action: 'created' });
   } catch (error) {
     console.error('❌ POST /api/trainees error:', error);
@@ -4137,16 +4190,18 @@ app.post('/api/trainees/bulk', async (req, res) => {
         };
 
         if (existing) {
-          await db.trainee.update({
+          const updated = await db.trainee.update({
             where: { id: existing.id },
             data: traineeData
           });
+          await ensureInitialIndividualLmpForTrainee(db, updated);
           updatedCount++;
           results.push({ idNumber: idNum, name: t.name, action: 'updated' });
         } else {
           const created = await db.trainee.create({
             data: { idNumber: idNum, ...traineeData }
           });
+          await ensureInitialIndividualLmpForTrainee(db, created);
           createdCount++;
           results.push({ idNumber: idNum, name: t.name, action: 'created', id: created.id });
         }
@@ -7705,6 +7760,218 @@ async function ensureIndividualLMPTable(db) {
   } catch (err) {
     console.error('❌ Failed to ensure IndividualLMP table:', err.message);
   }
+}
+
+async function ensureTraineeLmpOverlayTable(db) {
+  try {
+    await db.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "TraineeLmpOverlay" (
+        "id" TEXT NOT NULL,
+        "traineeId" TEXT NOT NULL,
+        "traineeFullName" TEXT NOT NULL,
+        "overlayId" TEXT NOT NULL,
+        "packageId" TEXT,
+        "overlayType" TEXT NOT NULL DEFAULT 'remedial',
+        "payload" JSONB NOT NULL,
+        "anchorAfterMasterEventId" TEXT,
+        "anchorBeforeMasterEventId" TEXT,
+        "anchorPolicy" TEXT NOT NULL DEFAULT 'between',
+        "orderKey" TEXT,
+        "isActive" BOOLEAN NOT NULL DEFAULT true,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT "TraineeLmpOverlay_pkey" PRIMARY KEY ("id")
+      );
+    `);
+    await db.$executeRawUnsafe(`
+      CREATE UNIQUE INDEX IF NOT EXISTS "TraineeLmpOverlay_trainee_overlay_key"
+      ON "TraineeLmpOverlay"("traineeId", "overlayId");
+    `);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TraineeLmpOverlay_traineeId_idx" ON "TraineeLmpOverlay"("traineeId");`);
+    await db.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "TraineeLmpOverlay_active_idx" ON "TraineeLmpOverlay"("traineeId", "isActive");`);
+    console.log('✅ TraineeLmpOverlay table ready');
+  } catch (err) {
+    console.error('❌ Failed to ensure TraineeLmpOverlay table:', err.message);
+  }
+}
+
+async function migrateIndividualLmpOverlays(db) {
+  try {
+    const lmps = await db.individualLMP.findMany({
+      select: { traineeId: true, traineeFullName: true, events: true },
+    });
+    let migrated = 0;
+    for (const lmp of lmps) {
+      const events = Array.isArray(lmp.events) ? lmp.events : [];
+      const overlays = events.filter(isLmpOverlayItemForSync);
+      if (overlays.length === 0) continue;
+      migrated += await upsertTraineeLmpOverlays(db, lmp.traineeId, lmp.traineeFullName, overlays, { deactivateMissing: false });
+    }
+    if (migrated > 0) {
+      console.log(`✅ Migrated/confirmed ${migrated} Individual LMP overlay event(s)`);
+    }
+  } catch (err) {
+    console.error('❌ migrateIndividualLmpOverlays failed (non-fatal):', err.message);
+  }
+}
+
+async function upsertTraineeLmpOverlays(db, traineeId, traineeFullName, events, options = {}) {
+  const overlays = (Array.isArray(events) ? events : []).filter(isLmpOverlayItemForSync);
+  const overlayIds = overlays.map(item => item.id || item.code).filter(Boolean);
+
+  if (options.deactivateMissing) {
+    if (overlayIds.length > 0) {
+      const placeholders = overlayIds.map((_, index) => `$${index + 2}::text`).join(', ');
+      await db.$executeRawUnsafe(
+        `UPDATE "TraineeLmpOverlay"
+         SET "isActive" = false, "updatedAt" = NOW()
+         WHERE "traineeId" = $1::text AND "overlayId" NOT IN (${placeholders})`,
+        traineeId,
+        ...overlayIds
+      );
+    } else {
+      await db.$executeRawUnsafe(
+        `UPDATE "TraineeLmpOverlay" SET "isActive" = false, "updatedAt" = NOW() WHERE "traineeId" = $1::text`,
+        traineeId
+      );
+    }
+  }
+
+  let count = 0;
+  for (const item of overlays) {
+    const overlayId = item.id || item.code;
+    if (!overlayId) continue;
+    const payload = {
+      ...item,
+      id: overlayId,
+      code: item.code || overlayId,
+      lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
+      isRemedial: item.isRemedial === true || item.lmpSource === 'remedial',
+    };
+    const rowId = `tlmpo-${safeIdentifier(`${traineeId}-${overlayId}`)}`.slice(0, 180);
+    const packageId = item.remedialPackageId || deriveRemedialPackageId(item) || null;
+    await db.$executeRawUnsafe(`
+      INSERT INTO "TraineeLmpOverlay" (
+        "id", "traineeId", "traineeFullName", "overlayId", "packageId", "overlayType",
+        "payload", "anchorAfterMasterEventId", "anchorBeforeMasterEventId", "anchorPolicy",
+        "orderKey", "isActive", "createdAt", "updatedAt"
+      ) VALUES (
+        $1::text, $2::text, $3::text, $4::text, $5::text, $6::text,
+        $7::jsonb, $8::text, $9::text, $10::text,
+        $11::text, true, NOW(), NOW()
+      )
+      ON CONFLICT ("traineeId", "overlayId") DO UPDATE SET
+        "traineeFullName" = EXCLUDED."traineeFullName",
+        "packageId" = EXCLUDED."packageId",
+        "overlayType" = EXCLUDED."overlayType",
+        "payload" = EXCLUDED."payload",
+        "anchorAfterMasterEventId" = EXCLUDED."anchorAfterMasterEventId",
+        "anchorBeforeMasterEventId" = EXCLUDED."anchorBeforeMasterEventId",
+        "anchorPolicy" = EXCLUDED."anchorPolicy",
+        "orderKey" = EXCLUDED."orderKey",
+        "isActive" = true,
+        "updatedAt" = NOW()
+    `,
+      rowId,
+      traineeId,
+      traineeFullName,
+      overlayId,
+      packageId,
+      payload.lmpSource || 'remedial',
+      JSON.stringify(payload),
+      payload.anchorAfterMasterEventId || null,
+      payload.anchorBeforeMasterEventId || null,
+      payload.anchorPolicy || 'between',
+      payload.orderKey || null
+    );
+    count++;
+  }
+  return count;
+}
+
+function deriveRemedialPackageId(item) {
+  const code = item?.code || item?.id || '';
+  const match = String(code).match(/^(.*?)-(?:REM-[A-Z]+\d+|RF)$/);
+  return match ? `${match[1]}-REMEDIAL` : null;
+}
+
+async function loadTraineeLmpOverlays(db, traineeId) {
+  const rows = await db.$queryRawUnsafe(
+    `SELECT * FROM "TraineeLmpOverlay" WHERE "traineeId" = $1::text AND "isActive" = true ORDER BY "orderKey" ASC NULLS LAST, "createdAt" ASC`,
+    traineeId
+  );
+  return (rows || []).map(row => {
+    const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+    return {
+      ...payload,
+      id: payload.id || row.overlayId,
+      code: payload.code || row.overlayId,
+      lmpSource: payload.lmpSource || row.overlayType || 'remedial',
+      anchorAfterMasterEventId: payload.anchorAfterMasterEventId || row.anchorAfterMasterEventId || undefined,
+      anchorBeforeMasterEventId: payload.anchorBeforeMasterEventId || row.anchorBeforeMasterEventId || undefined,
+      anchorPolicy: payload.anchorPolicy || row.anchorPolicy || 'between',
+      orderKey: payload.orderKey || row.orderKey || undefined,
+    };
+  });
+}
+
+async function loadMasterSyllabusForLmpType(db, lmpType) {
+  try {
+    const allItems = await db.$queryRawUnsafe(
+      `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
+    );
+    if (!allItems || allItems.length === 0) return [];
+    const parsed = allItems.map(item => ({
+      ...item,
+      courses: Array.isArray(item.courses) ? item.courses :
+        (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
+    }));
+    if (lmpType === 'FIC') return parsed.filter(item => item.courses.includes('FIC'));
+    if (lmpType && lmpType !== 'BPC+IPC') return parsed.filter(item => item.courses.includes(lmpType));
+    return parsed.filter(item => !item.courses.includes('FIC') && item.type !== 'Academics');
+  } catch (err) {
+    console.warn('[Individual LMP] Could not load master syllabus for composition:', err.message);
+    return [];
+  }
+}
+
+function composeIndividualLmpEvents(storedEvents, masterSyllabus, overlayEvents, completedEventIds = []) {
+  if (!masterSyllabus || masterSyllabus.length === 0) return Array.isArray(storedEvents) ? storedEvents : [];
+  const existingBase = Array.isArray(storedEvents) ? storedEvents.filter(item => !isLmpOverlayItemForSync(item)) : [];
+  const existingForMerge = [...existingBase, ...(overlayEvents || [])];
+  const scoreMap = {};
+  completedEventIds.forEach(id => {
+    const normalized = String(id || '').replace('*', '');
+    if (normalized) scoreMap[normalized] = new Date().toISOString();
+  });
+  return mergeIndividualLmpWithMasterForSync(existingForMerge, masterSyllabus, scoreMap);
+}
+
+function resolveTraineeLmpType(trainee) {
+  if (trainee?.lmpType) return trainee.lmpType;
+  if (trainee?.course && String(trainee.course).toUpperCase().startsWith('FIC')) return 'FIC';
+  return 'BPC+IPC';
+}
+
+async function ensureInitialIndividualLmpForTrainee(db, trainee) {
+  if (!trainee?.id || !trainee?.fullName) return null;
+  const existing = await db.individualLMP.findFirst({ where: { traineeId: trainee.id } });
+  if (existing) return existing;
+
+  const lmpType = resolveTraineeLmpType(trainee);
+  const masterSyllabus = await loadMasterSyllabusForLmpType(db, lmpType);
+  const events = composeIndividualLmpEvents([], masterSyllabus, [], []);
+  const created = await db.individualLMP.create({
+    data: {
+      traineeId: trainee.id,
+      traineeFullName: trainee.fullName,
+      lmpType,
+      events,
+      completedEventIds: [],
+    },
+  });
+  console.log(`✅ Initial IndividualLMP created for ${trainee.fullName}: ${events.length} events (${lmpType})`);
+  return created;
 }
 
 // ============================================================
