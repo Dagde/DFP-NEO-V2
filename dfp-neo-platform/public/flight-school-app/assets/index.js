@@ -71257,70 +71257,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog(`DEBUG Build Date: ${buildDate}`);
   let includedCount = 0;
   let skippedCount = 0;
-  const getPriorityTurnaround = (event) => {
-    if (event.type === "flight") return flightTurnaround;
-    if (event.type === "ftd") return ftdTurnaround;
-    if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
-    return 0;
-  };
-  const getPriorityResourceOptions = (event) => {
-    const resourcePrefix = event.type === "flight" ? "PC-21 " : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
-    const resourceCount = event.type === "flight" ? availableAircraftCount : event.type === "ftd" ? ftdCount : event.type === "cpt" ? cptCount : 6;
-    return Array.from({ length: resourceCount }, (_, index) => `${resourcePrefix}${index + 1}`);
-  };
-  const priorityResourceConflict = (candidate, existing) => {
-    if (!candidate.resourceId || candidate.resourceId !== existing.resourceId) return false;
-    const candidateTurnaround = getPriorityTurnaround(candidate);
-    const existingTurnaround = getPriorityTurnaround(existing);
-    const candidateEndWithTurnaround = candidate.startTime + candidate.duration + candidateTurnaround;
-    const existingEndWithTurnaround = existing.startTime + existing.duration + existingTurnaround;
-    return candidate.startTime < existingEndWithTurnaround && existing.startTime < candidateEndWithTurnaround;
-  };
-  const priorityPersonnelConflict = (candidate, existing) => {
-    if (!getPersonnel(candidate).some((person) => person && eventHasPerson(existing, person))) return false;
-    const getPriorityBookingWindow = (event) => {
-      if (typeof event.preStart === "number" || typeof event.postEnd === "number") {
-        return {
-          start: event.startTime - (event.preStart || 0),
-          end: event.startTime + event.duration + (event.postEnd || 0)
-        };
-      }
-      return getEventBookingWindowForAlgo(event, syllabusDetails);
-    };
-    const candidateWindow = getPriorityBookingWindow(candidate);
-    const existingWindow = getPriorityBookingWindow(existing);
-    return candidateWindow.start < existingWindow.end && candidateWindow.end > existingWindow.start;
-  };
-  const placeRemedialPriorityEvent = (event) => {
-    if (!event.isRemedial) return event;
-    const searchStart = Math.max(event.startTime || 0, REMEDIAL_EARLIEST_START);
-    const searchEnd = event.type === "ftd" ? ftdEndTime : flyingEndTime;
-    const timeIncrement = event.type === "flight" ? 5 / 60 : 15 / 60;
-    const resourceOptions = getPriorityResourceOptions(event);
-    for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
-      for (const resourceId of resourceOptions) {
-        const candidate = { ...event, startTime, resourceId };
-        const conflicts = generatedEvents.some(
-          (existing) => priorityResourceConflict(candidate, existing) || priorityPersonnelConflict(candidate, existing)
-        );
-        if (!conflicts) {
-          if (startTime !== event.startTime || resourceId !== event.resourceId) {
-            buildDebugLog(`  ↻ DEBUG MOVED remedial ${event.flightNumber} from ${event.startTime.toFixed(2)} to ${startTime.toFixed(2)} on ${resourceId} to respect turnaround/pre-post windows`);
-          }
-          return candidate;
-        }
-      }
-    }
-    buildDebugLog(`  ⚠ DEBUG could not move remedial ${event.flightNumber}; leaving original priority time/resource`);
-    return { ...event, startTime: searchStart };
-  };
   highestPriorityEvents.forEach((event) => {
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
     buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (event.date === buildDate && event.isTimeFixed) {
-      const { date, ...rawEventWithoutDate } = event;
-      const eventWithoutDate = placeRemedialPriorityEvent(rawEventWithoutDate);
+      if (event.isRemedial) {
+        skippedCount++;
+        buildDebugLog(`  ↷ DEBUG DEFERRED remedial priority event to normal scheduler so it can wait until after 1000 and respect turnaround rules`);
+        return;
+      }
+      const { date, ...eventWithoutDate } = event;
       if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
         eventWithoutDate.pilot = eventWithoutDate.instructor;
       }
