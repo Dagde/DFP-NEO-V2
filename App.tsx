@@ -9576,7 +9576,7 @@ const App: React.FC = () => {
     const buildRemedialPackageLmp = (
         originalTraineeLMP: SyllabusItemDetail[],
         eventToRemediate: SyllabusItemDetail,
-        newEvents: { type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
+        newEvents: { id?: string, code?: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
     ): SyllabusItemDetail[] | null => {
         // Req 3.2, 3.3.1-3.3.3: Create all new remedial items and the re-fly event.
         let lastNewEventId = eventToRemediate.id;
@@ -9592,7 +9592,7 @@ const App: React.FC = () => {
             else if (remEvent.type === 'FTD') { codeSuffix = `FTD${typeCounts.FTD}`; type = 'FTD'; }
             else if (remEvent.type === 'Flight') { codeSuffix = `F${typeCounts.Flight}`; type = 'Flight'; }
 
-            const remedialCode = `${baseEventCode}-${codeSuffix}`;
+            const remedialCode = remEvent.code || `${baseEventCode}-${codeSuffix}`;
 
             const newItem: SyllabusItemDetail = {
                 ...eventToRemediate,
@@ -9729,7 +9729,7 @@ const App: React.FC = () => {
     const handleSaveRemedialPackage = async (
         trainee: Trainee,
         eventToRemediate: SyllabusItemDetail,
-        newEvents: { type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
+        newEvents: { id?: string, code?: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
     ) => {
         const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
         if (!originalTraineeLMP) {

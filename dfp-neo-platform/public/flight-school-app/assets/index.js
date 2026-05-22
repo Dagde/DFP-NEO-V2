@@ -63179,6 +63179,17 @@ const AddRemedialPackageFlyout = ({
   const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
   const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
   const getRemedialBaseEventCode2 = (event) => String(event.code || event.id || event.masterEventId || "").replace(/-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i, "");
+  const getRemedialCodePrefix = (type) => {
+    if (type === "TUT") return "T";
+    if (type === "FTD") return "FTD";
+    return "F";
+  };
+  const buildRemedialEventCode = (baseCode, type, sequence) => `${baseCode}-${getRemedialCodePrefix(type)}${sequence}`;
+  const getNextRemedialSequence = (existingEvents, baseCode, type) => {
+    const prefix = `${baseCode}-${getRemedialCodePrefix(type)}`;
+    const usedSequences = existingEvents.filter((event) => event.type === type && event.code?.startsWith(prefix)).map((event) => Number(event.code.slice(prefix.length))).filter(Number.isFinite);
+    return usedSequences.length ? Math.max(...usedSequences) + 1 : 1;
+  };
   const eventMatchesLmpItem = (eventCode, item) => {
     if (!eventCode) return false;
     return eventCode === item.id || eventCode === item.code || eventCode === item.masterEventId;
@@ -63271,21 +63282,19 @@ const AddRemedialPackageFlyout = ({
   }, [eventToRemediate]);
   const handleAddEvents = () => {
     const eventsToAdd = [];
-    if (tutState.quantity > 0 && tutState.instructor && tutState.duration > 0) {
-      for (let i = 0; i < tutState.quantity; i++) {
-        eventsToAdd.push({ id: v4(), type: "TUT", duration: tutState.duration, instructor: tutState.instructor });
+    const baseCode = eventToRemediate ? getRemedialBaseEventCode2(eventToRemediate) : "";
+    const appendRemedialEvents = (type, quantity, duration, instructor) => {
+      if (!baseCode || quantity <= 0 || !instructor || duration <= 0) return;
+      let sequence = getNextRemedialSequence([...remedialEvents, ...eventsToAdd], baseCode, type);
+      for (let i = 0; i < quantity; i++) {
+        const code = buildRemedialEventCode(baseCode, type, sequence);
+        eventsToAdd.push({ id: code, code, type, duration, instructor });
+        sequence++;
       }
-    }
-    if (ftdState.quantity > 0 && ftdState.instructor && ftdState.duration > 0) {
-      for (let i = 0; i < ftdState.quantity; i++) {
-        eventsToAdd.push({ id: v4(), type: "FTD", duration: ftdState.duration, instructor: ftdState.instructor });
-      }
-    }
-    if (flightState.quantity > 0 && flightState.instructor && flightState.duration > 0) {
-      for (let i = 0; i < flightState.quantity; i++) {
-        eventsToAdd.push({ id: v4(), type: "Flight", duration: flightState.duration, instructor: flightState.instructor });
-      }
-    }
+    };
+    appendRemedialEvents("TUT", tutState.quantity, tutState.duration, tutState.instructor);
+    appendRemedialEvents("FTD", ftdState.quantity, ftdState.duration, ftdState.instructor);
+    appendRemedialEvents("Flight", flightState.quantity, flightState.duration, flightState.instructor);
     if (eventsToAdd.length > 0) {
       setRemedialEvents((prev) => [...prev, ...eventsToAdd]);
       setValidationMessage("");
@@ -63298,10 +63307,6 @@ const AddRemedialPackageFlyout = ({
   };
   const handleRemoveEvent = (id) => {
     setRemedialEvents((prev) => prev.filter((e) => e.id !== id));
-  };
-  const getRemedialEventDisplayType = (type) => {
-    if (type === "FTD") return resourceDisplayNames.ftd;
-    return type;
   };
   const handleSavePackage = () => {
     if (!eventToRemediate || remedialEvents.length === 0) {
@@ -63440,7 +63445,7 @@ const AddRemedialPackageFlyout = ({
           validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100", children: validationMessage }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-4 space-y-2", children: remedialEvents.map((event) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between p-2 bg-gray-700/50 rounded-md text-sm", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-sky-400 w-16", children: getRemedialEventDisplayType(event.type) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-sky-400 w-24", children: event.code }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
                 event.duration.toFixed(1),
                 " hrs with ",
@@ -76756,7 +76761,7 @@ ${"=".repeat(60)}`);
         codeSuffix = `F${typeCounts.Flight}`;
         type = "Flight";
       }
-      const remedialCode = `${baseEventCode}-${codeSuffix}`;
+      const remedialCode = remEvent.code || `${baseEventCode}-${codeSuffix}`;
       const newItem = {
         ...eventToRemediate,
         id: remedialCode,

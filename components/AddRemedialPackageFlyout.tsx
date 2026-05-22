@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { Trainee, Score, SyllabusItemDetail, Instructor, Pt051Assessment } from '../types';
-import { v4 as uuidv4 } from 'uuid';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
+
+type RemedialPackageEvent = { id: string, code: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string };
 
 interface AddRemedialPackageFlyoutProps {
   trainee: Trainee;
@@ -15,7 +16,7 @@ interface AddRemedialPackageFlyoutProps {
   onSave: (
     trainee: Trainee,
     eventToRemediate: SyllabusItemDetail,
-    newEvents: { type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
+    newEvents: RemedialPackageEvent[]
   ) => void;
 }
 
@@ -32,7 +33,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const { isFrozen } = useSystemFreeze();
   const [selectionMode, setSelectionMode] = useState<'suggested' | 'other'>('suggested');
   const [eventToRemediateId, setEventToRemediateId] = useState<string>('');
-  const [remedialEvents, setRemedialEvents] = useState<{ id: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]>([]);
+  const [remedialEvents, setRemedialEvents] = useState<RemedialPackageEvent[]>([]);
   const [validationMessage, setValidationMessage] = useState<string>('');
   const [openInstructorField, setOpenInstructorField] = useState<string | null>(null);
 
@@ -43,6 +44,28 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
 
   const getRemedialBaseEventCode = (event: SyllabusItemDetail): string =>
     String(event.code || event.id || event.masterEventId || '').replace(/-(?:REM-[A-Z]+\d+|FTD\d+|F\d+|T\d+|RF\d*)$/i, '');
+
+  const getRemedialCodePrefix = (type: RemedialPackageEvent['type']) => {
+    if (type === 'TUT') return 'T';
+    if (type === 'FTD') return 'FTD';
+    return 'F';
+  };
+
+  const buildRemedialEventCode = (baseCode: string, type: RemedialPackageEvent['type'], sequence: number): string =>
+    `${baseCode}-${getRemedialCodePrefix(type)}${sequence}`;
+
+  const getNextRemedialSequence = (
+    existingEvents: RemedialPackageEvent[],
+    baseCode: string,
+    type: RemedialPackageEvent['type']
+  ): number => {
+    const prefix = `${baseCode}-${getRemedialCodePrefix(type)}`;
+    const usedSequences = existingEvents
+      .filter(event => event.type === type && event.code?.startsWith(prefix))
+      .map(event => Number(event.code.slice(prefix.length)))
+      .filter(Number.isFinite);
+    return usedSequences.length ? Math.max(...usedSequences) + 1 : 1;
+  };
 
   const eventMatchesLmpItem = (eventCode: string | undefined, item: SyllabusItemDetail) => {
     if (!eventCode) return false;
@@ -181,26 +204,30 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   }, [eventToRemediate]);
 
   const handleAddEvents = () => {
-    const eventsToAdd: { id: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[] = [];
+    const eventsToAdd: RemedialPackageEvent[] = [];
+    const baseCode = eventToRemediate ? getRemedialBaseEventCode(eventToRemediate) : '';
+
+    const appendRemedialEvents = (
+      type: RemedialPackageEvent['type'],
+      quantity: number,
+      duration: number,
+      instructor: string
+    ) => {
+      if (!baseCode || quantity <= 0 || !instructor || duration <= 0) return;
+      let sequence = getNextRemedialSequence([...remedialEvents, ...eventsToAdd], baseCode, type);
+      for (let i = 0; i < quantity; i++) {
+        const code = buildRemedialEventCode(baseCode, type, sequence);
+        eventsToAdd.push({ id: code, code, type, duration, instructor });
+        sequence++;
+      }
+    };
 
     // Process Tutorials
-    if (tutState.quantity > 0 && tutState.instructor && tutState.duration > 0) {
-        for (let i = 0; i < tutState.quantity; i++) {
-            eventsToAdd.push({ id: uuidv4(), type: 'TUT', duration: tutState.duration, instructor: tutState.instructor });
-        }
-    }
+    appendRemedialEvents('TUT', tutState.quantity, tutState.duration, tutState.instructor);
     // Process FTDs
-    if (ftdState.quantity > 0 && ftdState.instructor && ftdState.duration > 0) {
-        for (let i = 0; i < ftdState.quantity; i++) {
-            eventsToAdd.push({ id: uuidv4(), type: 'FTD', duration: ftdState.duration, instructor: ftdState.instructor });
-        }
-    }
+    appendRemedialEvents('FTD', ftdState.quantity, ftdState.duration, ftdState.instructor);
     // Process Flights
-    if (flightState.quantity > 0 && flightState.instructor && flightState.duration > 0) {
-        for (let i = 0; i < flightState.quantity; i++) {
-            eventsToAdd.push({ id: uuidv4(), type: 'Flight', duration: flightState.duration, instructor: flightState.instructor });
-        }
-    }
+    appendRemedialEvents('Flight', flightState.quantity, flightState.duration, flightState.instructor);
 
     if (eventsToAdd.length > 0) {
         setRemedialEvents(prev => [...prev, ...eventsToAdd]);
@@ -389,7 +416,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                     {remedialEvents.map((event) => (
                         <div key={event.id} className="flex items-center justify-between p-2 bg-gray-700/50 rounded-md text-sm">
                             <div className="flex items-center space-x-3">
-                                <span className="font-bold text-sky-400 w-16">{getRemedialEventDisplayType(event.type)}</span>
+                                <span className="font-bold text-sky-400 w-24">{event.code}</span>
                                 <span className="text-gray-300">{event.duration.toFixed(1)} hrs with {(event.instructor || '').split(',')[0]}</span>
                             </div>
                             <button onClick={() => handleRemoveEvent(event.id)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
