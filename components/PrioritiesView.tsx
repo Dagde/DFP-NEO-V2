@@ -9,11 +9,6 @@ import { logAudit } from '../utils/auditLogger';
 import { InstructorPriorityConfig, InstructorPriorityGroups } from '../App';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
-const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
-
-const isRemedialLmpItem = (item: SyllabusItemDetail): boolean =>
-    item.isRemedial === true || REMEDIAL_EVENT_CODE_REGEX.test(item.code || item.id || '');
-
 interface PrioritiesViewProps {
   school?: 'ESL' | 'PEA';
   coursePriorities: string[];
@@ -404,7 +399,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
             lmp.forEach(item => {
                 // Check if it's a remedial item (flag or naming convention) AND not completed
-                if (isRemedialLmpItem(item) && !completedIds.has(item.id)) {
+                if ((item.isRemedial || item.code.includes('REM') || item.code.endsWith('RF')) && !completedIds.has(item.id)) {
                     list.push({ trainee: t, item });
                 }
             });

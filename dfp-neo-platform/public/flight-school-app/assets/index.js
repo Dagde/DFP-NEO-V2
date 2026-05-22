@@ -9642,8 +9642,8 @@ const formatDisplayType = (displayType, resourceDisplayNames) => {
   if (displayType === "CPT") return resourceDisplayNames.cpt;
   return displayType;
 };
-const REMEDIAL_EVENT_CODE_REGEX$3 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
-const isRemedialLmpItem$1 = (item) => item.lmpSource === "remedial" || item.isRemedial === true || item.module === "Remedial" || REMEDIAL_EVENT_CODE_REGEX$3.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$3.test(item.code || "");
+const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
+const isRemedialLmpItem = (item) => item.lmpSource === "remedial" || item.isRemedial === true || item.module === "Remedial" || REMEDIAL_EVENT_CODE_REGEX$2.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || "");
 const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
   isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -10093,8 +10093,8 @@ const TraineeLmpView = ({
               item: selectedItem,
               score: scores.find((s) => s.event === selectedItem.code),
               resourceDisplayNames,
-              isRemedial: isRemedialLmpItem$1(selectedItem),
-              onDelete: isRemedialLmpItem$1(selectedItem) && onDeleteRemedialItem ? async (item) => {
+              isRemedial: isRemedialLmpItem(selectedItem),
+              onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);
                 if (deleted) setSelectedItem(null);
               } : void 0
@@ -20056,8 +20056,6 @@ const NextDayBuildView = ({
     }
   ) });
 };
-const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
-const isRemedialLmpItem = (item) => item.isRemedial === true || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || item.id || "");
 const PrioritiesView = ({
   school = "ESL",
   coursePriorities,
@@ -20301,7 +20299,7 @@ const PrioritiesView = ({
       const tScores = scores.get(t.fullName) || [];
       const completedIds = new Set(tScores.map((s) => s.event));
       lmp.forEach((item) => {
-        if (isRemedialLmpItem(item) && !completedIds.has(item.id)) {
+        if ((item.isRemedial || item.code.includes("REM") || item.code.endsWith("RF")) && !completedIds.has(item.id)) {
           list.push({ trainee: t, item });
         }
       });
@@ -70508,31 +70506,17 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   let nextEventIndex = -1;
   for (let i = 0; i < individualLMP.length; i++) {
     const item = individualLMP[i];
-    if (!isRemedialSyllabusItem(item) || isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
+    if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
       continue;
     }
     const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
     if (prereqsMet) {
       nextEvt = item;
       nextEventIndex = i;
-      if (verboseNeoBuild) {
+      if (verboseNeoBuild && item.isRemedial) {
         console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
       }
       break;
-    }
-  }
-  if (!nextEvt) {
-    for (let i = 0; i < individualLMP.length; i++) {
-      const item = individualLMP[i];
-      if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
-        continue;
-      }
-      const prereqsMet = areLmpPrerequisitesMet(item, completedEventIds);
-      if (prereqsMet) {
-        nextEvt = item;
-        nextEventIndex = i;
-        break;
-      }
     }
   }
   if (nextEventIndex !== -1) {
@@ -71273,17 +71257,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog(`DEBUG Build Date: ${buildDate}`);
   let includedCount = 0;
   let skippedCount = 0;
-  const flexiblePriorityRemedialEvents = [];
   highestPriorityEvents.forEach((event) => {
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
     buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (event.date === buildDate && event.isTimeFixed) {
-      if (event.isRemedial) {
-        flexiblePriorityRemedialEvents.push(event);
-        buildDebugLog(`  ↻ DEBUG DEFERRED remedial priority event for flexible scheduling after ${REMEDIAL_EARLIEST_START.toFixed(2)} (ID: ${event.id})`);
-        return;
-      }
       const { date, ...eventWithoutDate } = event;
       if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
         eventWithoutDate.pilot = eventWithoutDate.instructor;
@@ -71319,7 +71297,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? "date mismatch" : "isTimeFixed is false"}`);
     }
   });
-  buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED, ${flexiblePriorityRemedialEvents.length} remedials deferred for flexible scheduling`);
+  buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
   buildDebugLog("DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====");
   buildDebugLog("DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====");
   generatedEvents.forEach((event) => {
@@ -71931,7 +71909,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
-      const isBnfEvent2 = type === "flight" && syllabusItemForCheck.code.startsWith("BNF");
+      const isBnfEvent2 = syllabusItemForCheck.code.startsWith("BNF");
       if (isBnfEvent2) {
         const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
         if (!pairedInstructorName) return null;
@@ -72038,8 +72016,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         return canAssignPersonForScheduledWindow(ip.name, startTime);
       });
       const _afterQualFilter = candidates.length;
-      const assignedRemedialInstructors = isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).filter(Boolean) : [];
-      candidates = assignedRemedialInstructors.length > 0 ? candidates.filter((ip) => assignedRemedialInstructors.includes(ip.name)) : candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
+      candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
       const _afterUnitFilter = candidates.length;
       const workloadOf = (i) => {
         const c = eventCounts.get(i.name);
@@ -72434,82 +72411,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return result;
   };
-  const scheduleFlexiblePriorityRemedials = () => {
-    if (flexiblePriorityRemedialEvents.length === 0) return;
-    recordProgress({ message: "Scheduling remedial package events...", percentage: 43 });
-    const incrementForType = (eventType) => eventType === "flight" ? 5 / 60 : 15 / 60;
-    const windowForType = (eventType) => ({
-      start: Math.max(eventType === "ftd" ? ftdStartTime : flyingStartTime, REMEDIAL_EARLIEST_START),
-      end: eventType === "ftd" ? ftdEndTime : flyingEndTime
-    });
-    for (const remedialEvent of flexiblePriorityRemedialEvents) {
-      const trainee = trainees.find((t) => t.fullName === remedialEvent.student || t.fullName === remedialEvent.pilot);
-      if (!trainee) {
-        buildDebugLog(`[REMEDIAL] Could not schedule ${remedialEvent.flightNumber}: trainee not found (${remedialEvent.student || remedialEvent.pilot || "unknown"})`);
-        continue;
-      }
-      const individualLmp = traineeLMPs.get(trainee.fullName) || [];
-      const baseSyllabusItem = individualLmp.find(
-        (item) => item.id === remedialEvent.flightNumber || item.code === remedialEvent.flightNumber || item.id === remedialEvent.id || item.code === remedialEvent.id
-      );
-      if (!baseSyllabusItem) {
-        buildDebugLog(`[REMEDIAL] Could not schedule ${remedialEvent.flightNumber}: Individual LMP item not found for ${trainee.fullName}`);
-        continue;
-      }
-      const scheduleType = remedialEvent.type === "ftd" ? "ftd" : remedialEvent.type === "ground" ? "ground" : remedialEvent.type === "cpt" ? "cpt" : "flight";
-      if (generatedEvents.some(
-        (existing) => existing.id === remedialEvent.id || existing.flightNumber === remedialEvent.flightNumber && existing.student === remedialEvent.student
-      )) {
-        continue;
-      }
-      const syllabusItemForSchedule = {
-        ...baseSyllabusItem,
-        duration: remedialEvent.duration || baseSyllabusItem.duration,
-        resourcesHuman: remedialEvent.instructor ? [remedialEvent.instructor] : baseSyllabusItem.resourcesHuman || []
-      };
-      const searchWindow = windowForType(scheduleType);
-      const increment = incrementForType(scheduleType);
-      const latestStart = searchWindow.end - syllabusItemForSchedule.duration;
-      let placed = false;
-      const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) && scheduleType !== "ground" ? [true, false] : [false];
-      for (const primaryOnly of passModes) {
-        if (placed) break;
-        for (let time = searchWindow.start; time <= latestStart + 1e-3; time += increment) {
-          const result = scheduleEvent(trainee, syllabusItemForSchedule, time, scheduleType, false, false, primaryOnly);
-          if (result && typeof result === "object" && "id" in result) {
-            generatedEvents.push({
-              ...result,
-              id: remedialEvent.id,
-              isRemedial: true,
-              isTimeFixed: false,
-              _source: "highest-priority-remedial",
-              _isNext: void 0,
-              _traineeName: trainee.fullName
-            });
-            const traineeCounts = eventCounts.get(trainee.fullName);
-            const instructorCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-            if (scheduleType === "flight" || scheduleType === "ftd") {
-              if (traineeCounts) traineeCounts.flightFtd++;
-              if (instructorCounts) instructorCounts.flightFtd++;
-            } else if (scheduleType === "ground") {
-              if (traineeCounts) traineeCounts.ground++;
-              if (instructorCounts) instructorCounts.ground++;
-            } else if (scheduleType === "cpt") {
-              if (traineeCounts) traineeCounts.cpt++;
-              if (instructorCounts) instructorCounts.cpt++;
-            }
-            placed = true;
-            buildDebugLog(`[REMEDIAL] Scheduled ${remedialEvent.flightNumber} for ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
-            break;
-          }
-        }
-      }
-      if (!placed) {
-        buildDebugLog(`[REMEDIAL] Could not find a valid slot for ${remedialEvent.flightNumber} after ${REMEDIAL_EARLIEST_START.toFixed(2)}`);
-      }
-    }
-  };
-  scheduleFlexiblePriorityRemedials();
   recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
   generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
   const dutySupStartTime = flyingStartTime;
@@ -78367,64 +78268,60 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     remedialRequests.forEach((remedialReq) => {
       if (remedialReq.forceSchedule) {
         console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
-        const trainee = allTraineesData.find((t) => Number(t.idNumber) === Number(remedialReq.traineeId));
-        let syllabusItem = null;
-        if (trainee) {
-          const individualLMP = traineeLMPs.get(trainee.fullName);
-          if (individualLMP) {
-            syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
-            if (syllabusItem) {
-              console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
+        const existingEvent = newPriorityEvents.find(
+          (e) => e.flightNumber === remedialReq.eventCode && e.isRemedial
+        );
+        if (existingEvent) {
+          console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
+        } else if (!existingEvent) {
+          const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
+          let syllabusItem = null;
+          if (trainee) {
+            const individualLMP = traineeLMPs.get(trainee.fullName);
+            if (individualLMP) {
+              syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
+              if (syllabusItem) {
+                console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
+              }
             }
           }
-        }
-        if (!syllabusItem) {
-          syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
-          if (syllabusItem) {
-            console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+          if (!syllabusItem) {
+            syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
+            if (syllabusItem) {
+              console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+            }
           }
-        }
-        const duration = syllabusItem?.duration || 1.5;
-        if (!syllabusItem) {
-          console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
-        }
-        if (!trainee) {
-          console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
-        }
-        if (trainee && syllabusItem) {
-          const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : "";
-          console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
-          const remedialPriorityEvent = {
-            id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
-            date: buildDfpDate,
-            type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : "flight",
-            instructor: allocatedInstructor,
-            // Use allocated instructor from remedial package
-            student: trainee.fullName,
-            flightNumber: syllabusItem.code,
-            duration,
-            startTime: REMEDIAL_EARLIEST_START,
-            resourceId: "",
-            // Will be assigned during scheduling
-            color: courseColors[trainee.course] || "bg-gray-500",
-            flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
-            locationType: "Local",
-            origin: school,
-            destination: school,
-            isTimeFixed: true,
-            isRemedial: true
-          };
-          const existingEventIndex = newPriorityEvents.findIndex(
-            (e) => e.isRemedial && e.flightNumber === remedialReq.eventCode && (e.id === remedialPriorityEvent.id || e.student === trainee.fullName)
-          );
-          if (existingEventIndex >= 0) {
-            newPriorityEvents[existingEventIndex] = {
-              ...newPriorityEvents[existingEventIndex],
-              ...remedialPriorityEvent
+          const duration = syllabusItem?.duration || 1.5;
+          if (!syllabusItem) {
+            console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
+          }
+          if (!trainee) {
+            console.error(`❌ Trainee not found for ID: ${remedialReq.traineeId}`);
+          }
+          if (trainee && syllabusItem) {
+            const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : "";
+            console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
+            const newEvent = {
+              id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
+              date: buildDfpDate,
+              type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : "flight",
+              instructor: allocatedInstructor,
+              // Use allocated instructor from remedial package
+              student: trainee.fullName,
+              flightNumber: syllabusItem.code,
+              duration,
+              startTime: REMEDIAL_EARLIEST_START,
+              resourceId: "",
+              // Will be assigned during scheduling
+              color: courseColors[trainee.course] || "bg-gray-500",
+              flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
+              locationType: "Local",
+              origin: school,
+              destination: school,
+              isTimeFixed: true,
+              isRemedial: true
             };
-            console.log(`🔄 Refreshed Force Schedule remedial for current build date: ${syllabusItem.code} (${buildDfpDate})`);
-          } else {
-            newPriorityEvents.push(remedialPriorityEvent);
+            newPriorityEvents.push(newEvent);
             added++;
             console.log("✅ Added Force Schedule remedial:", syllabusItem.code, "for", trainee.fullName);
           }
