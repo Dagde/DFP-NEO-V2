@@ -9644,22 +9644,27 @@ const formatDisplayType = (displayType, resourceDisplayNames) => {
 };
 const REMEDIAL_EVENT_CODE_REGEX$2 = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 const isRemedialLmpItem = (item) => item.lmpSource === "remedial" || item.isRemedial === true || item.module === "Remedial" || REMEDIAL_EVENT_CODE_REGEX$2.test(item.id || "") || REMEDIAL_EVENT_CODE_REGEX$2.test(item.code || "");
-const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
-  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4", children: [
+const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES, isRemedial = false, onDelete }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-6", children: [
+  isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-lg border border-red-500/40 bg-red-950/35 px-4 py-3", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-bold text-red-100", children: "Remedial Package Event" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-red-200/80", children: "Use this action to remove this event from the trainee's Individual LMP." })
     ] }),
-    onDelete && /* @__PURE__ */ jsxRuntimeExports.jsx(
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
       "button",
       {
         type: "button",
-        onClick: () => onDelete(item),
-        className: "flex-shrink-0 rounded-md border border-red-500/50 bg-red-950/40 px-3 py-2 text-sm font-semibold text-red-200 hover:bg-red-900/60",
-        children: "Delete"
+        disabled: !onDelete,
+        onClick: () => onDelete?.(item),
+        className: `rounded-md border px-4 py-2 text-sm font-bold ${onDelete ? "border-red-400/70 bg-red-700 text-white hover:bg-red-600" : "border-gray-600 bg-gray-800 text-gray-500 cursor-not-allowed"}`,
+        children: "Delete Remedial Event"
       }
     )
   ] }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-start justify-between gap-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-3xl font-bold text-white", children: item.code }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-lg text-gray-400 mt-1", children: item.eventDescription })
+  ] }) }),
   /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-700 rounded-lg", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Core Details" }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 md:grid-cols-4 gap-4 mt-2", children: [
@@ -10083,19 +10088,21 @@ const TraineeLmpView = ({
                   ]
                 }
               ),
-              isRemedial && onDeleteRemedialItem && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              isRemedial && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "button",
                 {
                   type: "button",
                   title: `Delete remedial event ${item.code}`,
+                  disabled: !onDeleteRemedialItem,
                   onClick: async (event) => {
                     event.stopPropagation();
+                    if (!onDeleteRemedialItem) return;
                     const deleted = await onDeleteRemedialItem(trainee, item);
                     if (deleted && selectedItem?.code === item.code) {
                       setSelectedItem(null);
                     }
                   },
-                  className: "mr-1 flex-shrink-0 rounded-md border border-red-500/50 bg-red-950/30 px-2 py-1 text-[10px] font-semibold text-red-200 hover:bg-red-900/60",
+                  className: `mr-1 flex-shrink-0 rounded-md border px-2 py-1 text-[10px] font-semibold ${onDeleteRemedialItem ? "border-red-500/50 bg-red-950/30 text-red-200 hover:bg-red-900/60" : "border-gray-600 bg-gray-800 text-gray-500 cursor-not-allowed"}`,
                   children: "Delete"
                 }
               )
@@ -10107,6 +10114,7 @@ const TraineeLmpView = ({
               item: selectedItem,
               score: scores.find((s) => s.event === selectedItem.code),
               resourceDisplayNames,
+              isRemedial: isRemedialLmpItem(selectedItem),
               onDelete: isRemedialLmpItem(selectedItem) && onDeleteRemedialItem ? async (item) => {
                 const deleted = await onDeleteRemedialItem(trainee, item);
                 if (deleted) setSelectedItem(null);
