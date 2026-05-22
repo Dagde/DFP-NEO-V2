@@ -70054,6 +70054,7 @@ const personnelNamesMatch = (a, b) => {
   const right = normalizePersonnelNameForMatch(b);
   return !!left && left === right;
 };
+const isNeoBuildVerboseDiagnosticsEnabled = () => typeof window !== "undefined" && window.localStorage?.getItem("neo_build_verbose_diag") === "true";
 const makePersonnelIdentityRef = (label, role) => {
   const normalizedName = normalizePersonnelNameForMatch(label);
   if (!normalizedName) return null;
@@ -70356,7 +70357,9 @@ const getEffectiveLastCompletedEvent = (traineeName, publishedSchedules, buildDa
     return null;
   }
   const lastEvent = completedEvents.sort((a, b) => b.startTime - a.startTime)[0];
-  console.log(`✓ ELCE for ${traineeName}: ${lastEvent.flightNumber} (completed ${yesterdayStr})`);
+  if (isNeoBuildVerboseDiagnosticsEnabled()) {
+    console.log(`✓ ELCE for ${traineeName}: ${lastEvent.flightNumber} (completed ${yesterdayStr})`);
+  }
   return lastEvent.flightNumber;
 };
 const normalizeLmpEventId = (value) => {
@@ -70381,14 +70384,15 @@ const areLmpPrerequisitesMet = (item, completedEventIds) => {
   });
 };
 const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap) => {
+  const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
   const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
-  if (hasIndividualLMP) {
+  if (verboseNeoBuild && hasIndividualLMP) {
     const remedialEvents = individualLMP.filter((item) => item.isRemedial);
     if (remedialEvents.length > 0) {
       console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
     }
-  } else {
+  } else if (verboseNeoBuild) {
     console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
   }
   if (!individualLMP || individualLMP.length === 0) {
@@ -70408,11 +70412,11 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   const dbElce = dbElceMap?.get(trainee.fullName);
   if (dbElce && (dbElce.dcoResult === "DCO" || dbElce.dcoResult === "DPCO")) {
     addLmpCompletionAlias(completedEventIds, dbElce.eventCode);
-    console.log(
+    if (verboseNeoBuild) console.log(
       `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} (${dbElce.dcoResult}) completed ${dbElce.eventDate} — added to completedEventIds`
     );
   } else if (dbElce && dbElce.dcoResult === "DNCO") {
-    console.log(
+    if (verboseNeoBuild) console.log(
       `[ELCE/DB] ${trainee.fullName}: ${dbElce.eventCode} was DNCO on ${dbElce.eventDate} — NOT counted as ELCE (unsuccessful sortie)`
     );
   }
@@ -70420,7 +70424,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
     const elce = getEffectiveLastCompletedEvent(trainee.fullName, publishedSchedules, buildDate);
     if (elce) {
       addLmpCompletionAlias(completedEventIds, elce);
-      console.log(`[ELCE/DFP] ${trainee.fullName}: ${elce} — DFP-scan fallback (no DB ELCE found)`);
+      if (verboseNeoBuild) console.log(`[ELCE/DFP] ${trainee.fullName}: ${elce} — DFP-scan fallback (no DB ELCE found)`);
     }
   }
   let nextEvt = null;
@@ -70435,7 +70439,7 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
     if (prereqsMet) {
       nextEvt = item;
       nextEventIndex = i;
-      if (item.isRemedial) {
+      if (verboseNeoBuild && item.isRemedial) {
         console.log(`✅ [${trainee.fullName}] Next event is REMEDIAL: ${item.code}`);
       }
       break;
@@ -70668,6 +70672,10 @@ function analyzeBuildResults(events, coursePercentages, coursePriorities, availa
 }
 let _instructorDiag = null;
 function _diagInitInstructors(buildDate, instructors) {
+  if (!isNeoBuildVerboseDiagnosticsEnabled()) {
+    _instructorDiag = null;
+    return;
+  }
   _instructorDiag = {
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
     buildDate,
@@ -70848,6 +70856,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   buildDebugLog("[TRAINEE-SOURCE-FORENSIC] ANALYSIS COMPLETE\n");
   const _MAX_OVERLAP_LOG = 10;
   const _logOverlapRejection = (instructorName, candidateFlightNumber, candidateType, candidateStart, candidateEnd, conflictingFlightNumber, conflictingType, conflictingStart, conflictingEnd) => {
+    if (!neoBuildVerboseDiagnostics) return;
     if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
     _overlapRejCount++;
     const isCrossType = candidateType === "ground" !== (conflictingType === "ground");
@@ -70867,6 +70876,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
   };
   const _logSameTraineeConflict = (candTraineeName, candEventName, candIsNext, candStart, candEnd, conflTraineeName, conflEventName, conflIsNext, conflStart, conflEnd, conflSource, requiredTurnaroundHours) => {
+    if (!neoBuildVerboseDiagnostics) return;
     if (_stSeqCount >= _MAX_ST_SEQ_LOG) return;
     _stSeqCount++;
     const _isSameTrainee = candTraineeName === conflTraineeName;
@@ -71236,7 +71246,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (next) {
       if (next.code.startsWith("BNF") && next.type === "Flight") {
         if (isPersonScheduledForDayEvents(trainee.fullName)) {
-          console.log(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
+          buildDebugLog(`🌙 ❌ ${trainee.fullName} excluded from BNF - has day events (Active DFP or NEO-Build)`);
           nextEventLists.flight.push(trainee);
         } else {
           nextEventLists.bnf.push(trainee);
@@ -71470,25 +71480,25 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const instructorsNeeded = bnfTraineeCount;
     const nightDutyStartTime = commenceNightFlying;
     const nightDutyEndTime = ceaseNightFlying;
-    console.log("🌙 ===== NIGHT INSTRUCTOR SELECTION =====");
-    console.log(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
+    buildDebugLog("🌙 ===== NIGHT INSTRUCTOR SELECTION =====");
+    buildDebugLog(`🌙 Need ${instructorsNeeded} instructors for ${bnfTraineeCount} BNF trainees`);
     const nightEligiblePool = originalInstructors.filter((ip) => {
       if (ip.role !== "QFI" && !ip.isQFI) return false;
       if (isPersonStaticallyUnavailable(ip, nightDutyStartTime, nightDutyEndTime, buildDate, "flight")) return false;
       if (isPersonScheduledForDayEvents(ip.name)) {
-        console.log(`🌙 ❌ ${ip.name} excluded - has day events (Active DFP or NEO-Build)`);
+        buildDebugLog(`🌙 ❌ ${ip.name} excluded - has day events (Active DFP or NEO-Build)`);
         return false;
       }
       if (isPersonScheduledForNightEvents(ip.name)) {
-        console.log(`🌙 ❌ ${ip.name} excluded - already has night commitment`);
+        buildDebugLog(`🌙 ❌ ${ip.name} excluded - already has night commitment`);
         return false;
       }
-      console.log(`🌙 ✅ ${ip.name} eligible for night flying`);
+      buildDebugLog(`🌙 ✅ ${ip.name} eligible for night flying`);
       return true;
     });
-    console.log(`🌙 Eligible pool: ${nightEligiblePool.length} instructors`);
+    buildDebugLog(`🌙 Eligible pool: ${nightEligiblePool.length} instructors`);
     const nightFlyingInstructors = [...nightEligiblePool].sort(() => 0.5 - Math.random()).slice(0, instructorsNeeded);
-    console.log(`🌙 Selected instructors: ${nightFlyingInstructors.map((i) => i.name).join(", ")}`);
+    buildDebugLog(`🌙 Selected instructors: ${nightFlyingInstructors.map((i) => i.name).join(", ")}`);
     const bnfTrainees = nextEventLists.bnf;
     nightFlyingInstructors.forEach((nfi, index) => {
       const trainee = bnfTrainees[index];
@@ -71541,6 +71551,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
   };
   const _fbLogSuccess = (trainee, syllabusItem, isNext, startTime, endTime, instructorName, aircraft, area) => {
+    if (!neoBuildVerboseDiagnostics) return;
     if (_fbSuccessCount >= 2) return;
     _fbSuccessCount++;
     console.log(`
@@ -71555,6 +71566,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log(`   Slot:      ${_fmtT(startTime)}`);
   };
   const _fbLogFailure = (trainee, syllabusItem, isNext, startTime, endTime, reason) => {
+    if (!neoBuildVerboseDiagnostics) return;
     if (_fbBuckets[reason] !== void 0) _fbBuckets[reason]++;
     else _fbBuckets["OTHER"]++;
     const slotKey = Math.round(startTime * 12) / 12;
@@ -71573,6 +71585,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log(`   Reason:   ${reason}`);
   };
   const _fbPrintSummary = () => {
+    if (!neoBuildVerboseDiagnostics) return;
     const postFirstTwo = [8 + 10 / 60, 8 + 15 / 60, 8 + 20 / 60, 8 + 25 / 60, 8 + 30 / 60];
     const topReason = Object.entries(_fbBuckets).sort((a, b) => b[1] - a[1])[0];
     const laterSlotData = postFirstTwo.map((t) => _fbTimeSlotsAttempted.get(Math.round(t * 12) / 12));
@@ -71758,7 +71771,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const _fbEnd = startTime + syllabusItem.duration;
     const traineeCounts = eventCounts.get(trainee.fullName);
     if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
-      console.log(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
+      buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "DAY_NIGHT_SEPARATION");
       return null;
     }
@@ -71782,7 +71795,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return null;
     }
-    const traineeHasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
+    const traineeHasOverlap = generatedEvents.some((e) => {
+      if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
       if (!eventHasPerson(e, trainee.fullName)) return false;
       const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
       return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -71812,7 +71826,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         };
         const currentDutyHours = calculateInstructorDutyHours(instructor2.name, proposedEvent);
         if (currentDutyHours > preferredDutyPeriod) {
-          console.log(`SOFT LIMIT VIOLATION: ${instructor2.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
+          buildDebugLog(`SOFT LIMIT VIOLATION: ${instructor2.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
           return null;
         }
         if (instructor2.isExecutive) {
@@ -71826,7 +71840,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup >= totalEventLimit) return null;
           if (instructor2.isFlyingSupervisor && ipCounts.dutySup >= eventLimits.instructor.maxDutySup) return null;
         }
-        const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
+        const hasOverlap = generatedEvents.some((e) => {
+          if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, instructor2.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -71971,7 +71986,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         };
         const currentDutyHours = calculateInstructorDutyHours(ip.name, proposedEvent);
         if (currentDutyHours > preferredDutyPeriod) {
-          console.log(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
+          buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
           _dRej.softDutyLimit++;
           continue;
         }
@@ -72025,7 +72040,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
         }
-        const hasOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
+        const hasOverlap = generatedEvents.some((e) => {
+          if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, ip.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           const overlaps = proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
@@ -72150,7 +72166,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           return instrBase === traineeBase && instrFlight !== "" && traineeFlight !== "" && instrFlight === traineeFlight;
         })();
         if (!instructorInHardGroup) {
-          console.log(`[Priority] ${syllabusItem.code} for ${trainee.fullName}: using ${instructor.name} on a real resource; no hard-group instructor was available.`);
+          buildDebugLog(`[Priority] ${syllabusItem.code} for ${trainee.fullName}: using ${instructor.name} on a real resource; no hard-group instructor was available.`);
         }
       }
     }
@@ -72301,29 +72317,29 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   }
   let nightDutySup = null;
   if (nextEventLists.bnf.length >= 2) {
-    console.log("🌙 Pre-selecting night duty supervisor to prevent day assignments...");
+    buildDebugLog("🌙 Pre-selecting night duty supervisor to prevent day assignments...");
     const nightFlyingInstructorNames = new Set(Array.from(nightPairings.values()));
     const nightSupPool = instructors.filter(
       (s) => (s.isFlyingSupervisor || s.unavailability.some((u) => u.reason === "TMUF - Ground Duties only" && buildDate >= u.startDate && buildDate < u.endDate)) && !nightFlyingInstructorNames.has(s.name)
     );
-    console.log(`🌙 Night supervisor pool: ${nightSupPool.length} candidates`);
+    buildDebugLog(`🌙 Night supervisor pool: ${nightSupPool.length} candidates`);
     nightDutySup = nightSupPool.find((sup) => {
       if (isPersonStaticallyUnavailable(sup, commenceNightFlying, ceaseNightFlying, buildDate, "duty_sup")) {
-        console.log(`🌙 ❌ ${sup.name} - statically unavailable for night duty`);
+        buildDebugLog(`🌙 ❌ ${sup.name} - statically unavailable for night duty`);
         return false;
       }
       if (isPersonScheduledForDayEvents(sup.name)) {
-        console.log(`🌙 ❌ ${sup.name} - has day events (Active DFP or NEO-Build)`);
+        buildDebugLog(`🌙 ❌ ${sup.name} - has day events (Active DFP or NEO-Build)`);
         return false;
       }
-      console.log(`🌙 ✅ ${sup.name} - eligible for night duty supervisor`);
+      buildDebugLog(`🌙 ✅ ${sup.name} - eligible for night duty supervisor`);
       return true;
     }) || null;
     if (nightDutySup) {
       markIntendedNightPerson(nightDutySup.name);
-      console.log(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
+      buildDebugLog(`🌙 Night duty supervisor pre-selected: ${nightDutySup.name} (marked for night duty only)`);
     } else {
-      console.log(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
+      buildDebugLog(`🌙 ⚠️ WARNING: No eligible night duty supervisor found!`);
     }
   }
   const dutySupEligible = instructors.filter(
@@ -72334,7 +72350,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const shuffledNormalSupervisors = [...normalSupervisors].sort(() => 0.5 - Math.random());
   const sortedSupervisors = [...tmuffSupervisors, ...shuffledNormalSupervisors];
   let currentSupTime = dutySupStartTime;
-  console.log(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
+  buildDebugLog(`Duty Supervisor Allocation - Covering entire day window: ${dutySupStartTime} to ${dutySupEndTime}`);
   while (currentSupTime < dutySupEndTime) {
     const isBlockCovered = generatedEvents.some((e) => e.resourceId === "Duty Sup" && currentSupTime >= e.startTime && currentSupTime < e.startTime + e.duration);
     if (isBlockCovered) {
@@ -72362,12 +72378,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         type: "ground"
       };
       const totalDutyHours = calculateInstructorDutyHours(sup.name, proposedDutySupEvent);
-      console.log(`Duty Sup Check - ${sup.name}: Total Duty = ${totalDutyHours.toFixed(2)}hrs, Soft Limit = ${preferredDutyPeriod}hrs`);
+      buildDebugLog(`Duty Sup Check - ${sup.name}: Total Duty = ${totalDutyHours.toFixed(2)}hrs, Soft Limit = ${preferredDutyPeriod}hrs`);
       if (totalDutyHours > preferredDutyPeriod) {
-        console.log(`Skipping ${sup.name} - would exceed soft limit of ${preferredDutyPeriod}hrs`);
+        buildDebugLog(`Skipping ${sup.name} - would exceed soft limit of ${preferredDutyPeriod}hrs`);
         continue;
       }
-      const hasOverlapAtStart = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
+      const hasOverlapAtStart = generatedEvents.some((e) => {
+        if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
         if (!getPersonnel(e).includes(sup.name)) return false;
         const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
         return currentSupTime < bookingWindow.end && currentSupTime + 0.1 > bookingWindow.start;
@@ -72396,7 +72413,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             break;
           }
         }
-        const hasFutureOverlap = generatedEvents.filter((e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")).some((e) => {
+        const hasFutureOverlap = generatedEvents.some((e) => {
+          if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!getPersonnel(e).includes(sup.name)) return false;
           const bookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
           return t < bookingWindow.end && proposedEnd > bookingWindow.start;
@@ -72427,16 +72445,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         student: ""
       });
       eventCounts.get(bestSupervisor.name).dutySup++;
-      console.log(`Duty Sup assigned: ${bestSupervisor.name} from ${currentSupTime} to ${currentSupTime + maxDuration}`);
+      buildDebugLog(`Duty Sup assigned: ${bestSupervisor.name} from ${currentSupTime} to ${currentSupTime + maxDuration}`);
       currentSupTime += maxDuration;
     } else {
-      console.log(`WARNING: No Duty Supervisor available for ${currentSupTime} to ${currentSupTime + 0.5} - GAP in coverage!`);
+      buildDebugLog(`WARNING: No Duty Supervisor available for ${currentSupTime} to ${currentSupTime + 0.5} - GAP in coverage!`);
       currentSupTime += 0.5;
     }
   }
   if (nextEventLists.bnf.length >= 2 && nightDutySup) {
     setProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
-    console.log(`Scheduling night duty supervisor: ${nightDutySup.name}`);
+    buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
     const existingNightDutySup = generatedEvents.find((e) => {
       if (e.resourceId !== "Duty Sup") return false;
       const dutyStart = e.startTime;
@@ -72449,9 +72467,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return commenceNightFlying < bookingWindow.end && ceaseNightFlying > bookingWindow.start;
     });
     if (existingNightDutySup) {
-      console.log(`Night Duty Sup already covered by ${existingNightDutySup.instructor || "unknown"} from ${existingNightDutySup.startTime} to ${existingNightDutySup.startTime + existingNightDutySup.duration}; skipping duplicate.`);
+      buildDebugLog(`Night Duty Sup already covered by ${existingNightDutySup.instructor || "unknown"} from ${existingNightDutySup.startTime} to ${existingNightDutySup.startTime + existingNightDutySup.duration}; skipping duplicate.`);
     } else if (nightDutySupHasOverlap) {
-      console.log(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
+      buildDebugLog(`WARNING: Night Duty Sup ${nightDutySup.name} has overlapping night event; skipping assignment.`);
     } else {
       generatedEvents.push({
         id: v4(),
@@ -72472,7 +72490,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       eventCounts.get(nightDutySup.name).dutySup++;
     }
   } else if (nextEventLists.bnf.length >= 2 && !nightDutySup) {
-    console.log("WARNING: Night flying scheduled but no night duty supervisor available!");
+    buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
   }
   setProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   setProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
@@ -72483,7 +72501,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
   const _dualFlightList = _allFlightList.filter((t) => !_isSoloTrainee(t));
   const _soloFlightList = _allFlightList.filter((t) => _isSoloTrainee(t));
-  console.log(`
+  buildDebugLog(`
 🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
   window.__fbFlightListSize = _allFlightList.length;
   scheduleList(
@@ -72503,11 +72521,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     for (let gi = 0; gi < _soloFlightList.length; gi += MAX_SOLO_GROUP_SIZE) {
       soloGroups.push(_soloFlightList.slice(gi, gi + MAX_SOLO_GROUP_SIZE));
     }
-    console.log(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
+    buildDebugLog(`[SOLO] ${_soloFlightList.length} solo trainees → ${soloGroups.length} group(s) of up to ${MAX_SOLO_GROUP_SIZE}`);
     let groupSearchStart = Math.max(flyingStartTime, SOLO_WINDOW_START);
     for (let gi = 0; gi < soloGroups.length; gi++) {
       const group = soloGroups[gi];
-      console.log(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
+      buildDebugLog(`[SOLO] Scheduling group ${gi + 1}/${soloGroups.length} (${group.length} trainees), searching from ${_fmtT(groupSearchStart)}`);
       const TIME_INCREMENT = 5 / 60;
       let lastPlacedTime = groupSearchStart;
       for (const trainee of group) {
@@ -72526,13 +72544,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               tCounts.flightFtd++;
               lastPlacedTime = Math.max(lastPlacedTime, time);
               placed = true;
-              console.log(`[SOLO]   ✅ Placed ${trainee.fullName} at ${_fmtT(time)} on ${result.resourceId}`);
+              buildDebugLog(`[SOLO]   ✅ Placed ${trainee.fullName} at ${_fmtT(time)} on ${result.resourceId}`);
               break;
             }
           }
         }
         if (!placed) {
-          console.log(`[SOLO]   ⚠️  ${trainee.fullName} unplaced → STBY`);
+          buildDebugLog(`[SOLO]   ⚠️  ${trainee.fullName} unplaced → STBY`);
         }
       }
       groupSearchStart = lastPlacedTime + TIME_INCREMENT;
@@ -72819,7 +72837,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (!next || next.type !== "FTD") return false;
     return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
   });
-  console.log("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
+  buildDebugLog("Trainees needing FTD recovery pass:", traineesNeedingStbyFtd.length);
   if (traineesNeedingStbyFtd.length > 0) {
     const ftdRecoveryIncrement = 15 / 60;
     let recoveredToFtd = 0;
@@ -72841,13 +72859,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             if (ipCounts) ipCounts.flightFtd++;
             recoveredToFtd++;
             placedOnFtd = true;
-            console.log(`FTD recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
+            buildDebugLog(`FTD recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${result.resourceId}`);
             break;
           }
         }
       }
     }
-    console.log(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
+    buildDebugLog(`FTD recovery complete: ${recoveredToFtd} events recovered onto real FTD resources`);
   }
   const findAvailableFtdResourceForStbyCandidate = (startTime, duration) => {
     for (let i = 1; i <= ftdCount; i++) {
@@ -72904,27 +72922,27 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (ipCounts) ipCounts.flightFtd++;
       recoveredToRealFtdBeforeStby++;
       placedOnRealFtd = true;
-      console.log(`FTD final recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${resourceId} before STBY fallback`);
+      buildDebugLog(`FTD final recovery: Placed ${trainee.fullName} at ${time.toFixed(2)} on ${resourceId} before STBY fallback`);
       break;
     }
     if (!placedOnRealFtd) {
-      console.log(`FTD final recovery: ${trainee.fullName} still requires STBY consideration`);
+      buildDebugLog(`FTD final recovery: ${trainee.fullName} still requires STBY consideration`);
     }
   }
   if (recoveredToRealFtdBeforeStby > 0) {
-    console.log(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
+    buildDebugLog(`FTD final recovery complete: ${recoveredToRealFtdBeforeStby} additional events recovered onto real FTD resources`);
   }
   const traineesStillNeedingStbyFtd = traineesNeedingStbyFtd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
     return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
   });
-  console.log("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
+  buildDebugLog("Trainees still needing STBY FTD events:", traineesStillNeedingStbyFtd.length);
   if (traineesStillNeedingStbyFtd.length > 0) {
     let currentStbyLine = 1;
     let currentTime = ftdStartTime;
     const minSpacing = ftdTurnaround;
-    console.log(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
+    buildDebugLog(`FTD STBY: Scheduling ${traineesStillNeedingStbyFtd.length} events with ${minSpacing.toFixed(2)}hr spacing`);
     for (const trainee of traineesStillNeedingStbyFtd) {
       const { next } = traineeNextEventMap.get(trainee.fullName);
       if (!next) continue;
@@ -72960,7 +72978,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               preStart: next.preFlightTime,
               postEnd: next.postFlightTime
             });
-            console.log(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
+            buildDebugLog(`FTD STBY: Placed ${trainee.fullName} at ${currentTime.toFixed(2)} on STBY ${currentStbyLine}, instructor: ${instructor || "TBA"}`);
             currentTime += next.duration + minSpacing;
             placed = true;
           } else {
@@ -72973,11 +72991,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       }
       if (!placed) {
-        console.log(`FTD STBY: Could not place ${trainee.fullName} - all STBY lines full`);
+        buildDebugLog(`FTD STBY: Could not place ${trainee.fullName} - all STBY lines full`);
       }
     }
     const ftdStbyEvents = generatedEvents.filter((e) => e.type === "ftd" && e.resourceId.startsWith("STBY"));
-    console.log(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
+    buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
   }
   setProgress({ message: "Shuffling events for distribution...", percentage: 95 });
   setProgress({ message: "Sorting events by resource order...", percentage: 98 });
@@ -73368,7 +73386,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         requiredGap: conflict.requiredGap
       })));
     } else {
-      console.log("[BUILD-CONFLICT-DIAG] Final build conflict scan clear.");
+      buildDebugLog("[BUILD-CONFLICT-DIAG] Final build conflict scan clear.");
     }
     return report;
   };
@@ -73435,13 +73453,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (hpe.date === buildDate && hpe.isTimeFixed) {
       const found = sortedEvents.find((e) => e.id === hpe.id);
       if (found) {
-        console.log(`  ✓ FOUND: ${hpe.flightNumber} - ${hpe.student || hpe.pilot || "N/A"} (ID: ${hpe.id})`);
+        buildDebugLog(`  ✓ FOUND: ${hpe.flightNumber} - ${hpe.student || hpe.pilot || "N/A"} (ID: ${hpe.id})`);
       } else {
-        console.log(`  ✗ MISSING: ${hpe.flightNumber} - ${hpe.student || hpe.pilot || "N/A"} (ID: ${hpe.id}) - THIS SHOULD NOT HAPPEN!`);
+        buildDebugLog(`  ✗ MISSING: ${hpe.flightNumber} - ${hpe.student || hpe.pilot || "N/A"} (ID: ${hpe.id}) - THIS SHOULD NOT HAPPEN!`);
       }
     }
   });
-  console.log("DEBUG ===== END FINAL BUILD RESULTS =====");
+  buildDebugLog("DEBUG ===== END FINAL BUILD RESULTS =====");
   setProgress({ message: "Build complete!", percentage: 100 });
   _diagFinalizeInstructors();
   return sortedEvents;
