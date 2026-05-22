@@ -244,6 +244,64 @@ const personnelNamesMatch = (a?: string, b?: string): boolean => {
 const isNeoBuildVerboseDiagnosticsEnabled = (): boolean =>
     typeof window !== 'undefined' && window.localStorage?.getItem('neo_build_verbose_diag') === 'true';
 
+interface NeoBuildTimingPhase {
+    name: string;
+    durationMs: number;
+    totalElapsedMs: number;
+    details?: Record<string, any>;
+}
+
+interface NeoBuildTimingReport {
+    timestamp: string;
+    buildDate: string;
+    phases: NeoBuildTimingPhase[];
+    counters: Record<string, any>;
+    startedAtMs?: number;
+    lastMarkMs?: number;
+    completedAt?: string;
+    totalElapsedMs?: number;
+}
+
+const createNeoBuildTimingReport = (buildDate: string, counters: Record<string, any> = {}): NeoBuildTimingReport => {
+    const now = performance.now();
+    return {
+        timestamp: new Date().toISOString(),
+        buildDate,
+        phases: [],
+        counters,
+        startedAtMs: now,
+        lastMarkMs: now,
+    };
+};
+
+const saveNeoBuildTimingReport = (report?: NeoBuildTimingReport) => {
+    if (!report) return;
+    try {
+        localStorage.setItem('neo_build_timing_report', JSON.stringify(report));
+    } catch (error) {
+        console.warn('[NEO-BUILD-TIMING] Failed to save timing report:', error);
+    }
+};
+
+const markNeoBuildTiming = (
+    report: NeoBuildTimingReport | undefined,
+    name: string,
+    details?: Record<string, any>
+) => {
+    if (!report || report.startedAtMs === undefined || report.lastMarkMs === undefined) return;
+    const now = performance.now();
+    report.phases.push({
+        name,
+        durationMs: Math.round(now - report.lastMarkMs),
+        totalElapsedMs: Math.round(now - report.startedAtMs),
+        ...(details ? { details } : {}),
+    });
+    report.lastMarkMs = now;
+    report.completedAt = new Date().toISOString();
+    report.totalElapsedMs = Math.round(now - report.startedAtMs);
+    saveNeoBuildTimingReport(report);
+};
+
 type PersonnelIdentityRole = 'staff' | 'trainee';
 
 interface PersonnelIdentityRef {
@@ -702,6 +760,7 @@ interface DfpConfig {
   // If absent (null/undefined), computeNextEventsForTrainee falls back to the
   // legacy DFP schedule-scan ELCE.
   dbElceMap?: Map<string, { eventCode: string; eventDate: string; dcoResult: 'DCO' | 'DPCO' | 'DNCO'; isCountedAsElce: boolean } | null>;
+  timingReport?: NeoBuildTimingReport;
 }
 
 // --- DFP Algorithm Helpers (moved outside for re-use in debug) ---
@@ -1534,6 +1593,21 @@ function _diagFinalizeInstructors() {
     console.log('[NEO-BUILD-DIAG] Download triggered:', `neo-build-diag-${ts}.json`);
 };
 
+(window as any).__downloadNeoBuildTiming = () => {
+    const raw = localStorage.getItem('neo_build_timing_report');
+    if (!raw) { console.error('No NEO Build timing report found. Run a build first.'); return; }
+    const report = JSON.parse(raw);
+    const ts = (report.timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `neo-build-timing-${ts}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    console.log('[NEO-BUILD-TIMING] Download triggered:', `neo-build-timing-${ts}.json`);
+};
+
 // ═══════════════════════════════════════════════════════════════════════════
 // END INSTRUCTOR ALLOCATION DIAGNOSTIC SYSTEM
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1546,6 +1620,14 @@ function generateDfpInternal(
     const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
     const ftdResourceLabel = buildResourceDisplayNames.ftd;
     const cptResourceLabel = buildResourceDisplayNames.cpt;
+    const timingReport = config.timingReport;
+    const markBuildTiming = (name: string, details?: Record<string, any>) => markNeoBuildTiming(timingReport, name, details);
+    const recordProgress = (progress: { message: string, percentage: number }) => {
+        markBuildTiming(`progress:${progress.message}`, {
+            percentage: progress.percentage,
+        });
+        setProgress(progress);
+    };
     const neoBuildVerboseDiagnostics = localStorage.getItem('neo_build_verbose_diag') === 'true';
     const neoBuildLiveDiagnostics = localStorage.getItem('neo_build_live_diag') === 'true';
     const buildDebugLog = (...args: any[]) => {
@@ -1942,7 +2024,7 @@ function generateDfpInternal(
 
     // enforceDayNightSeparation and detectConflictsForEventWithDayNightSeparation are now defined at component level above
 
-    setProgress({ message: 'Initializing DFP build...', percentage: 0 });
+    recordProgress({ message: 'Initializing DFP build...', percentage: 0 });
     buildDebugLog('[SEQ-DIAG] generateDfpInternal entered');
 
     // Preserve only explicitly fixed Active DFP events as build constraints.
@@ -2110,7 +2192,7 @@ function generateDfpInternal(
     });
     buildDebugLog('DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====');
 
-    setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
+    recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
 
     const activeTrainees = trainees.filter(t =>
         !t.isPaused &&
@@ -2170,7 +2252,7 @@ function generateDfpInternal(
 
     const nightFlyingTraineeNames = new Set(nextEventLists.bnf.map(t => t.fullName));
 
-    setProgress({ message: 'Ranking trainees...', percentage: 20 });
+    recordProgress({ message: 'Ranking trainees...', percentage: 20 });
     const getMedianProgress = (courseName: string): number => {
         const courseTrainees = activeTrainees.filter(t => t.course === courseName);
         if (courseTrainees.length === 0) return 0;
@@ -2294,7 +2376,7 @@ function generateDfpInternal(
 
     // Apply reordering only to the flight list (Day Next Event List)
     nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
-    setProgress({ message: 'Allocating course slots...', percentage: 30 });
+    recordProgress({ message: 'Allocating course slots...', percentage: 30 });
 
     // Helper: Normalize percentages to sum to 100%
     const normalizePercentages = (percentages: Map<string, number>): Map<string, number> => {
@@ -2647,7 +2729,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // - Ground/CPT: 15 minutes (represents minimum gap between end of one ground school and start of next)
         const timeIncrement = type === 'flight' ? 5 / 60 : 15 / 60;
         const listName = `${isNightPass ? 'BNF' : type.toUpperCase()} ${isPlusOne ? 'Next+1' : 'Next'}`;
-        setProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
+        recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + (['flight', 'ftd', 'cpt', 'ground'].indexOf(type) * 10) });
 
         let unplacedTrainees = [...list];
         let placedThisPass = true;
@@ -3535,7 +3617,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
 
     // NEW ALGORITHM: Schedule Duty Supervisors FIRST, before any other events
-    setProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
+    recordProgress({ message: 'Scheduling Duty Supervisors...', percentage: 40 });
 
     // Duty Supervisor MUST cover entire Day flying window regardless of flight schedule
     const dayFlights = generatedEvents.filter(e => e.type === 'flight' && !e.resourceId.startsWith('STBY') && !e.resourceId.startsWith('BNF-STBY'));
@@ -3546,7 +3628,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // Always schedule Duty Supervisor for day window, even if no flights
     if (dutySupStartTime >= dutySupEndTime) {
-        setProgress({ message: 'Invalid day flying window', percentage: 90 });
+        recordProgress({ message: 'Invalid day flying window', percentage: 90 });
         // Continue to night flying setup even if day window is invalid
     }
 
@@ -3732,7 +3814,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // 2. Schedule DUTY SUP for Night Flying window (if 2+ BNF trainees)
     if (nextEventLists.bnf.length >= 2 && nightDutySup) {
-        setProgress({ message: 'Scheduling Night Duty Supervisor...', percentage: 42 });
+        recordProgress({ message: 'Scheduling Night Duty Supervisor...', percentage: 42 });
         buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
 
         const existingNightDutySup = generatedEvents.find(e => {
@@ -3767,10 +3849,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
     // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
-    setProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
+    recordProgress({ message: 'Scheduling Day Flight Events (Priority)...', percentage: 45 });
     // Highest Priority Flight Events are already added at the start
 
-    setProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
+    recordProgress({ message: 'Scheduling Day Flight Events (Next)...', percentage: 50 });
 
     // SOLO SCHEDULING:
     // Solo flights (BGF11/BGF18 or sortieType='Solo') are scheduled AFTER all dual flights.
@@ -3898,7 +3980,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // 4. Schedule Night Flight Events (if 2+ BNF trainees): a) Highest Priority, b) Next Events
     // Night Flying Rule: Only scheduled when 2+ BNF trainees (1 trainee = no night flying)
-    setProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
+    recordProgress({ message: 'Scheduling Night Flying...', percentage: 55 });
     if(nextEventLists.bnf.length >= 2) {
          // Highest Priority Night Flight Events are already added at the start
 
@@ -3908,10 +3990,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
-    setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
     // Highest Priority FTD Events are already added at the start
 
-    setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
+    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
         'ftd',
@@ -3923,10 +4005,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 6. Schedule CPT/Ground Events: a) Highest Priority, b) Next Events
-    setProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
     // Highest Priority CPT Events are already added at the start
 
-    setProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
+    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
         'cpt',
@@ -3937,10 +4019,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         false
     );
 
-    setProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
+    recordProgress({ message: 'Scheduling Ground Events (Priority)...', percentage: 74 });
     // Highest Priority Ground Events are already added at the start
 
-    setProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
+    recordProgress({ message: 'Scheduling Ground Events (Next)...', percentage: 76 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),
         'ground',
@@ -3952,7 +4034,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 7. Schedule Day Flight Events: Plus-One
-    setProgress({ message: 'Scheduling Day Flight Events (Plus-One)...', percentage: 78 });
+    recordProgress({ message: 'Scheduling Day Flight Events (Plus-One)...', percentage: 78 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight)),
         'flight',
@@ -3967,7 +4049,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // Two-Wave System: Wave One = Next Events, Wave Two = Plus-One Events
     // Each BNF trainee can fly up to 2 night flights (special limit for BNF)
     if(nextEventLists.bnf.length >= 2) {
-         setProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
+         recordProgress({ message: 'Scheduling Night Flight Events (Plus-One)...', percentage: 80 });
          const bnfWaveTwoList = nextEventLists.bnf.filter(trainee => {
             const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
             return plusOne && plusOne.code.startsWith('BNF') && plusOne.type === 'Flight';
@@ -3976,7 +4058,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     }
 
     // 8. Schedule FTD Events: Plus-One
-    setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
+    recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
         'ftd',
@@ -3988,7 +4070,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     );
 
     // 9. Schedule CPT/Ground Events: Plus-One
-    setProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
+    recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
         'cpt',
@@ -3999,7 +4081,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         false
     );
 
-    setProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
+    recordProgress({ message: 'Scheduling Ground Events (Plus-One)...', percentage: 86 });
     scheduleList(
         applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground)),
         'ground',
@@ -4012,7 +4094,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // NEW STBY SCHEDULING PASS - "8 Flights Per Hour" Rule
     // STBY flights are extra flights added on top of the main DFP when aircraft run out
-    setProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
+    recordProgress({ message: 'Scheduling STBY flights...', percentage: 88 });
 
 
 
@@ -4343,7 +4425,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // FTD STBY SCHEDULING - Handle unscheduled FTD events
     // Fill STBY lines sequentially with proper spacing
-    setProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
+    recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
 
     const traineesNeedingStbyFtd = nextEventLists.ftd.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
@@ -4560,7 +4642,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
     }
 
-    setProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
+    recordProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
 
     // Helper: Shuffle array randomly (Fisher-Yates algorithm)
     const shuffleArray = <T,>(array: T[]): T[] => {
@@ -4645,7 +4727,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     // Sort events by resource order to match left column headers
     // This ensures resource column labels align with event rows
-    setProgress({ message: 'Sorting events by resource order...', percentage: 98 });
+    recordProgress({ message: 'Sorting events by resource order...', percentage: 98 });
 
     // Define resource order matching buildResources
     const resourceOrder = [
@@ -5200,7 +5282,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
     buildDebugLog('DEBUG ===== END FINAL BUILD RESULTS =====');
 
-    setProgress({ message: 'Build complete!', percentage: 100 });
+    recordProgress({ message: 'Build complete!', percentage: 100 });
 
     // ── DIAGNOSTIC: Finalize and save instructor allocation report ──
     _diagFinalizeInstructors();
@@ -11740,12 +11822,23 @@ const App: React.FC = () => {
         console.log('🚀 [NEO-Build] buildDfpDate:', buildDfpDate);
         console.log('🚀 [NEO-Build] preservedEvents:', preservedEvents?.length || 0);
         console.log('🚀 [NEO-Build] highestPriorityEvents:', highestPriorityEvents.length);
+        const timingReport = createNeoBuildTimingReport(buildDfpDate, {
+            preservedEvents: preservedEvents?.length || 0,
+            highestPriorityEvents: highestPriorityEvents.length,
+            trainees: traineesData.length,
+            instructors: instructorsData.length,
+            currentTraineeLMPs: traineeLMPs.size,
+            scoresTrainees: scores.size,
+            publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length,
+        });
+        markNeoBuildTiming(timingReport, 'runBuildAlgorithm:start');
 
         setIsBuildingDfp(true);
         setNextDayBuildEvents([]); // Clear previous build
 
         // Use preserved events if provided, otherwise use state
         const eventsToUse = preservedEvents || highestPriorityEvents;
+        markNeoBuildTiming(timingReport, 'state:clear-previous-build', { eventsToUse: eventsToUse.length });
 
         // ── Fetch DB-backed ELCE for all active trainees ──────────────────────
         // This gives the build algorithm real DCO tracking data written the moment
@@ -11763,11 +11856,13 @@ const App: React.FC = () => {
                     ? '/api'
                     : 'https://dfp-neo-v2-production.up.railway.app/api';
 
+                markNeoBuildTiming(timingReport, 'elce:request-start', { activeTrainees: activeTraineeNames.length });
                 const elceRes = await fetch(`${apiBase}/event-completions/elce`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ traineeFullNames: activeTraineeNames, buildDate: buildDfpDate }),
                 });
+                markNeoBuildTiming(timingReport, 'elce:response-received', { status: elceRes.status });
 
                 if (elceRes.ok) {
                     const elceData = await elceRes.json() as {
@@ -11775,14 +11870,17 @@ const App: React.FC = () => {
                     };
                     dbElceMap = new Map(Object.entries(elceData.elceMap));
                     const withElce = [...dbElceMap.values()].filter(Boolean).length;
+                    markNeoBuildTiming(timingReport, 'elce:json-parsed', { trainees: dbElceMap.size, withElce });
                     console.log(`[ELCE] Bulk fetch complete — ${dbElceMap.size} trainees, ${withElce} with DB ELCE record`);
                 } else {
                     console.warn(`[ELCE] Bulk fetch failed (status ${elceRes.status}) — falling back to DFP-scan ELCE`);
                 }
             }
         } catch (elceErr) {
+            markNeoBuildTiming(timingReport, 'elce:error', { message: elceErr instanceof Error ? elceErr.message : String(elceErr) });
             console.warn('[ELCE] Bulk fetch threw — falling back to DFP-scan ELCE:', elceErr);
         }
+        markNeoBuildTiming(timingReport, 'elce:complete');
 
         let buildTraineeLMPs = traineeLMPs;
         try {
@@ -11799,30 +11897,44 @@ const App: React.FC = () => {
             };
 
             console.log('[NEO-Build] Refreshing composed Individual LMPs before build...');
+            markNeoBuildTiming(timingReport, 'lmp-sync:request-start', {
+                bpcIpcSyllabus: bpcIpcSyllabus.length,
+                ficSyllabus: ficSyllabus.length,
+            });
             const syncRes = await fetch(`${apiBase}/trainees/lmp-sync`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ syllabusData }),
             });
+            markNeoBuildTiming(timingReport, 'lmp-sync:response-received', { status: syncRes.status });
             if (!syncRes.ok) {
                 console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
             }
 
+            markNeoBuildTiming(timingReport, 'lmp-fetch:request-start');
             const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`, {
                 credentials: 'include',
             });
+            markNeoBuildTiming(timingReport, 'lmp-fetch:response-received', { status: lmpRes.status });
             if (lmpRes.ok) {
                 const lmpData = await lmpRes.json();
                 const freshLMPs = new Map<string, SyllabusItemDetail[]>();
+                let freshEventCount = 0;
                 (lmpData.lmps || []).forEach((lmp: any) => {
                     if (lmp.traineeFullName && Array.isArray(lmp.events)) {
                         freshLMPs.set(lmp.traineeFullName, lmp.events);
+                        freshEventCount += lmp.events.length;
                     }
+                });
+                markNeoBuildTiming(timingReport, 'lmp-fetch:json-parsed', {
+                    lmps: freshLMPs.size,
+                    events: freshEventCount,
                 });
                 if (freshLMPs.size > 0) {
                     buildTraineeLMPs = freshLMPs;
                     setTraineeLMPs(freshLMPs);
+                    markNeoBuildTiming(timingReport, 'lmp-fetch:state-updated', { lmps: freshLMPs.size });
                     console.log(`[NEO-Build] ✅ Loaded ${freshLMPs.size} fresh composed Individual LMPs for build`);
                 } else {
                     console.warn('[NEO-Build] Pre-build LMP refresh returned no events; using current in-memory LMPs');
@@ -11831,8 +11943,10 @@ const App: React.FC = () => {
                 console.warn(`[NEO-Build] Pre-build LMP fetch failed (${lmpRes.status}); using current in-memory LMPs`);
             }
         } catch (lmpRefreshErr) {
+            markNeoBuildTiming(timingReport, 'lmp-refresh:error', { message: lmpRefreshErr instanceof Error ? lmpRefreshErr.message : String(lmpRefreshErr) });
             console.warn('[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:', lmpRefreshErr);
         }
+        markNeoBuildTiming(timingReport, 'lmp-refresh:complete', { buildTraineeLMPs: buildTraineeLMPs.size });
 
         console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
 
@@ -11882,10 +11996,13 @@ const App: React.FC = () => {
             staffSharingUnits: organisationSettings.staffSharingUnits,
             excludedCourses: excludedCourses,
             dbElceMap,  // DB-backed ELCE map (undefined = fall back to DFP-scan)
+            timingReport,
         };
 
+        markNeoBuildTiming(timingReport, 'generate:setTimeout-queued', { delayMs: 500 });
         setTimeout(() => {
             try {
+                markNeoBuildTiming(timingReport, 'generate:setTimeout-fired');
                 console.log('🚀 [NEO-Build] Starting DFP build process for', buildDfpDate);
                 console.log('🚀 [NEO-Build] Config:', {
                     instructors: config.instructors.length,
@@ -11895,14 +12012,18 @@ const App: React.FC = () => {
                     buildDate: config.buildDate
                 });
 
+                markNeoBuildTiming(timingReport, 'generateDfpInternal:start');
                 const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+                markNeoBuildTiming(timingReport, 'generateDfpInternal:complete', { generated: generated.length });
                 console.log('🚀 [NEO-Build] DFP build completed, generated', generated.length, 'events');
                 console.log('🚀 [NEO-Build] Generated events sample:', generated.slice(0, 3));
 
                 setNextDayBuildEvents(generated);
+                markNeoBuildTiming(timingReport, 'state:setNextDayBuildEvents', { generated: generated.length });
                 console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
 
                 // Analyze build results
+                markNeoBuildTiming(timingReport, 'analysis:start');
                 const analysis = analyzeBuildResults(
                     generated,
                     coursePercentages,
@@ -11915,6 +12036,7 @@ const App: React.FC = () => {
                     syllabusDetails,
                     publishedSchedules
                 );
+                markNeoBuildTiming(timingReport, 'analysis:complete', { totalEvents: analysis.totalEvents });
 
                 // Store analysis in state for BuildAnalysisView
                 setLastBuildAnalysis(analysis);
@@ -11928,9 +12050,11 @@ const App: React.FC = () => {
                         uniformityScore: analysis.timeDistribution.uniformityScore
                     }
                 }));
+                markNeoBuildTiming(timingReport, 'analysis:stored');
 
                 console.log('Build analysis:', analysis);
 
+                markNeoBuildTiming(timingReport, 'notifications:start');
                 const notifications: string[] = [];
                 const allPersonnel = [...allInstructorsData, ...allTraineesData];
                 generated.forEach(event => {
@@ -11953,16 +12077,21 @@ const App: React.FC = () => {
                 if (notifications.length > 0) {
                     setUnavailabilityNotifications(notifications);
                 }
+                markNeoBuildTiming(timingReport, 'notifications:complete', { notifications: notifications.length });
 
             } catch (error) {
+                markNeoBuildTiming(timingReport, 'build:error', { message: error instanceof Error ? error.message : String(error) });
                 console.error("🚀 [NEO-Build] DFP Build Failed:", error);
                 console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
                 setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
             } finally {
+                markNeoBuildTiming(timingReport, 'navigation:setTimeout-queued', { delayMs: 1000 });
                 setTimeout(() => {
+                    markNeoBuildTiming(timingReport, 'navigation:setTimeout-fired');
                     console.log('🚀 [NEO-Build] Build process complete, navigating to NextDayBuild');
                     setIsBuildingDfp(false);
                     handleNavigation('NextDayBuild');
+                    markNeoBuildTiming(timingReport, 'runBuildAlgorithm:complete');
                 }, 1000);
             }
         }, 500);

@@ -70055,6 +70055,39 @@ const personnelNamesMatch = (a, b) => {
   return !!left && left === right;
 };
 const isNeoBuildVerboseDiagnosticsEnabled = () => typeof window !== "undefined" && window.localStorage?.getItem("neo_build_verbose_diag") === "true";
+const createNeoBuildTimingReport = (buildDate, counters = {}) => {
+  const now = performance.now();
+  return {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    buildDate,
+    phases: [],
+    counters,
+    startedAtMs: now,
+    lastMarkMs: now
+  };
+};
+const saveNeoBuildTimingReport = (report) => {
+  if (!report) return;
+  try {
+    localStorage.setItem("neo_build_timing_report", JSON.stringify(report));
+  } catch (error) {
+    console.warn("[NEO-BUILD-TIMING] Failed to save timing report:", error);
+  }
+};
+const markNeoBuildTiming = (report, name, details) => {
+  if (!report || report.startedAtMs === void 0 || report.lastMarkMs === void 0) return;
+  const now = performance.now();
+  report.phases.push({
+    name,
+    durationMs: Math.round(now - report.lastMarkMs),
+    totalElapsedMs: Math.round(now - report.startedAtMs),
+    ...details ? { details } : {}
+  });
+  report.lastMarkMs = now;
+  report.completedAt = (/* @__PURE__ */ new Date()).toISOString();
+  report.totalElapsedMs = Math.round(now - report.startedAtMs);
+  saveNeoBuildTimingReport(report);
+};
 const makePersonnelIdentityRef = (label, role) => {
   const normalizedName = normalizePersonnelNameForMatch(label);
   if (!normalizedName) return null;
@@ -70803,10 +70836,35 @@ window.__downloadNeoBuildDiagnostic = () => {
   URL.revokeObjectURL(url);
   console.log("[NEO-BUILD-DIAG] Download triggered:", `neo-build-diag-${ts}.json`);
 };
+window.__downloadNeoBuildTiming = () => {
+  const raw = localStorage.getItem("neo_build_timing_report");
+  if (!raw) {
+    console.error("No NEO Build timing report found. Run a build first.");
+    return;
+  }
+  const report = JSON.parse(raw);
+  const ts = (report.timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `neo-build-timing-${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  console.log("[NEO-BUILD-TIMING] Download triggered:", `neo-build-timing-${ts}.json`);
+};
 function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
   const cptResourceLabel = buildResourceDisplayNames.cpt;
+  const timingReport = config.timingReport;
+  const markBuildTiming = (name, details) => markNeoBuildTiming(timingReport, name, details);
+  const recordProgress = (progress) => {
+    markBuildTiming(`progress:${progress.message}`, {
+      percentage: progress.percentage
+    });
+    setProgress(progress);
+  };
   const neoBuildVerboseDiagnostics = localStorage.getItem("neo_build_verbose_diag") === "true";
   const neoBuildLiveDiagnostics = localStorage.getItem("neo_build_live_diag") === "true";
   const buildDebugLog = (...args) => {
@@ -71086,7 +71144,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (proposedDayNight === "Day" && isPersonScheduledForNightEvents(personName)) return false;
     return true;
   };
-  setProgress({ message: "Initializing DFP build...", percentage: 0 });
+  recordProgress({ message: "Initializing DFP build...", percentage: 0 });
   buildDebugLog("[SEQ-DIAG] generateDfpInternal entered");
   const activeDfpEvents = (publishedSchedules[buildDate] || []).filter((event) => event.isTimeFixed);
   const ignoredActiveDfpEvents = (publishedSchedules[buildDate] || []).length - activeDfpEvents.length;
@@ -71225,7 +71283,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   buildDebugLog("DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====");
-  setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
+  recordProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
   const activeTrainees = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
@@ -71269,7 +71327,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   new Set(nextEventLists.bnf.map((t) => t.fullName));
-  setProgress({ message: "Ranking trainees...", percentage: 20 });
+  recordProgress({ message: "Ranking trainees...", percentage: 20 });
   const getMedianProgress = (courseName) => {
     const courseTrainees = activeTrainees.filter((t) => t.course === courseName);
     if (courseTrainees.length === 0) return 0;
@@ -71368,7 +71426,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return reorderedList;
   };
   nextEventLists.flight = reorderSoloWithTwrDi(nextEventLists.flight);
-  setProgress({ message: "Allocating course slots...", percentage: 30 });
+  recordProgress({ message: "Allocating course slots...", percentage: 30 });
   const normalizePercentages = (percentages) => {
     const total = Array.from(percentages.values()).reduce((sum, val) => sum + val, 0);
     if (total === 0) return percentages;
@@ -71645,7 +71703,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass) => {
     const timeIncrement = type === "flight" ? 5 / 60 : 15 / 60;
     const listName = `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
-    setProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
+    recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
     let unplacedTrainees = [...list];
     let placedThisPass = true;
     const listDiag = {
@@ -72308,12 +72366,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return result;
   };
-  setProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
+  recordProgress({ message: "Scheduling Duty Supervisors...", percentage: 40 });
   generatedEvents.filter((e) => e.type === "flight" && !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY"));
   const dutySupStartTime = flyingStartTime;
   const dutySupEndTime = flyingEndTime;
   if (dutySupStartTime >= dutySupEndTime) {
-    setProgress({ message: "Invalid day flying window", percentage: 90 });
+    recordProgress({ message: "Invalid day flying window", percentage: 90 });
   }
   let nightDutySup = null;
   if (nextEventLists.bnf.length >= 2) {
@@ -72453,7 +72511,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   }
   if (nextEventLists.bnf.length >= 2 && nightDutySup) {
-    setProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
+    recordProgress({ message: "Scheduling Night Duty Supervisor...", percentage: 42 });
     buildDebugLog(`Scheduling night duty supervisor: ${nightDutySup.name}`);
     const existingNightDutySup = generatedEvents.find((e) => {
       if (e.resourceId !== "Duty Sup") return false;
@@ -72492,8 +72550,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   } else if (nextEventLists.bnf.length >= 2 && !nightDutySup) {
     buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
   }
-  setProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
-  setProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
+  recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
+  recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
     const next = traineeNextEventMap.get(trainee.fullName)?.next;
     return !!(next && (next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id)));
@@ -72569,13 +72627,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
   }
   _fbPrintSummary();
-  setProgress({ message: "Scheduling Night Flying...", percentage: 55 });
+  recordProgress({ message: "Scheduling Night Flying...", percentage: 55 });
   if (nextEventLists.bnf.length >= 2) {
     const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf);
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
-  setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
+  recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
+  recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ftd)),
     "ftd",
@@ -72585,8 +72643,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
-  setProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
+  recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Priority)...`, percentage: 70 });
+  recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Next)...`, percentage: 72 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.cpt)),
     "cpt",
@@ -72596,8 +72654,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
-  setProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
+  recordProgress({ message: "Scheduling Ground Events (Priority)...", percentage: 74 });
+  recordProgress({ message: "Scheduling Ground Events (Next)...", percentage: 76 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextEventLists.ground)),
     "ground",
@@ -72607,7 +72665,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
+  recordProgress({ message: "Scheduling Day Flight Events (Plus-One)...", percentage: 78 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.flight)),
     "flight",
@@ -72618,14 +72676,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     false
   );
   if (nextEventLists.bnf.length >= 2) {
-    setProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
+    recordProgress({ message: "Scheduling Night Flight Events (Plus-One)...", percentage: 80 });
     const bnfWaveTwoList = nextEventLists.bnf.filter((trainee) => {
       const { plusOne } = traineeNextEventMap.get(trainee.fullName) || { plusOne: null };
       return plusOne && plusOne.code.startsWith("BNF") && plusOne.type === "Flight";
     });
     scheduleList(bnfWaveTwoList, "flight", true, commenceNightFlying, ceaseNightFlying, null, true);
   }
-  setProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
+  recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Plus-One)...`, percentage: 82 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ftd)),
     "ftd",
@@ -72635,7 +72693,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     "STBY",
     false
   );
-  setProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
+  recordProgress({ message: `Scheduling ${cptResourceLabel} Events (Plus-One)...`, percentage: 84 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.cpt)),
     "cpt",
@@ -72645,7 +72703,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
+  recordProgress({ message: "Scheduling Ground Events (Plus-One)...", percentage: 86 });
   scheduleList(
     applyCoursePriority(filterOutBnfTrainees(nextPlusOneLists.ground)),
     "ground",
@@ -72655,7 +72713,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     null,
     false
   );
-  setProgress({ message: "Scheduling STBY flights...", percentage: 88 });
+  recordProgress({ message: "Scheduling STBY flights...", percentage: 88 });
   const hasFlightStartTime = (time, events) => {
     return events.some(
       (e) => e.type === "flight" && Math.abs(e.startTime - time) < 0.01
@@ -72831,7 +72889,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   }
-  setProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
+  recordProgress({ message: `Scheduling STBY ${ftdResourceLabel} events...`, percentage: 90 });
   const traineesNeedingStbyFtd = nextEventLists.ftd.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next || next.type !== "FTD") return false;
@@ -72997,8 +73055,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const ftdStbyEvents = generatedEvents.filter((e) => e.type === "ftd" && e.resourceId.startsWith("STBY"));
     buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
   }
-  setProgress({ message: "Shuffling events for distribution...", percentage: 95 });
-  setProgress({ message: "Sorting events by resource order...", percentage: 98 });
+  recordProgress({ message: "Shuffling events for distribution...", percentage: 95 });
+  recordProgress({ message: "Sorting events by resource order...", percentage: 98 });
   const resourceOrder = [
     // PC-21 aircraft
     ...Array.from({ length: 24 }, (_, i) => `PC-21 ${i + 1}`),
@@ -73460,7 +73518,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   });
   buildDebugLog("DEBUG ===== END FINAL BUILD RESULTS =====");
-  setProgress({ message: "Build complete!", percentage: 100 });
+  recordProgress({ message: "Build complete!", percentage: 100 });
   _diagFinalizeInstructors();
   return sortedEvents;
 }
@@ -78448,31 +78506,47 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("🚀 [NEO-Build] buildDfpDate:", buildDfpDate);
     console.log("🚀 [NEO-Build] preservedEvents:", preservedEvents?.length || 0);
     console.log("🚀 [NEO-Build] highestPriorityEvents:", highestPriorityEvents.length);
+    const timingReport = createNeoBuildTimingReport(buildDfpDate, {
+      preservedEvents: preservedEvents?.length || 0,
+      highestPriorityEvents: highestPriorityEvents.length,
+      trainees: traineesData.length,
+      instructors: instructorsData.length,
+      currentTraineeLMPs: traineeLMPs.size,
+      scoresTrainees: scores.size,
+      publishedEventsForBuildDate: (publishedSchedules[buildDfpDate] || []).length
+    });
+    markNeoBuildTiming(timingReport, "runBuildAlgorithm:start");
     setIsBuildingDfp(true);
     setNextDayBuildEvents([]);
     const eventsToUse = preservedEvents || highestPriorityEvents;
+    markNeoBuildTiming(timingReport, "state:clear-previous-build", { eventsToUse: eventsToUse.length });
     let dbElceMap;
     try {
       const activeTraineeNames = traineesData.filter((t) => !t.isPaused).map((t) => t.fullName).filter(Boolean);
       if (activeTraineeNames.length > 0) {
         const apiBase2 = window.location.origin.includes("railway.app") ? "/api" : "https://dfp-neo-v2-production.up.railway.app/api";
+        markNeoBuildTiming(timingReport, "elce:request-start", { activeTrainees: activeTraineeNames.length });
         const elceRes = await fetch(`${apiBase2}/event-completions/elce`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ traineeFullNames: activeTraineeNames, buildDate: buildDfpDate })
         });
+        markNeoBuildTiming(timingReport, "elce:response-received", { status: elceRes.status });
         if (elceRes.ok) {
           const elceData = await elceRes.json();
           dbElceMap = new Map(Object.entries(elceData.elceMap));
           const withElce = [...dbElceMap.values()].filter(Boolean).length;
+          markNeoBuildTiming(timingReport, "elce:json-parsed", { trainees: dbElceMap.size, withElce });
           console.log(`[ELCE] Bulk fetch complete — ${dbElceMap.size} trainees, ${withElce} with DB ELCE record`);
         } else {
           console.warn(`[ELCE] Bulk fetch failed (status ${elceRes.status}) — falling back to DFP-scan ELCE`);
         }
       }
     } catch (elceErr) {
+      markNeoBuildTiming(timingReport, "elce:error", { message: elceErr instanceof Error ? elceErr.message : String(elceErr) });
       console.warn("[ELCE] Bulk fetch threw — falling back to DFP-scan ELCE:", elceErr);
     }
+    markNeoBuildTiming(timingReport, "elce:complete");
     let buildTraineeLMPs = traineeLMPs;
     try {
       const apiBase2 = getApiBaseUrl();
@@ -78487,29 +78561,43 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         "FIC": ficSyllabus
       };
       console.log("[NEO-Build] Refreshing composed Individual LMPs before build...");
+      markNeoBuildTiming(timingReport, "lmp-sync:request-start", {
+        bpcIpcSyllabus: bpcIpcSyllabus.length,
+        ficSyllabus: ficSyllabus.length
+      });
       const syncRes = await fetch(`${apiBase2}/trainees/lmp-sync`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ syllabusData })
       });
+      markNeoBuildTiming(timingReport, "lmp-sync:response-received", { status: syncRes.status });
       if (!syncRes.ok) {
         console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
       }
+      markNeoBuildTiming(timingReport, "lmp-fetch:request-start");
       const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`, {
         credentials: "include"
       });
+      markNeoBuildTiming(timingReport, "lmp-fetch:response-received", { status: lmpRes.status });
       if (lmpRes.ok) {
         const lmpData = await lmpRes.json();
         const freshLMPs = /* @__PURE__ */ new Map();
+        let freshEventCount = 0;
         (lmpData.lmps || []).forEach((lmp) => {
           if (lmp.traineeFullName && Array.isArray(lmp.events)) {
             freshLMPs.set(lmp.traineeFullName, lmp.events);
+            freshEventCount += lmp.events.length;
           }
+        });
+        markNeoBuildTiming(timingReport, "lmp-fetch:json-parsed", {
+          lmps: freshLMPs.size,
+          events: freshEventCount
         });
         if (freshLMPs.size > 0) {
           buildTraineeLMPs = freshLMPs;
           setTraineeLMPs(freshLMPs);
+          markNeoBuildTiming(timingReport, "lmp-fetch:state-updated", { lmps: freshLMPs.size });
           console.log(`[NEO-Build] ✅ Loaded ${freshLMPs.size} fresh composed Individual LMPs for build`);
         } else {
           console.warn("[NEO-Build] Pre-build LMP refresh returned no events; using current in-memory LMPs");
@@ -78518,8 +78606,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         console.warn(`[NEO-Build] Pre-build LMP fetch failed (${lmpRes.status}); using current in-memory LMPs`);
       }
     } catch (lmpRefreshErr) {
+      markNeoBuildTiming(timingReport, "lmp-refresh:error", { message: lmpRefreshErr instanceof Error ? lmpRefreshErr.message : String(lmpRefreshErr) });
       console.warn("[NEO-Build] Pre-build LMP refresh threw; using current in-memory LMPs:", lmpRefreshErr);
     }
+    markNeoBuildTiming(timingReport, "lmp-refresh:complete", { buildTraineeLMPs: buildTraineeLMPs.size });
     console.log(`🚀 [NEO-Build] DEBUG runBuildAlgorithm called with ${eventsToUse.length} highest priority events`);
     const instructorsInBuild = instructorsData;
     const traineesInBuild = traineesData;
@@ -78565,11 +78655,14 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       staffSharingEnabled: organisationSettings.staffSharingEnabled,
       staffSharingUnits: organisationSettings.staffSharingUnits,
       excludedCourses,
-      dbElceMap
+      dbElceMap,
       // DB-backed ELCE map (undefined = fall back to DFP-scan)
+      timingReport
     };
+    markNeoBuildTiming(timingReport, "generate:setTimeout-queued", { delayMs: 500 });
     setTimeout(() => {
       try {
+        markNeoBuildTiming(timingReport, "generate:setTimeout-fired");
         console.log("🚀 [NEO-Build] Starting DFP build process for", buildDfpDate);
         console.log("🚀 [NEO-Build] Config:", {
           instructors: config.instructors.length,
@@ -78578,11 +78671,15 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           highestPriorityEvents: config.highestPriorityEvents.length,
           buildDate: config.buildDate
         });
+        markNeoBuildTiming(timingReport, "generateDfpInternal:start");
         const generated = generateDfpInternal(config, setDfpBuildProgress, publishedSchedules);
+        markNeoBuildTiming(timingReport, "generateDfpInternal:complete", { generated: generated.length });
         console.log("🚀 [NEO-Build] DFP build completed, generated", generated.length, "events");
         console.log("🚀 [NEO-Build] Generated events sample:", generated.slice(0, 3));
         setNextDayBuildEvents(generated);
+        markNeoBuildTiming(timingReport, "state:setNextDayBuildEvents", { generated: generated.length });
         console.log("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
+        markNeoBuildTiming(timingReport, "analysis:start");
         const analysis = analyzeBuildResults(
           generated,
           coursePercentages,
@@ -78595,6 +78692,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           syllabusDetails,
           publishedSchedules
         );
+        markNeoBuildTiming(timingReport, "analysis:complete", { totalEvents: analysis.totalEvents });
         setLastBuildAnalysis(analysis);
         localStorage.setItem("lastBuildAnalysis", JSON.stringify({
           ...analysis,
@@ -78604,7 +78702,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             uniformityScore: analysis.timeDistribution.uniformityScore
           }
         }));
+        markNeoBuildTiming(timingReport, "analysis:stored");
         console.log("Build analysis:", analysis);
+        markNeoBuildTiming(timingReport, "notifications:start");
         const notifications = [];
         const allPersonnel = [...allInstructorsData, ...allTraineesData];
         generated.forEach((event) => {
@@ -78624,15 +78724,20 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         if (notifications.length > 0) {
           setUnavailabilityNotifications(notifications);
         }
+        markNeoBuildTiming(timingReport, "notifications:complete", { notifications: notifications.length });
       } catch (error) {
+        markNeoBuildTiming(timingReport, "build:error", { message: error instanceof Error ? error.message : String(error) });
         console.error("🚀 [NEO-Build] DFP Build Failed:", error);
         console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : "No stack trace");
         setDfpBuildProgress({ message: "Error during build!", percentage: 100 });
       } finally {
+        markNeoBuildTiming(timingReport, "navigation:setTimeout-queued", { delayMs: 1e3 });
         setTimeout(() => {
+          markNeoBuildTiming(timingReport, "navigation:setTimeout-fired");
           console.log("🚀 [NEO-Build] Build process complete, navigating to NextDayBuild");
           setIsBuildingDfp(false);
           handleNavigation("NextDayBuild");
+          markNeoBuildTiming(timingReport, "runBuildAlgorithm:complete");
         }, 1e3);
       }
     }, 500);
