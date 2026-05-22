@@ -6147,6 +6147,7 @@ const App: React.FC = () => {
                 }
 
                 try {
+                    if (!cancelled) setPt051PerformanceLoading(true);
                     const persistedAssessments: Pt051Assessment[] = [];
                     const pageSize = 2000;
                     let offset = 0;
@@ -6180,6 +6181,8 @@ const App: React.FC = () => {
                     }
                 } catch (perfErr) {
                     console.warn('[PT051] Could not load persisted trainee performance records:', perfErr);
+                } finally {
+                    if (!cancelled) setPt051PerformanceLoading(false);
                 }
 
                 if (data.seedingMetadata) {
@@ -6187,6 +6190,7 @@ const App: React.FC = () => {
                 }
             } catch (error) {
                 console.warn('[Historical] Could not load historical data:', error);
+                if (!cancelled) setPt051PerformanceLoading(false);
             }
         };
         loadHistoricalData();
@@ -6431,6 +6435,7 @@ const App: React.FC = () => {
     const currentUserPermission = getHighestPermission(combinedPermissions);
     const [scores, setScores] = useState<Map<string, Score[]>>(new Map());
     const [pt051Assessments, setPt051Assessments] = useState<Map<string, Pt051Assessment>>(new Map());
+    const [pt051PerformanceLoading, setPt051PerformanceLoading] = useState(true);
     const [courses, setCourses] = useState<Course[]>([]);
     const [courseColors, setCourseColors] = useState<{ [key: string]: string }>({});
     const [archivedCourses, setArchivedCourses] = useState<{ [key: string]: string }>({});
@@ -9271,7 +9276,7 @@ const App: React.FC = () => {
         return 'BPC+IPC';
     };
 
-    const persistTraineeLmp = async (trainee: Trainee, lmp: SyllabusItemDetail[]) => {
+    const persistTraineeLmp = async (trainee: Trainee, lmp: SyllabusItemDetail[]): Promise<SyllabusItemDetail[]> => {
         const matchedTrainee = allTraineesData.find((candidate: any) => candidate.fullName === trainee.fullName);
         const traineeDbId = (trainee as any).id || (matchedTrainee as any)?.id;
         if (!traineeDbId) {
@@ -9304,6 +9309,14 @@ const App: React.FC = () => {
             const errorText = await response.text();
             throw new Error(errorText || `Failed to persist Individual LMP (${response.status})`);
         }
+
+        const saved = await response.json();
+        const savedEvents = saved?.lmp?.events;
+        if (!Array.isArray(savedEvents) || savedEvents.length === 0) {
+            throw new Error('Individual LMP save response did not include persisted events');
+        }
+
+        return savedEvents;
     };
 
     const handleSaveRemedialPackage = async (
@@ -9331,7 +9344,13 @@ const App: React.FC = () => {
         });
 
         try {
-            await persistTraineeLmp(trainee, updatedLmp);
+            const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            setTraineeLMPs(prevLMPs => {
+                const newLMPs = new Map(prevLMPs);
+                newLMPs.set(trainee.fullName, persistedLmp);
+                return newLMPs;
+            });
+            void loadPersistedTraineeLmp(trainee);
             setShowAddRemedialPackage(false);
             setSuccessMessage('Remedial package added to trainee LMP.');
         } catch (error) {
@@ -15549,6 +15568,7 @@ updates.forEach(update => {
                                 assessments={traineeAssessments}
                                 pt051Events={traineeAssessments}
                                 userProfile={currentUser}
+                                isLoading={pt051PerformanceLoading}
                                 refreshEvents={() => {
                                     // Refresh events by calling the existing refresh functions
                                     loadEventsForDate(selectedDate, selectedCourse);

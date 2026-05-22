@@ -33,9 +33,10 @@ interface HateSheetViewProps {
     onInsertPt051: (insertIndex: number, targetDate: string) => void;
     canEditPt051?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
+    isLoading?: boolean;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
     const { isFrozen } = useSystemFreeze();
     // Drag and drop state - simplified to just highlight target row
     const [isDragging, setIsDragging] = useState(false);
@@ -463,7 +464,22 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                 </tr>
                             </thead>
                             <tbody className="bg-gray-800 divide-y divide-gray-700">
-                                {combinedHistory.length > 0 ? (
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={6} className="text-center py-14 text-gray-300">
+                                            <div className="flex flex-col items-center justify-center gap-4">
+                                                <div className="h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" />
+                                                <div>
+                                                    <div className="text-sm font-semibold text-white">Loading performance history</div>
+                                                    <div className="mt-1 text-xs text-gray-400">Retrieving PT-051 and LMP records...</div>
+                                                </div>
+                                                <div className="h-1.5 w-56 overflow-hidden rounded-full bg-gray-700">
+                                                    <div className="h-full w-1/2 rounded-full bg-sky-400 animate-pulse" />
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : combinedHistory.length > 0 ? (
                                     combinedHistory.map((item, index) => (
                                         <tr 
                                             key={index}

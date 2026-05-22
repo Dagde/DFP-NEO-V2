@@ -9317,7 +9317,7 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied: onAccessDenied2 }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied: onAccessDenied2, isLoading = false }) => {
   const { isFrozen } = useSystemFreeze();
   const [isDragging, setIsDragging] = reactExports.useState(false);
   const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
@@ -9567,7 +9567,14 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
           ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "text-center py-14 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-4", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: "Retrieving PT-051 and LMP records..." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-1.5 w-56 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-1/2 rounded-full bg-sky-400 animate-pulse" }) })
+          ] }) }) }) : combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "tr",
             {
               onClick: () => handleRowClick(item),
@@ -74061,6 +74068,7 @@ const App = () => {
           console.log(`[Historical] Ignored ${Object.keys(data.pt051Assessments).length} legacy PT-051 records; TraineePerformance is authoritative`);
         }
         try {
+          if (!cancelled) setPt051PerformanceLoading(true);
           const persistedAssessments = [];
           const pageSize = 2e3;
           let offset = 0;
@@ -74090,12 +74098,15 @@ const App = () => {
           }
         } catch (perfErr) {
           console.warn("[PT051] Could not load persisted trainee performance records:", perfErr);
+        } finally {
+          if (!cancelled) setPt051PerformanceLoading(false);
         }
         if (data.seedingMetadata) {
           console.log(`[Historical] Seeded at: ${data.seedingMetadata.seededAt}, courses: ${(data.seedingMetadata.coursesSeeded || []).join(", ")}`);
         }
       } catch (error) {
         console.warn("[Historical] Could not load historical data:", error);
+        if (!cancelled) setPt051PerformanceLoading(false);
       }
     };
     loadHistoricalData();
@@ -74289,6 +74300,7 @@ const App = () => {
   const currentUserPermission = getHighestPermission(combinedPermissions);
   const [scores, setScores] = reactExports.useState(/* @__PURE__ */ new Map());
   const [pt051Assessments, setPt051Assessments] = reactExports.useState(/* @__PURE__ */ new Map());
+  const [pt051PerformanceLoading, setPt051PerformanceLoading] = reactExports.useState(true);
   const [courses, setCourses] = reactExports.useState([]);
   const [courseColors, setCourseColors] = reactExports.useState({});
   const [archivedCourses, setArchivedCourses] = reactExports.useState({});
@@ -76528,6 +76540,12 @@ ${"=".repeat(60)}`);
       const errorText = await response.text();
       throw new Error(errorText || `Failed to persist Individual LMP (${response.status})`);
     }
+    const saved = await response.json();
+    const savedEvents = saved?.lmp?.events;
+    if (!Array.isArray(savedEvents) || savedEvents.length === 0) {
+      throw new Error("Individual LMP save response did not include persisted events");
+    }
+    return savedEvents;
   };
   const handleSaveRemedialPackage = async (trainee, eventToRemediate, newEvents) => {
     const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
@@ -76547,7 +76565,13 @@ ${"=".repeat(60)}`);
       return newLMPs;
     });
     try {
-      await persistTraineeLmp(trainee, updatedLmp);
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prevLMPs) => {
+        const newLMPs = new Map(prevLMPs);
+        newLMPs.set(trainee.fullName, persistedLmp);
+        return newLMPs;
+      });
+      void loadPersistedTraineeLmp(trainee);
       setShowAddRemedialPackage(false);
       setSuccessMessage("Remedial package added to trainee LMP.");
     } catch (error) {
@@ -81417,6 +81441,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               assessments: traineeAssessments,
               pt051Events: traineeAssessments,
               userProfile: currentUser2,
+              isLoading: pt051PerformanceLoading,
               refreshEvents: () => {
                 loadEventsForDate(selectedDate, selectedCourse);
               },
