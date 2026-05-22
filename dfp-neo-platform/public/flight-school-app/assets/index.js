@@ -70745,6 +70745,23 @@ window.__downloadBuildConflictDiagnostic = () => {
   URL.revokeObjectURL(url);
   console.log("[BUILD-CONFLICT-DIAG] Download triggered:", `build-conflict-diag-${ts}.json`);
 };
+window.__downloadNeoBuildDiagnostic = () => {
+  const raw = localStorage.getItem("neo_build_diag_report");
+  if (!raw) {
+    console.error("No NEO Build diagnostic report found. Run a build first.");
+    return;
+  }
+  const report = JSON.parse(raw);
+  const ts = (report.timestamp || (/* @__PURE__ */ new Date()).toISOString()).replace(/[:.]/g, "-").replace("T", "_").slice(0, 19);
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `neo-build-diag-${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  console.log("[NEO-BUILD-DIAG] Download triggered:", `neo-build-diag-${ts}.json`);
+};
 function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
@@ -71036,6 +71053,38 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     _isNext: void 0,
     _traineeName: e.student || e.pilot || ""
   }));
+  const neoBuildDiag = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    buildDate,
+    input: {
+      instructors: originalInstructors.length,
+      trainees: trainees.length,
+      syllabus: syllabusDetails.length,
+      scoresTrainees: scores.size,
+      traineeLmps: traineeLMPs.size,
+      highestPriorityEvents: highestPriorityEvents.length,
+      activeDfpEvents: activeDfpEventsWithoutDate.length
+    },
+    activeTrainees: {
+      total: 0,
+      excludedPaused: trainees.filter((t) => t.isPaused).length,
+      excludedCourses: 0,
+      excludedStaticUnavailable: 0
+    },
+    nextEventLists: null,
+    nextSamples: [],
+    scheduleLists: {},
+    final: null
+  };
+  const saveNeoBuildDiag = (stage) => {
+    neoBuildDiag.stage = stage;
+    neoBuildDiag.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    try {
+      localStorage.setItem("neo_build_diag_report", JSON.stringify(neoBuildDiag));
+    } catch (error) {
+      console.warn("[NEO-BUILD-DIAG] Failed to save report:", error);
+    }
+  };
   const eventCounts = /* @__PURE__ */ new Map();
   originalInstructors.forEach((i) => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
   trainees.forEach((t) => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
@@ -71131,6 +71180,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const activeTrainees = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
   );
+  neoBuildDiag.activeTrainees.total = activeTrainees.length;
+  neoBuildDiag.activeTrainees.excludedCourses = trainees.filter((t) => !t.isPaused && (config.excludedCourses || []).includes(t.course)).length;
+  neoBuildDiag.activeTrainees.excludedStaticUnavailable = trainees.filter(
+    (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
+  ).length;
   const traineeNextEventMap = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
     const nextEvents = computeNextEventsForTrainee(trainee, traineeLMPs, scores, syllabusDetails, publishedSchedules, buildDate, config.dbElceMap);
@@ -71200,6 +71254,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   Object.values(nextEventLists).forEach((list) => list.sort(sortTrainees));
   Object.values(nextPlusOneLists).forEach((list) => list.sort(sortTrainees));
+  neoBuildDiag.nextEventLists = {
+    next: {
+      flight: nextEventLists.flight.length,
+      ftd: nextEventLists.ftd.length,
+      cpt: nextEventLists.cpt.length,
+      ground: nextEventLists.ground.length,
+      bnf: nextEventLists.bnf.length
+    },
+    nextPlusOne: {
+      flight: nextPlusOneLists.flight.length,
+      ftd: nextPlusOneLists.ftd.length,
+      cpt: nextPlusOneLists.cpt.length,
+      ground: nextPlusOneLists.ground.length
+    },
+    noNextEvent: activeTrainees.filter((t) => !traineeNextEventMap.get(t.fullName)?.next).length
+  };
+  neoBuildDiag.nextSamples = Array.from(traineeNextEventMap.entries()).slice(0, 80).map(([name, ev]) => ({
+    name,
+    nextCode: ev.next?.code || null,
+    nextType: ev.next?.type || null,
+    nextPrerequisites: ev.next?.prerequisites || [],
+    plusOneCode: ev.plusOne?.code || null,
+    plusOneType: ev.plusOne?.type || null
+  }));
+  saveNeoBuildDiag("category-lists-built");
   console.log(
     `🟢🟢🟢 [SEQ-DIAG] Category lists built:
   Next  → flight:${nextEventLists.flight.length} ftd:${nextEventLists.ftd.length} cpt:${nextEventLists.cpt.length} ground:${nextEventLists.ground.length} bnf:${nextEventLists.bnf.length}
@@ -71515,6 +71594,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     setProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
     let unplacedTrainees = [...list];
     let placedThisPass = true;
+    const listDiag = {
+      type,
+      isPlusOne,
+      isNightPass,
+      startTimeBoundary,
+      endTimeBoundary,
+      input: list.length,
+      attempts: 0,
+      successes: 0,
+      noSyllabusItem: 0,
+      blockedPrimaryMissing: 0,
+      sample: list.slice(0, 20).map((trainee) => {
+        const nextEvents = traineeNextEventMap.get(trainee.fullName);
+        const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
+        return {
+          trainee: trainee.fullName,
+          event: item?.code || null,
+          eventType: item?.type || null,
+          prerequisites: item?.prerequisites || []
+        };
+      }),
+      unplaced: []
+    };
+    neoBuildDiag.scheduleLists[listName] = listDiag;
+    saveNeoBuildDiag(`schedule-list-start:${listName}`);
     const segments = [];
     if ((type === "cpt" || type === "ground") && !isNightPass) {
       const segmentDuration = 2;
@@ -71529,6 +71633,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const { next, plusOne } = traineeNextEventMap.get(trainee.fullName);
         const syllabusItem = isPlusOne ? plusOne : next;
         if (!syllabusItem) {
+          listDiag.noSyllabusItem++;
           continue;
         }
         let searchStartTime = startTimeBoundary;
@@ -71538,6 +71643,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             (e) => getPersonnel(e).includes(trainee.fullName) && nextEventCodes.has(e.flightNumber)
           );
           if (!nextEvent) {
+            listDiag.blockedPrimaryMissing++;
             remainingForNextPass.push(trainee);
             continue;
           }
@@ -71558,9 +71664,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               const earliestEventStart = mustFitFullBookingWindow ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
               const latestEventStart = mustFitFullBookingWindow ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
               for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
+                listDiag.attempts++;
                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
                 if (result && typeof result === "object" && "id" in result) {
                   generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                  listDiag.successes++;
                   const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
                   const tCounts = eventCounts.get(trainee.fullName);
                   if (type === "flight" || type === "ftd") {
@@ -71590,7 +71698,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
       }
       unplacedTrainees = remainingForNextPass;
+      listDiag.unplaced = unplacedTrainees.slice(0, 40).map((trainee) => {
+        const nextEvents = traineeNextEventMap.get(trainee.fullName);
+        const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
+        return {
+          trainee: trainee.fullName,
+          event: item?.code || null,
+          eventType: item?.type || null
+        };
+      });
+      saveNeoBuildDiag(`schedule-list-pass:${listName}`);
     }
+    saveNeoBuildDiag(`schedule-list-end:${listName}`);
   };
   const scheduleEvent = (trainee, syllabusItem, startTime, type, isNightPass, isPlusOne, primaryPreferOnly = false, requirePreferredNightAircraft = false) => {
     const _isFlight = type === "flight" && !isNightPass;
@@ -73213,6 +73332,54 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return report;
   };
   generateBuildConflictDiagnostic(sortedEvents);
+  neoBuildDiag.final = {
+    totalEvents: sortedEvents.length,
+    byType: sortedEvents.reduce((acc, event) => {
+      const typeKey = event.type || "unknown";
+      acc[typeKey] = (acc[typeKey] || 0) + 1;
+      return acc;
+    }, {}),
+    bySource: sortedEvents.reduce((acc, event) => {
+      const sourceKey = event._source || "unknown";
+      acc[sourceKey] = (acc[sourceKey] || 0) + 1;
+      return acc;
+    }, {}),
+    byResourcePrefix: sortedEvents.reduce((acc, event) => {
+      const resource = event.resourceId || "none";
+      const prefix = resource === "Duty Sup" ? "Duty Sup" : resource.split(" ")[0] || "none";
+      acc[prefix] = (acc[prefix] || 0) + 1;
+      return acc;
+    }, {}),
+    firstEvents: sortedEvents.slice(0, 80).map((event) => ({
+      id: event.id,
+      flightNumber: event.flightNumber,
+      type: event.type,
+      resourceId: event.resourceId,
+      startTime: event.startTime,
+      duration: event.duration,
+      instructor: event.instructor,
+      student: event.student,
+      pilot: event.pilot,
+      source: event._source,
+      isNext: event._isNext,
+      traineeName: event._traineeName
+    }))
+  };
+  saveNeoBuildDiag("final");
+  console.warn('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
+    activeTrainees: neoBuildDiag.activeTrainees,
+    nextEventLists: neoBuildDiag.nextEventLists,
+    final: neoBuildDiag.final
+  });
+  console.table(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => ({
+    list: name,
+    input: diag.input,
+    attempts: diag.attempts,
+    successes: diag.successes,
+    noSyllabusItem: diag.noSyllabusItem,
+    blockedPrimaryMissing: diag.blockedPrimaryMissing,
+    unplaced: diag.unplaced.length
+  })));
   console.log("First 20 sorted events by resource:");
   sortedEvents.slice(0, 20).forEach((e) => {
     const personName = e.student || e.pilot || e.instructor || "N/A";
