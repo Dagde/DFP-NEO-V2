@@ -55,6 +55,7 @@ interface TraineeProfileFlyoutProps {
   currentUserId?: string;
   currentUserName?: string;
   pt051Assessments?: Map<string, Pt051Assessment>;
+  pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
   onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
@@ -285,6 +286,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   currentUserId,
   currentUserName,
   pt051Assessments,
+  pt051PerformanceLoading = false,
   traineeLMPs,
   userProfile,
   onSelectPt051ForEvent,
@@ -1179,6 +1181,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             onBackToRoster={() => setActiveTab(null)}
                             onInsertPt051={() => {}}
                             canEditPt051={canEditPt051}
+                            isLoading={pt051PerformanceLoading}
                           />
                         </div>
                       );

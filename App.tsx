@@ -15402,6 +15402,7 @@ updates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
                             pt051Assessments={pt051Assessments}
+                            pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
                         />;
             case 'CourseRoster':
@@ -15544,6 +15545,7 @@ updates.forEach(update => {
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
                             pt051Assessments={pt051Assessments}
+                            pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
                         />;
             case 'HateSheet':

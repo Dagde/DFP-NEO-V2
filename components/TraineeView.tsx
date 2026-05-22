@@ -41,6 +41,7 @@ interface TraineeViewProps {
   currentUserId?: string;
   currentUserName?: string;
   pt051Assessments?: Map<string, any>;
+  pt051PerformanceLoading?: boolean;
   userProfile?: any;
   canViewTraineeProfile?: (trainee: any) => boolean;
   canViewTraineePt051?: (trainee: any) => boolean;
@@ -148,6 +149,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             resourceDisplayNames={props.resourceDisplayNames}
             personnelDisplaySettings={props.personnelDisplaySettings}
             pt051Assessments={props.pt051Assessments}
+            pt051PerformanceLoading={props.pt051PerformanceLoading}
             userProfile={props.userProfile}
             canViewTraineeProfile={props.canViewTraineeProfile}
             canViewTraineePt051={props.canViewTraineePt051}

@@ -10174,6 +10174,7 @@ const TraineeProfileFlyout = ({
   currentUserId,
   currentUserName,
   pt051Assessments,
+  pt051PerformanceLoading = false,
   traineeLMPs,
   userProfile,
   onSelectPt051ForEvent,
@@ -10901,7 +10902,8 @@ const TraineeProfileFlyout = ({
                 onBackToRoster: () => setActiveTab(null),
                 onInsertPt051: () => {
                 },
-                canEditPt051
+                canEditPt051,
+                isLoading: pt051PerformanceLoading
               }
             ) });
           })(),
@@ -11834,6 +11836,7 @@ const CourseRosterView = ({
   currentUserId,
   currentUserName,
   pt051Assessments,
+  pt051PerformanceLoading = false,
   userProfile,
   canViewTraineeProfile = () => true,
   canViewTraineePt051 = () => true,
@@ -12130,6 +12133,7 @@ const CourseRosterView = ({
         resourceDisplayNames,
         personnelDisplaySettings,
         pt051Assessments,
+        pt051PerformanceLoading,
         traineeLMPs,
         userProfile,
         canViewPt051: canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
@@ -28114,6 +28118,7 @@ const TraineeView = (props) => {
           resourceDisplayNames: props.resourceDisplayNames,
           personnelDisplaySettings: props.personnelDisplaySettings,
           pt051Assessments: props.pt051Assessments,
+          pt051PerformanceLoading: props.pt051PerformanceLoading,
           userProfile: props.userProfile,
           canViewTraineeProfile: props.canViewTraineeProfile,
           canViewTraineePt051: props.canViewTraineePt051,
@@ -81290,6 +81295,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             resourceDisplayNames,
             personnelDisplaySettings,
             pt051Assessments,
+            pt051PerformanceLoading,
             userProfile: currentUser2
           }
         );
@@ -81416,6 +81422,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             resourceDisplayNames,
             personnelDisplaySettings,
             pt051Assessments,
+            pt051PerformanceLoading,
             userProfile: currentUser2
           }
         );

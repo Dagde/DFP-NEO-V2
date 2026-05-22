@@ -49,6 +49,7 @@ interface CourseRosterViewProps {
     currentUserId?: string;
     currentUserName?: string;
     pt051Assessments?: Map<string, any>;
+    pt051PerformanceLoading?: boolean;
     userProfile?: any;
     canViewTraineeProfile?: (trainee: Trainee) => boolean;
     canViewTraineePt051?: (trainee: Trainee) => boolean;
@@ -121,6 +122,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     currentUserId,
     currentUserName,
     pt051Assessments,
+    pt051PerformanceLoading = false,
     userProfile,
     canViewTraineeProfile = () => true,
     canViewTraineePt051 = () => true,
@@ -487,6 +489,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     resourceDisplayNames={resourceDisplayNames}
                     personnelDisplaySettings={personnelDisplaySettings}
                     pt051Assessments={pt051Assessments}
+                    pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}
                     userProfile={userProfile}
                     canViewPt051={canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
