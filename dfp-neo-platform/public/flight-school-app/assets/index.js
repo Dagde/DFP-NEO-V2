@@ -70766,25 +70766,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const buildResourceDisplayNames = config.resourceDisplayNames ?? DEFAULT_RESOURCE_DISPLAY_NAMES;
   const ftdResourceLabel = buildResourceDisplayNames.ftd;
   const cptResourceLabel = buildResourceDisplayNames.cpt;
+  const neoBuildVerboseDiagnostics = localStorage.getItem("neo_build_verbose_diag") === "true";
+  const neoBuildLiveDiagnostics = localStorage.getItem("neo_build_live_diag") === "true";
+  const buildDebugLog = (...args) => {
+    if (neoBuildVerboseDiagnostics) console.log(...args);
+  };
   let _overlapRejCount = 0;
   const _traineeTotal = config.trainees.length;
   const _traineeDb = config.trainees.filter((t) => t._dataSource === "database").length;
   const _traineeMock = config.trainees.filter((t) => t._dataSource !== "database").length;
   const _traineeUnknown = config.trainees.filter((t) => !t._dataSource).length;
-  console.log("\n🔴🔴🔴 [TRAINEE-SOURCE-FORENSIC] BUILD ENTRY POINT ANALYSIS 🔴🔴🔴");
-  console.log("A. Exact build input counts:");
-  console.log(`   Total trainees: ${_traineeTotal}`);
-  console.log(`   DB-tagged trainees: ${_traineeDb}`);
-  console.log(`   Mock-tagged trainees: ${_traineeMock}`);
-  console.log(`   Unknown source trainees: ${_traineeUnknown}`);
+  buildDebugLog("\n[TRAINEE-SOURCE-FORENSIC] BUILD ENTRY POINT ANALYSIS");
+  buildDebugLog("A. Exact build input counts:");
+  buildDebugLog(`   Total trainees: ${_traineeTotal}`);
+  buildDebugLog(`   DB-tagged trainees: ${_traineeDb}`);
+  buildDebugLog(`   Mock-tagged trainees: ${_traineeMock}`);
+  buildDebugLog(`   Unknown source trainees: ${_traineeUnknown}`);
   let _buildDataType = "UNKNOWN";
   if (_traineeDb > 0 && _traineeMock === 0 && _traineeUnknown === 0) _buildDataType = "DB ONLY";
   else if (_traineeMock > 0 && _traineeDb === 0 && _traineeUnknown === 0) _buildDataType = "MOCK ONLY";
   else if (_traineeDb > 0 && _traineeMock > 0) _buildDataType = "MIXED (DB + MOCK)";
   else if (_traineeUnknown > 0) _buildDataType = "MIXED (CONTAINS UNKNOWN)";
   else if (_traineeTotal === 0) _buildDataType = "EMPTY";
-  console.log("B. Build input type:", _buildDataType);
-  console.log("C. 10 sample trainee records from actual build input:");
+  buildDebugLog("B. Build input type:", _buildDataType);
+  buildDebugLog("C. 10 sample trainee records from actual build input:");
   const _sampleTrainees = config.trainees.slice(0, 10).map((t) => ({
     id: t.idNumber || t.id,
     fullName: t.fullName || t.name,
@@ -70792,22 +70797,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     _dataSource: t._dataSource || "undefined"
   }));
   _sampleTrainees.forEach((sample, i) => {
-    console.log(`   [${i + 1}] ID:${sample.id} | Name:${sample.fullName} | Course:${sample.course} | Source:${sample._dataSource}`);
+    buildDebugLog(`   [${i + 1}] ID:${sample.id} | Name:${sample.fullName} | Course:${sample.course} | Source:${sample._dataSource}`);
   });
   if (_buildDataType === "MIXED (DB + MOCK)") {
-    console.log("\n🚨 CONTAMINATION DETECTED 🚨");
-    console.log("D. Conclusion: Build algorithm is receiving mixed DB+mock trainee dataset.");
-    console.log("E. This is the FIRST proven contamination point - scheduling has not even started yet.");
-    console.log("F. In DB-only mode, mock trainees should be present in traineesData? NO - they should be filtered out.");
-    console.log("G. Are they actually present in final build input? YES - counts above prove contamination.");
+    buildDebugLog("\nCONTAMINATION DETECTED");
+    buildDebugLog("D. Conclusion: Build algorithm is receiving mixed DB+mock trainee dataset.");
+    buildDebugLog("E. This is the FIRST proven contamination point - scheduling has not even started yet.");
+    buildDebugLog("F. In DB-only mode, mock trainees should be present in traineesData? NO - they should be filtered out.");
+    buildDebugLog("G. Are they actually present in final build input? YES - counts above prove contamination.");
   } else if (_buildDataType === "DB ONLY") {
-    console.log("\n✅ NO CONTAMINATION");
-    console.log("D. Conclusion: Build algorithm is receiving DB-only trainee dataset as expected.");
+    buildDebugLog("\nNO CONTAMINATION");
+    buildDebugLog("D. Conclusion: Build algorithm is receiving DB-only trainee dataset as expected.");
   } else {
-    console.log("\n⚠️ UNEXPECTED STATE");
-    console.log("D. Build input is:", _buildDataType);
+    buildDebugLog("\nUNEXPECTED STATE");
+    buildDebugLog("D. Build input is:", _buildDataType);
   }
-  console.log("🔴🔴🔴 [TRAINEE-SOURCE-FORENSIC] ANALYSIS COMPLETE 🔴🔴🔴\n");
+  buildDebugLog("[TRAINEE-SOURCE-FORENSIC] ANALYSIS COMPLETE\n");
   const _MAX_OVERLAP_LOG = 10;
   const _logOverlapRejection = (instructorName, candidateFlightNumber, candidateType, candidateStart, candidateEnd, conflictingFlightNumber, conflictingType, conflictingStart, conflictingEnd) => {
     if (_overlapRejCount >= _MAX_OVERLAP_LOG) return;
@@ -70877,10 +70882,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
 ═══════════════════════════════════════════════════`
     );
   };
-  console.log("🚨🚨🚨 [GENERATE DFP INTERNAL] Starting with config.instructors:", config.instructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role })));
-  console.log("🚨🚨🚨 [GENERATE DFP INTERNAL] Total instructors in config:", config.instructors.length);
+  buildDebugLog("[GENERATE DFP INTERNAL] Starting with config.instructors:", config.instructors.map((i) => ({ id: i.idNumber, name: i.name, role: i.role })));
+  buildDebugLog("[GENERATE DFP INTERNAL] Total instructors in config:", config.instructors.length);
   config.instructors.forEach((instructor, index) => {
-    console.log(`🚨🚨🚨 [INSTRUCTOR ${index}] ID: ${instructor.idNumber}, Name: ${instructor.name}, Role: ${instructor.role}`);
+    buildDebugLog(`[INSTRUCTOR ${index}] ID: ${instructor.idNumber}, Name: ${instructor.name}, Role: ${instructor.role}`);
   });
   const {
     instructors: originalInstructors,
@@ -71039,10 +71044,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return true;
   };
   setProgress({ message: "Initializing DFP build...", percentage: 0 });
-  console.log("🟢🟢🟢 [SEQ-DIAG] generateDfpInternal ENTERED — focused same-trainee diagnostic active");
+  buildDebugLog("[SEQ-DIAG] generateDfpInternal entered");
   const activeDfpEvents = (publishedSchedules[buildDate] || []).filter((event) => event.isTimeFixed);
   const ignoredActiveDfpEvents = (publishedSchedules[buildDate] || []).length - activeDfpEvents.length;
-  console.log(`🔵 Active DFP has ${activeDfpEvents.length} fixed event(s) for ${buildDate}; ignoring ${ignoredActiveDfpEvents} non-fixed event(s) for rebuild`);
+  buildDebugLog(`Active DFP has ${activeDfpEvents.length} fixed event(s) for ${buildDate}; ignoring ${ignoredActiveDfpEvents} non-fixed event(s) for rebuild`);
   const activeDfpEventsWithoutDate = activeDfpEvents.map((e) => {
     const { date, ...eventWithoutDate } = e;
     return eventWithoutDate;
@@ -71077,6 +71082,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
+    if (stage !== "final" && !neoBuildLiveDiagnostics) return;
     neoBuildDiag.stage = stage;
     neoBuildDiag.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     try {
@@ -71088,14 +71094,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const eventCounts = /* @__PURE__ */ new Map();
   originalInstructors.forEach((i) => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
   trainees.forEach((t) => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
-  console.log("🔵 Initializing event counts from Active DFP...");
+  buildDebugLog("Initializing event counts from Active DFP...");
   activeDfpEventsWithoutDate.forEach((event) => {
     getPersonnel(event).forEach((personName) => {
       const counts = eventCounts.get(personName);
       if (counts) {
         if (event.type === "flight" || event.type === "ftd") {
           counts.flightFtd++;
-          console.log(`  🔵 ${personName}: flight/ftd count = ${counts.flightFtd}`);
+          buildDebugLog(`  ${personName}: flight/ftd count = ${counts.flightFtd}`);
         } else if (event.type === "ground") {
           counts.ground++;
         } else if (event.type === "cpt") {
@@ -71104,15 +71110,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     });
   });
-  console.log("DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====");
-  console.log(`DEBUG Total Highest Priority Events to check: ${highestPriorityEvents.length}`);
-  console.log(`DEBUG Build Date: ${buildDate}`);
+  buildDebugLog("DEBUG ===== BUILD ALGORITHM: PROCESSING HIGHEST PRIORITY EVENTS =====");
+  buildDebugLog(`DEBUG Total Highest Priority Events to check: ${highestPriorityEvents.length}`);
+  buildDebugLog(`DEBUG Build Date: ${buildDate}`);
   let includedCount = 0;
   let skippedCount = 0;
   highestPriorityEvents.forEach((event) => {
-    console.log(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
-    console.log(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
-    console.log(`  - event.isTimeFixed: ${event.isTimeFixed}`);
+    buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
+    buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
+    buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
     if (event.date === buildDate && event.isTimeFixed) {
       const { date, ...eventWithoutDate } = event;
       if (!eventWithoutDate.pilot && eventWithoutDate.instructor) {
@@ -71127,13 +71133,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           _isNext: void 0,
           _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || ""
         };
-        console.log(`  ↻ DEBUG UPDATED existing Active DFP event as highest priority (ID: ${event.id})`);
+        buildDebugLog(`  ↻ DEBUG UPDATED existing Active DFP event as highest priority (ID: ${event.id})`);
         return;
       }
       generatedEvents.push({ ...eventWithoutDate, _source: "highest-priority", _isNext: void 0, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || "" });
       includedCount++;
-      console.log(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
-      console.log(`  - pilot: ${eventWithoutDate.pilot}, instructor: ${eventWithoutDate.instructor}, student: ${eventWithoutDate.student}`);
+      buildDebugLog(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
+      buildDebugLog(`  - pilot: ${eventWithoutDate.pilot}, instructor: ${eventWithoutDate.instructor}, student: ${eventWithoutDate.student}`);
       getPersonnel(event).forEach((personName) => {
         const counts = eventCounts.get(personName);
         if (counts && (event.type === "flight" || event.type === "ftd")) {
@@ -71146,12 +71152,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
     } else {
       skippedCount++;
-      console.log(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? "date mismatch" : "isTimeFixed is false"}`);
+      buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? "date mismatch" : "isTimeFixed is false"}`);
     }
   });
-  console.log(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
-  console.log("DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====");
-  console.log("DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====");
+  buildDebugLog(`DEBUG Summary: ${includedCount} events INCLUDED, ${skippedCount} events SKIPPED`);
+  buildDebugLog("DEBUG ===== BUILD ALGORITHM: HIGHEST PRIORITY PROCESSING COMPLETE =====");
+  buildDebugLog("DEBUG ===== ASSIGNING RESOURCES TO HIGHEST PRIORITY EVENTS =====");
   generatedEvents.forEach((event) => {
     if (!event.resourceId || event.resourceId === "") {
       const resourcePrefix = event.type === "flight" ? "PC-21 " : event.type === "ftd" ? "FTD " : event.type === "cpt" ? "CPT " : "Ground ";
@@ -71169,13 +71175,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       if (assignedResource) {
         event.resourceId = assignedResource;
-        console.log(`DEBUG Assigned ${assignedResource} to highest priority event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"}`);
+        buildDebugLog(`DEBUG Assigned ${assignedResource} to highest priority event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"}`);
       } else {
-        console.warn(`DEBUG Could not find available resource for: ${event.flightNumber}`);
+        if (neoBuildVerboseDiagnostics) console.warn(`DEBUG Could not find available resource for: ${event.flightNumber}`);
       }
     }
   });
-  console.log("DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====");
+  buildDebugLog("DEBUG ===== RESOURCE ASSIGNMENT COMPLETE =====");
   setProgress({ message: 'Compiling "Next Event" lists...', percentage: 10 });
   const activeTrainees = trainees.filter(
     (t) => !t.isPaused && !(config.excludedCourses || []).includes(t.course) && !isPersonStaticallyUnavailable(t, flyingStartTime, ceaseNightFlying, buildDate, "flight")
@@ -71279,14 +71285,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     plusOneType: ev.plusOne?.type || null
   }));
   saveNeoBuildDiag("category-lists-built");
-  console.log(
+  buildDebugLog(
     `🟢🟢🟢 [SEQ-DIAG] Category lists built:
   Next  → flight:${nextEventLists.flight.length} ftd:${nextEventLists.ftd.length} cpt:${nextEventLists.cpt.length} ground:${nextEventLists.ground.length} bnf:${nextEventLists.bnf.length}
   Next+1→ flight:${nextPlusOneLists.flight.length} ftd:${nextPlusOneLists.ftd.length} cpt:${nextPlusOneLists.cpt.length} ground:${nextPlusOneLists.ground.length}`
   );
-  try {
-    localStorage.setItem("category_lists_diag", JSON.stringify({ activeTrainees: activeTrainees.length, next: { flight: nextEventLists.flight.length, ftd: nextEventLists.ftd.length, cpt: nextEventLists.cpt.length, ground: nextEventLists.ground.length, bnf: nextEventLists.bnf.length }, nextPlusOne: { flight: nextPlusOneLists.flight.length, ftd: nextPlusOneLists.ftd.length, cpt: nextPlusOneLists.cpt.length, ground: nextPlusOneLists.ground.length }, traineeNextEvents: Array.from(traineeNextEventMap.entries()).slice(0, 20).map(([name, ev]) => ({ name, nextType: ev.next?.type || "null", nextCode: ev.next?.code || "null" })) }));
-  } catch (e) {
+  if (neoBuildLiveDiagnostics) {
+    try {
+      localStorage.setItem("category_lists_diag", JSON.stringify({ activeTrainees: activeTrainees.length, next: { flight: nextEventLists.flight.length, ftd: nextEventLists.ftd.length, cpt: nextEventLists.cpt.length, ground: nextEventLists.ground.length, bnf: nextEventLists.bnf.length }, nextPlusOne: { flight: nextPlusOneLists.flight.length, ftd: nextPlusOneLists.ftd.length, cpt: nextPlusOneLists.cpt.length, ground: nextPlusOneLists.ground.length }, traineeNextEvents: Array.from(traineeNextEventMap.entries()).slice(0, 20).map(([name, ev]) => ({ name, nextType: ev.next?.type || "null", nextCode: ev.next?.code || "null" })) }));
+    } catch (e) {
+    }
   }
   const reorderSoloWithTwrDi = (list) => {
     const soloWithTwrDiIndices = [];
@@ -73366,28 +73374,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }))
   };
   saveNeoBuildDiag("final");
-  console.warn('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
+  buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
     activeTrainees: neoBuildDiag.activeTrainees,
     nextEventLists: neoBuildDiag.nextEventLists,
     final: neoBuildDiag.final
   });
-  console.table(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => ({
-    list: name,
-    input: diag.input,
-    attempts: diag.attempts,
-    successes: diag.successes,
-    noSyllabusItem: diag.noSyllabusItem,
-    blockedPrimaryMissing: diag.blockedPrimaryMissing,
-    unplaced: diag.unplaced.length
-  })));
-  console.log("First 20 sorted events by resource:");
+  if (neoBuildVerboseDiagnostics) {
+    console.table(Object.entries(neoBuildDiag.scheduleLists).map(([name, diag]) => ({
+      list: name,
+      input: diag.input,
+      attempts: diag.attempts,
+      successes: diag.successes,
+      noSyllabusItem: diag.noSyllabusItem,
+      blockedPrimaryMissing: diag.blockedPrimaryMissing,
+      unplaced: diag.unplaced.length
+    })));
+  }
+  buildDebugLog("First 20 sorted events by resource:");
   sortedEvents.slice(0, 20).forEach((e) => {
     const personName = e.student || e.pilot || e.instructor || "N/A";
-    console.log(`  ${e.resourceId}: ${personName} at ${e.startTime.toFixed(2)}`);
+    buildDebugLog(`  ${e.resourceId}: ${personName} at ${e.startTime.toFixed(2)}`);
   });
-  console.log("DEBUG ===== FINAL BUILD RESULTS =====");
-  console.log(`DEBUG Total events in final build: ${sortedEvents.length}`);
-  console.log("DEBUG Checking for originally locked events:");
+  buildDebugLog("DEBUG ===== FINAL BUILD RESULTS =====");
+  buildDebugLog(`DEBUG Total events in final build: ${sortedEvents.length}`);
+  buildDebugLog("DEBUG Checking for originally locked events:");
   highestPriorityEvents.forEach((hpe) => {
     if (hpe.date === buildDate && hpe.isTimeFixed) {
       const found = sortedEvents.find((e) => e.id === hpe.id);
