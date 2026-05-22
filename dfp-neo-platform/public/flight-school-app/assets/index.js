@@ -78575,8 +78575,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (!syncRes.ok) {
         console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
       }
-      markNeoBuildTiming(timingReport, "lmp-fetch:request-start");
-      const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true`, {
+      markNeoBuildTiming(timingReport, "lmp-fetch:request-start", { buildPayload: true });
+      const lmpRes = await fetch(`${apiBase2}/trainees/lmp-sync?includeEvents=true&build=true`, {
         credentials: "include"
       });
       markNeoBuildTiming(timingReport, "lmp-fetch:response-received", { status: lmpRes.status });

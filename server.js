@@ -3542,6 +3542,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
   try {
     const db = await getPrisma();
     const includeEvents = req.query.includeEvents === 'true';
+    const buildPayload = req.query.build === 'true';
     const select = {
       id: true,
       traineeId: true,
@@ -3550,7 +3551,7 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
       completedEventIds: true,
       updatedAt: true,
     };
-    if (includeEvents) {
+    if (includeEvents && !buildPayload) {
       select.events = true;
     }
 
@@ -3560,6 +3561,84 @@ app.get('/api/trainees/lmp-sync', async (req, res) => {
     });
     if (!includeEvents) {
       return res.json({ lmps, count: lmps.length });
+    }
+
+    if (buildPayload) {
+      const allSyllabusItems = await db.$queryRawUnsafe(
+        `SELECT * FROM "SyllabusItem" WHERE "isActive" = true ORDER BY "sortOrder" ASC`
+      );
+      const parsedSyllabus = (allSyllabusItems || []).map(item => ({
+        ...item,
+        courses: Array.isArray(item.courses) ? item.courses :
+          (typeof item.courses === 'string' ? JSON.parse(item.courses) : []),
+      }));
+      const getMasterSyllabus = (lmpType) => {
+        if (lmpType === 'FIC') return parsedSyllabus.filter(item => item.courses.includes('FIC'));
+        if (lmpType && lmpType !== 'BPC+IPC') return parsedSyllabus.filter(item => item.courses.includes(lmpType));
+        return parsedSyllabus.filter(item => !item.courses.includes('FIC') && item.type !== 'Academics');
+      };
+      const compactLmpEventForBuild = (item) => ({
+        id: item.id,
+        code: item.code,
+        masterEventId: item.masterEventId,
+        eventDescription: item.eventDescription,
+        type: item.type,
+        duration: item.duration,
+        sortieType: item.sortieType,
+        dayNight: item.dayNight,
+        methodOfDelivery: item.methodOfDelivery,
+        prerequisites: item.prerequisites,
+        preFlightTime: item.preFlightTime,
+        postFlightTime: item.postFlightTime,
+        completedAt: item.completedAt,
+        isComplete: item.isComplete,
+        completed: item.completed,
+        isRemedial: item.isRemedial,
+        lmpSource: item.lmpSource,
+        orderKey: item.orderKey,
+        placementNeedsReview: item.placementNeedsReview,
+        anchorAfterMasterEventId: item.anchorAfterMasterEventId,
+        anchorBeforeMasterEventId: item.anchorBeforeMasterEventId,
+        anchorPolicy: item.anchorPolicy,
+      });
+      const overlayRows = await db.$queryRawUnsafe(
+        `SELECT * FROM "TraineeLmpOverlay" WHERE "isActive" = true ORDER BY "orderKey" ASC NULLS LAST, "createdAt" ASC`
+      );
+      const overlaysByTraineeId = new Map();
+      (overlayRows || []).forEach(row => {
+        const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+        const overlay = {
+          ...payload,
+          id: payload.id || row.overlayId,
+          code: payload.code || row.overlayId,
+          lmpSource: payload.lmpSource || row.overlayType || 'remedial',
+          anchorAfterMasterEventId: payload.anchorAfterMasterEventId || row.anchorAfterMasterEventId || undefined,
+          anchorBeforeMasterEventId: payload.anchorBeforeMasterEventId || row.anchorBeforeMasterEventId || undefined,
+          anchorPolicy: payload.anchorPolicy || row.anchorPolicy || 'between',
+          orderKey: payload.orderKey || row.orderKey || undefined,
+        };
+        if (!overlaysByTraineeId.has(row.traineeId)) overlaysByTraineeId.set(row.traineeId, []);
+        overlaysByTraineeId.get(row.traineeId).push(overlay);
+      });
+
+      const composedLmps = lmps.map(lmp => {
+        const masterSyllabus = getMasterSyllabus(lmp.lmpType);
+        const overlayEvents = overlaysByTraineeId.get(lmp.traineeId) || [];
+        const events = composeIndividualLmpEvents(
+          [],
+          masterSyllabus,
+          overlayEvents,
+          lmp.completedEventIds || []
+        ).map(compactLmpEventForBuild);
+        return {
+          ...lmp,
+          events,
+          overlayCount: overlayEvents.length,
+          composedFromMaster: masterSyllabus.length > 0,
+        };
+      });
+
+      return res.json({ lmps: composedLmps, count: composedLmps.length, buildPayload: true });
     }
 
     const composedLmps = [];

@@ -11912,8 +11912,8 @@ const App: React.FC = () => {
                 console.warn(`[NEO-Build] Pre-build LMP sync failed (${syncRes.status}); using current in-memory LMPs`);
             }
 
-            markNeoBuildTiming(timingReport, 'lmp-fetch:request-start');
-            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true`, {
+            markNeoBuildTiming(timingReport, 'lmp-fetch:request-start', { buildPayload: true });
+            const lmpRes = await fetch(`${apiBase}/trainees/lmp-sync?includeEvents=true&build=true`, {
                 credentials: 'include',
             });
             markNeoBuildTiming(timingReport, 'lmp-fetch:response-received', { status: lmpRes.status });
