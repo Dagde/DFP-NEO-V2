@@ -71979,7 +71979,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "DAY_NIGHT_SEPARATION");
       return null;
     }
-    const isBnfEvent = syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight";
+    const isBnfEvent = isNightPass && syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight";
     const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
     if (type === "flight" || type === "ftd") {
       if (traineeCounts.flightFtd >= bnfFlightLimit) {
@@ -72010,7 +72010,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
-      const isBnfEvent2 = syllabusItemForCheck.code.startsWith("BNF");
+      const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF");
       if (isBnfEvent2) {
         const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
         if (!pairedInstructorName) return null;
@@ -72433,7 +72433,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     let area = void 0;
     if (type === "flight") {
-      const isBnf = syllabusItem.code.startsWith("BNF");
+      const isBnf = isNightPass && syllabusItem.code.startsWith("BNF");
       const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
       const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
       const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);

@@ -3072,8 +3072,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return null;
         }
 
-        // CRITICAL FIX: For night flying BNF events, allow 2 flights per night
-        const isBnfEvent = syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight';
+        // CRITICAL FIX: For night flying BNF events, allow 2 flights per night.
+        // Remedial BNF flights can be scheduled as day mandatory events and must use
+        // the normal day-flight path rather than the BNF night pairing/window rules.
+        const isBnfEvent = isNightPass && syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight';
         const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
 
         if (type === 'flight' || type === 'ftd') {
@@ -3116,7 +3118,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             isPlusOneCheck: boolean,
             primaryOnlyMode: boolean = false
         ): Instructor | null => {
-            const isBnfEvent = syllabusItemForCheck.code.startsWith('BNF');
+            const isBnfEvent = isNightPass && syllabusItemForCheck.code.startsWith('BNF');
 
             if (isBnfEvent) {
                 const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
@@ -3684,7 +3686,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
         let area: string | undefined = undefined;
         if (type === 'flight') {
-            const isBnf = syllabusItem.code.startsWith('BNF');
+            const isBnf = isNightPass && syllabusItem.code.startsWith('BNF');
             const endTimeBoundary = isBnf ? ceaseNightFlying : flyingEndTime;
             const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
             const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
