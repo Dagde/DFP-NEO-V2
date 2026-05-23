@@ -72781,6 +72781,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   window.__fbFlightListSize = _allFlightList.length;
   if (_mandatoryFlightList.length > 0) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
+    const roundUpToFlightSlot = (time) => Math.ceil((time - 1e-9) * 12) / 12;
     if (flyingStartTime < REMEDIAL_EARLIEST_START) {
       scheduleList(
         _dualFlightList,
@@ -72793,18 +72794,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         "FLIGHT Next Pre-1000 Normal Dual"
       );
     }
-    scheduleList(
-      _mandatoryFlightList,
-      "flight",
-      false,
-      firstRemedialFlightStart,
-      flyingEndTime,
-      null,
-      false,
-      "FLIGHT Mandatory Remedial",
-      mandatoryRemedialFlightItems
-    );
-    const roundUpToFlightSlot = (time) => Math.ceil((time - 1e-9) * 12) / 12;
     const leadAircraftReadyTime = generatedEvents.filter((event) => event.resourceId === "PC-21 1").reduce((latestReady, event) => {
       const turnaround = event.type === "flight" ? flightTurnaround : 0;
       return Math.max(latestReady, event.startTime + event.duration + turnaround);
@@ -72813,7 +72802,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       firstRemedialFlightStart,
       roundUpToFlightSlot(leadAircraftReadyTime)
     );
-    buildDebugLog(`[FLIGHT-WAVE] Post-1000 normal dual wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so the wave restarts on PC-21 1 after mandatory remedials.`);
+    buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean PC-21 wave.`);
+    scheduleList(
+      _mandatoryFlightList,
+      "flight",
+      false,
+      alignedPostMandatoryStart,
+      flyingEndTime,
+      null,
+      false,
+      "FLIGHT Mandatory Remedial",
+      mandatoryRemedialFlightItems
+    );
     scheduleList(
       _dualFlightList,
       "flight",
