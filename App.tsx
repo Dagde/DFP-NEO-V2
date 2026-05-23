@@ -4140,11 +4140,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             mandatoryRemedialFlightItems
         );
 
+        const roundUpToFlightSlot = (time: number): number => Math.ceil((time - 1e-9) * 12) / 12;
+        const leadAircraftReadyTime = generatedEvents
+            .filter(event => event.resourceId === 'PC-21 1')
+            .reduce((latestReady, event) => {
+                const turnaround = event.type === 'flight' ? flightTurnaround : 0;
+                return Math.max(latestReady, event.startTime + event.duration + turnaround);
+            }, firstRemedialFlightStart);
+        const alignedPostMandatoryStart = Math.max(
+            firstRemedialFlightStart,
+            roundUpToFlightSlot(leadAircraftReadyTime)
+        );
+        buildDebugLog(`[FLIGHT-WAVE] Post-1000 normal dual wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so the wave restarts on PC-21 1 after mandatory remedials.`);
+
         scheduleList(
             _dualFlightList,
             'flight',
             false,
-            firstRemedialFlightStart,
+            alignedPostMandatoryStart,
             flyingEndTime,
             null,
             false,
