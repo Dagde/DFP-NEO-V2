@@ -2205,10 +2205,27 @@ function generateDfpInternal(
         return { ...event, startTime: searchStart };
     };
 
+    const isMandatoryRemedialFlight = (event: ScheduleEvent): boolean =>
+        event.date === buildDate &&
+        event.isTimeFixed === true &&
+        event.isRemedial === true &&
+        event.type === 'flight';
+
+    const mandatoryRemedialFlights = highestPriorityEvents.filter(isMandatoryRemedialFlight);
+    if (mandatoryRemedialFlights.length > 0) {
+        buildDebugLog(`DEBUG Mandatory remedial flight queue prepared: ${mandatoryRemedialFlights.length} event(s)`);
+    }
+
     highestPriorityEvents.forEach(event => {
         buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'} (ID: ${event.id})`);
         buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
         buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
+
+        if (isMandatoryRemedialFlight(event)) {
+            skippedCount++;
+            buildDebugLog(`  ↷ DEBUG QUEUED mandatory remedial flight for normal scheduling after 1000: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'}`);
+            return;
+        }
 
         if(event.date === buildDate && event.isTimeFixed) {
             const { date, ...rawEventWithoutDate } = event;
@@ -3965,23 +3982,79 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const next = traineeNextEventMap.get(trainee.fullName)?.next;
         return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
     };
-    const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight));
+    const _isMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
+        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        if (!next || next.type !== 'Flight') return false;
+
+        return mandatoryRemedialFlights.some(event => {
+            const eventTrainee = event.student || event.pilot || '';
+            if (eventTrainee !== trainee.fullName) return false;
+
+            const priorityEventCodes = new Set([
+                normalizeLmpEventId(event.flightNumber),
+                normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber })),
+            ].filter(Boolean));
+
+            return (
+                priorityEventCodes.has(normalizeLmpEventId(next.code)) ||
+                priorityEventCodes.has(normalizeLmpEventId(next.id)) ||
+                priorityEventCodes.has(normalizeLmpEventId(next.masterEventId))
+            );
+        });
+    };
+    const _mandatoryFlightList = applyCoursePriority(activeTrainees.filter(_isMandatoryRemedialFlightTrainee));
+    const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter(t => !_isMandatoryRemedialFlightTrainee(t))));
     const _dualFlightList = _allFlightList.filter(t => !_isSoloTrainee(t));
     const _soloFlightList = _allFlightList.filter(t => _isSoloTrainee(t));
 
-    buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
     (window as any).__fbFlightListSize = _allFlightList.length;
 
     // Step 3a: Schedule DUAL flights first
-    scheduleList(
-        _dualFlightList,
-        'flight',
-        false,
-        flyingStartTime,
-        flyingEndTime,
-        null,
-        false
-    );
+    if (_mandatoryFlightList.length > 0) {
+        const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
+        if (flyingStartTime < REMEDIAL_EARLIEST_START) {
+            scheduleList(
+                _dualFlightList,
+                'flight',
+                false,
+                flyingStartTime,
+                REMEDIAL_EARLIEST_START,
+                null,
+                false
+            );
+        }
+
+        scheduleList(
+            _mandatoryFlightList,
+            'flight',
+            false,
+            firstRemedialFlightStart,
+            flyingEndTime,
+            null,
+            false
+        );
+
+        scheduleList(
+            _dualFlightList,
+            'flight',
+            false,
+            firstRemedialFlightStart,
+            flyingEndTime,
+            null,
+            false
+        );
+    } else {
+        scheduleList(
+            _dualFlightList,
+            'flight',
+            false,
+            flyingStartTime,
+            flyingEndTime,
+            null,
+            false
+        );
+    }
 
     // Step 3b: Schedule SOLO flights using grouped dispatch logic.
     //
@@ -4090,7 +4163,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
          // Highest Priority Night Flight Events are already added at the start
 
          // Schedule Night Flight Next Events (Wave One)
-         const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf);
+         const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter(t => !_isMandatoryRemedialFlightTrainee(t)));
          scheduleList(bnfWaveOneList, 'flight', false, commenceNightFlying, ceaseNightFlying, null, true);
     }
 
