@@ -2853,7 +2853,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         endTimeBoundary: number,
         standbyPrefix: string | null,
         isNightPass: boolean,
-        diagnosticLabel?: string
+        diagnosticLabel?: string,
+        syllabusOverrides?: Map<string, SyllabusItemDetail>
     ) => {
         // Time increments for slot hunting:
         // - Flight: 5 minutes (staggered departures to avoid all aircraft taxiing at once)
@@ -2879,7 +2880,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             attemptSamples: [] as any[],
             sample: list.slice(0, 20).map(trainee => {
                 const nextEvents = traineeNextEventMap.get(trainee.fullName);
-                const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
+                const item = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
+                    ? syllabusOverrides.get(trainee.fullName)
+                    : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
                 return {
                     trainee: trainee.fullName,
                     event: item?.code || null,
@@ -2906,7 +2909,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             for (const trainee of unplacedTrainees) {
                 const { next, plusOne } = traineeNextEventMap.get(trainee.fullName)!;
-                const syllabusItem = isPlusOne ? plusOne : next;
+                const syllabusItem = !isPlusOne && syllabusOverrides?.has(trainee.fullName)
+                    ? syllabusOverrides.get(trainee.fullName)!
+                    : isPlusOne ? plusOne : next;
                 if (!syllabusItem) {
                     listDiag.noSyllabusItem++;
                     continue;
@@ -4016,25 +4021,35 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const next = traineeNextEventMap.get(trainee.fullName)?.next;
         return !!(next && (next.sortieType === 'Solo' || ['BGF11', 'BGF18'].includes(next.id)));
     };
+    const getMandatoryRemedialFlightForTrainee = (trainee: Trainee): ScheduleEvent | null => {
+        return mandatoryRemedialFlights.find(event => (event.student || event.pilot || '') === trainee.fullName) || null;
+    };
+    const getMandatoryRemedialSyllabusItem = (trainee: Trainee): SyllabusItemDetail | null => {
+        const priorityEvent = getMandatoryRemedialFlightForTrainee(trainee);
+        if (!priorityEvent) return null;
+
+        const individualLmp = traineeLMPs.get(trainee.fullName) || [];
+        return (
+            individualLmp.find(item =>
+                normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) ||
+                normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
+            ) ||
+            syllabusDetails.find(item =>
+                normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) ||
+                normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
+            ) ||
+            null
+        );
+    };
+    const mandatoryRemedialFlightItems = new Map<string, SyllabusItemDetail>();
+    activeTrainees.forEach(trainee => {
+        const item = getMandatoryRemedialSyllabusItem(trainee);
+        if (item && item.type === 'Flight') {
+            mandatoryRemedialFlightItems.set(trainee.fullName, item);
+        }
+    });
     const _isMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
-        const next = traineeNextEventMap.get(trainee.fullName)?.next;
-        if (!next || next.type !== 'Flight') return false;
-
-        return mandatoryRemedialFlights.some(event => {
-            const eventTrainee = event.student || event.pilot || '';
-            if (eventTrainee !== trainee.fullName) return false;
-
-            const priorityEventCodes = new Set([
-                normalizeLmpEventId(event.flightNumber),
-                normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber })),
-            ].filter(Boolean));
-
-            return (
-                priorityEventCodes.has(normalizeLmpEventId(next.code)) ||
-                priorityEventCodes.has(normalizeLmpEventId(next.id)) ||
-                priorityEventCodes.has(normalizeLmpEventId(next.masterEventId))
-            );
-        });
+        return mandatoryRemedialFlightItems.has(trainee.fullName);
     };
     const _mandatoryFlightList = applyCoursePriority(activeTrainees.filter(_isMandatoryRemedialFlightTrainee));
     const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter(t => !_isMandatoryRemedialFlightTrainee(t))));
@@ -4044,6 +4059,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const eventTrainee = event.student || event.pilot || '';
         const trainee = activeTrainees.find(t => t.fullName === eventTrainee) || null;
         const next = trainee ? traineeNextEventMap.get(trainee.fullName)?.next : null;
+        const mandatoryItem = trainee ? mandatoryRemedialFlightItems.get(trainee.fullName) || null : null;
         const priorityEventCodes = [
             normalizeLmpEventId(event.flightNumber),
             normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber })),
@@ -4064,18 +4080,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             nextId: next?.id || null,
             nextMasterEventId: next?.masterEventId || null,
             nextType: next?.type || null,
+            mandatoryItemCode: mandatoryItem?.code || null,
+            mandatoryItemId: mandatoryItem?.id || null,
+            mandatoryItemType: mandatoryItem?.type || null,
             priorityEventCodes,
             nextEventCodes,
             matchedMandatoryQueue: matched,
             reason: !trainee
                 ? 'TRAINEE_NOT_ACTIVE_OR_FILTERED'
-                : !next
-                    ? 'NO_NEXT_EVENT'
-                    : next.type !== 'Flight'
-                        ? 'NEXT_EVENT_NOT_FLIGHT'
-                        : matched
-                            ? 'MATCHED_MANDATORY_QUEUE'
-                            : 'NEXT_EVENT_DOES_NOT_MATCH_PRIORITY_REMEDIAL',
+                : mandatoryItem
+                    ? 'MATCHED_SELECTED_REMEDIAL_EVENT'
+                    : 'SELECTED_REMEDIAL_EVENT_NOT_FOUND_IN_INDIVIDUAL_LMP',
         };
     });
     neoBuildDiag.mandatoryRemedialFlights.normalFlightListExclusions = mandatoryRemedialFlights.map(event => {
@@ -4119,7 +4134,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             flyingEndTime,
             null,
             false,
-            'FLIGHT Mandatory Remedial'
+            'FLIGHT Mandatory Remedial',
+            mandatoryRemedialFlightItems
         );
 
         scheduleList(

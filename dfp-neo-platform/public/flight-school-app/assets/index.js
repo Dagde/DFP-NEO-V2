@@ -71827,7 +71827,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("   C. Primary blocker: " + blockerType + " (instr=" + instrTotal + ", ac=" + acTotal + ", area=" + areaTotal + ", sep=" + sepTotal + ")");
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
-  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel) => {
+  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides) => {
     const timeIncrement = type === "flight" ? 5 / 60 : 15 / 60;
     const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
     const isMandatoryTraceList = listName.includes("Mandatory Remedial");
@@ -71848,7 +71848,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       attemptSamples: [],
       sample: list.slice(0, 20).map((trainee) => {
         const nextEvents = traineeNextEventMap.get(trainee.fullName);
-        const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
+        const item = !isPlusOne && syllabusOverrides?.has(trainee.fullName) ? syllabusOverrides.get(trainee.fullName) : isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
         return {
           trainee: trainee.fullName,
           event: item?.code || null,
@@ -71872,7 +71872,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const remainingForNextPass = [];
       for (const trainee of unplacedTrainees) {
         const { next, plusOne } = traineeNextEventMap.get(trainee.fullName);
-        const syllabusItem = isPlusOne ? plusOne : next;
+        const syllabusItem = !isPlusOne && syllabusOverrides?.has(trainee.fullName) ? syllabusOverrides.get(trainee.fullName) : isPlusOne ? plusOne : next;
         if (!syllabusItem) {
           listDiag.noSyllabusItem++;
           continue;
@@ -72702,18 +72702,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const next = traineeNextEventMap.get(trainee.fullName)?.next;
     return !!(next && (next.sortieType === "Solo" || ["BGF11", "BGF18"].includes(next.id)));
   };
+  const getMandatoryRemedialFlightForTrainee = (trainee) => {
+    return mandatoryRemedialFlights.find((event) => (event.student || event.pilot || "") === trainee.fullName) || null;
+  };
+  const getMandatoryRemedialSyllabusItem = (trainee) => {
+    const priorityEvent = getMandatoryRemedialFlightForTrainee(trainee);
+    if (!priorityEvent) return null;
+    const individualLmp = traineeLMPs.get(trainee.fullName) || [];
+    return individualLmp.find(
+      (item) => normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) || normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
+    ) || syllabusDetails.find(
+      (item) => normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) || normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
+    ) || null;
+  };
+  const mandatoryRemedialFlightItems = /* @__PURE__ */ new Map();
+  activeTrainees.forEach((trainee) => {
+    const item = getMandatoryRemedialSyllabusItem(trainee);
+    if (item && item.type === "Flight") {
+      mandatoryRemedialFlightItems.set(trainee.fullName, item);
+    }
+  });
   const _isMandatoryRemedialFlightTrainee = (trainee) => {
-    const next = traineeNextEventMap.get(trainee.fullName)?.next;
-    if (!next || next.type !== "Flight") return false;
-    return mandatoryRemedialFlights.some((event) => {
-      const eventTrainee = event.student || event.pilot || "";
-      if (eventTrainee !== trainee.fullName) return false;
-      const priorityEventCodes = new Set([
-        normalizeLmpEventId(event.flightNumber),
-        normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber }))
-      ].filter(Boolean));
-      return priorityEventCodes.has(normalizeLmpEventId(next.code)) || priorityEventCodes.has(normalizeLmpEventId(next.id)) || priorityEventCodes.has(normalizeLmpEventId(next.masterEventId));
-    });
+    return mandatoryRemedialFlightItems.has(trainee.fullName);
   };
   const _mandatoryFlightList = applyCoursePriority(activeTrainees.filter(_isMandatoryRemedialFlightTrainee));
   const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter((t) => !_isMandatoryRemedialFlightTrainee(t))));
@@ -72723,6 +72733,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const eventTrainee = event.student || event.pilot || "";
     const trainee = activeTrainees.find((t) => t.fullName === eventTrainee) || null;
     const next = trainee ? traineeNextEventMap.get(trainee.fullName)?.next : null;
+    const mandatoryItem = trainee ? mandatoryRemedialFlightItems.get(trainee.fullName) || null : null;
     const priorityEventCodes = [
       normalizeLmpEventId(event.flightNumber),
       normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber }))
@@ -72743,10 +72754,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       nextId: next?.id || null,
       nextMasterEventId: next?.masterEventId || null,
       nextType: next?.type || null,
+      mandatoryItemCode: mandatoryItem?.code || null,
+      mandatoryItemId: mandatoryItem?.id || null,
+      mandatoryItemType: mandatoryItem?.type || null,
       priorityEventCodes,
       nextEventCodes,
       matchedMandatoryQueue: matched,
-      reason: !trainee ? "TRAINEE_NOT_ACTIVE_OR_FILTERED" : !next ? "NO_NEXT_EVENT" : next.type !== "Flight" ? "NEXT_EVENT_NOT_FLIGHT" : matched ? "MATCHED_MANDATORY_QUEUE" : "NEXT_EVENT_DOES_NOT_MATCH_PRIORITY_REMEDIAL"
+      reason: !trainee ? "TRAINEE_NOT_ACTIVE_OR_FILTERED" : mandatoryItem ? "MATCHED_SELECTED_REMEDIAL_EVENT" : "SELECTED_REMEDIAL_EVENT_NOT_FOUND_IN_INDIVIDUAL_LMP"
     };
   });
   neoBuildDiag.mandatoryRemedialFlights.normalFlightListExclusions = mandatoryRemedialFlights.map((event) => {
@@ -72787,7 +72801,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       flyingEndTime,
       null,
       false,
-      "FLIGHT Mandatory Remedial"
+      "FLIGHT Mandatory Remedial",
+      mandatoryRemedialFlightItems
     );
     scheduleList(
       _dualFlightList,
