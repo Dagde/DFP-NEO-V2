@@ -71221,6 +71221,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     nextEventLists: null,
     nextSamples: [],
     scheduleLists: {},
+    mandatoryRemedialFlights: {
+      queue: [],
+      matchAudit: [],
+      normalFlightListExclusions: [],
+      finalAssignments: []
+    },
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
@@ -71316,6 +71322,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const isMandatoryRemedialFlight = (event) => event.date === buildDate && event.isTimeFixed === true && event.isRemedial === true && event.type === "flight";
   const mandatoryRemedialFlights = highestPriorityEvents.filter(isMandatoryRemedialFlight);
+  neoBuildDiag.mandatoryRemedialFlights.queue = mandatoryRemedialFlights.map((event) => ({
+    id: event.id,
+    flightNumber: event.flightNumber,
+    baseEventCode: getRemedialBaseEventCode({ code: event.flightNumber }),
+    student: event.student,
+    pilot: event.pilot,
+    instructor: event.instructor,
+    startTime: event.startTime,
+    type: event.type,
+    isRemedial: event.isRemedial,
+    isTimeFixed: event.isTimeFixed
+  }));
   if (mandatoryRemedialFlights.length > 0) {
     buildDebugLog(`DEBUG Mandatory remedial flight queue prepared: ${mandatoryRemedialFlights.length} event(s)`);
   }
@@ -71809,9 +71827,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("   C. Primary blocker: " + blockerType + " (instr=" + instrTotal + ", ac=" + acTotal + ", area=" + areaTotal + ", sep=" + sepTotal + ")");
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
-  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass) => {
+  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel) => {
     const timeIncrement = type === "flight" ? 5 / 60 : 15 / 60;
-    const listName = `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
+    const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
+    const isMandatoryTraceList = listName.includes("Mandatory Remedial");
     recordProgress({ message: `Placing ${listName} events...`, percentage: 40 + ["flight", "ftd", "cpt", "ground"].indexOf(type) * 10 });
     let unplacedTrainees = [...list];
     let placedThisPass = true;
@@ -71826,6 +71845,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       successes: 0,
       noSyllabusItem: 0,
       blockedPrimaryMissing: 0,
+      attemptSamples: [],
       sample: list.slice(0, 20).map((trainee) => {
         const nextEvents = traineeNextEventMap.get(trainee.fullName);
         const item = isPlusOne ? nextEvents?.plusOne : nextEvents?.next;
@@ -71888,6 +71908,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
                 listDiag.attempts++;
                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
+                if (isMandatoryTraceList && listDiag.attemptSamples.length < 250) {
+                  listDiag.attemptSamples.push({
+                    trainee: trainee.fullName,
+                    event: syllabusItem.code,
+                    time,
+                    displayTime: _fmtT(time),
+                    primaryOnly,
+                    requireNightAircraftReuse,
+                    outcome: result && typeof result === "object" && "id" in result ? "placed" : "rejected",
+                    resourceId: result && typeof result === "object" && "id" in result ? result.resourceId : null,
+                    instructor: result && typeof result === "object" && "id" in result ? result.instructor : null
+                  });
+                }
                 if (result && typeof result === "object" && "id" in result) {
                   generatedEvents.push({ ...result, _source: "generated", _isNext: !isPlusOne, _traineeName: trainee.fullName });
                   listDiag.successes++;
@@ -72686,8 +72719,51 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter((t) => !_isMandatoryRemedialFlightTrainee(t))));
   const _dualFlightList = _allFlightList.filter((t) => !_isSoloTrainee(t));
   const _soloFlightList = _allFlightList.filter((t) => _isSoloTrainee(t));
+  neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map((event) => {
+    const eventTrainee = event.student || event.pilot || "";
+    const trainee = activeTrainees.find((t) => t.fullName === eventTrainee) || null;
+    const next = trainee ? traineeNextEventMap.get(trainee.fullName)?.next : null;
+    const priorityEventCodes = [
+      normalizeLmpEventId(event.flightNumber),
+      normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber }))
+    ].filter(Boolean);
+    const nextEventCodes = next ? [
+      normalizeLmpEventId(next.code),
+      normalizeLmpEventId(next.id),
+      normalizeLmpEventId(next.masterEventId)
+    ].filter(Boolean) : [];
+    const matched = trainee ? _isMandatoryRemedialFlightTrainee(trainee) : false;
+    return {
+      priorityEventId: event.id,
+      priorityFlightNumber: event.flightNumber,
+      priorityBaseEventCode: getRemedialBaseEventCode({ code: event.flightNumber }),
+      trainee: eventTrainee,
+      activeTraineeFound: !!trainee,
+      nextCode: next?.code || null,
+      nextId: next?.id || null,
+      nextMasterEventId: next?.masterEventId || null,
+      nextType: next?.type || null,
+      priorityEventCodes,
+      nextEventCodes,
+      matchedMandatoryQueue: matched,
+      reason: !trainee ? "TRAINEE_NOT_ACTIVE_OR_FILTERED" : !next ? "NO_NEXT_EVENT" : next.type !== "Flight" ? "NEXT_EVENT_NOT_FLIGHT" : matched ? "MATCHED_MANDATORY_QUEUE" : "NEXT_EVENT_DOES_NOT_MATCH_PRIORITY_REMEDIAL"
+    };
+  });
+  neoBuildDiag.mandatoryRemedialFlights.normalFlightListExclusions = mandatoryRemedialFlights.map((event) => {
+    const eventTrainee = event.student || event.pilot || "";
+    return {
+      priorityEventId: event.id,
+      priorityFlightNumber: event.flightNumber,
+      trainee: eventTrainee,
+      inMandatoryFlightList: _mandatoryFlightList.some((t) => t.fullName === eventTrainee),
+      inNormalDualFlightList: _dualFlightList.some((t) => t.fullName === eventTrainee),
+      inNormalSoloFlightList: _soloFlightList.some((t) => t.fullName === eventTrainee),
+      inBnfList: nextEventLists.bnf.some((t) => t.fullName === eventTrainee)
+    };
+  });
   buildDebugLog(`
 🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+  buildDebugLog("[MANDATORY-REMEDIAL-DIAG] Match audit:", neoBuildDiag.mandatoryRemedialFlights.matchAudit);
   window.__fbFlightListSize = _allFlightList.length;
   if (_mandatoryFlightList.length > 0) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
@@ -72699,7 +72775,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         flyingStartTime,
         REMEDIAL_EARLIEST_START,
         null,
-        false
+        false,
+        "FLIGHT Next Pre-1000 Normal Dual"
       );
     }
     scheduleList(
@@ -72709,7 +72786,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       firstRemedialFlightStart,
       flyingEndTime,
       null,
-      false
+      false,
+      "FLIGHT Mandatory Remedial"
     );
     scheduleList(
       _dualFlightList,
@@ -72718,7 +72796,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       firstRemedialFlightStart,
       flyingEndTime,
       null,
-      false
+      false,
+      "FLIGHT Next Post-1000 Normal Dual"
     );
   } else {
     scheduleList(
@@ -73616,6 +73695,44 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return report;
   };
   generateBuildConflictDiagnostic(sortedEvents);
+  neoBuildDiag.mandatoryRemedialFlights.finalAssignments = mandatoryRemedialFlights.map((event) => {
+    const eventTrainee = event.student || event.pilot || "";
+    const priorityCodes = new Set([
+      normalizeLmpEventId(event.flightNumber),
+      normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber }))
+    ].filter(Boolean));
+    const traineeEvents = sortedEvents.filter(
+      (scheduleEvent2) => eventHasPerson(scheduleEvent2, eventTrainee) && (scheduleEvent2.type === "flight" || scheduleEvent2.type === "ftd")
+    );
+    const mandatoryScheduled = traineeEvents.find(
+      (scheduleEvent2) => priorityCodes.has(normalizeLmpEventId(scheduleEvent2.flightNumber)) || priorityCodes.has(normalizeLmpEventId(getRemedialBaseEventCode({ code: scheduleEvent2.flightNumber })))
+    );
+    return {
+      priorityEventId: event.id,
+      priorityFlightNumber: event.flightNumber,
+      priorityBaseEventCode: getRemedialBaseEventCode({ code: event.flightNumber }),
+      trainee: eventTrainee,
+      mandatoryScheduled: !!mandatoryScheduled,
+      scheduledMandatoryEvent: mandatoryScheduled ? {
+        id: mandatoryScheduled.id,
+        flightNumber: mandatoryScheduled.flightNumber,
+        type: mandatoryScheduled.type,
+        startTime: mandatoryScheduled.startTime,
+        resourceId: mandatoryScheduled.resourceId,
+        instructor: mandatoryScheduled.instructor,
+        source: mandatoryScheduled._source
+      } : null,
+      allFlightOrFtdEventsForTrainee: traineeEvents.map((scheduleEvent2) => ({
+        id: scheduleEvent2.id,
+        flightNumber: scheduleEvent2.flightNumber,
+        type: scheduleEvent2.type,
+        startTime: scheduleEvent2.startTime,
+        resourceId: scheduleEvent2.resourceId,
+        instructor: scheduleEvent2.instructor,
+        source: scheduleEvent2._source
+      }))
+    };
+  });
   neoBuildDiag.final = {
     totalEvents: sortedEvents.length,
     byType: sortedEvents.reduce((acc, event) => {
