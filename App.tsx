@@ -16560,6 +16560,7 @@ updates.forEach(update => {
                                 lmpScores={scores.get(selectedTraineeForHateSheet.fullName) || []}
                                 assessments={traineeAssessments}
                                 pt051Events={traineeAssessments}
+                                traineeLmp={traineeLMPs.get(selectedTraineeForHateSheet.fullName) || []}
                                 userProfile={currentUser}
                                 isLoading={pt051PerformanceLoading}
                                 refreshEvents={() => {

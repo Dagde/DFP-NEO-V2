@@ -1173,6 +1173,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             lmpScores={scores.get(trainee.fullName) || []}
                             assessments={traineeAssessments}
                             pt051Events={traineeAssessments}
+                            traineeLmp={individualLMP || []}
                             userProfile={userProfile || {}}
                             refreshEvents={() => {}}
                             onSelectLmpScore={() => {}}

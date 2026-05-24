@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Trainee, Score, Pt051Assessment } from '../types';
+import { Trainee, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { showDarkConfirm } from './DarkMessageModal';
@@ -25,6 +25,7 @@ interface HateSheetViewProps {
     lmpScores: Score[];
     assessments: Pt051Assessment[];
     pt051Events: any[];
+    traineeLmp?: SyllabusItemDetail[];
     userProfile: any;
     refreshEvents?: () => void;
     onSelectLmpScore: (score: Score) => void;
@@ -36,7 +37,7 @@ interface HateSheetViewProps {
     isLoading?: boolean;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
     const { isFrozen } = useSystemFreeze();
     // Drag and drop state - simplified to just highlight target row
     const [isDragging, setIsDragging] = useState(false);
@@ -138,12 +139,31 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
            console.log('All PT-051 Assessments:', assessments.length, assessments);
            console.log('Completed PT-051 Assessments (filtered):', completedAssessments.length, completedAssessments);
            
-           // Combine and sort by date, newest first
-           const combined = [...lmpItems, ...pt051Items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+           const normaliseEventCode = (value?: string | null) => String(value || '').replace(/\s+/g, '').toUpperCase();
+           const lmpOrder = new Map<string, number>();
+           traineeLmp.forEach((item, index) => {
+               const key = normaliseEventCode(item.code);
+               if (key && !lmpOrder.has(key)) lmpOrder.set(key, index);
+           });
+           const getLmpOrder = (item: (typeof lmpItems[number]) | (typeof pt051Items[number])) => {
+               const eventCode = item.type === 'LMP Score' ? item.event : item.flightNumber;
+               return lmpOrder.get(normaliseEventCode(eventCode));
+           };
+
+           // Combine and sort by Individual LMP order when available.
+           // Date remains the fallback for legacy/manual records that are not in the current LMP.
+           const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
+               const aOrder = getLmpOrder(a);
+               const bOrder = getLmpOrder(b);
+               if (aOrder !== undefined && bOrder !== undefined && aOrder !== bOrder) {
+                   return aOrder - bOrder;
+               }
+               return new Date(b.date).getTime() - new Date(a.date).getTime();
+           });
            console.log('Combined History:', combined.length, combined);
            
            return combined;
-       }, [lmpScores, assessments]);
+       }, [lmpScores, assessments, traineeLmp]);
 
     const getScoreDisplay = (item: (typeof combinedHistory)[0]) => {
         let score: number | string | null = null;
@@ -166,9 +186,9 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             // Find the index of this item in the combined history (newest first)
             const currentIndex = combinedHistory.findIndex(history => history.id === item.id);
             
-            // Check if there was a previous marginal score in the overall timeline
-            if (currentIndex >= 0 && currentIndex < combinedHistory.length - 1) {
-                const previousItem = combinedHistory[currentIndex + 1]; // Next item in newest-first order
+            // Check if there was a previous marginal score in the LMP/progress timeline
+            if (currentIndex > 0) {
+                const previousItem = combinedHistory[currentIndex - 1];
                 const prevScore = previousItem.type === 'LMP Score' ? previousItem.score : previousItem.overallGrade;
                 console.log('Previous item in timeline:', previousItem.type === 'LMP Score' ? previousItem.event : previousItem.flightNumber, 'score:', prevScore, 'type:', previousItem.type, 'ID:', previousItem.id);
                 
