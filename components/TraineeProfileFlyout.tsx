@@ -1542,7 +1542,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                         <>
                           <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
-                          {canViewPt051 && <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>PT-051</button>}
+                          {canViewPt051 && (
+                            <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>
+                              <span className="text-[10px] leading-[1.05]">Training<br />Assessment</span>
+                            </button>
+                          )}
                           {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
                           {canAddRemedialPackage && <button onClick={() => onAddRemedialPackage(trainee)} className={btnClass}>Add Remedial Package</button>}
                           <button onClick={() => handleTabClick('logbook')} className={tabBtnClass('logbook')}>Logbook</button>
