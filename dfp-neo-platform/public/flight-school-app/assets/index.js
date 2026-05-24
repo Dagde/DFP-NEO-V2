@@ -71827,7 +71827,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     console.log("   C. Primary blocker: " + blockerType + " (instr=" + instrTotal + ", ac=" + acTotal + ", area=" + areaTotal + ", sep=" + sepTotal + ")");
     console.log('[FLIGHT-DIAG] END - also in localStorage key "flight_diag_report"');
   };
-  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides) => {
+  const scheduleList = (list, type, isPlusOne, startTimeBoundary, endTimeBoundary, standbyPrefix, isNightPass, diagnosticLabel, syllabusOverrides, latestStartBefore) => {
     const timeIncrement = type === "flight" ? 5 / 60 : 15 / 60;
     const listName = diagnosticLabel || `${isNightPass ? "BNF" : type.toUpperCase()} ${isPlusOne ? "Next+1" : "Next"}`;
     const isMandatoryTraceList = listName.includes("Mandatory Remedial");
@@ -71840,6 +71840,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       isNightPass,
       startTimeBoundary,
       endTimeBoundary,
+      latestStartBefore,
       input: list.length,
       attempts: 0,
       successes: 0,
@@ -71905,7 +71906,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               const mustFitFullBookingWindow = isNightPass || type === "ground" || type === "cpt";
               const earliestEventStart = mustFitFullBookingWindow ? space.start + (syllabusItem.preFlightTime || 0) : space.start;
               const latestEventStart = mustFitFullBookingWindow ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0) : space.end - syllabusItem.duration;
-              for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
+              const cappedLatestEventStart = typeof latestStartBefore === "number" ? Math.min(latestEventStart, latestStartBefore - 1e-3) : latestEventStart;
+              for (let time = earliestEventStart; time <= cappedLatestEventStart; time += timeIncrement) {
                 listDiag.attempts++;
                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
                 if (isMandatoryTraceList && listDiag.attemptSamples.length < 250) {
@@ -72788,10 +72790,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         "flight",
         false,
         flyingStartTime,
-        REMEDIAL_EARLIEST_START,
+        flyingEndTime,
         null,
         false,
-        "FLIGHT Next Pre-1000 Normal Dual"
+        "FLIGHT Next Pre-1000 Normal Dual",
+        void 0,
+        REMEDIAL_EARLIEST_START
       );
     }
     const leadAircraftReadyTime = generatedEvents.filter((event) => event.resourceId === "PC-21 1").reduce((latestReady, event) => {

@@ -2854,7 +2854,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         standbyPrefix: string | null,
         isNightPass: boolean,
         diagnosticLabel?: string,
-        syllabusOverrides?: Map<string, SyllabusItemDetail>
+        syllabusOverrides?: Map<string, SyllabusItemDetail>,
+        latestStartBefore?: number
     ) => {
         // Time increments for slot hunting:
         // - Flight: 5 minutes (staggered departures to avoid all aircraft taxiing at once)
@@ -2872,6 +2873,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             isNightPass,
             startTimeBoundary,
             endTimeBoundary,
+            latestStartBefore,
             input: list.length,
             attempts: 0,
             successes: 0,
@@ -2978,8 +2980,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             const latestEventStart = mustFitFullBookingWindow
                                 ? space.end - syllabusItem.duration - (syllabusItem.postFlightTime || 0)
                                 : space.end - syllabusItem.duration;
+                            const cappedLatestEventStart = typeof latestStartBefore === 'number'
+                                ? Math.min(latestEventStart, latestStartBefore - 0.001)
+                                : latestEventStart;
 
-                            for (let time = earliestEventStart; time <= latestEventStart; time += timeIncrement) {
+                            for (let time = earliestEventStart; time <= cappedLatestEventStart; time += timeIncrement) {
                                 listDiag.attempts++;
                                 const result = scheduleEvent(trainee, syllabusItem, time, type, isNightPass, isPlusOne, primaryOnly, requireNightAircraftReuse);
                                 if (isMandatoryTraceList && listDiag.attemptSamples.length < 250) {
@@ -4122,10 +4127,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 'flight',
                 false,
                 flyingStartTime,
-                REMEDIAL_EARLIEST_START,
+                flyingEndTime,
                 null,
                 false,
-                'FLIGHT Next Pre-1000 Normal Dual'
+                'FLIGHT Next Pre-1000 Normal Dual',
+                undefined,
+                REMEDIAL_EARLIEST_START
             );
         }
 
