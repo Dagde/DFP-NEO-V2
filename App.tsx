@@ -10240,6 +10240,18 @@ const App: React.FC = () => {
                 newLMPs.set(trainee.fullName, persistedLmp);
                 return newLMPs;
             });
+            logAudit(
+                'Individual LMP',
+                'Delete',
+                `Deleted remedial event ${item.code} from ${trainee.fullName}`,
+                [
+                    `Event: ${item.code}`,
+                    `Description: ${item.eventDescription || 'Unknown'}`,
+                    `Trainee: ${trainee.rank ? `${trainee.rank} ` : ''}${trainee.name}`,
+                    `Course: ${trainee.course || 'Unknown'}`,
+                    `LMP events: ${originalTraineeLMP.length} to ${persistedLmp.length}`,
+                ].join('; ')
+            );
             setSuccessMessage(`Deleted remedial event ${item.code}.`);
             return true;
         } catch (error) {
