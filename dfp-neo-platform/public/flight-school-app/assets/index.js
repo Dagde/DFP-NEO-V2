@@ -71261,7 +71261,28 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     try {
       localStorage.setItem("neo_build_diag_report", JSON.stringify(neoBuildDiag));
     } catch (error) {
-      console.warn("[NEO-BUILD-DIAG] Failed to save report:", error);
+      const compactReport = {
+        ...neoBuildDiag,
+        storageCompacted: true,
+        storageCompactedReason: error instanceof Error ? error.message : String(error),
+        dayFlightGapDiagnostics: {
+          attempts: neoBuildDiag.dayFlightGapDiagnostics.attempts.slice(-500),
+          instructorTrace: neoBuildDiag.dayFlightGapDiagnostics.instructorTrace.slice(-500),
+          placements: neoBuildDiag.dayFlightGapDiagnostics.placements,
+          finalGaps: neoBuildDiag.dayFlightGapDiagnostics.finalGaps
+        },
+        mandatoryRemedialFlights: {
+          ...neoBuildDiag.mandatoryRemedialFlights,
+          scheduleAttempts: neoBuildDiag.mandatoryRemedialFlights.scheduleAttempts.slice(-500),
+          instructorAllocationTrace: neoBuildDiag.mandatoryRemedialFlights.instructorAllocationTrace.slice(-500)
+        }
+      };
+      try {
+        localStorage.setItem("neo_build_diag_report", JSON.stringify(compactReport));
+        console.warn("[NEO-BUILD-DIAG] Full report exceeded browser storage; saved compact report instead.", error);
+      } catch (compactError) {
+        console.warn("[NEO-BUILD-DIAG] Failed to save full or compact report:", error, compactError);
+      }
     }
   };
   const eventCounts = /* @__PURE__ */ new Map();
