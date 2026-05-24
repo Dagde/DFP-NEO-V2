@@ -16289,6 +16289,7 @@ updates.forEach(update => {
                             canViewTraineeLmp={canViewTraineeLmp}
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
                             onDeleteRemedialItem={handleDeleteRemedialLmpItem}
+                            onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
@@ -16439,6 +16440,7 @@ updates.forEach(update => {
                             canEditTraineePt051={canEditTraineePt051}
                             canViewTraineeLmp={canViewTraineeLmp}
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
+                            onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}

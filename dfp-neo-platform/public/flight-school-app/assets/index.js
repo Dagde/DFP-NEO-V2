@@ -10222,6 +10222,7 @@ const TraineeProfileFlyout = ({
   canViewIndividualLmp = true,
   canAddRemedialPackage = true,
   onDeleteRemedialItem,
+  onGeneratePt051ForItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
@@ -10958,7 +10959,8 @@ const TraineeProfileFlyout = ({
                 traineeLmp: individualLMP || [],
                 scores: traineeScores,
                 onBack: () => setActiveTab(null),
-                onDeleteRemedialItem
+                onDeleteRemedialItem,
+                onGeneratePt051ForItem
               }
             ) });
           })(),
@@ -11885,6 +11887,7 @@ const CourseRosterView = ({
   canViewTraineeLmp = () => true,
   canAddRemedialPackageForTrainee = () => true,
   onDeleteRemedialItem,
+  onGeneratePt051ForItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings
@@ -12183,6 +12186,7 @@ const CourseRosterView = ({
         canViewIndividualLmp: canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canAddRemedialPackage: canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         onDeleteRemedialItem,
+        onGeneratePt051ForItem,
         onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
@@ -28151,6 +28155,7 @@ const TraineeView = (props) => {
           onViewLogbook: props.onViewLogbook,
           onDeleteTrainee: props.onDeleteTrainee,
           onDeleteRemedialItem: props.onDeleteRemedialItem,
+          onGeneratePt051ForItem: props.onGeneratePt051ForItem,
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
           onUpdateCourseUnit: props.onUpdateCourseUnit,
@@ -82101,6 +82106,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             canViewTraineeLmp,
             canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
             onDeleteRemedialItem: handleDeleteRemedialLmpItem,
+            onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
             onAccessDenied: denyPlatformAction,
             locations,
             units,
@@ -82242,6 +82248,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             canEditTraineePt051,
             canViewTraineeLmp,
             canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
+            onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
             onAccessDenied: denyPlatformAction,
             locations,
             units,

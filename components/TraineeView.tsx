@@ -32,6 +32,7 @@ interface TraineeViewProps {
   onViewLogbook: (trainee: any) => void;
   onDeleteTrainee: (trainee: any) => void;
   onDeleteRemedialItem?: (trainee: any, item: any) => Promise<boolean> | boolean;
+  onGeneratePt051ForItem?: (trainee: any, item: any) => void;
   onOpenInstructorProfile?: (instructorName: string) => void;
   // Course edit callbacks
   onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
@@ -140,6 +141,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onViewLogbook={props.onViewLogbook}
             onDeleteTrainee={props.onDeleteTrainee}
             onDeleteRemedialItem={props.onDeleteRemedialItem}
+            onGeneratePt051ForItem={props.onGeneratePt051ForItem}
             onOpenInstructorProfile={props.onOpenInstructorProfile}
             onUpdateCourseNumber={props.onUpdateCourseNumber}
             onUpdateCourseUnit={props.onUpdateCourseUnit}

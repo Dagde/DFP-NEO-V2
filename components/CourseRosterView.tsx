@@ -57,6 +57,7 @@ interface CourseRosterViewProps {
     canViewTraineeLmp?: (trainee: Trainee) => boolean;
     canAddRemedialPackageForTrainee?: (trainee: Trainee) => boolean;
     onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
+    onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -131,6 +132,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     canViewTraineeLmp = () => true,
     canAddRemedialPackageForTrainee = () => true,
     onDeleteRemedialItem,
+    onGeneratePt051ForItem,
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
@@ -499,6 +501,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     canViewIndividualLmp={canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canAddRemedialPackage={canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     onDeleteRemedialItem={onDeleteRemedialItem}
+                    onGeneratePt051ForItem={onGeneratePt051ForItem}
                     onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
                         assessment
