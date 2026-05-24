@@ -71241,7 +71241,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       normalFlightListExclusions: [],
       finalAssignments: [],
       remedialInstructorOverrides: [],
-      forcedInstructorConflicts: []
+      forcedInstructorConflicts: [],
+      scheduleAttempts: [],
+      instructorAllocationTrace: [],
+      placementTrace: []
     },
     final: null
   };
@@ -71330,6 +71333,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   const getRemedialInstructorOverride = (traineeName, eventCode) => remedialInstructorOverrides.get(remedialInstructorOverrideKey(traineeName, eventCode))?.instructor || "";
   const forcedRemedialInstructorConflicts = [];
+  const traceMandatoryRemedial = (bucket, entry, limit = 1200) => {
+    const list = neoBuildDiag.mandatoryRemedialFlights[bucket];
+    if (list.length >= limit) return;
+    list.push({
+      sequence: list.length + 1,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      ...entry
+    });
+  };
   neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
   const placeRemedialPriorityEvent = (event) => {
     if (!event.isRemedial) return event;
@@ -71349,8 +71361,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const candidate = { ...event, startTime, resourceId };
         const remedialInstructor = getRemedialInstructorOverride(candidate.student || candidate.pilot || "", candidate.flightNumber);
         const ignoredInstructorConflicts = [];
+        let conflictReason = "";
+        let conflictWith = null;
         const conflicts = generatedEvents.some((existing) => {
-          if (priorityResourceConflict(candidate, existing)) return true;
+          if (priorityResourceConflict(candidate, existing)) {
+            conflictReason = "RESOURCE_CONFLICT";
+            conflictWith = {
+              flightNumber: existing.flightNumber,
+              type: existing.type,
+              resourceId: existing.resourceId,
+              startTime: existing.startTime,
+              endTime: existing.startTime + existing.duration
+            };
+            return true;
+          }
           if (!priorityPersonnelConflict(candidate, existing)) return false;
           const commonPersonnel = getPersonnel(candidate).filter((person) => person && eventHasPerson(existing, person));
           const onlyRemedialInstructorConflict = !!remedialInstructor && commonPersonnel.length > 0 && commonPersonnel.every((person) => normalizeBuildPersonnelName(person) === normalizeBuildPersonnelName(remedialInstructor));
@@ -71360,7 +71384,29 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             );
             return false;
           }
+          conflictReason = "PERSONNEL_CONFLICT";
+          conflictWith = {
+            flightNumber: existing.flightNumber,
+            type: existing.type,
+            resourceId: existing.resourceId,
+            startTime: existing.startTime,
+            endTime: existing.startTime + existing.duration,
+            commonPersonnel
+          };
           return true;
+        });
+        traceMandatoryRemedial("placementTrace", {
+          phase: "fixed-priority-placement",
+          trainee: candidate.student || candidate.pilot || "",
+          event: candidate.flightNumber,
+          startTime,
+          displayTime: _fmtT(startTime),
+          resourceId,
+          remedialInstructor,
+          outcome: conflicts ? "rejected" : "placed",
+          conflictReason: conflictReason || null,
+          conflictWith,
+          ignoredInstructorConflicts
         });
         if (!conflicts) {
           const placedCandidate = ignoredInstructorConflicts.length > 0 ? {
@@ -72010,6 +72056,26 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                     const segment = segments.find((s) => time >= s.start && time < s.end);
                     if (segment) segment.count++;
                   }
+                  if (isMandatoryTraceList || isRemedialSyllabusItem(syllabusItem)) {
+                    traceMandatoryRemedial("placementTrace", {
+                      phase: "generated-event-added",
+                      listName,
+                      trainee: trainee.fullName,
+                      event: syllabusItem.code,
+                      type,
+                      isPlusOne,
+                      isNightPass,
+                      startTime: result.startTime,
+                      displayTime: _fmtT(result.startTime),
+                      duration: result.duration,
+                      resourceId: result.resourceId,
+                      instructor: result.instructor,
+                      remedialInstructorOverride: getRemedialInstructorOverride(trainee.fullName, syllabusItem.code),
+                      traineeCountsAfter: { ...tCounts },
+                      instructorCountsAfter: result.instructor && eventCounts.get(result.instructor) ? { ...eventCounts.get(result.instructor) } : null,
+                      generatedEventsCount: generatedEvents.length
+                    });
+                  }
                   placed = true;
                   placedThisPass = true;
                   break;
@@ -72019,6 +72085,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
         }
         if (!placed) {
+          if (isMandatoryTraceList || isRemedialSyllabusItem(syllabusItem)) {
+            traceMandatoryRemedial("placementTrace", {
+              phase: "trainee-not-placed-this-pass",
+              listName,
+              trainee: trainee.fullName,
+              event: syllabusItem.code,
+              type,
+              isPlusOne,
+              isNightPass,
+              searchStartTime,
+              searchEndTime: endTimeBoundary,
+              remedialInstructorOverride: getRemedialInstructorOverride(trainee.fullName, syllabusItem.code),
+              attemptsSoFarForList: listDiag.attempts
+            });
+          }
           remainingForNextPass.push(trainee);
         }
       }
@@ -72043,39 +72124,66 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const traineeCounts = eventCounts.get(trainee.fullName);
     const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
     let forcedInstructorConflictDetails = [];
-    if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
+    const isTracedRemedialAttempt = isRemedialSyllabusItem(syllabusItem) || !!remedialInstructorOverride;
+    const traceScheduleReject = (reason, details = {}) => {
+      if (isTracedRemedialAttempt) {
+        traceMandatoryRemedial("scheduleAttempts", {
+          phase: "schedule-event",
+          outcome: "rejected",
+          reason,
+          trainee: trainee.fullName,
+          event: syllabusItem.code,
+          eventId: syllabusItem.id,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          dayNight: syllabusItem.dayNight,
+          remedialInstructorOverride,
+          primaryPreferOnly,
+          requirePreferredNightAircraft,
+          details
+        });
+      }
       return null;
+    };
+    if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
+      return traceScheduleReject("REMEDIAL_BEFORE_1000");
     }
     if (syllabusItem.dayNight === "Night" && getScheduledDayNightForStart(startTime) !== "Night") {
-      return null;
+      return traceScheduleReject("DAY_NIGHT_MISMATCH", { required: "Night", proposed: getScheduledDayNightForStart(startTime) });
     }
     if (syllabusItem.dayNight === "Day" && getScheduledDayNightForStart(startTime) !== "Day") {
-      return null;
+      return traceScheduleReject("DAY_NIGHT_MISMATCH", { required: "Day", proposed: getScheduledDayNightForStart(startTime) });
     }
     if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
       buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "DAY_NIGHT_SEPARATION");
-      return null;
+      return traceScheduleReject("TRAINEE_DAY_NIGHT_SEPARATION", { proposed: getScheduledDayNightForStart(startTime) });
     }
     const isBnfEvent = isNightPass && syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight" && !isRemedialSyllabusItem(syllabusItem);
     const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
     if (type === "flight" || type === "ftd") {
       if (traineeCounts.flightFtd >= bnfFlightLimit) {
         if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_EVENT_LIMIT_EXCEEDED");
-        return null;
+        return traceScheduleReject("TRAINEE_FLIGHT_FTD_LIMIT", { count: traineeCounts.flightFtd, limit: bnfFlightLimit });
       }
     } else {
-      if (traineeCounts.ground >= 2) return null;
+      if (traineeCounts.ground >= 2) return traceScheduleReject("TRAINEE_GROUND_LIMIT", { count: traineeCounts.ground, limit: 2 });
     }
     const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
     if (traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt >= bnfTotalLimit) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TOTAL_LIMIT_EXCEEDED");
-      return null;
+      return traceScheduleReject("TRAINEE_TOTAL_LIMIT", {
+        flightFtd: traineeCounts.flightFtd,
+        ground: traineeCounts.ground,
+        cpt: traineeCounts.cpt,
+        limit: bnfTotalLimit
+      });
     }
     const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.code, duration: syllabusItem.duration }, syllabusDetails);
     if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
-      return null;
+      return traceScheduleReject("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
     }
     const traineeHasOverlap = generatedEvents.some((e) => {
       if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
@@ -72085,7 +72193,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
     if (traineeHasOverlap) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TIME_OVERLAP");
-      return null;
+      return traceScheduleReject("TRAINEE_TIME_OVERLAP", { proposedBookingWindow });
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
       const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF") && !isRemedialSyllabusItem(syllabusItemForCheck);
@@ -72199,6 +72307,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
       }
       const _afterQualFilter = candidates.length;
+      if (isTracedRemedialAttempt) {
+        traceMandatoryRemedial("instructorAllocationTrace", {
+          phase: "candidate-pool",
+          trainee: traineeForCheck.fullName,
+          event: syllabusItemForCheck.code,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          remedialInstructorOverride,
+          requiredRemedialInstructor,
+          totalInstructors: instructors.length,
+          candidatesAfterRoleAndDayNight: _afterQualFilter,
+          candidateNames: candidates.slice(0, 25).map((ip) => ip.name)
+        });
+      }
       if (!requiredRemedialInstructor) {
         candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
       }
@@ -72259,10 +72382,37 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         candidates = [...sameUnit, ...otherUnit];
       }
       const _candidatesEnteringLoop = candidates.length;
+      if (isTracedRemedialAttempt) {
+        traceMandatoryRemedial("instructorAllocationTrace", {
+          phase: "candidate-loop-start",
+          trainee: traineeForCheck.fullName,
+          event: syllabusItemForCheck.code,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          remedialInstructorOverride,
+          requiredRemedialInstructor,
+          candidatesEnteringLoop: _candidatesEnteringLoop,
+          candidateNames: candidates.slice(0, 25).map((ip) => ip.name),
+          primaryOnlyMode
+        });
+      }
       for (const ip of candidates) {
         const eventTypeForCheck = type === "cpt" ? "ground" : type;
         if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) {
           _dRej.staticUnavailable++;
+          if (isTracedRemedialAttempt) {
+            traceMandatoryRemedial("instructorAllocationTrace", {
+              phase: "candidate-rejected",
+              reason: "INSTRUCTOR_STATICALLY_UNAVAILABLE",
+              trainee: traineeForCheck.fullName,
+              event: syllabusItemForCheck.code,
+              instructor: ip.name,
+              startTime,
+              displayTime: _fmtT(startTime),
+              proposedBookingWindow
+            });
+          }
           continue;
         }
         const ipCounts = eventCounts.get(ip.name);
@@ -72276,6 +72426,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         if (currentDutyHours > preferredDutyPeriod) {
           buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
           _dRej.softDutyLimit++;
+          if (isTracedRemedialAttempt) {
+            traceMandatoryRemedial("instructorAllocationTrace", {
+              phase: "candidate-rejected",
+              reason: "INSTRUCTOR_SOFT_DUTY_LIMIT",
+              trainee: traineeForCheck.fullName,
+              event: syllabusItemForCheck.code,
+              instructor: ip.name,
+              startTime,
+              displayTime: _fmtT(startTime),
+              currentDutyHours,
+              preferredDutyPeriod
+            });
+          }
           continue;
         }
         if (eventTypeForCheck === "ground") {
@@ -72369,9 +72532,36 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             forcedInstructorConflictDetails = overlappingEvents.map(
               (e) => `${ip.name} overlaps ${e.flightNumber} (${e.type}) ${_fmtT(e.startTime)}-${_fmtT(e.startTime + e.duration)}`
             );
+            traceMandatoryRemedial("instructorAllocationTrace", {
+              phase: "candidate-overlap-overridden",
+              trainee: traineeForCheck.fullName,
+              event: syllabusItemForCheck.code,
+              instructor: ip.name,
+              startTime,
+              displayTime: _fmtT(startTime),
+              forcedInstructorConflictDetails
+            });
             buildDebugLog(`[REMEDIAL INSTRUCTOR OVERRIDE] ${syllabusItemForCheck.code} for ${traineeForCheck.fullName} is keeping ${ip.name} despite ${overlappingEvents.length} instructor conflict(s).`);
           } else {
             _dRej.timeOverlap++;
+            if (isTracedRemedialAttempt) {
+              traceMandatoryRemedial("instructorAllocationTrace", {
+                phase: "candidate-rejected",
+                reason: "INSTRUCTOR_TIME_OVERLAP",
+                trainee: traineeForCheck.fullName,
+                event: syllabusItemForCheck.code,
+                instructor: ip.name,
+                startTime,
+                displayTime: _fmtT(startTime),
+                overlappingEvents: overlappingEvents.slice(0, 5).map((e) => ({
+                  flightNumber: e.flightNumber,
+                  type: e.type,
+                  startTime: e.startTime,
+                  endTime: e.startTime + e.duration,
+                  resourceId: e.resourceId
+                }))
+              });
+            }
             continue;
           }
         }
@@ -72404,6 +72594,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           instructorFound: true,
           zeroReason: null
         });
+        if (isTracedRemedialAttempt) {
+          traceMandatoryRemedial("instructorAllocationTrace", {
+            phase: "candidate-selected",
+            trainee: traineeForCheck.fullName,
+            event: syllabusItemForCheck.code,
+            instructor: ip.name,
+            startTime,
+            displayTime: _fmtT(startTime),
+            rejections: { ..._dRej }
+          });
+        }
         return ip;
       }
       let _zeroReason = "ALL_FILTERED_OUT";
@@ -72424,6 +72625,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         instructorFound: false,
         zeroReason: _zeroReason
       });
+      if (isTracedRemedialAttempt) {
+        traceMandatoryRemedial("instructorAllocationTrace", {
+          phase: "no-instructor-found",
+          trainee: traineeForCheck.fullName,
+          event: syllabusItemForCheck.code,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          remedialInstructorOverride,
+          requiredRemedialInstructor,
+          zeroReason: _zeroReason,
+          totalInstructors: instructors.length,
+          afterQualificationFilter: _afterQualFilter,
+          afterUnitFilter: _afterUnitFilter,
+          candidatesEnteringLoop: _candidatesEnteringLoop,
+          rejections: { ..._dRej }
+        });
+      }
       return null;
     };
     const isSoloFlight = syllabusItem.sortieType === "Solo" || ["BGF11", "BGF18"].includes(syllabusItem.id);
@@ -72448,7 +72667,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
         }
-        return null;
+        return traceScheduleReject("NO_INSTRUCTOR_SELECTED", { remedialInstructorOverride });
       }
       if (anyHardGroup && (type === "flight" || type === "ftd") && !isNightPass && !primaryPreferOnly) {
         const traineeFlight = (trainee.flight || "").trim();
@@ -72520,7 +72739,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     if (!resourceId) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AIRCRAFT_AVAILABLE");
-      return null;
+      return traceScheduleReject("NO_RESOURCE_AVAILABLE", {
+        resourcePrefix,
+        resourceCount,
+        preferredNightAircraft
+      });
     }
     let area = void 0;
     if (type === "flight") {
@@ -72532,20 +72755,29 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const violatesWindow = isBnf ? bookingStart < startTimeBoundary || bookingEnd > endTimeBoundary : startTime < startTimeBoundary || startTime + syllabusItem.duration > endTimeBoundary;
       if (violatesWindow) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
-        return null;
+        return traceScheduleReject("TIME_BOUNDARY_VIOLATION", {
+          bookingStart,
+          bookingEnd,
+          startTimeBoundary,
+          endTimeBoundary,
+          isBnf
+        });
       }
       const SOLO_WINDOW_START = 9;
       const SOLO_WINDOW_END = 15;
       if (isSoloFlight) {
         if (startTime < SOLO_WINDOW_START - 1e-3 || startTime > SOLO_WINDOW_END + 1e-3) {
           _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TIME_BOUNDARY_VIOLATION");
-          return null;
+          return traceScheduleReject("SOLO_WINDOW_VIOLATION", {
+            soloWindowStart: SOLO_WINDOW_START,
+            soloWindowEnd: SOLO_WINDOW_END
+          });
         }
       }
       area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
       if (!area) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "NO_AREA_AVAILABLE");
-        return null;
+        return traceScheduleReject("NO_AREA_AVAILABLE");
       }
       const nonStbyFlights = generatedEvents.filter(
         (e) => !e.resourceId.startsWith("STBY") && !e.resourceId.startsWith("BNF-STBY")
@@ -72553,7 +72785,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       const takeoffsInLastHour = nonStbyFlights.filter((e) => e.type === "flight" && e.startTime > startTime - 1 && e.startTime <= startTime).length;
       if (takeoffsInLastHour >= 8) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "HOURLY_DISPATCH_LIMIT");
-        return null;
+        return traceScheduleReject("HOURLY_DISPATCH_LIMIT", { takeoffsInLastHour, limit: 8 });
       }
       const takeoffConflict = nonStbyFlights.some((e) => {
         if (e.type !== "flight") return false;
@@ -72565,18 +72797,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       });
       if (takeoffConflict) {
         _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TAKEOFF_SEPARATION_VIOLATION");
-        return null;
+        return traceScheduleReject("TAKEOFF_SEPARATION_VIOLATION");
       }
     }
     if (type === "ground" || type === "cpt") {
       const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
       const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
       if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
-        return null;
+        return traceScheduleReject("GROUND_OR_CPT_WINDOW_VIOLATION", { bookingStart, bookingEnd, flyingStartTime, flyingEndTime });
       }
     } else if (type === "ftd") {
       if (startTime + syllabusItem.duration > ftdEndTime) {
-        return null;
+        return traceScheduleReject("FTD_WINDOW_VIOLATION", { eventEnd: startTime + syllabusItem.duration, ftdEndTime });
       }
     }
     const result = {
@@ -72609,6 +72841,26 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         startTime,
         endTime: startTime + syllabusItem.duration,
         details: forcedInstructorConflictDetails
+      });
+    }
+    if (isTracedRemedialAttempt) {
+      traceMandatoryRemedial("scheduleAttempts", {
+        phase: "schedule-event",
+        outcome: "placed",
+        trainee: trainee.fullName,
+        event: syllabusItem.code,
+        eventId: syllabusItem.id,
+        type,
+        startTime,
+        displayTime: _fmtT(startTime),
+        resourceId,
+        instructor: result.instructor,
+        pilot: result.pilot,
+        student: result.student,
+        area,
+        dayNight: syllabusItem.dayNight,
+        remedialInstructorOverride,
+        forcedInstructorConflictDetails
       });
     }
     if (_isFlight) {

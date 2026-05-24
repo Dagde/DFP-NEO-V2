@@ -2096,6 +2096,9 @@ function generateDfpInternal(
             finalAssignments: [] as any[],
             remedialInstructorOverrides: [] as any[],
             forcedInstructorConflicts: [] as any[],
+            scheduleAttempts: [] as any[],
+            instructorAllocationTrace: [] as any[],
+            placementTrace: [] as any[],
         },
         final: null,
     };
@@ -2226,6 +2229,20 @@ function generateDfpInternal(
         details: string[];
     }> = [];
 
+    const traceMandatoryRemedial = (
+        bucket: 'scheduleAttempts' | 'instructorAllocationTrace' | 'placementTrace',
+        entry: Record<string, any>,
+        limit: number = 1200
+    ) => {
+        const list = neoBuildDiag.mandatoryRemedialFlights[bucket] as any[];
+        if (list.length >= limit) return;
+        list.push({
+            sequence: list.length + 1,
+            timestamp: new Date().toISOString(),
+            ...entry,
+        });
+    };
+
     neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
 
     const placeRemedialPriorityEvent = (
@@ -2254,8 +2271,20 @@ function generateDfpInternal(
                 const candidate = { ...event, startTime, resourceId };
                 const remedialInstructor = getRemedialInstructorOverride(candidate.student || candidate.pilot || '', candidate.flightNumber);
                 const ignoredInstructorConflicts: string[] = [];
+                let conflictReason = '';
+                let conflictWith: any = null;
                 const conflicts = generatedEvents.some(existing => {
-                    if (priorityResourceConflict(candidate, existing)) return true;
+                    if (priorityResourceConflict(candidate, existing)) {
+                        conflictReason = 'RESOURCE_CONFLICT';
+                        conflictWith = {
+                            flightNumber: existing.flightNumber,
+                            type: existing.type,
+                            resourceId: existing.resourceId,
+                            startTime: existing.startTime,
+                            endTime: existing.startTime + existing.duration,
+                        };
+                        return true;
+                    }
                     if (!priorityPersonnelConflict(candidate, existing)) return false;
 
                     const commonPersonnel = getPersonnel(candidate).filter(person => person && eventHasPerson(existing, person));
@@ -2270,7 +2299,29 @@ function generateDfpInternal(
                         return false;
                     }
 
+                    conflictReason = 'PERSONNEL_CONFLICT';
+                    conflictWith = {
+                        flightNumber: existing.flightNumber,
+                        type: existing.type,
+                        resourceId: existing.resourceId,
+                        startTime: existing.startTime,
+                        endTime: existing.startTime + existing.duration,
+                        commonPersonnel,
+                    };
                     return true;
+                });
+                traceMandatoryRemedial('placementTrace', {
+                    phase: 'fixed-priority-placement',
+                    trainee: candidate.student || candidate.pilot || '',
+                    event: candidate.flightNumber,
+                    startTime,
+                    displayTime: _fmtT(startTime),
+                    resourceId,
+                    remedialInstructor,
+                    outcome: conflicts ? 'rejected' : 'placed',
+                    conflictReason: conflictReason || null,
+                    conflictWith,
+                    ignoredInstructorConflicts,
                 });
                 if (!conflicts) {
                     const placedCandidate = ignoredInstructorConflicts.length > 0
@@ -3113,6 +3164,29 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                         if (segment) segment.count++;
                                     }
 
+                                    if (isMandatoryTraceList || isRemedialSyllabusItem(syllabusItem)) {
+                                        traceMandatoryRemedial('placementTrace', {
+                                            phase: 'generated-event-added',
+                                            listName,
+                                            trainee: trainee.fullName,
+                                            event: syllabusItem.code,
+                                            type,
+                                            isPlusOne,
+                                            isNightPass,
+                                            startTime: result.startTime,
+                                            displayTime: _fmtT(result.startTime),
+                                            duration: result.duration,
+                                            resourceId: result.resourceId,
+                                            instructor: result.instructor,
+                                            remedialInstructorOverride: getRemedialInstructorOverride(trainee.fullName, syllabusItem.code),
+                                            traineeCountsAfter: { ...tCounts },
+                                            instructorCountsAfter: result.instructor && eventCounts.get(result.instructor)
+                                                ? { ...eventCounts.get(result.instructor)! }
+                                                : null,
+                                            generatedEventsCount: generatedEvents.length,
+                                        });
+                                    }
+
                                     placed = true;
                                     placedThisPass = true;
                                     break;
@@ -3122,7 +3196,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     }
                 }
 
-                if (!placed) { remainingForNextPass.push(trainee); }
+                if (!placed) {
+                    if (isMandatoryTraceList || isRemedialSyllabusItem(syllabusItem)) {
+                        traceMandatoryRemedial('placementTrace', {
+                            phase: 'trainee-not-placed-this-pass',
+                            listName,
+                            trainee: trainee.fullName,
+                            event: syllabusItem.code,
+                            type,
+                            isPlusOne,
+                            isNightPass,
+                            searchStartTime,
+                            searchEndTime: endTimeBoundary,
+                            remedialInstructorOverride: getRemedialInstructorOverride(trainee.fullName, syllabusItem.code),
+                            attemptsSoFarForList: listDiag.attempts,
+                        });
+                    }
+                    remainingForNextPass.push(trainee);
+                }
             }
             unplacedTrainees = remainingForNextPass;
             listDiag.unplaced = unplacedTrainees.slice(0, 40).map(trainee => {
@@ -3159,22 +3250,44 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const traineeCounts = eventCounts.get(trainee.fullName)!;
         const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
         let forcedInstructorConflictDetails: string[] = [];
+        const isTracedRemedialAttempt = isRemedialSyllabusItem(syllabusItem) || !!remedialInstructorOverride;
+        const traceScheduleReject = (reason: string, details: Record<string, any> = {}): ScheduleEventResult => {
+            if (isTracedRemedialAttempt) {
+                traceMandatoryRemedial('scheduleAttempts', {
+                    phase: 'schedule-event',
+                    outcome: 'rejected',
+                    reason,
+                    trainee: trainee.fullName,
+                    event: syllabusItem.code,
+                    eventId: syllabusItem.id,
+                    type,
+                    startTime,
+                    displayTime: _fmtT(startTime),
+                    dayNight: syllabusItem.dayNight,
+                    remedialInstructorOverride,
+                    primaryPreferOnly,
+                    requirePreferredNightAircraft,
+                    details,
+                });
+            }
+            return null;
+        };
 
         if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
-            return null;
+            return traceScheduleReject('REMEDIAL_BEFORE_1000');
         }
 
         if (syllabusItem.dayNight === 'Night' && getScheduledDayNightForStart(startTime) !== 'Night') {
-            return null;
+            return traceScheduleReject('DAY_NIGHT_MISMATCH', { required: 'Night', proposed: getScheduledDayNightForStart(startTime) });
         }
         if (syllabusItem.dayNight === 'Day' && getScheduledDayNightForStart(startTime) !== 'Day') {
-            return null;
+            return traceScheduleReject('DAY_NIGHT_MISMATCH', { required: 'Day', proposed: getScheduledDayNightForStart(startTime) });
         }
 
         if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
             buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
-            return null;
+            return traceScheduleReject('TRAINEE_DAY_NIGHT_SEPARATION', { proposed: getScheduledDayNightForStart(startTime) });
         }
 
         // CRITICAL FIX: For night flying BNF events, allow 2 flights per night.
@@ -3186,10 +3299,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (type === 'flight' || type === 'ftd') {
              if (traineeCounts.flightFtd >= bnfFlightLimit) {
                  if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_EVENT_LIMIT_EXCEEDED');
-                 return null;
+                 return traceScheduleReject('TRAINEE_FLIGHT_FTD_LIMIT', { count: traineeCounts.flightFtd, limit: bnfFlightLimit });
              }
         } else {
-             if (traineeCounts.ground >= 2) return null;
+             if (traineeCounts.ground >= 2) return traceScheduleReject('TRAINEE_GROUND_LIMIT', { count: traineeCounts.ground, limit: 2 });
         }
 
         // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
@@ -3197,13 +3310,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
         if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TOTAL_LIMIT_EXCEEDED');
-            return null;
+            return traceScheduleReject('TRAINEE_TOTAL_LIMIT', {
+                flightFtd: traineeCounts.flightFtd,
+                ground: traineeCounts.ground,
+                cpt: traineeCounts.cpt,
+                limit: bnfTotalLimit,
+            });
         }
 
         const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.code, duration: syllabusItem.duration }, syllabusDetails);
         if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_STATICALLY_UNAVAILABLE');
-            return null;
+            return traceScheduleReject('TRAINEE_STATICALLY_UNAVAILABLE', { proposedBookingWindow });
         }
 
         const traineeHasOverlap = generatedEvents.some(e => {
@@ -3214,7 +3332,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         });
         if (traineeHasOverlap) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TIME_OVERLAP');
-            return null;
+            return traceScheduleReject('TRAINEE_TIME_OVERLAP', { proposedBookingWindow });
         }
 
         const findAvailableInstructor = (
@@ -3379,6 +3497,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // ── DIAGNOSTIC: after qualification filter ──
             const _afterQualFilter = candidates.length;
+            if (isTracedRemedialAttempt) {
+                traceMandatoryRemedial('instructorAllocationTrace', {
+                    phase: 'candidate-pool',
+                    trainee: traineeForCheck.fullName,
+                    event: syllabusItemForCheck.code,
+                    type,
+                    startTime,
+                    displayTime: _fmtT(startTime),
+                    remedialInstructorOverride,
+                    requiredRemedialInstructor,
+                    totalInstructors: instructors.length,
+                    candidatesAfterRoleAndDayNight: _afterQualFilter,
+                    candidateNames: candidates.slice(0, 25).map(ip => ip.name),
+                });
+            }
 
             // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
             if (!requiredRemedialInstructor) {
@@ -3497,10 +3630,40 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // ── DIAGNOSTIC: track candidates entering the loop ──
             const _candidatesEnteringLoop = candidates.length;
+            if (isTracedRemedialAttempt) {
+                traceMandatoryRemedial('instructorAllocationTrace', {
+                    phase: 'candidate-loop-start',
+                    trainee: traineeForCheck.fullName,
+                    event: syllabusItemForCheck.code,
+                    type,
+                    startTime,
+                    displayTime: _fmtT(startTime),
+                    remedialInstructorOverride,
+                    requiredRemedialInstructor,
+                    candidatesEnteringLoop: _candidatesEnteringLoop,
+                    candidateNames: candidates.slice(0, 25).map(ip => ip.name),
+                    primaryOnlyMode,
+                });
+            }
 
             for (const ip of candidates) {
                 const eventTypeForCheck = type === 'cpt' ? 'ground' : type;
-                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) { _dRej.staticUnavailable++; continue; }
+                if (isPersonStaticallyUnavailable(ip, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, eventTypeForCheck)) {
+                    _dRej.staticUnavailable++;
+                    if (isTracedRemedialAttempt) {
+                        traceMandatoryRemedial('instructorAllocationTrace', {
+                            phase: 'candidate-rejected',
+                            reason: 'INSTRUCTOR_STATICALLY_UNAVAILABLE',
+                            trainee: traineeForCheck.fullName,
+                            event: syllabusItemForCheck.code,
+                            instructor: ip.name,
+                            startTime,
+                            displayTime: _fmtT(startTime),
+                            proposedBookingWindow,
+                        });
+                    }
+                    continue;
+                }
 
                 const ipCounts = eventCounts.get(ip.name)!;
 
@@ -3515,7 +3678,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
                 if (currentDutyHours > preferredDutyPeriod) {
                     buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
-                    _dRej.softDutyLimit++; continue;
+                    _dRej.softDutyLimit++;
+                    if (isTracedRemedialAttempt) {
+                        traceMandatoryRemedial('instructorAllocationTrace', {
+                            phase: 'candidate-rejected',
+                            reason: 'INSTRUCTOR_SOFT_DUTY_LIMIT',
+                            trainee: traineeForCheck.fullName,
+                            event: syllabusItemForCheck.code,
+                            instructor: ip.name,
+                            startTime,
+                            displayTime: _fmtT(startTime),
+                            currentDutyHours,
+                            preferredDutyPeriod,
+                        });
+                    }
+                    continue;
                 }
 
                 // NEW RULE: Ground event limits based on Flight/FTD activity
@@ -3590,9 +3767,36 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         forcedInstructorConflictDetails = overlappingEvents.map(e =>
                             `${ip.name} overlaps ${e.flightNumber} (${e.type}) ${_fmtT(e.startTime)}-${_fmtT(e.startTime + e.duration)}`
                         );
+                        traceMandatoryRemedial('instructorAllocationTrace', {
+                            phase: 'candidate-overlap-overridden',
+                            trainee: traineeForCheck.fullName,
+                            event: syllabusItemForCheck.code,
+                            instructor: ip.name,
+                            startTime,
+                            displayTime: _fmtT(startTime),
+                            forcedInstructorConflictDetails,
+                        });
                         buildDebugLog(`[REMEDIAL INSTRUCTOR OVERRIDE] ${syllabusItemForCheck.code} for ${traineeForCheck.fullName} is keeping ${ip.name} despite ${overlappingEvents.length} instructor conflict(s).`);
                     } else {
                         _dRej.timeOverlap++;
+                        if (isTracedRemedialAttempt) {
+                            traceMandatoryRemedial('instructorAllocationTrace', {
+                                phase: 'candidate-rejected',
+                                reason: 'INSTRUCTOR_TIME_OVERLAP',
+                                trainee: traineeForCheck.fullName,
+                                event: syllabusItemForCheck.code,
+                                instructor: ip.name,
+                                startTime,
+                                displayTime: _fmtT(startTime),
+                                overlappingEvents: overlappingEvents.slice(0, 5).map(e => ({
+                                    flightNumber: e.flightNumber,
+                                    type: e.type,
+                                    startTime: e.startTime,
+                                    endTime: e.startTime + e.duration,
+                                    resourceId: e.resourceId,
+                                })),
+                            });
+                        }
                         continue;
                     }
                 }
@@ -3626,6 +3830,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     instructorFound: true,
                     zeroReason: null,
                 });
+                if (isTracedRemedialAttempt) {
+                    traceMandatoryRemedial('instructorAllocationTrace', {
+                        phase: 'candidate-selected',
+                        trainee: traineeForCheck.fullName,
+                        event: syllabusItemForCheck.code,
+                        instructor: ip.name,
+                        startTime,
+                        displayTime: _fmtT(startTime),
+                        rejections: { ..._dRej },
+                    });
+                }
                 return ip;
             }
             // ── DIAGNOSTIC: no instructor found ──
@@ -3648,6 +3863,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 instructorFound: false,
                 zeroReason: _zeroReason,
             });
+            if (isTracedRemedialAttempt) {
+                traceMandatoryRemedial('instructorAllocationTrace', {
+                    phase: 'no-instructor-found',
+                    trainee: traineeForCheck.fullName,
+                    event: syllabusItemForCheck.code,
+                    type,
+                    startTime,
+                    displayTime: _fmtT(startTime),
+                    remedialInstructorOverride,
+                    requiredRemedialInstructor,
+                    zeroReason: _zeroReason,
+                    totalInstructors: instructors.length,
+                    afterQualificationFilter: _afterQualFilter,
+                    afterUnitFilter: _afterUnitFilter,
+                    candidatesEnteringLoop: _candidatesEnteringLoop,
+                    rejections: { ..._dRej },
+                });
+            }
             return null;
         };
 
@@ -3682,7 +3915,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     }
                     _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, noInstrReason);
                 }
-                return null;
+                return traceScheduleReject('NO_INSTRUCTOR_SELECTED', { remedialInstructorOverride });
             }
 
             // ── HARD MODE CHECK ──
@@ -3805,7 +4038,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // If no resource available, return null (STBY will be handled in separate pass)
         if (!resourceId) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AIRCRAFT_AVAILABLE');
-            return null;
+            return traceScheduleReject('NO_RESOURCE_AVAILABLE', {
+                resourcePrefix,
+                resourceCount,
+                preferredNightAircraft,
+            });
         }
 
         let area: string | undefined = undefined;
@@ -3820,7 +4057,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 : startTime < startTimeBoundary || startTime + syllabusItem.duration > endTimeBoundary;
             if (violatesWindow) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
-                return null;
+                return traceScheduleReject('TIME_BOUNDARY_VIOLATION', {
+                    bookingStart,
+                    bookingEnd,
+                    startTimeBoundary,
+                    endTimeBoundary,
+                    isBnf,
+                });
             }
 
             // SOLO DEPARTURE WINDOW: Solo flights may only depart between 09:00 and 15:00.
@@ -3831,14 +4074,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             if (isSoloFlight) {
                 if (startTime < SOLO_WINDOW_START - 0.001 || startTime > SOLO_WINDOW_END + 0.001) {
                     _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TIME_BOUNDARY_VIOLATION');
-                    return null;
+                    return traceScheduleReject('SOLO_WINDOW_VIOLATION', {
+                        soloWindowStart: SOLO_WINDOW_START,
+                        soloWindowEnd: SOLO_WINDOW_END,
+                    });
                 }
             }
 
             area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
-                return null;
+                return traceScheduleReject('NO_AREA_AVAILABLE');
             }
 
             const nonStbyFlights = generatedEvents.filter(e =>
@@ -3851,7 +4097,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
             if (takeoffsInLastHour >= 8) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
-                return null;
+                return traceScheduleReject('HOURLY_DISPATCH_LIMIT', { takeoffsInLastHour, limit: 8 });
             }
 
             // All flights (including solo) must respect the 5-minute takeoff separation rule.
@@ -3866,7 +4112,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             });
             if (takeoffConflict) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TAKEOFF_SEPARATION_VIOLATION');
-                return null;
+                return traceScheduleReject('TAKEOFF_SEPARATION_VIOLATION');
             }
         }
 
@@ -3878,11 +4124,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const bookingStart = startTime - (syllabusItem.preFlightTime || 0);
             const bookingEnd = startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0);
             if (bookingStart < flyingStartTime || bookingEnd > flyingEndTime) {
-                return null; // TIME_BOUNDARY_VIOLATION – event would run past flying window end
+                return traceScheduleReject('GROUND_OR_CPT_WINDOW_VIOLATION', { bookingStart, bookingEnd, flyingStartTime, flyingEndTime });
             }
         } else if (type === 'ftd') {
             if (startTime + syllabusItem.duration > ftdEndTime) {
-                return null; // TIME_BOUNDARY_VIOLATION – FTD event would run past FTD window end
+                return traceScheduleReject('FTD_WINDOW_VIOLATION', { eventEnd: startTime + syllabusItem.duration, ftdEndTime });
             }
         }
 
@@ -3904,6 +4150,26 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 startTime,
                 endTime: startTime + syllabusItem.duration,
                 details: forcedInstructorConflictDetails,
+            });
+        }
+        if (isTracedRemedialAttempt) {
+            traceMandatoryRemedial('scheduleAttempts', {
+                phase: 'schedule-event',
+                outcome: 'placed',
+                trainee: trainee.fullName,
+                event: syllabusItem.code,
+                eventId: syllabusItem.id,
+                type,
+                startTime,
+                displayTime: _fmtT(startTime),
+                resourceId,
+                instructor: result.instructor,
+                pilot: result.pilot,
+                student: result.student,
+                area,
+                dayNight: syllabusItem.dayNight,
+                remedialInstructorOverride,
+                forcedInstructorConflictDetails,
             });
         }
         // Log successful flight events (first 2 only)
