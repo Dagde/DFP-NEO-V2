@@ -656,7 +656,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     /* ── NEO Build LMP Tab (existing) ── */
                     <>
                         {/* Left Column: List */}
-                        <div className="w-1/4 min-h-0 border-r border-gray-700 overflow-y-auto">
+                        <div className="w-1/4 min-h-0 border-r border-gray-700 overflow-y-auto overscroll-contain">
                             <ul className="p-2 space-y-1">
                                 {traineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
@@ -678,7 +678,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         </div>
 
                         {/* Right Column: Detail View */}
-                        <div className="w-3/4 min-h-0 overflow-y-auto">
+                        <div className="w-3/4 min-h-0 overflow-y-auto overscroll-contain">
                             <div className="p-6 max-w-5xl mx-auto min-h-full">
                                 {selectedItem ? (
                                     <DetailView

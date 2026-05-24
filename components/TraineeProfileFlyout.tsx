@@ -995,7 +995,14 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
                 <div className="flex flex-1 overflow-hidden">
                   {/* MAIN CONTENT — scrollable */}
-                  <div ref={contentScrollRef} className="flex-1 overflow-y-auto p-4 space-y-3 relative">
+                  <div
+                    ref={contentScrollRef}
+                    className={`flex-1 min-h-0 p-4 relative ${
+                      activeTab === 'lmp'
+                        ? 'overflow-hidden flex flex-col'
+                        : 'overflow-y-auto space-y-3'
+                    }`}
+                  >
                     {/* Transparent freeze overlay — blocks all interaction with content */}
                     {isFrozen && (
                       <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
@@ -1195,7 +1202,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       let individualLMP = traineeLMPs ? traineeLMPs.get(trainee.fullName) : individualLmp;
                       if (!individualLMP) individualLMP = individualLmp;
                       return (
-                        <div className={card3d + " p-0 overflow-hidden"} style={card3dStyle}>
+                        <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TraineeLmpView
                             trainee={trainee}
                             traineeLmp={individualLMP || []}
