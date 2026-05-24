@@ -2154,18 +2154,20 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   }
   return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
 };
+const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
+const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 16;
 const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
   name: "PT-051",
   shortName: "Training Report"
 };
-const cleanLabel = (value, fallback) => {
+const cleanLabel = (value, fallback, maxLength) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
-  return trimmed || fallback;
+  return (trimmed || fallback).slice(0, maxLength);
 };
 const normaliseTrainingReportTerminology = (input) => ({
-  name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name),
-  shortName: cleanLabel(input?.shortName, DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName)
+  name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH),
+  shortName: cleanLabel(input?.shortName, DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName, TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH)
 });
 const getTrainingReportTerminology = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
@@ -9336,9 +9338,12 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
+  const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
+  const trainingReportName = reportTerminology.name;
+  const trainingReportShortLabel = reportTerminology.shortName;
   const combinedHistory = React.useMemo(() => {
     const completedAssessments = assessments2.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
@@ -9434,6 +9439,8 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     console.log("Combined History:", combined.length, combined);
     return combined;
   }, [lmpScores, assessments2, traineeLmp]);
+  const getTypeDisplayLabel = (type) => type === "PT-051" ? trainingReportShortLabel : type;
+  const getTypeDisplayTitle = (type) => type === "PT-051" ? trainingReportName : type;
   const getScoreDisplay = (item) => {
     let score = null;
     let isDoubleMarginal = false;
@@ -9560,7 +9567,11 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: "Retrieving PT-051 and LMP records..." })
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
+              "Retrieving ",
+              trainingReportShortLabel,
+              " and LMP records..."
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-1.5 w-56 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-1/2 rounded-full bg-sky-400 animate-pulse" }) })
         ] }) }) }) : combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -9571,7 +9582,14 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: item.type === "LMP Score" ? item.event : item.flightNumber }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: item.type }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "span",
+                {
+                  className: `max-w-32 truncate px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`,
+                  title: getTypeDisplayTitle(item.type),
+                  children: getTypeDisplayLabel(item.type)
+                }
+              ) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getStatusDisplay(item) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
@@ -10955,7 +10973,8 @@ const TraineeProfileFlyout = ({
                     onInsertPt051: () => {
                     },
                     canEditPt051,
-                    isLoading: pt051PerformanceLoading
+                    isLoading: pt051PerformanceLoading,
+                    trainingReportTerminology
                   }
                 ) });
               })(),
@@ -58182,8 +58201,6 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
-const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
-const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 18;
 const DEPLOYMENT_MODE_OPTIONS = [
   "Online SaaS",
   "Private Defence Network",
@@ -60093,7 +60110,7 @@ const PlatformConfigurationSettings = ({
               disabled: !canEditRankTerminology,
               maxLength: TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH,
               onChange: (value) => updateTrainingReportTerminology({ shortName: value }),
-              info: `The compact label used where space is tight, such as Trainee Profile action buttons. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`
+              info: `The compact label used where space is tight, such as Trainee Profile action buttons and Performance History type pills. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`
             }
           )
         ] }),

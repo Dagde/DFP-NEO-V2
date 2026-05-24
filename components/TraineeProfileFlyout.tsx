@@ -1217,6 +1217,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             onInsertPt051={() => {}}
                             canEditPt051={canEditPt051}
                             isLoading={pt051PerformanceLoading}
+                            trainingReportTerminology={trainingReportTerminology}
                           />
                         </div>
                       );

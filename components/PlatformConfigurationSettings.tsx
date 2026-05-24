@@ -11,6 +11,8 @@ import {
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
+  TRAINING_REPORT_NAME_MAX_LENGTH,
+  TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH,
   normaliseTrainingReportTerminology,
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
@@ -90,9 +92,6 @@ const ACCESS_SCOPE_TONE = {
   fill: 'rgba(8, 145, 178, 0.24)',
   applyBorder: 'rgba(103, 232, 249, 0.62)',
 };
-
-const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
-const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 18;
 
 const DEPLOYMENT_MODE_OPTIONS = [
   'Online SaaS',
@@ -2251,7 +2250,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               disabled={!canEditRankTerminology}
               maxLength={TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTerminology({ shortName: value })}
-              info={`The compact label used where space is tight, such as Trainee Profile action buttons. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`}
+              info={`The compact label used where space is tight, such as Trainee Profile action buttons and Performance History type pills. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`}
             />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

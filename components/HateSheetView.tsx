@@ -4,6 +4,11 @@ import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
 import { showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
+import {
+    DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+    normaliseTrainingReportTerminology,
+    type TrainingReportTerminology,
+} from '../utils/trainingReportTerminology';
 
 // Define ALL_ELEMENTS to match PT051View
 const PT051_STRUCTURE = [
@@ -35,11 +40,15 @@ interface HateSheetViewProps {
     canEditPt051?: boolean;
     onAccessDenied?: (actionLabel: string) => void;
     isLoading?: boolean;
+    trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
 }
 
-const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
+const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
     const { isFrozen } = useSystemFreeze();
     const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
+    const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
+    const trainingReportName = reportTerminology.name;
+    const trainingReportShortLabel = reportTerminology.shortName;
 
     // Helper function to format date
     const formatDate = (timestamp: number) => {
@@ -182,6 +191,14 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
            return combined;
        }, [lmpScores, assessments, traineeLmp]);
 
+    const getTypeDisplayLabel = (type: 'LMP Score' | 'PT-051') => (
+        type === 'PT-051' ? trainingReportShortLabel : type
+    );
+
+    const getTypeDisplayTitle = (type: 'LMP Score' | 'PT-051') => (
+        type === 'PT-051' ? trainingReportName : type
+    );
+
     const getScoreDisplay = (item: (typeof combinedHistory)[0]) => {
         let score: number | string | null = null;
         let isDoubleMarginal = false;
@@ -311,7 +328,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
 
     const handleDeletePT051 = async (eventId: string) => {
         if (!canEditPt051) {
-            onAccessDenied?.('delete PT-051 assessment');
+            onAccessDenied?.(`delete ${trainingReportName} assessment`);
             return;
         }
         console.log('🎯 handleDeletePT051 called with eventId:', eventId);
@@ -323,7 +340,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         
         if (!assessmentToDelete) {
             console.log('❌ Assessment not found with ID:', eventId);
-            alert('PT-051 assessment not found.');
+            alert(`${trainingReportName} assessment not found.`);
             return;
         }
 
@@ -334,7 +351,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         });
 
         // Confirm deletion
-        const confirmMessage = `Are you sure you want to delete this PT-051 assessment?\n\nDate: ${assessmentToDelete.date}\nGrade: ${assessmentToDelete.overallGrade || 'N/A'}\nEvent: ${assessmentToDelete.flightNumber || 'N/A'}\n\nThis action cannot be undone.`;
+        const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nDate: ${assessmentToDelete.date}\nGrade: ${assessmentToDelete.overallGrade || 'N/A'}\nEvent: ${assessmentToDelete.flightNumber || 'N/A'}\n\nThis action cannot be undone.`;
         
         // Use custom dark confirm modal instead of browser default
         const confirmed = await showDarkConfirm(confirmMessage);
@@ -367,11 +384,11 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             console.log('📋 About to log audit entry:', {
                 page: 'Performance History',
                 action: 'Delete',
-                description: `Deleted PT-051 assessment for ${traineeName}`,
+                description: `Deleted ${trainingReportName} assessment for ${traineeName}`,
                 details: auditDetails
             });
             
-            logAudit('Performance History', 'Delete', `Deleted PT-051 assessment for ${traineeName}`, auditDetails);
+            logAudit('Performance History', 'Delete', `Deleted ${trainingReportName} assessment for ${traineeName}`, auditDetails);
             console.log('✅ PT-051 deletion recorded in audit log');
 
             // Remove from local state after database deletion and audit logging
@@ -388,7 +405,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
             
         } catch (error) {
             console.error('Error deleting PT-051:', error);
-            alert('Failed to delete PT-051. Please try again.');
+            alert(`Failed to delete ${trainingReportName}. Please try again.`);
         }
     };
     
@@ -440,7 +457,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                                 <div className="h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" />
                                                 <div>
                                                     <div className="text-sm font-semibold text-white">Loading performance history</div>
-                                                    <div className="mt-1 text-xs text-gray-400">Retrieving PT-051 and LMP records...</div>
+                                                    <div className="mt-1 text-xs text-gray-400">Retrieving {trainingReportShortLabel} and LMP records...</div>
                                                 </div>
                                                 <div className="h-1.5 w-56 overflow-hidden rounded-full bg-gray-700">
                                                     <div className="h-full w-1/2 rounded-full bg-sky-400 animate-pulse" />
@@ -463,8 +480,11 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'LMP Score' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>
-                                                    {item.type}
+                                                <span
+                                                    className={`max-w-32 truncate px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'LMP Score' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}
+                                                    title={getTypeDisplayTitle(item.type)}
+                                                >
+                                                    {getTypeDisplayLabel(item.type)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center">
