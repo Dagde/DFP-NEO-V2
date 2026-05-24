@@ -15,7 +15,7 @@ import {
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
-import { showDarkPrompt } from './DarkMessageModal';
+import { showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 
 type PlatformConfig = {
   organisations: any[];
@@ -90,6 +90,9 @@ const ACCESS_SCOPE_TONE = {
   fill: 'rgba(8, 145, 178, 0.24)',
   applyBorder: 'rgba(103, 232, 249, 0.62)',
 };
+
+const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
+const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 18;
 
 const DEPLOYMENT_MODE_OPTIONS = [
   'Online SaaS',
@@ -643,6 +646,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [selectedProfileId, setSelectedProfileId] = useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = useState<Record<string, boolean>>({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = useState(false);
+  const [rankTerminologyDirty, setRankTerminologyDirty] = useState(false);
   const [licenseStatus, setLicenseStatus] = useState<LicenseRuntimeStatus | null>(null);
   const [licenseImportText, setLicenseImportText] = useState('');
   const [licenseImportMessage, setLicenseImportMessage] = useState('');
@@ -689,6 +693,21 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
     } catch (err: any) {
       setError(err?.message || 'Could not verify password for Rank, Terminology & Labels editing.');
     }
+  };
+
+  const lockRankTerminology = async () => {
+    if (rankTerminologyDirty) {
+      const shouldSave = await showDarkConfirm(
+        'You have unsaved Rank, Terminology & Labels changes.\n\nSelect OK to save and apply the changes now. Select Cancel to keep editing without locking.',
+        'Unsaved Terminology Changes',
+        'warning',
+      );
+      if (shouldSave) {
+        await save();
+      }
+      return;
+    }
+    setRankTerminologyUnlocked(false);
   };
 
   useEffect(() => {
@@ -846,6 +865,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updatePersonnelDisplaySettings = (changes: Partial<PersonnelDisplaySettings>) => {
+    setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       personnelDisplaySettings: normalisePersonnelDisplaySettings({
@@ -856,6 +876,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   };
 
   const updateTrainingReportTerminology = (changes: Partial<TrainingReportTerminology>) => {
+    setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       trainingReportTerminology: normaliseTrainingReportTerminology({
@@ -2151,7 +2172,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
             rankTerminologyUnlocked ? (
               <button
                 type="button"
-                onClick={() => setRankTerminologyUnlocked(false)}
+                onClick={lockRankTerminology}
                 className="rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200"
               >
                 Lock
@@ -2220,15 +2241,17 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               label="Training Report Name"
               value={trainingReportTerminology.name}
               disabled={!canEditRankTerminology}
+              maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTerminology({ name: value })}
-              info="The organisation-specific name for the trainee assessment form. Examples: PT-051, Training Assessment, Flight Assessment Report."
+              info={`The organisation-specific name for the trainee assessment form. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Examples: PT-051, Training Assessment, Flight Assessment Report.`}
             />
             <Field
               label="Training Report Short Label"
               value={trainingReportTerminology.shortName}
               disabled={!canEditRankTerminology}
+              maxLength={TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTerminology({ shortName: value })}
-              info="The compact label used where space is tight, such as Trainee Profile action buttons. Example: Training Report."
+              info={`The compact label used where space is tight, such as Trainee Profile action buttons. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`}
             />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
@@ -2532,10 +2555,21 @@ const FieldLabel = ({ label, info }: { label: string; info?: string }) => (
   </span>
 );
 
-const Field = ({ label, value, disabled, onChange, info }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string }) => (
+const Field = ({ label, value, disabled, onChange, info, maxLength }: { label: string; value: string; disabled: boolean; onChange: (value: string) => void; info?: string; maxLength?: number }) => (
   <label>
     <FieldLabel label={label} info={info} />
-    <input className={fieldClass} value={value || ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
+    <input
+      className={fieldClass}
+      value={value || ''}
+      disabled={disabled}
+      maxLength={maxLength}
+      onChange={(event) => onChange(typeof maxLength === 'number' ? event.target.value.slice(0, maxLength) : event.target.value)}
+    />
+    {typeof maxLength === 'number' ? (
+      <span className="mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+        {(value || '').length}/{maxLength}
+      </span>
+    ) : null}
   </label>
 );
 

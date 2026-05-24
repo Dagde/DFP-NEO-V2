@@ -58182,6 +58182,8 @@ const ACCESS_SCOPE_TONE = {
   fill: "rgba(8, 145, 178, 0.24)",
   applyBorder: "rgba(103, 232, 249, 0.62)"
 };
+const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
+const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 18;
 const DEPLOYMENT_MODE_OPTIONS = [
   "Online SaaS",
   "Private Defence Network",
@@ -58648,6 +58650,7 @@ const PlatformConfigurationSettings = ({
   const [selectedProfileId, setSelectedProfileId] = reactExports.useState(DEFAULT_PERMISSION_PROFILES[0].id);
   const [advancedFeatureAreaOpenByScope, setAdvancedFeatureAreaOpenByScope] = reactExports.useState({});
   const [rankTerminologyUnlocked, setRankTerminologyUnlocked] = reactExports.useState(false);
+  const [rankTerminologyDirty, setRankTerminologyDirty] = reactExports.useState(false);
   const [licenseStatus, setLicenseStatus] = reactExports.useState(null);
   const [licenseImportText, setLicenseImportText] = reactExports.useState("");
   const [licenseImportMessage, setLicenseImportMessage] = reactExports.useState("");
@@ -58692,6 +58695,20 @@ const PlatformConfigurationSettings = ({
     } catch (err) {
       setError(err?.message || "Could not verify password for Rank, Terminology & Labels editing.");
     }
+  };
+  const lockRankTerminology = async () => {
+    if (rankTerminologyDirty) {
+      const shouldSave = await showDarkConfirm(
+        "You have unsaved Rank, Terminology & Labels changes.\n\nSelect OK to save and apply the changes now. Select Cancel to keep editing without locking.",
+        "Unsaved Terminology Changes",
+        "warning"
+      );
+      if (shouldSave) {
+        await save();
+      }
+      return;
+    }
+    setRankTerminologyUnlocked(false);
   };
   reactExports.useEffect(() => {
     let cancelled = false;
@@ -58830,6 +58847,7 @@ const PlatformConfigurationSettings = ({
     }));
   };
   const updatePersonnelDisplaySettings = (changes) => {
+    setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       personnelDisplaySettings: normalisePersonnelDisplaySettings({
@@ -58839,6 +58857,7 @@ const PlatformConfigurationSettings = ({
     }));
   };
   const updateTrainingReportTerminology = (changes) => {
+    setRankTerminologyDirty(true);
     updatePrimaryOrganisationSettings((settings) => ({
       ...settings,
       trainingReportTerminology: normaliseTrainingReportTerminology({
@@ -59987,7 +60006,7 @@ const PlatformConfigurationSettings = ({
             "button",
             {
               type: "button",
-              onClick: () => setRankTerminologyUnlocked(false),
+              onClick: lockRankTerminology,
               className: "rounded border border-gray-500 bg-gray-300 px-4 py-2 text-sm font-bold text-gray-900 hover:bg-gray-200",
               children: "Lock"
             }
@@ -60061,8 +60080,9 @@ const PlatformConfigurationSettings = ({
               label: "Training Report Name",
               value: trainingReportTerminology.name,
               disabled: !canEditRankTerminology,
+              maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
               onChange: (value) => updateTrainingReportTerminology({ name: value }),
-              info: "The organisation-specific name for the trainee assessment form. Examples: PT-051, Training Assessment, Flight Assessment Report."
+              info: `The organisation-specific name for the trainee assessment form. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Examples: PT-051, Training Assessment, Flight Assessment Report.`
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60071,8 +60091,9 @@ const PlatformConfigurationSettings = ({
               label: "Training Report Short Label",
               value: trainingReportTerminology.shortName,
               disabled: !canEditRankTerminology,
+              maxLength: TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH,
               onChange: (value) => updateTrainingReportTerminology({ shortName: value }),
-              info: "The compact label used where space is tight, such as Trainee Profile action buttons. Example: Training Report."
+              info: `The compact label used where space is tight, such as Trainee Profile action buttons. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`
             }
           )
         ] }),
@@ -60353,9 +60374,23 @@ const FieldLabel = ({ label, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("
   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: label }),
   info ? /* @__PURE__ */ jsxRuntimeExports.jsx(InfoHint, { text: info }) : null
 ] });
-const Field = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
+const Field = ({ label, value, disabled, onChange, info, maxLength }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
-  /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: fieldClass, value: value || "", disabled, onChange: (event) => onChange(event.target.value) })
+  /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "input",
+    {
+      className: fieldClass,
+      value: value || "",
+      disabled,
+      maxLength,
+      onChange: (event) => onChange(typeof maxLength === "number" ? event.target.value.slice(0, maxLength) : event.target.value)
+    }
+  ),
+  typeof maxLength === "number" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "mt-1 block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
+    (value || "").length,
+    "/",
+    maxLength
+  ] }) : null
 ] });
 const NumberField = ({ label, value, disabled, onChange, info }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx(FieldLabel, { label, info }),
