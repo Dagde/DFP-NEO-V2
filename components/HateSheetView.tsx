@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Trainee, Score, Pt051Assessment, SyllabusItemDetail } from '../types';
 import AuditButton from './AuditButton';
 import { logAudit } from '../utils/auditLogger';
@@ -39,9 +39,6 @@ interface HateSheetViewProps {
 
 const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
     const { isFrozen } = useSystemFreeze();
-    // Drag and drop state - simplified to just highlight target row
-    const [isDragging, setIsDragging] = useState(false);
-    const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
     const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
 
     // Helper function to format date
@@ -292,74 +289,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         }
     };
 
-    // Drag and drop handlers
-    const handleDragStart = (e: React.DragEvent) => {
-        if (!canEditPt051) {
-            e.preventDefault();
-            onAccessDenied?.('insert PT-051 assessment');
-            return;
-        }
-        console.log('🟢 DRAG STARTED - PT-051 drag initiated');
-        console.log('🟢 Drag event details:', e.type, e.currentTarget);
-        setIsDragging(true);
-        e.dataTransfer.effectAllowed = 'copy';
-        e.dataTransfer.setData('text/plain', 'pt051-new');
-        // Force visual feedback
-        setTimeout(() => console.log('🟢 isDragging state:', isDragging), 100);
-    };
-
-    const handleDragEnd = () => {
-        setIsDragging(false);
-        setHighlightedIndex(null);
-    };
-
-    // Instant drag handler - highlight immediately without delay
-    const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
-        if (!canEditPt051) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-        
-        // Instant highlighting - no delay!
-        setHighlightedIndex(index);
-        console.log('⚡ INSTANT HIGHLIGHT - Row:', index);
-    }, [canEditPt051]);
-
-    const handleDragLeave = useCallback(() => {
-        // Instant clear - no delay!
-        setHighlightedIndex(null);
-        console.log('⚡ CLEARED HIGHLIGHT');
-    }, []);
-
-    const handleDrop = (e: React.DragEvent, index: number) => {
-        e.preventDefault();
-        if (!canEditPt051) {
-            onAccessDenied?.('insert PT-051 assessment');
-            handleDragEnd();
-            return;
-        }
-        
-        // Calculate target date based on the highlighted row
-        let targetDate = '';
-        let insertIndex = index + 1; // Insert after the highlighted row
-        
-        if (insertIndex === 0) {
-            // Insert at the beginning
-            targetDate = new Date().toISOString().split('T')[0];
-        } else if (insertIndex >= combinedHistory.length) {
-            // Insert at the end
-            const oldestItem = combinedHistory[combinedHistory.length - 1];
-            targetDate = oldestItem ? new Date(new Date(oldestItem.date).getTime() + 86400000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
-        } else {
-            // Insert between items - use the highlighted row's date
-            const highlightedItem = combinedHistory[index];
-            targetDate = highlightedItem ? highlightedItem.date : new Date().toISOString().split('T')[0];
-        }
-        
-        console.log('🎯 DROPPED PT-051 - Will insert after index:', index, 'on date:', targetDate);
-        onInsertPt051(insertIndex, targetDate);
-        handleDragEnd();
-    };
-
     const handleDeletePT051 = async (eventId: string) => {
         if (!canEditPt051) {
             onAccessDenied?.('delete PT-051 assessment');
@@ -443,11 +372,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         }
     };
     
-    // Debug state logging
-    React.useEffect(() => {
-        console.log('🔍 DEBUG STATE - isDragging:', isDragging, 'highlightedIndex:', highlightedIndex);
-    }, [isDragging, highlightedIndex]);
-
     return (
         <div className="flex-1 flex flex-col bg-gray-900 overflow-hidden">
             {/* Header */}
@@ -475,23 +399,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                     <div className="absolute inset-0 z-50 bg-transparent cursor-not-allowed" style={{pointerEvents: 'all'}} />
                 )}
                 <div className="p-4 md:p-6 max-w-7xl mx-auto">
-                    {/* Draggable PT-051 Button */}
-                    <div className="mb-4 flex justify-center">
-                        <div
-                            draggable={canEditPt051}
-                            onDragStart={handleDragStart}
-                            onDragEnd={handleDragEnd}
-                            className={`inline-flex items-center px-4 py-2 text-white rounded-md transition-all duration-200 ${canEditPt051 ? 'bg-green-600 cursor-move hover:bg-green-700 hover:shadow-lg' : 'bg-gray-700 cursor-not-allowed opacity-60'} ${isDragging ? 'opacity-50 scale-95' : ''}`}
-                            title={canEditPt051 ? 'Drag and drop to insert PT-051 assessment' : 'Your permission profile does not allow PT-051 editing'}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z"/>
-                            </svg>
-                            <span className="font-semibold">+ Insert PT-051</span>
-                            <span className="ml-2 text-xs opacity-75">(drag to timeline)</span>
-                        </div>
-                    </div>
-
                     <div className="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700">
                         <table className="min-w-full divide-y divide-gray-700">
                             <thead className="bg-gray-700/50">
@@ -526,14 +433,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                         <tr 
                                             key={index}
                                             onClick={() => handleRowClick(item)} 
-                                            className={`hover:bg-gray-700/50 transition-all duration-200 cursor-pointer ${
-                                                highlightedIndex === index 
-                                                    ? 'bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse' 
-                                                    : ''
-                                            }`}
-                                            onDragOver={(e) => handleDragOver(e, index)}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, index)}
+                                            className="hover:bg-gray-700/50 transition-all duration-200 cursor-pointer"
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{item.date}</td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -562,13 +462,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                     <tr>
                                         <td colSpan={6} 
                                             className="text-center py-10 text-gray-500"
-                                            onDragOver={(e) => {
-                                                e.preventDefault();
-                                                console.log('🔶 DRAG OVER EMPTY STATE');
-                                                setHighlightedIndex(0);
-                                            }}
-                                            onDragLeave={handleDragLeave}
-                                            onDrop={(e) => handleDrop(e, 0)}
                                         >
                                             No performance records for this trainee.
                                         </td>

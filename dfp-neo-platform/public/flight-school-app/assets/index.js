@@ -9319,8 +9319,6 @@ const PT051_STRUCTURE$2 = [
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
 const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false }) => {
   const { isFrozen } = useSystemFreeze();
-  const [isDragging, setIsDragging] = reactExports.useState(false);
-  const [highlightedIndex, setHighlightedIndex] = reactExports.useState(null);
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const combinedHistory = React.useMemo(() => {
     const completedAssessments = assessments2.filter((assessment) => {
@@ -9489,59 +9487,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
       onSelectPt051(item);
     }
   };
-  const handleDragStart = (e) => {
-    if (!canEditPt051) {
-      e.preventDefault();
-      onAccessDenied?.("insert PT-051 assessment");
-      return;
-    }
-    console.log("🟢 DRAG STARTED - PT-051 drag initiated");
-    console.log("🟢 Drag event details:", e.type, e.currentTarget);
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = "copy";
-    e.dataTransfer.setData("text/plain", "pt051-new");
-    setTimeout(() => console.log("🟢 isDragging state:", isDragging), 100);
-  };
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    setHighlightedIndex(null);
-  };
-  const handleDragOver = reactExports.useCallback((e, index) => {
-    if (!canEditPt051) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-    setHighlightedIndex(index);
-    console.log("⚡ INSTANT HIGHLIGHT - Row:", index);
-  }, [canEditPt051]);
-  const handleDragLeave = reactExports.useCallback(() => {
-    setHighlightedIndex(null);
-    console.log("⚡ CLEARED HIGHLIGHT");
-  }, []);
-  const handleDrop = (e, index) => {
-    e.preventDefault();
-    if (!canEditPt051) {
-      onAccessDenied?.("insert PT-051 assessment");
-      handleDragEnd();
-      return;
-    }
-    let targetDate = "";
-    let insertIndex = index + 1;
-    if (insertIndex === 0) {
-      targetDate = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    } else if (insertIndex >= combinedHistory.length) {
-      const oldestItem = combinedHistory[combinedHistory.length - 1];
-      targetDate = oldestItem ? new Date(new Date(oldestItem.date).getTime() + 864e5).toISOString().split("T")[0] : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    } else {
-      const highlightedItem = combinedHistory[index];
-      targetDate = highlightedItem ? highlightedItem.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    }
-    console.log("🎯 DROPPED PT-051 - Will insert after index:", index, "on date:", targetDate);
-    onInsertPt051(insertIndex, targetDate);
-    handleDragEnd();
-  };
-  React.useEffect(() => {
-    console.log("🔍 DEBUG STATE - isDragging:", isDragging, "highlightedIndex:", highlightedIndex);
-  }, [isDragging, highlightedIndex]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -9568,73 +9513,46 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-y-auto relative", children: [
       isFrozen && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute inset-0 z-50 bg-transparent cursor-not-allowed", style: { pointerEvents: "all" } }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mb-4 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          "div",
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 md:p-6 max-w-7xl mx-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Status" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "text-center py-14 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-4", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: "Retrieving PT-051 and LMP records..." })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-1.5 w-56 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-1/2 rounded-full bg-sky-400 animate-pulse" }) })
+        ] }) }) }) : combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "tr",
           {
-            draggable: canEditPt051,
-            onDragStart: handleDragStart,
-            onDragEnd: handleDragEnd,
-            className: `inline-flex items-center px-4 py-2 text-white rounded-md transition-all duration-200 ${canEditPt051 ? "bg-green-600 cursor-move hover:bg-green-700 hover:shadow-lg" : "bg-gray-700 cursor-not-allowed opacity-60"} ${isDragging ? "opacity-50 scale-95" : ""}`,
-            title: canEditPt051 ? "Drag and drop to insert PT-051 assessment" : "Your permission profile does not allow PT-051 editing",
+            onClick: () => handleRowClick(item),
+            className: "hover:bg-gray-700/50 transition-all duration-200 cursor-pointer",
             children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5 mr-2", viewBox: "0 0 20 20", fill: "currentColor", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM2 7a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V7z" }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold", children: "+ Insert PT-051" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "ml-2 text-xs opacity-75", children: "(drag to timeline)" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: item.type === "LMP Score" ? item.event : item.flightNumber }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: item.type }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getStatusDisplay(item) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
             ]
+          },
+          index
+        )) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "td",
+          {
+            colSpan: 6,
+            className: "text-center py-10 text-gray-500",
+            children: "No performance records for this trainee."
           }
-        ) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full divide-y divide-gray-700", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-gray-700/50", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Status" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
-          ] }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("tbody", { className: "bg-gray-800 divide-y divide-gray-700", children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 6, className: "text-center py-14 text-gray-300", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center justify-center gap-4", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 text-xs text-gray-400", children: "Retrieving PT-051 and LMP records..." })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-1.5 w-56 overflow-hidden rounded-full bg-gray-700", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-full w-1/2 rounded-full bg-sky-400 animate-pulse" }) })
-          ] }) }) }) : combinedHistory.length > 0 ? combinedHistory.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "tr",
-            {
-              onClick: () => handleRowClick(item),
-              className: `hover:bg-gray-700/50 transition-all duration-200 cursor-pointer ${highlightedIndex === index ? "bg-yellow-500/30 border-2 border-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" : ""}`,
-              onDragOver: (e) => handleDragOver(e, index),
-              onDragLeave: handleDragLeave,
-              onDrop: (e) => handleDrop(e, index),
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: item.type === "LMP Score" ? item.event : item.flightNumber }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: item.type }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getStatusDisplay(item) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
-              ]
-            },
-            index
-          )) : /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "td",
-            {
-              colSpan: 6,
-              className: "text-center py-10 text-gray-500",
-              onDragOver: (e) => {
-                e.preventDefault();
-                console.log("🔶 DRAG OVER EMPTY STATE");
-                setHighlightedIndex(0);
-              },
-              onDragLeave: handleDragLeave,
-              onDrop: (e) => handleDrop(e, 0),
-              children: "No performance records for this trainee."
-            }
-          ) }) })
-        ] }) })
-      ] })
+        ) }) })
+      ] }) }) })
     ] })
   ] });
 };
