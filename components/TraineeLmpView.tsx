@@ -573,8 +573,19 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     }, [scores, traineeLmp]);
 
     useEffect(() => {
-        setSelectedItem(null);
-    }, [trainee.fullName]);
+        if (activeTab !== 'neo') return;
+        if (traineeLmp.length === 0) {
+            setSelectedItem(null);
+            return;
+        }
+
+        setSelectedItem(current => {
+            if (current && traineeLmp.some(item => item.id === current.id || item.code === current.code)) {
+                return current;
+            }
+            return traineeLmp[0];
+        });
+    }, [activeTab, trainee.fullName, traineeLmp]);
 
     // Tab button style helper
     const tabClass = (tab: 'neo' | 'academic') =>
@@ -645,12 +656,12 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     /* ── NEO Build LMP Tab (existing) ── */
                     <>
                         {/* Left Column: List */}
-                        <div className="w-1/4 border-r border-gray-700 overflow-y-auto">
+                        <div className="w-1/4 min-h-0 border-r border-gray-700 overflow-y-auto">
                             <ul className="p-2 space-y-1">
                                 {traineeLmp.map(item => {
                                     const isCompleted = completedEventIds.has(item.code);
                                     return (
-                                        <li key={item.code}>
+                                        <li key={item.id || item.code}>
                                             <div className={`group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? 'bg-sky-700 text-white font-semibold' : 'text-gray-300 hover:bg-gray-700/50'}`}>
                                                 <button
                                                     onClick={() => setSelectedItem(item)}
@@ -667,8 +678,8 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                         </div>
 
                         {/* Right Column: Detail View */}
-                        <div className="w-3/4 overflow-y-auto">
-                            <div className="p-6 max-w-5xl mx-auto">
+                        <div className="w-3/4 min-h-0 overflow-y-auto">
+                            <div className="p-6 max-w-5xl mx-auto min-h-full">
                                 {selectedItem ? (
                                     <DetailView
                                         item={selectedItem}

@@ -10044,8 +10044,18 @@ const TraineeLmpView = ({
     return ids;
   }, [scores, traineeLmp]);
   reactExports.useEffect(() => {
-    setSelectedItem(null);
-  }, [trainee.fullName]);
+    if (activeTab !== "neo") return;
+    if (traineeLmp.length === 0) {
+      setSelectedItem(null);
+      return;
+    }
+    setSelectedItem((current) => {
+      if (current && traineeLmp.some((item) => item.id === current.id || item.code === current.code)) {
+        return current;
+      }
+      return traineeLmp[0];
+    });
+  }, [activeTab, trainee.fullName, traineeLmp]);
   const tabClass = (tab) => `px-4 py-2 text-sm font-semibold rounded-t-md transition-colors ${activeTab === tab ? "bg-gray-900 text-sky-400 border-t border-l border-r border-gray-700" : "bg-gray-800 text-gray-400 hover:text-gray-200 border border-transparent"}`;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 p-4 flex justify-between items-center border-b border-gray-700", children: [
@@ -10103,7 +10113,7 @@ const TraineeLmpView = ({
       ) : (
         /* ── NEO Build LMP Tab (existing) ── */
         /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 border-r border-gray-700 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-1/4 min-h-0 border-r border-gray-700 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "p-2 space-y-1", children: traineeLmp.map((item) => {
             const isCompleted = completedEventIds.has(item.code);
             return /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: `group rounded-md transition-colors text-sm flex items-center ${selectedItem?.code === item.code ? "bg-sky-700 text-white font-semibold" : "text-gray-300 hover:bg-gray-700/50"}`, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
               "button",
@@ -10115,9 +10125,9 @@ const TraineeLmpView = ({
                   /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.code })
                 ]
               }
-            ) }) }, item.code);
+            ) }) }, item.id || item.code);
           }) }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-3/4 min-h-0 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-6 max-w-5xl mx-auto min-h-full", children: selectedItem ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             DetailView$1,
             {
               item: selectedItem,
