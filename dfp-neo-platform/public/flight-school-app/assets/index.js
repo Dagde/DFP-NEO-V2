@@ -9392,10 +9392,25 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
       const aOrder = getLmpOrder(a);
       const bOrder = getLmpOrder(b);
-      if (aOrder !== void 0 && bOrder !== void 0 && aOrder !== bOrder) {
-        return aOrder - bOrder;
+      const aHasOrder = aOrder !== void 0;
+      const bHasOrder = bOrder !== void 0;
+      if (aHasOrder && bHasOrder) {
+        if (aOrder !== bOrder) return aOrder - bOrder;
+        const aTypeOrder = a.type === "PT-051" ? 0 : 1;
+        const bTypeOrder = b.type === "PT-051" ? 0 : 1;
+        if (aTypeOrder !== bTypeOrder) return aTypeOrder - bTypeOrder;
       }
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (aHasOrder !== bHasOrder) {
+        return aHasOrder ? -1 : 1;
+      }
+      const aDate = new Date(a.date || "").getTime();
+      const bDate = new Date(b.date || "").getTime();
+      const safeADate = Number.isNaN(aDate) ? 0 : aDate;
+      const safeBDate = Number.isNaN(bDate) ? 0 : bDate;
+      if (safeADate !== safeBDate) return safeBDate - safeADate;
+      const aCode = normaliseEventCode(a.type === "LMP Score" ? a.event : a.flightNumber);
+      const bCode = normaliseEventCode(b.type === "LMP Score" ? b.event : b.flightNumber);
+      return aCode.localeCompare(bCode);
     });
     console.log("Combined History:", combined.length, combined);
     return combined;

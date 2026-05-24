@@ -147,15 +147,35 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                return lmpOrder.get(normaliseEventCode(eventCode));
            };
 
-           // Combine and sort by Individual LMP order when available.
-           // Date remains the fallback for legacy/manual records that are not in the current LMP.
+           // Combine and sort by Individual LMP order when available. Records that
+           // are not in the current Individual LMP are kept behind the LMP timeline
+           // as a legacy fallback, but cleanup should remove those PT-051 rows.
            const combined = [...lmpItems, ...pt051Items].sort((a, b) => {
                const aOrder = getLmpOrder(a);
                const bOrder = getLmpOrder(b);
-               if (aOrder !== undefined && bOrder !== undefined && aOrder !== bOrder) {
-                   return aOrder - bOrder;
+               const aHasOrder = aOrder !== undefined;
+               const bHasOrder = bOrder !== undefined;
+
+               if (aHasOrder && bHasOrder) {
+                   if (aOrder !== bOrder) return aOrder - bOrder;
+                   const aTypeOrder = a.type === 'PT-051' ? 0 : 1;
+                   const bTypeOrder = b.type === 'PT-051' ? 0 : 1;
+                   if (aTypeOrder !== bTypeOrder) return aTypeOrder - bTypeOrder;
                }
-               return new Date(b.date).getTime() - new Date(a.date).getTime();
+
+               if (aHasOrder !== bHasOrder) {
+                   return aHasOrder ? -1 : 1;
+               }
+
+               const aDate = new Date(a.date || '').getTime();
+               const bDate = new Date(b.date || '').getTime();
+               const safeADate = Number.isNaN(aDate) ? 0 : aDate;
+               const safeBDate = Number.isNaN(bDate) ? 0 : bDate;
+               if (safeADate !== safeBDate) return safeBDate - safeADate;
+
+               const aCode = normaliseEventCode(a.type === 'LMP Score' ? a.event : a.flightNumber);
+               const bCode = normaliseEventCode(b.type === 'LMP Score' ? b.event : b.flightNumber);
+               return aCode.localeCompare(bCode);
            });
            console.log('Combined History:', combined.length, combined);
            
