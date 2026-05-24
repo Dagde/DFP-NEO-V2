@@ -71246,6 +71246,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       instructorAllocationTrace: [],
       placementTrace: []
     },
+    dayFlightGapDiagnostics: {
+      attempts: [],
+      instructorTrace: [],
+      placements: [],
+      finalGaps: []
+    },
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
@@ -71335,6 +71341,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const forcedRemedialInstructorConflicts = [];
   const traceMandatoryRemedial = (bucket, entry, limit = 1200) => {
     const list = neoBuildDiag.mandatoryRemedialFlights[bucket];
+    if (list.length >= limit) return;
+    list.push({
+      sequence: list.length + 1,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      ...entry
+    });
+  };
+  const traceDayFlightGap = (bucket, entry, limit = 8e3) => {
+    const list = neoBuildDiag.dayFlightGapDiagnostics[bucket];
     if (list.length >= limit) return;
     list.push({
       sequence: list.length + 1,
@@ -72076,6 +72091,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                       generatedEventsCount: generatedEvents.length
                     });
                   }
+                  if (type === "flight" && !isNightPass && !isPlusOne && !isRemedialSyllabusItem(syllabusItem)) {
+                    traceDayFlightGap("placements", {
+                      phase: "generated-event-added",
+                      listName,
+                      trainee: trainee.fullName,
+                      event: syllabusItem.code,
+                      type,
+                      startTime: result.startTime,
+                      displayTime: _fmtT(result.startTime),
+                      duration: result.duration,
+                      resourceId: result.resourceId,
+                      instructor: result.instructor,
+                      area: result.area,
+                      traineeCountsAfter: { ...tCounts },
+                      instructorCountsAfter: result.instructor && eventCounts.get(result.instructor) ? { ...eventCounts.get(result.instructor) } : null,
+                      generatedEventsCount: generatedEvents.length
+                    });
+                  }
                   placed = true;
                   placedThisPass = true;
                   break;
@@ -72125,6 +72158,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
     let forcedInstructorConflictDetails = [];
     const isTracedRemedialAttempt = isRemedialSyllabusItem(syllabusItem) || !!remedialInstructorOverride;
+    const isDayFlightGapTraceAttempt = type === "flight" && !isNightPass && !isPlusOne && !isTracedRemedialAttempt;
     const traceScheduleReject = (reason, details = {}) => {
       if (isTracedRemedialAttempt) {
         traceMandatoryRemedial("scheduleAttempts", {
@@ -72139,6 +72173,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           displayTime: _fmtT(startTime),
           dayNight: syllabusItem.dayNight,
           remedialInstructorOverride,
+          primaryPreferOnly,
+          requirePreferredNightAircraft,
+          details
+        });
+      }
+      if (isDayFlightGapTraceAttempt) {
+        traceDayFlightGap("attempts", {
+          phase: "schedule-event",
+          outcome: "rejected",
+          reason,
+          trainee: trainee.fullName,
+          event: syllabusItem.code,
+          eventId: syllabusItem.id,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          dayNight: syllabusItem.dayNight,
           primaryPreferOnly,
           requirePreferredNightAircraft,
           details
@@ -72326,6 +72377,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           candidateNames: candidates.slice(0, 25).map((ip) => ip.name)
         });
       }
+      if (isDayFlightGapTraceAttempt) {
+        traceDayFlightGap("instructorTrace", {
+          phase: "candidate-pool",
+          trainee: traineeForCheck.fullName,
+          event: syllabusItemForCheck.code,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          totalInstructors: instructors.length,
+          candidatesAfterRoleAndDayNight: _afterQualFilter,
+          candidateNames: candidates.slice(0, 20).map((ip) => ip.name),
+          intendedNightCandidatesFiltered: instructors.filter((ip) => {
+            if (type === "flight" && ip.role !== "QFI" && !ip.isQFI) return false;
+            return getScheduledDayNightForStart(startTime) === "Day" && isPersonScheduledForNightEvents(ip.name);
+          }).slice(0, 20).map((ip) => ip.name)
+        });
+      }
       if (!requiredRemedialInstructor) {
         candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
       }
@@ -72398,6 +72466,21 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           requiredRemedialInstructor,
           candidatesEnteringLoop: _candidatesEnteringLoop,
           candidateNames: candidates.slice(0, 25).map((ip) => ip.name),
+          primaryOnlyMode
+        });
+      }
+      if (isDayFlightGapTraceAttempt) {
+        traceDayFlightGap("instructorTrace", {
+          phase: "candidate-loop-start",
+          trainee: traineeForCheck.fullName,
+          event: syllabusItemForCheck.code,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          afterQualificationFilter: _afterQualFilter,
+          afterUnitFilter: _afterUnitFilter,
+          candidatesEnteringLoop: _candidatesEnteringLoop,
+          candidateNames: candidates.slice(0, 20).map((ip) => ip.name),
           primaryOnlyMode
         });
       }
@@ -72647,6 +72730,22 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           rejections: { ..._dRej }
         });
       }
+      if (isDayFlightGapTraceAttempt) {
+        traceDayFlightGap("instructorTrace", {
+          phase: "no-instructor-found",
+          trainee: traineeForCheck.fullName,
+          event: syllabusItemForCheck.code,
+          type,
+          startTime,
+          displayTime: _fmtT(startTime),
+          zeroReason: _zeroReason,
+          totalInstructors: instructors.length,
+          afterQualificationFilter: _afterQualFilter,
+          afterUnitFilter: _afterUnitFilter,
+          candidatesEnteringLoop: _candidatesEnteringLoop,
+          rejections: { ..._dRej }
+        });
+      }
       return null;
     };
     const isSoloFlight = syllabusItem.sortieType === "Solo" || ["BGF11", "BGF18"].includes(syllabusItem.id);
@@ -72845,6 +72944,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         startTime,
         endTime: startTime + syllabusItem.duration,
         details: forcedInstructorConflictDetails
+      });
+    }
+    if (isDayFlightGapTraceAttempt) {
+      traceDayFlightGap("attempts", {
+        phase: "schedule-event",
+        outcome: "placed",
+        trainee: trainee.fullName,
+        event: syllabusItem.code,
+        eventId: syllabusItem.id,
+        type,
+        startTime,
+        displayTime: _fmtT(startTime),
+        resourceId,
+        instructor: result.instructor,
+        pilot: result.pilot,
+        student: result.student,
+        area,
+        dayNight: syllabusItem.dayNight
       });
     }
     if (isTracedRemedialAttempt) {
@@ -73941,6 +74058,41 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     return a.startTime - b.startTime;
   });
+  const dayPc21FlightsByStart = sortedEvents.filter(
+    (event) => event.type === "flight" && event.resourceId?.startsWith("PC-21") && getGeneratedEventDayNightClassification(event) !== "Night" && event.startTime < flyingEndTime
+  ).sort((a, b) => a.startTime - b.startTime || (resourceOrderMap.get(a.resourceId) ?? 9999) - (resourceOrderMap.get(b.resourceId) ?? 9999));
+  for (let index = 1; index < dayPc21FlightsByStart.length; index++) {
+    const previous = dayPc21FlightsByStart[index - 1];
+    const current = dayPc21FlightsByStart[index];
+    const gapMinutes = Math.round((current.startTime - previous.startTime) * 60);
+    if (gapMinutes > 5) {
+      const expectedNextStart = previous.startTime + 5 / 60;
+      traceDayFlightGap("finalGaps", {
+        phase: "final-day-flight-gap",
+        previous: {
+          flightNumber: previous.flightNumber,
+          resourceId: previous.resourceId,
+          startTime: previous.startTime,
+          displayTime: _fmtT(previous.startTime),
+          instructor: previous.instructor,
+          student: previous.student
+        },
+        current: {
+          flightNumber: current.flightNumber,
+          resourceId: current.resourceId,
+          startTime: current.startTime,
+          displayTime: _fmtT(current.startTime),
+          instructor: current.instructor,
+          student: current.student
+        },
+        expectedNextStart,
+        expectedDisplayTime: _fmtT(expectedNextStart),
+        gapMinutes,
+        attemptsAtExpectedSlot: (neoBuildDiag.dayFlightGapDiagnostics.attempts || []).filter((attempt) => Math.abs((attempt.startTime || 0) - expectedNextStart) < 1e-3).slice(0, 30),
+        instructorTraceAtExpectedSlot: (neoBuildDiag.dayFlightGapDiagnostics.instructorTrace || []).filter((trace) => Math.abs((trace.startTime || 0) - expectedNextStart) < 1e-3).slice(0, 30)
+      });
+    }
+  }
   const generateBuildConflictDiagnostic = (events) => {
     const eventWindow = (event) => getEventBookingWindowForAlgo(event, syllabusDetails);
     const resourceTurnaroundFor = (event) => {
