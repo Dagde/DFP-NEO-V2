@@ -5915,8 +5915,22 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
     // Step 4: No Schedule record - check DailySnapshot for published events filtered to this user
     if (date) {
       const snapRows = await db.$queryRawUnsafe(
-        `SELECT "scheduleEvents", "traineeEvents", "staffEvents" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
-        date
+        `SELECT date, "scheduleEvents", "traineeEvents", "staffEvents"
+         FROM "DailySnapshot"
+         WHERE date = $1::text
+            OR date = $2::text
+            OR date = $3::text
+         ORDER BY
+           CASE
+             WHEN date = $1::text THEN 0
+             WHEN date = $2::text THEN 1
+             WHEN date = $3::text THEN 2
+             ELSE 3
+           END
+         LIMIT 1`,
+        date,
+        `${date}__ESL`,
+        `${date}__PEA`
       );
 
       if (snapRows && snapRows.length > 0) {
@@ -5950,6 +5964,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
         const userEvents = allSnapshotEvents.filter(e =>
           nameMatch(e.student) ||
           nameMatch(e.instructor) ||
+          nameMatch(e.pilot) ||
             (e.traineeId && e.traineeId.toLowerCase() === jwtUserId.toLowerCase())
         );
 
@@ -5967,7 +5982,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
               endTime: toHHMM(endTimeVal),
               eventType: mapEventType(e.type || e.eventType || e.eventCode),
               location: e.location || e.origin || null,
-              role: mapRole(nameMatch(e.student) ? 'Student' : nameMatch(e.instructor) ? 'Instructor' : e.role || null),
+              role: mapRole(nameMatch(e.student) ? 'Student' : (nameMatch(e.instructor) || nameMatch(e.pilot)) ? 'Instructor' : e.role || null),
               status: isStandby ? "STBY" : "Published",
               isStandby: isStandby,
               notes: e.notes || e.eventDescription || null,
@@ -5982,7 +5997,7 @@ app.get('/api/mobile/schedule', authenticateMobileJWT, async (req, res) => {
             console.log("\u2705 GET /api/mobile/schedule - Found " + mappedEvents.length + " events in DailySnapshot for date=" + date);
             return res.json({
               schedule: {
-                id: "snapshot-" + date,
+                id: "snapshot-" + snap.date,
                 date: date,
                 isPublished: true,
                 events: mappedEvents,
