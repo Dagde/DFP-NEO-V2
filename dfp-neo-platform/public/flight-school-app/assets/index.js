@@ -11137,7 +11137,7 @@ const TraineeProfileFlyout = ({
                   ] }) })
                 ] })
               ) }),
-              !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
+              activeTab !== "lmp" && !isEditing && !isCreating && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: "Assigned Instructors" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-3", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-2", style: { ...card3dStyle2, background: "linear-gradient(180deg, #1e2d42 0%, #192538 100%)" }, children: [
@@ -11188,7 +11188,7 @@ const TraineeProfileFlyout = ({
                   ] })
                 ] })
               ] }),
-              !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
+              activeTab !== "lmp" && !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: card3d2 + " p-3", style: card3dStyle2, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("h4", { className: "text-xs font-semibold text-gray-300 mb-3", children: [
                   "Logbook – Prior Experience (",
                   resourceDisplayNames.aircraft,

@@ -1361,7 +1361,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
 
 
                       {/* ─── SECTION 2: ASSIGNED INSTRUCTORS (always visible, not editing) ─── */}
-                      {!isEditing && !isCreating && (
+                      {activeTab !== 'lmp' && !isEditing && !isCreating && (
                         <div className={card3d + " p-3"} style={card3dStyle}>
                           <h4 className="text-xs font-semibold text-gray-300 mb-3">Assigned Instructors</h4>
                           <div className="grid grid-cols-2 gap-3">
@@ -1448,7 +1448,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                       )}
 
                       {/* ─── SECTION 3: LOGBOOK VIEW (always visible, not editing) ─── */}
-                      {!isEditing && (
+                      {activeTab !== 'lmp' && !isEditing && (
                         <div className={card3d + " p-3"} style={card3dStyle}>
                           <h4 className="text-xs font-semibold text-gray-300 mb-3">Logbook – Prior Experience ({resourceDisplayNames.aircraft} only)</h4>
                           <div className="flex gap-2">
