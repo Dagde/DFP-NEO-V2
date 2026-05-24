@@ -72195,7 +72195,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           ...bucket4OtherSameUnit,
           ...bucket5Other
         ];
-        if (primaryOnlyMode) {
+        if (primaryOnlyMode && !requiredRemedialInstructor) {
           candidates = candidates.filter((i) => {
             if ((softGroups.primary || hardGroups.primary) && isPrimary(i)) return true;
             if ((softGroups.secondary || hardGroups.secondary) && isSecondary(i)) return true;
@@ -72745,11 +72745,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const priorityEvent = getMandatoryRemedialFlightForTrainee(trainee);
     if (!priorityEvent) return null;
     const individualLmp = traineeLMPs.get(trainee.fullName) || [];
-    return individualLmp.find(
+    const matchedItem = individualLmp.find(
       (item) => normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) || normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
     ) || syllabusDetails.find(
       (item) => normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) || normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
     ) || null;
+    if (!matchedItem) return null;
+    const assignedInstructor = (priorityEvent.instructor || "").trim();
+    const existingHumanResources = Array.isArray(matchedItem.resourcesHuman) ? matchedItem.resourcesHuman.filter((name) => typeof name === "string" && name.trim().length > 0) : [];
+    return {
+      ...matchedItem,
+      dayNight: priorityEvent.dayNight || matchedItem.dayNight,
+      resourcesHuman: assignedInstructor ? [assignedInstructor, ...existingHumanResources.filter((name) => name !== assignedInstructor)] : existingHumanResources
+    };
   };
   const mandatoryRemedialFlightItems = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
