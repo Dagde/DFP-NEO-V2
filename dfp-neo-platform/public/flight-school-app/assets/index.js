@@ -11248,10 +11248,10 @@ const TraineeProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
-            canViewPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: tabBtnClass("hatesheet"), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[10px] leading-[1.05]", children: [
+            canViewPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: tabBtnClass("hatesheet"), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
               "Training",
               /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Assessment"
+              "Report"
             ] }) }),
             canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
             canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),

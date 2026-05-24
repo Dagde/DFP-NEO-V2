@@ -1544,7 +1544,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
                           {canViewPt051 && (
                             <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>
-                              <span className="text-[10px] leading-[1.05]">Training<br />Assessment</span>
+                              <span className="leading-tight">Training<br />Report</span>
                             </button>
                           )}
                           {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
