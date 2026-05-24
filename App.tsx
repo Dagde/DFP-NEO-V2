@@ -3400,7 +3400,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 //
                 // In primary-only mode, use the UNION of soft and hard groups as the allowed set —
                 // if a group is selected in either mode, it qualifies during pass 1.
-                if (primaryOnlyMode && !requiredRemedialInstructor) {
+                if (primaryOnlyMode) {
                     candidates = candidates.filter(i => {
                         if ((softGroups.primary    || hardGroups.primary)    && isPrimary(i))    return true;
                         if ((softGroups.secondary  || hardGroups.secondary)  && isSecondary(i))  return true;
@@ -4069,7 +4069,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (!priorityEvent) return null;
 
         const individualLmp = traineeLMPs.get(trainee.fullName) || [];
-        const matchedItem = (
+        return (
             individualLmp.find(item =>
                 normalizeLmpEventId(item.code) === normalizeLmpEventId(priorityEvent.flightNumber) ||
                 normalizeLmpEventId(item.id) === normalizeLmpEventId(priorityEvent.flightNumber)
@@ -4080,20 +4080,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             ) ||
             null
         );
-        if (!matchedItem) return null;
-
-        const assignedInstructor = (priorityEvent.instructor || '').trim();
-        const existingHumanResources = Array.isArray(matchedItem.resourcesHuman)
-            ? matchedItem.resourcesHuman.filter(name => typeof name === 'string' && name.trim().length > 0)
-            : [];
-
-        return {
-            ...matchedItem,
-            dayNight: priorityEvent.dayNight || matchedItem.dayNight,
-            resourcesHuman: assignedInstructor
-                ? [assignedInstructor, ...existingHumanResources.filter(name => name !== assignedInstructor)]
-                : existingHumanResources,
-        };
     };
     const mandatoryRemedialFlightItems = new Map<string, SyllabusItemDetail>();
     activeTrainees.forEach(trainee => {
