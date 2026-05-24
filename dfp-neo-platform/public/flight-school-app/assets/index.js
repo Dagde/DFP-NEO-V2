@@ -63361,15 +63361,15 @@ const AddRemedialPackageFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Dur (hrs)" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", step: "0.1", min: "0", value: state.duration, onChange: (e) => setState((p) => ({ ...p, duration: parseFloat(e.target.value) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "8rem" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "10.5rem" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Day/Night" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-2 overflow-hidden rounded-md border border-gray-600 bg-gray-700", children: ["Day", "Night"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-3 overflow-hidden rounded-md border border-gray-600 bg-gray-700", children: ["Day", "Night", "Day/Night"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
         "button",
         {
           type: "button",
           onClick: () => setState((p) => ({ ...p, dayNight: option })),
           className: `h-[38px] text-xs font-semibold transition-colors ${state.dayNight === option ? "bg-sky-600 text-white" : "text-gray-300 hover:bg-gray-600"}`,
-          children: option
+          children: option === "Day/Night" ? "Both" : option
         },
         option
       )) })
@@ -78789,30 +78789,51 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       if (remedialReq.forceSchedule) {
         console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
         const remedialPriorityEventId = `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`;
-        const existingEvent = newPriorityEvents.find(
+        const existingEventIndex = newPriorityEvents.findIndex(
           (e) => e.id === remedialPriorityEventId
         );
-        if (existingEvent) {
-          console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
-        } else if (!existingEvent) {
-          const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
-          let syllabusItem = null;
-          if (trainee) {
-            const individualLMP = traineeLMPs.get(trainee.fullName);
-            if (individualLMP) {
-              syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-              if (syllabusItem) {
-                console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
-              }
-            }
-          }
-          if (!syllabusItem) {
-            syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
+        const existingEvent = existingEventIndex >= 0 ? newPriorityEvents[existingEventIndex] : null;
+        const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
+        let syllabusItem = null;
+        if (trainee) {
+          const individualLMP = traineeLMPs.get(trainee.fullName);
+          if (individualLMP) {
+            syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
             if (syllabusItem) {
-              console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+              console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
             }
           }
-          const duration = syllabusItem?.duration || 1.5;
+        }
+        if (!syllabusItem) {
+          syllabusItem = syllabusDetails.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
+          if (syllabusItem) {
+            console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+          }
+        }
+        const duration = syllabusItem?.duration || 1.5;
+        if (existingEvent) {
+          if (trainee && syllabusItem) {
+            const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : existingEvent.instructor || "";
+            newPriorityEvents[existingEventIndex] = {
+              ...existingEvent,
+              type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : existingEvent.type,
+              instructor: allocatedInstructor,
+              pilot: existingEvent.pilot || allocatedInstructor,
+              student: trainee.fullName,
+              flightNumber: syllabusItem.code,
+              duration,
+              flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
+              dayNight: syllabusItem.dayNight,
+              preStart: syllabusItem.preFlightTime,
+              postEnd: syllabusItem.postFlightTime,
+              isRemedial: true,
+              isTimeFixed: true
+            };
+            console.log(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
+          } else {
+            console.log(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
+          }
+        } else if (!existingEvent) {
           if (!syllabusItem) {
             console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
           }

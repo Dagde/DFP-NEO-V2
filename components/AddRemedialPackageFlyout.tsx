@@ -3,7 +3,7 @@ import { Trainee, Score, SyllabusItemDetail, Instructor, Pt051Assessment } from 
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
-type RemedialDayNight = 'Day' | 'Night';
+type RemedialDayNight = 'Day' | 'Night' | 'Day/Night';
 type RemedialPackageEvent = { id: string, code: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string, dayNight: RemedialDayNight };
 type RemedialRowState = { quantity: number; duration: number; instructor: string; dayNight: RemedialDayNight; };
 
@@ -273,17 +273,17 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
             <label className="block text-xs font-medium text-gray-400">Dur (hrs)</label>
             <input type="number" step="0.1" min="0" value={state.duration} onChange={e => setState(p => ({ ...p, duration: parseFloat(e.target.value) || 0 }))} className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" />
         </div>
-        <div style={{ width: '8rem' }}>
+        <div style={{ width: '10.5rem' }}>
             <label className="block text-xs font-medium text-gray-400">Day/Night</label>
-            <div className="mt-1 grid grid-cols-2 overflow-hidden rounded-md border border-gray-600 bg-gray-700">
-              {(['Day', 'Night'] as RemedialDayNight[]).map(option => (
+            <div className="mt-1 grid grid-cols-3 overflow-hidden rounded-md border border-gray-600 bg-gray-700">
+              {(['Day', 'Night', 'Day/Night'] as RemedialDayNight[]).map(option => (
                 <button
                   key={option}
                   type="button"
                   onClick={() => setState(p => ({ ...p, dayNight: option }))}
                   className={`h-[38px] text-xs font-semibold transition-colors ${state.dayNight === option ? 'bg-sky-600 text-white' : 'text-gray-300 hover:bg-gray-600'}`}
                 >
-                  {option}
+                  {option === 'Day/Night' ? 'Both' : option}
                 </button>
               ))}
             </div>

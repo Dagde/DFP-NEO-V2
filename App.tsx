@@ -12037,38 +12037,62 @@ const App: React.FC = () => {
                 console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
 
                 const remedialPriorityEventId = `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`;
-                const existingEvent = newPriorityEvents.find(e =>
+                const existingEventIndex = newPriorityEvents.findIndex(e =>
                     e.id === remedialPriorityEventId
                 );
+                const existingEvent = existingEventIndex >= 0 ? newPriorityEvents[existingEventIndex] : null;
+
+                // For remedial events, look in the trainee's Individual LMP first, then fallback to master syllabus.
+                // The Individual LMP is authoritative for inserted remedial details such as Day/Night and assigned instructor.
+                const trainee = allTraineesData.find(t => t.idNumber === remedialReq.traineeId);
+                let syllabusItem: SyllabusItemDetail | null = null;
+
+                if (trainee) {
+                    const individualLMP = traineeLMPs.get(trainee.fullName);
+                    if (individualLMP) {
+                        syllabusItem = individualLMP.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
+                        if (syllabusItem) {
+                            console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
+                        }
+                    }
+                }
+
+                if (!syllabusItem) {
+                    syllabusItem = syllabusDetails.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode) || null;
+                    if (syllabusItem) {
+                        console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
+                    }
+                }
+
+                const duration = syllabusItem?.duration || 1.5;
 
                 if (existingEvent) {
-                    console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
+                    if (trainee && syllabusItem) {
+                        const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0
+                            ? syllabusItem.resourcesHuman[0]
+                            : existingEvent.instructor || '';
+                        newPriorityEvents[existingEventIndex] = {
+                            ...existingEvent,
+                            type: syllabusItem.type === 'FTD' ? 'ftd' :
+                                  syllabusItem.type === 'Ground School' ? 'ground' :
+                                  syllabusItem.type === 'Flight' ? 'flight' : existingEvent.type,
+                            instructor: allocatedInstructor,
+                            pilot: existingEvent.pilot || allocatedInstructor,
+                            student: trainee.fullName,
+                            flightNumber: syllabusItem.code,
+                            duration,
+                            flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
+                            dayNight: syllabusItem.dayNight,
+                            preStart: syllabusItem.preFlightTime,
+                            postEnd: syllabusItem.postFlightTime,
+                            isRemedial: true,
+                            isTimeFixed: true,
+                        };
+                        console.log(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
+                    } else {
+                        console.log(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
+                    }
                 } else if (!existingEvent) {
-                    // For remedial events, look in the trainee's Individual LMP first, then fallback to master syllabus
-                    const trainee = allTraineesData.find(t => t.idNumber === remedialReq.traineeId);
-                    let syllabusItem = null;
-
-                    if (trainee) {
-                        // Look in Individual LMP first (where remedial events exist)
-                        const individualLMP = traineeLMPs.get(trainee.fullName);
-                        if (individualLMP) {
-                            syllabusItem = individualLMP.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-                            if (syllabusItem) {
-                                console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
-                            }
-                        }
-                    }
-
-                    // Fallback to master syllabus if not found in Individual LMP
-                    if (!syllabusItem) {
-                        syllabusItem = syllabusDetails.find(s => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
-                        if (syllabusItem) {
-                            console.log(`✅ Found event in master syllabus: ${remedialReq.eventCode}`);
-                        }
-                    }
-
-                    const duration = syllabusItem?.duration || 1.5;
-
                     if (!syllabusItem) {
                         console.error(`❌ Event not found in Individual LMP or master syllabus: ${remedialReq.eventCode}`);
                     }
