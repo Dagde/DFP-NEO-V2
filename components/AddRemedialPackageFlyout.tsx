@@ -37,7 +37,6 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [eventToRemediateId, setEventToRemediateId] = useState<string>('');
   const [remedialEvents, setRemedialEvents] = useState<RemedialPackageEvent[]>([]);
   const [validationMessage, setValidationMessage] = useState<string>('');
-  const [openInstructorField, setOpenInstructorField] = useState<string | null>(null);
 
   // State for the three new rows
   const [tutState, setTutState] = useState<RemedialRowState>({ quantity: 0, duration: 1.0, instructor: '', dayNight: 'Day' });
@@ -258,11 +257,10 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   };
   
   const InputRow: React.FC<{
-    fieldId: string;
     label: string;
     state: RemedialRowState;
     setState: React.Dispatch<React.SetStateAction<RemedialRowState>>;
-  }> = ({ fieldId, label, state, setState }) => (
+  }> = ({ label, state, setState }) => (
     <div className="flex items-end space-x-2">
         <div className="w-28 flex-shrink-0">
             <label className="block text-sm font-medium text-gray-300">{label}</label>
@@ -275,52 +273,43 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
             <label className="block text-xs font-medium text-gray-400">Dur (hrs)</label>
             <input type="number" step="0.1" min="0" value={state.duration} onChange={e => setState(p => ({ ...p, duration: parseFloat(e.target.value) || 0 }))} className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" />
         </div>
-        <div style={{ width: '7rem' }}>
+        <div style={{ width: '8rem' }}>
             <label className="block text-xs font-medium text-gray-400">Day/Night</label>
-            <select
-              value={state.dayNight}
-              onChange={e => setState(p => ({ ...p, dayNight: e.target.value as RemedialDayNight }))}
-              className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm"
-            >
-              <option value="Day">Day</option>
-              <option value="Night">Night</option>
-            </select>
+            <div className="mt-1 grid grid-cols-2 overflow-hidden rounded-md border border-gray-600 bg-gray-700">
+              {(['Day', 'Night'] as RemedialDayNight[]).map(option => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setState(p => ({ ...p, dayNight: option }))}
+                  className={`h-[38px] text-xs font-semibold transition-colors ${state.dayNight === option ? 'bg-sky-600 text-white' : 'text-gray-300 hover:bg-gray-600'}`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
         </div>
-        <div className="flex-grow relative">
+        <div className="flex-grow">
             <label className="block text-xs font-medium text-gray-400">Instructor</label>
-            <button
-              type="button"
-              onClick={() => setOpenInstructorField(openInstructorField === fieldId ? null : fieldId)}
-              className="mt-1 flex w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-left text-sm text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            <select
+              value={state.instructor}
+              onChange={e => {
+                setState(p => ({ ...p, instructor: e.target.value }));
+                setValidationMessage('');
+              }}
+              className="mt-1 w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             >
-              <span className={state.instructor ? 'text-white' : 'text-gray-400'}>{state.instructor || 'Select'}</span>
-              <span className="text-gray-400">▾</span>
-            </button>
-            {openInstructorField === fieldId && (
-              <div className="absolute z-[95] mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-600 bg-gray-800 shadow-xl">
-                {instructors.map(i => (
-                  <button
-                    key={i.idNumber}
-                    type="button"
-                    onClick={() => {
-                      setState(p => ({ ...p, instructor: i.name }));
-                      setOpenInstructorField(null);
-                      setValidationMessage('');
-                    }}
-                    className="block w-full px-3 py-2 text-left text-sm text-gray-100 hover:bg-sky-700"
-                  >
-                    {i.name}
-                  </button>
-                ))}
-              </div>
-            )}
+              <option value="">Select instructor...</option>
+              {instructors.map(i => (
+                <option key={i.idNumber} value={i.name}>{i.name}</option>
+              ))}
+            </select>
         </div>
     </div>
   );
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in">
-      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
+      <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 flex flex-col h-[90vh]" onClick={e => e.stopPropagation()}>
         <div className="p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-sky-400">Add Remedial Package for {trainee.name}</h2>
           <button onClick={onClose} className="text-white hover:text-gray-300"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
@@ -410,9 +399,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
               <fieldset className="p-4 border border-gray-600 rounded-lg">
                 <legend className="px-2 text-sm font-semibold text-gray-300">Step 2: Build Remedial Package</legend>
                 <div className="mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3">
-                    <InputRow fieldId="tutorials" label="Tutorials" state={tutState} setState={setTutState} />
-                    <InputRow fieldId="ftds" label={`${resourceDisplayNames.ftd}s`} state={ftdState} setState={setFtdState} />
-                    <InputRow fieldId="flights" label="Flights" state={flightState} setState={setFlightState} />
+                    <InputRow label="Tutorials" state={tutState} setState={setTutState} />
+                    <InputRow label={`${resourceDisplayNames.ftd}s`} state={ftdState} setState={setFtdState} />
+                    <InputRow label="Flights" state={flightState} setState={setFlightState} />
                 </div>
                 <button onClick={handleAddEvents} className="w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold">Add Events to Package</button>
                 {validationMessage && (

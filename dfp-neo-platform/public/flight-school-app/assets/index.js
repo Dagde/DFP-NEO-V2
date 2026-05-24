@@ -63210,7 +63210,6 @@ const AddRemedialPackageFlyout = ({
   const [eventToRemediateId, setEventToRemediateId] = reactExports.useState("");
   const [remedialEvents, setRemedialEvents] = reactExports.useState([]);
   const [validationMessage, setValidationMessage] = reactExports.useState("");
-  const [openInstructorField, setOpenInstructorField] = reactExports.useState(null);
   const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "", dayNight: "Day" });
   const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "", dayNight: "Day" });
   const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "", dayNight: "Day" });
@@ -63352,7 +63351,7 @@ const AddRemedialPackageFlyout = ({
     setValidationMessage("");
     onSave(trainee, eventToRemediate, remedialEvents);
   };
-  const InputRow = ({ fieldId, label, state, setState }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end space-x-2", children: [
+  const InputRow = ({ label, state, setState }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-end space-x-2", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-28 flex-shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300", children: label }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "4.5rem" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Qty" }),
@@ -63362,52 +63361,39 @@ const AddRemedialPackageFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Dur (hrs)" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", step: "0.1", min: "0", value: state.duration, onChange: (e) => setState((p) => ({ ...p, duration: parseFloat(e.target.value) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "7rem" }, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "8rem" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Day/Night" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 grid grid-cols-2 overflow-hidden rounded-md border border-gray-600 bg-gray-700", children: ["Day", "Night"].map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "button",
+        {
+          type: "button",
+          onClick: () => setState((p) => ({ ...p, dayNight: option })),
+          className: `h-[38px] text-xs font-semibold transition-colors ${state.dayNight === option ? "bg-sky-600 text-white" : "text-gray-300 hover:bg-gray-600"}`,
+          children: option
+        },
+        option
+      )) })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-grow", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Instructor" }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "select",
         {
-          value: state.dayNight,
-          onChange: (e) => setState((p) => ({ ...p, dayNight: e.target.value })),
-          className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm",
+          value: state.instructor,
+          onChange: (e) => {
+            setState((p) => ({ ...p, instructor: e.target.value }));
+            setValidationMessage("");
+          },
+          className: "mt-1 w-full rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
           children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Day", children: "Day" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Night", children: "Night" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "Select instructor..." }),
+            instructors.map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: i.name, children: i.name }, i.idNumber))
           ]
         }
       )
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-grow relative", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Instructor" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "button",
-        {
-          type: "button",
-          onClick: () => setOpenInstructorField(openInstructorField === fieldId ? null : fieldId),
-          className: "mt-1 flex w-full items-center justify-between rounded-md border border-gray-600 bg-gray-700 px-3 py-2 text-left text-sm text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: state.instructor ? "text-white" : "text-gray-400", children: state.instructor || "Select" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-gray-400", children: "▾" })
-          ]
-        }
-      ),
-      openInstructorField === fieldId && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-[95] mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-600 bg-gray-800 shadow-xl", children: instructors.map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "button",
-        {
-          type: "button",
-          onClick: () => {
-            setState((p) => ({ ...p, instructor: i.name }));
-            setOpenInstructorField(null);
-            setValidationMessage("");
-          },
-          className: "block w-full px-3 py-2 text-left text-sm text-gray-100 hover:bg-sky-700",
-          children: i.name
-        },
-        i.idNumber
-      )) })
     ] })
   ] });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 flex flex-col h-[90vh]", onClick: (e) => e.stopPropagation(), children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl border border-gray-700 flex flex-col h-[90vh]", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("h2", { className: "text-xl font-bold text-sky-400", children: [
         "Add Remedial Package for ",
@@ -63488,9 +63474,9 @@ const AddRemedialPackageFlyout = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 2: Build Remedial Package" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 p-3 bg-gray-700/30 rounded-lg space-y-3", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { fieldId: "tutorials", label: "Tutorials", state: tutState, setState: setTutState }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { fieldId: "ftds", label: `${resourceDisplayNames.ftd}s`, state: ftdState, setState: setFtdState }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { fieldId: "flights", label: "Flights", state: flightState, setState: setFlightState })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Tutorials", state: tutState, setState: setTutState }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: `${resourceDisplayNames.ftd}s`, state: ftdState, setState: setFtdState }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(InputRow, { label: "Flights", state: flightState, setState: setFlightState })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleAddEvents, className: "w-full mt-3 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-semibold", children: "Add Events to Package" }),
           validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3 rounded-lg border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100", children: validationMessage }),
