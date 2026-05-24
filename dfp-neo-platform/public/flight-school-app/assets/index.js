@@ -3760,10 +3760,10 @@ const AddCourseFlyout = ({ onClose, onSave, existingCourses, locations = [], uni
 };
 const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
   const courseNames = reactExports.useMemo(() => Object.keys(activeCourses), [activeCourses]);
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState(courseNames[0] || "");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState(courseNames[0] || "");
   const handleArchive = () => {
-    if (selectedCourse2) {
-      onArchive(selectedCourse2);
+    if (selectedCourse) {
+      onArchive(selectedCourse);
     }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[60] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
@@ -3779,7 +3779,7 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
           "select",
           {
             id: "course-to-archive",
-            value: selectedCourse2,
+            value: selectedCourse,
             onChange: (e) => setSelectedCourse(e.target.value),
             className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm",
             children: courseNames.length > 0 ? courseNames.map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name)) : /* @__PURE__ */ jsxRuntimeExports.jsx("option", { disabled: true, children: "No active courses" })
@@ -3789,7 +3789,7 @@ const RemoveCourseFlyout = ({ onClose, onArchive, activeCourses }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-gray-500", children: "Archived courses are removed from the main list but are not deleted from the system." })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleArchive, disabled: !selectedCourse2, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Archive Course" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleArchive, disabled: !selectedCourse, className: "px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors text-sm font-semibold disabled:bg-gray-500 disabled:cursor-not-allowed", children: "Archive Course" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "px-4 py-2 bg-transparent border border-gray-600 text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors text-sm", children: "Cancel" })
     ] })
   ] }) });
@@ -6760,13 +6760,13 @@ const ScheduleView = ({
                           type: "date",
                           value: date,
                           onChange: (event) => {
-                            const selectedDate2 = event.target.value;
-                            if (!selectedDate2) return;
+                            const selectedDate = event.target.value;
+                            if (!selectedDate) return;
                             if (onDateSelect) {
-                              onDateSelect(selectedDate2);
+                              onDateSelect(selectedDate);
                             } else {
                               const current = (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).getTime();
-                              const selected = (/* @__PURE__ */ new Date(`${selectedDate2}T00:00:00Z`)).getTime();
+                              const selected = (/* @__PURE__ */ new Date(`${selectedDate}T00:00:00Z`)).getTime();
                               const diff = Math.round((selected - current) / 864e5);
                               if (diff !== 0) onDateChange(diff);
                             }
@@ -10185,6 +10185,7 @@ const TraineeProfileFlyout = ({
   pt051PerformanceLoading = false,
   traineeLMPs,
   userProfile,
+  initialActiveTab = null,
   onSelectPt051ForEvent,
   canViewPt051 = true,
   canEditPt051 = true,
@@ -10210,7 +10211,7 @@ const TraineeProfileFlyout = ({
   }, [syllabusDetails]);
   const card3d2 = "rounded-lg border border-gray-500/60 shadow-md";
   const card3dStyle2 = { background: "linear-gradient(180deg, #243044 0%, #1e2d42 60%)", boxShadow: "0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)" };
-  const [activeTab, setActiveTab] = reactExports.useState(null);
+  const [activeTab, setActiveTab] = reactExports.useState(initialActiveTab);
   const [currencyEditState, setCurrencyEditState] = reactExports.useState(null);
   const [localCurrencyStatus, setLocalCurrencyStatus] = reactExports.useState(void 0);
   const localCurrencyStatusRef = reactExports.useRef(void 0);
@@ -10357,6 +10358,14 @@ const TraineeProfileFlyout = ({
     resetState();
     setIsEditing(isCreating);
   }, [trainee, isCreating]);
+  reactExports.useEffect(() => {
+    if (initialActiveTab) {
+      setActiveTab(initialActiveTab);
+      setTimeout(() => {
+        contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      }, 50);
+    }
+  }, [initialActiveTab, trainee.fullName]);
   const hasLoggedViewRef = reactExports.useRef(false);
   reactExports.useEffect(() => {
     if (!isCreating && !hasLoggedViewRef.current) {
@@ -11327,7 +11336,7 @@ const DeleteTraineeConfirmation = ({
   traineesData,
   courseColors
 }) => {
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState("");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
   const [pin, setPin] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
@@ -11345,7 +11354,7 @@ const DeleteTraineeConfirmation = ({
     setError("");
   };
   const handleConfirm = () => {
-    if (!selectedCourse2) {
+    if (!selectedCourse) {
       setError("Please select a course");
       return;
     }
@@ -11376,7 +11385,7 @@ const DeleteTraineeConfirmation = ({
     setAction("delete");
     onClose();
   };
-  const traineesInCourse = traineesData.filter((t) => t.course === selectedCourse2);
+  const traineesInCourse = traineesData.filter((t) => t.course === selectedCourse);
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in", onClick: handleClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-lg border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Delete or Archive Trainee" }),
@@ -11389,7 +11398,7 @@ const DeleteTraineeConfirmation = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
-            value: selectedCourse2,
+            value: selectedCourse,
             onChange: (e) => handleCourseChange(e.target.value),
             className: "w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-sky-500",
             children: [
@@ -11399,7 +11408,7 @@ const DeleteTraineeConfirmation = ({
           }
         )
       ] }),
-      selectedCourse2 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      selectedCourse && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-300 mb-2", children: "Trainee *" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
@@ -11427,7 +11436,7 @@ const DeleteTraineeConfirmation = ({
               " ",
               selectedTrainee.name,
               " from ",
-              selectedCourse2
+              selectedCourse
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-amber-100 text-xs mt-1", children: [
               "You are about to remove this trainee from the ",
@@ -11503,7 +11512,7 @@ const DeleteTraineeConfirmation = ({
         "button",
         {
           onClick: handleConfirm,
-          disabled: !selectedCourse2 || !selectedTrainee || !pin,
+          disabled: !selectedCourse || !selectedTrainee || !pin,
           className: `px-4 py-2 text-white rounded-md disabled:bg-gray-500 disabled:cursor-not-allowed ${action === "archive" ? "bg-sky-600 hover:bg-sky-700" : "bg-red-600 hover:bg-red-700"}`,
           children: action === "archive" ? "Archive Trainee" : "Delete Trainee"
         }
@@ -11839,6 +11848,7 @@ const CourseRosterView = ({
   locations,
   units,
   selectedPersonForProfile,
+  selectedProfileInitialTab = null,
   onProfileOpened,
   traineeLMPs,
   onViewLogbook,
@@ -11869,6 +11879,7 @@ const CourseRosterView = ({
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
   const [selectedTrainee, setSelectedTrainee] = reactExports.useState(null);
+  const [profileInitialTab, setProfileInitialTab] = reactExports.useState(null);
   const [isCreatingNew, setIsCreatingNew] = reactExports.useState(false);
   const [newTraineeTemplate, setNewTraineeTemplate] = reactExports.useState(null);
   const [courseToRestore, setCourseToRestore] = reactExports.useState(null);
@@ -11885,11 +11896,12 @@ const CourseRosterView = ({
         onProfileOpened?.();
         return;
       }
+      setProfileInitialTab(selectedProfileInitialTab);
       setSelectedTrainee(selectedPersonForProfile);
       setIsCreatingNew(false);
       onProfileOpened?.();
     }
-  }, [selectedPersonForProfile, onProfileOpened, canViewTraineeProfile, onAccessDenied]);
+  }, [selectedPersonForProfile, selectedProfileInitialTab, onProfileOpened, canViewTraineeProfile, onAccessDenied]);
   const groupedTrainees = reactExports.useMemo(() => {
     const groups = {};
     traineesData.forEach((trainee) => {
@@ -12123,6 +12135,7 @@ const CourseRosterView = ({
         trainee: isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
         onClose: () => {
           setSelectedTrainee(null);
+          setProfileInitialTab(null);
           setIsCreatingNew(false);
           setNewTraineeTemplate(null);
         },
@@ -12154,6 +12167,7 @@ const CourseRosterView = ({
         pt051PerformanceLoading,
         traineeLMPs,
         userProfile,
+        initialActiveTab: profileInitialTab,
         canViewPt051: canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canEditPt051: canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         canViewIndividualLmp: canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
@@ -17264,7 +17278,7 @@ const AcademicsTab = ({
     if (defaultLocality && localities.includes(defaultLocality)) return defaultLocality;
     return localities[0] || "";
   });
-  const [selectedDate2, setSelectedDate] = reactExports.useState(date);
+  const [selectedDate, setSelectedDate] = reactExports.useState(date);
   const [workStart, setWorkStart] = reactExports.useState(8);
   const [workEnd, setWorkEnd] = reactExports.useState(17);
   const [otherText, setOtherText] = reactExports.useState("");
@@ -17283,22 +17297,22 @@ const AcademicsTab = ({
     });
     return Array.from(courses).sort();
   }, [traineesData, selectedLocality, localities, locationAbbreviations]);
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState(coursesForLocality[0] || "");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState(coursesForLocality[0] || "");
   reactExports.useEffect(() => {
-    if (!coursesForLocality.includes(selectedCourse2)) {
+    if (!coursesForLocality.includes(selectedCourse)) {
       setSelectedCourse(coursesForLocality[0] || "");
     }
-  }, [coursesForLocality, selectedCourse2]);
+  }, [coursesForLocality, selectedCourse]);
   const courseTrainees = reactExports.useMemo(
-    () => allTraineesByCourse[selectedCourse2] || [],
-    [allTraineesByCourse, selectedCourse2]
+    () => allTraineesByCourse[selectedCourse] || [],
+    [allTraineesByCourse, selectedCourse]
   );
   const traineeStatuses = reactExports.useMemo(
     () => courseTrainees.reduce((acc, t) => {
-      acc[t.fullName] = getTraineeStatus(t, events, selectedDate2);
+      acc[t.fullName] = getTraineeStatus(t, events, selectedDate);
       return acc;
     }, {}),
-    [courseTrainees, events, selectedDate2]
+    [courseTrainees, events, selectedDate]
   );
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   reactExports.useEffect(() => {
@@ -17417,12 +17431,12 @@ Do you still want to include them in this academic session?`
     }
   }, [selectedStandard, getNextStart, otherText]);
   const suggestions = reactExports.useMemo(() => {
-    if (!selectedCourse2 || courseTrainees.length === 0) return [];
+    if (!selectedCourse || courseTrainees.length === 0) return [];
     return academicSyllabus.filter((s) => {
       const c = getLessonCompletion(s.code, courseTrainees, scores);
       return c === "none" || c === "partial";
     }).filter((s) => !selectedLessons.has(s.code)).slice(0, 6);
-  }, [academicSyllabus, courseTrainees, scores, selectedLessons, selectedCourse2]);
+  }, [academicSyllabus, courseTrainees, scores, selectedLessons, selectedCourse]);
   const timelineRef = reactExports.useRef(null);
   const dragging = reactExports.useRef(null);
   const timelineWidth = () => timelineRef.current?.clientWidth || 800;
@@ -17462,13 +17476,13 @@ Do you still want to include them in this academic session?`
   };
   const handleSave = () => {
     console.log("🎓 [AcademicsTab.handleSave] ===== Publish button clicked =====");
-    console.log("🎓 [AcademicsTab.handleSave] selectedCourse:", selectedCourse2);
+    console.log("🎓 [AcademicsTab.handleSave] selectedCourse:", selectedCourse);
     console.log("🎓 [AcademicsTab.handleSave] selectedTrainees:", selectedTrainees, "(count:", selectedTrainees.length, ")");
     console.log("🎓 [AcademicsTab.handleSave] tiles:", tiles, "(count:", tiles.length, ")");
-    console.log("🎓 [AcademicsTab.handleSave] selectedDate:", selectedDate2);
+    console.log("🎓 [AcademicsTab.handleSave] selectedDate:", selectedDate);
     console.log("🎓 [AcademicsTab.handleSave] workStart:", workStart, "workEnd:", workEnd);
     console.log("🎓 [AcademicsTab.handleSave] resourceId:", resourceId);
-    if (!selectedCourse2) {
+    if (!selectedCourse) {
       console.error("🎓 [AcademicsTab.handleSave] ❌ BLOCKED: no selectedCourse");
       alert("Please select a course.");
       return;
@@ -17491,8 +17505,8 @@ Do you still want to include them in this academic session?`
       lessons,
       timeline: tiles,
       selectedTrainees,
-      course: selectedCourse2,
-      date: selectedDate2,
+      course: selectedCourse,
+      date: selectedDate,
       workStart,
       workEnd,
       resourceId,
@@ -17535,7 +17549,7 @@ Do you still want to include them in this academic session?`
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Course" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { style: S.select, value: selectedCourse2, onChange: (e) => setSelectedCourse(e.target.value), children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { style: S.select, value: selectedCourse, onChange: (e) => setSelectedCourse(e.target.value), children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "", children: "-- Select --" }),
           coursesForLocality.map((c) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: c, children: c }, c))
         ] })
@@ -17562,7 +17576,7 @@ Do you still want to include them in this academic session?`
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Date" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", style: S.input, value: selectedDate2, onChange: (e) => setSelectedDate(e.target.value) })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "date", style: S.input, value: selectedDate, onChange: (e) => setSelectedDate(e.target.value) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: S.label, children: "Work Start" }),
@@ -17682,7 +17696,7 @@ Do you still want to include them in this academic session?`
               letterSpacing: 1
             }, children: label }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { padding: "4px 2px" }, children: moduleItems.map((item) => {
-              const courseProgress = courseAcademicProgress?.get(selectedCourse2);
+              const courseProgress = courseAcademicProgress?.get(selectedCourse);
               const isCourseDone = courseProgress?.has(item.code) ?? false;
               const isSelected = selectedLessons.has(item.code);
               return /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -17704,8 +17718,8 @@ Do you still want to include them in this academic session?`
                       {
                         onClick: (e) => {
                           e.stopPropagation();
-                          if (onUpdateCourseAcademicProgress && selectedCourse2) {
-                            onUpdateCourseAcademicProgress(selectedCourse2, item.code, !isCourseDone);
+                          if (onUpdateCourseAcademicProgress && selectedCourse) {
+                            onUpdateCourseAcademicProgress(selectedCourse, item.code, !isCourseDone);
                           }
                         },
                         title: isCourseDone ? "Mark as NOT completed by this course" : "Mark as completed by this course cohort",
@@ -18098,7 +18112,7 @@ const AddGroundEventFlyout = ({
   const [duration, setDuration] = reactExports.useState(groundSyllabus[0]?.duration || 1);
   const [notes, setNotes] = reactExports.useState("");
   const [instructor, setInstructor] = reactExports.useState("");
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState(Object.keys(activeCourses)[0] || "");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState(Object.keys(activeCourses)[0] || "");
   const [isEntireCourse, setIsEntireCourse] = reactExports.useState(false);
   const [selectedTrainees, setSelectedTrainees] = reactExports.useState([]);
   const [selectedGround, setSelectedGround] = reactExports.useState("Ground 1");
@@ -18148,7 +18162,7 @@ const AddGroundEventFlyout = ({
       location,
       instructor,
       selectionType,
-      course: isEntireCourse ? selectedCourse2 : void 0,
+      course: isEntireCourse ? selectedCourse : void 0,
       attendees,
       resourceId: isCptEvent ? selectedCpt : selectedGround
     });
@@ -18162,7 +18176,7 @@ const AddGroundEventFlyout = ({
     const checked = e.target.checked;
     setIsEntireCourse(checked);
     setSelectedTrainees([]);
-    if (checked && selectedCourse2) setShowCourseConfirm(true);
+    if (checked && selectedCourse) setShowCourseConfirm(true);
   };
   const timeOptions = reactExports.useMemo(() => {
     const options = [];
@@ -18284,7 +18298,7 @@ const AddGroundEventFlyout = ({
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4 items-center", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { htmlFor: "ground-course", className: "block text-sm font-medium text-gray-400", children: "Course" }),
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-course", value: selectedCourse2, onChange: (e) => setSelectedCourse(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Object.keys(activeCourses).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name)) })
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("select", { id: "ground-course", value: selectedCourse, onChange: (e) => setSelectedCourse(e.target.value), className: "mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:outline-none focus:ring-sky-500 sm:text-sm", children: Object.keys(activeCourses).map((name) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: name, children: name }, name)) })
                         ] }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-3 pt-6", children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "checkbox", id: "entire-course", checked: isEntireCourse, onChange: handleEntireCourseChange, className: "h-5 w-5 bg-gray-700 rounded accent-sky-500" }),
@@ -18404,8 +18418,8 @@ const AddGroundEventFlyout = ({
           setSelectedTrainees(confirmedTrainees);
           setShowCourseConfirm(false);
         },
-        courseNumber: selectedCourse2,
-        traineesInCourse: allTraineesByCourse[selectedCourse2] || [],
+        courseNumber: selectedCourse,
+        traineesInCourse: allTraineesByCourse[selectedCourse] || [],
         traineeStatus: traineesData.reduce((acc, t) => acc.set(t.fullName, { isPaused: t.isPaused }), /* @__PURE__ */ new Map())
       }
     )
@@ -23743,7 +23757,7 @@ const EventsTab = ({ events }) => {
 };
 const TrainingIntelligenceTab = () => {
   const [courses, setCourses] = reactExports.useState([]);
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState("");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [recentRuns, setRecentRuns] = reactExports.useState([]);
   const [isRunning, setIsRunning] = reactExports.useState(false);
   const [runProgress, setRunProgress] = reactExports.useState("");
@@ -23783,14 +23797,14 @@ const TrainingIntelligenceTab = () => {
     }
   };
   reactExports.useEffect(() => {
-    if (selectedCourse2) loadCourseData(selectedCourse2);
-  }, [selectedCourse2]);
+    if (selectedCourse) loadCourseData(selectedCourse);
+  }, [selectedCourse]);
   const fetchCourses2 = async () => {
     try {
       const r = await fetch("/api/tie/courses");
       const data = await r.json();
       setCourses(Array.isArray(data) ? data : []);
-      if (Array.isArray(data) && data.length > 0 && !selectedCourse2) {
+      if (Array.isArray(data) && data.length > 0 && !selectedCourse) {
         setSelectedCourse(data[0].name);
       }
     } catch {
@@ -23830,7 +23844,7 @@ const TrainingIntelligenceTab = () => {
     if (pollRef.current) return;
     pollRef.current = setInterval(async () => {
       try {
-        const r = await fetch(`/api/tie/status${selectedCourse2 ? `?course=${encodeURIComponent(selectedCourse2)}` : ""}`);
+        const r = await fetch(`/api/tie/status${selectedCourse ? `?course=${encodeURIComponent(selectedCourse)}` : ""}`);
         const data = await r.json();
         if (data.status === "complete") {
           setRunProgress(`Complete — ${data.recordsProcessed ?? "?"} records processed`);
@@ -23841,7 +23855,7 @@ const TrainingIntelligenceTab = () => {
             setIsRunning(false);
             fetchRecentRuns();
             fetchCourses2();
-            if (selectedCourse2) loadCourseData(selectedCourse2);
+            if (selectedCourse) loadCourseData(selectedCourse);
           }, 2500);
         } else if (data.status === "failed") {
           setError(`Run failed: ${data.errorMessage || "unknown error"}`);
@@ -23865,7 +23879,7 @@ const TrainingIntelligenceTab = () => {
       const r = await fetch("/api/tie/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseFilter: selectedCourse2 || null, triggeredBy: "manual-ui" })
+        body: JSON.stringify({ courseFilter: selectedCourse || null, triggeredBy: "manual-ui" })
       });
       const result = await r.json();
       if (result.started) {
@@ -23878,7 +23892,7 @@ const TrainingIntelligenceTab = () => {
           setIsRunning(false);
           fetchRecentRuns();
           fetchCourses2();
-          if (selectedCourse2) loadCourseData(selectedCourse2);
+          if (selectedCourse) loadCourseData(selectedCourse);
         }, 2500);
       } else {
         setError(`Run failed: ${result.error || "unknown error"}`);
@@ -23924,7 +23938,7 @@ const TrainingIntelligenceTab = () => {
           /* @__PURE__ */ jsxRuntimeExports.jsxs(
             "select",
             {
-              value: selectedCourse2,
+              value: selectedCourse,
               onChange: (e) => setSelectedCourse(e.target.value),
               disabled: isRunning,
               className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:outline-none focus:border-cyan-400",
@@ -28122,6 +28136,7 @@ const TraineeView = (props) => {
           locations: props.locations,
           units: props.units,
           selectedPersonForProfile: props.selectedPersonForProfile,
+          selectedProfileInitialTab: props.selectedProfileInitialTab,
           onProfileOpened: props.onProfileOpened,
           traineeLMPs: props.traineeLMPs,
           onViewLogbook: props.onViewLogbook,
@@ -50560,15 +50575,15 @@ const CourseSelectionFlyout = ({
   onClose,
   updateType
 }) => {
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState("");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [error, setError] = reactExports.useState("");
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedCourse2) {
+    if (!selectedCourse) {
       setError("Please select a course.");
       return;
     }
-    onConfirm(selectedCourse2);
+    onConfirm(selectedCourse);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 bg-black/70 z-[90] flex items-center justify-center animate-fade-in", onClick: onClose, children: /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit, className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: (e) => e.stopPropagation(), children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "p-4 border-b border-gray-700 bg-gray-900/50", children: /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-white", children: "Select Course" }) }),
@@ -50580,7 +50595,7 @@ const CourseSelectionFlyout = ({
           "select",
           {
             id: "course-select",
-            value: selectedCourse2,
+            value: selectedCourse,
             onChange: (e) => {
               setSelectedCourse(e.target.value);
               setError("");
@@ -50595,13 +50610,13 @@ const CourseSelectionFlyout = ({
         ),
         error && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 text-sm mt-1", children: error })
       ] }),
-      updateType === "bulk" && selectedCourse2 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/20 border border-red-700 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
+      updateType === "bulk" && selectedCourse && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-red-900/20 border border-red-700 rounded-md p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start space-x-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-5 h-5 text-red-400 mt-0.5 flex-shrink-0", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: 2, d: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" }) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-red-400 font-medium text-sm", children: "Warning" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-red-300 text-xs mt-1", children: [
             "This will permanently delete all trainees currently in ",
-            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: selectedCourse2 }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { children: selectedCourse }),
             " and replace them with the uploaded data."
           ] })
         ] })
@@ -52431,7 +52446,7 @@ const SettingsView = ({
   const [showUpdateConfirmation, setShowUpdateConfirmation] = reactExports.useState(false);
   const [showCourseSelection, setShowCourseSelection] = reactExports.useState(false);
   const [selectedUpdateType, setSelectedUpdateType] = reactExports.useState("minor");
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState("");
+  const [selectedCourse, setSelectedCourse] = reactExports.useState("");
   const [coursesFromFile, setCoursesFromFile] = reactExports.useState([]);
   const [showNewRecordConfirm, setShowNewRecordConfirm] = reactExports.useState(false);
   const [unmatchedRowData, setUnmatchedRowData] = reactExports.useState(null);
@@ -53187,9 +53202,9 @@ const SettingsView = ({
           setSkippedCount((prev) => prev + 1);
           return;
         }
-        if (selectedCourse2) {
-          existingRecord = traineesData.find((t) => t.idNumber === parsedData.idNumber && t.course === selectedCourse2);
-          parsedData.course = selectedCourse2;
+        if (selectedCourse) {
+          existingRecord = traineesData.find((t) => t.idNumber === parsedData.idNumber && t.course === selectedCourse);
+          parsedData.course = selectedCourse;
         } else {
           existingRecord = traineesData.find((t) => t.idNumber === parsedData.idNumber);
         }
@@ -53240,12 +53255,12 @@ const SettingsView = ({
         break;
       case "trainee_loads":
         finalUpdatedList = [...traineesData];
-        if (selectedCourse2) {
+        if (selectedCourse) {
           updatedRecords.forEach((ur) => {
-            const index = finalUpdatedList.findIndex((t) => t.idNumber === ur.idNumber && t.course === selectedCourse2);
+            const index = finalUpdatedList.findIndex((t) => t.idNumber === ur.idNumber && t.course === selectedCourse);
             if (index !== -1) finalUpdatedList[index] = ur;
           });
-          const newRecordsWithCourse = newRecords.map((nr) => ({ ...nr, course: selectedCourse2 }));
+          const newRecordsWithCourse = newRecords.map((nr) => ({ ...nr, course: selectedCourse }));
           onBulkUpdateTrainees([...finalUpdatedList, ...newRecordsWithCourse]);
           console.log(`[DEBUG] About to initialize LMP for ${newRecordsWithCourse.length} new trainees`);
           console.log(`[DEBUG] onUpdateTraineeLMPs function available:`, typeof onUpdateTraineeLMPs);
@@ -53273,15 +53288,15 @@ const SettingsView = ({
             console.log(`[DEBUG] LMP initialization complete. New LMPs count: ${newLMPs.size}`);
             return newLMPs;
           });
-          if (selectedCourse2 && !courseColors[selectedCourse2]) {
+          if (selectedCourse && !courseColors[selectedCourse]) {
             const defaultColors = ["#e74c3c", "#3498db", "#9b59b6", "#1abc9c", "#f39c12", "#34495e", "#16a085", "#27ae60", "#2980b9"];
             const colorIndex = Object.keys(courseColors).length % defaultColors.length;
             const newCourseColors = {
               ...courseColors,
-              [selectedCourse2]: defaultColors[colorIndex]
+              [selectedCourse]: defaultColors[colorIndex]
             };
             setCourseColors(newCourseColors);
-            console.log(`🎨 Added color for course ${selectedCourse2}: ${defaultColors[colorIndex]}`);
+            console.log(`🎨 Added color for course ${selectedCourse}: ${defaultColors[colorIndex]}`);
           }
         } else {
           updatedRecords.forEach((ur) => {
@@ -53303,7 +53318,7 @@ const SettingsView = ({
     setUpdateSummary({ type: "Minor", added: newRecords.length, updated: updatedRecords.length, skipped: skippedCount, replaced: 0 });
     setShowUpdateSummary(true);
     const dataType = fileToProcess.folderId === "instructor_loads" ? "Instructors" : fileToProcess.folderId === "trainee_loads" ? "Trainees" : "LMP Data";
-    const courseInfo = selectedCourse2 ? ` for course: ${selectedCourse2}` : "";
+    const courseInfo = selectedCourse ? ` for course: ${selectedCourse}` : "";
     logAudit({
       page: "Settings - Data Loaders",
       action: "update",
@@ -63779,7 +63794,7 @@ const FullPageProgressGraph = ({
   initialSelectedCourse,
   onClose
 }) => {
-  const [selectedCourse2, setSelectedCourse] = reactExports.useState(initialSelectedCourse);
+  const [selectedCourse, setSelectedCourse] = reactExports.useState(initialSelectedCourse);
   const courseGraphData = reactExports.useMemo(() => {
     return courses.filter((course) => courseColors[course.name]).map((course) => {
       const metric = calculateCourseProgressMetric(course, allTrainees, traineeLMPs, pt051Assessments, riskThresholds);
@@ -63794,7 +63809,7 @@ const FullPageProgressGraph = ({
       };
     }).filter((data) => data.totalEvents > 0 && data.metric.trainees.length > 0);
   }, [courses, allTrainees, traineeLMPs, pt051Assessments, riskThresholds, courseColors]);
-  const displayData = selectedCourse2 ? courseGraphData.filter((data) => data.course.name === selectedCourse2) : courseGraphData;
+  const displayData = selectedCourse ? courseGraphData.filter((data) => data.course.name === selectedCourse) : courseGraphData;
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col bg-gray-900 overflow-hidden", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-progress-graph-header": "true", className: "bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center space-x-4", children: [
@@ -63813,7 +63828,7 @@ const FullPageProgressGraph = ({
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "select",
           {
-            value: selectedCourse2 || "",
+            value: selectedCourse || "",
             onChange: (event) => setSelectedCourse(event.target.value || null),
             className: "bg-gray-700 text-white rounded-md px-3 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-sky-500",
             children: [
@@ -71598,7 +71613,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     while (mixedTrainees.length < traineesForCourseMixing.length) {
       totalAllocated++;
       let maxDeficit = -Infinity;
-      let selectedCourse2 = null;
+      let selectedCourse = null;
       for (const course of coursePriorities) {
         const courseTrainees = listByCourse.get(course);
         if (!courseTrainees || courseTrainees.length === 0) continue;
@@ -71608,14 +71623,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const deficit = target - allocated;
         if (deficit > maxDeficit) {
           maxDeficit = deficit;
-          selectedCourse2 = course;
+          selectedCourse = course;
         }
       }
-      if (selectedCourse2) {
-        const courseTrainees = listByCourse.get(selectedCourse2);
+      if (selectedCourse) {
+        const courseTrainees = listByCourse.get(selectedCourse);
         const trainee = courseTrainees.shift();
         mixedTrainees.push(trainee);
-        courseAllocations.set(selectedCourse2, (courseAllocations.get(selectedCourse2) || 0) + 1);
+        courseAllocations.set(selectedCourse, (courseAllocations.get(selectedCourse) || 0) + 1);
       } else {
         break;
       }
@@ -75547,6 +75562,7 @@ ${"=".repeat(60)}`);
   const [pauseOverlayEnd, setPauseOverlayEnd] = reactExports.useState(null);
   const [selectedPersonForProfile, setSelectedPersonForProfile] = reactExports.useState(null);
   const [profileInitialTab, setProfileInitialTab] = reactExports.useState(null);
+  const [traineeProfileInitialTab, setTraineeProfileInitialTab] = reactExports.useState(null);
   const [showPublishConfirm, setShowPublishConfirm] = reactExports.useState(false);
   const [showAddGroundEvent, setShowAddGroundEvent] = reactExports.useState(false);
   const [cptConflict, setCptConflict] = reactExports.useState(null);
@@ -76763,6 +76779,27 @@ ${"=".repeat(60)}`);
       navigateToView(view2);
     }
   };
+  const openTraineeProfileTab = reactExports.useCallback((trainee, tab = null) => {
+    if (!canViewTraineeProfile(trainee)) {
+      denyPlatformAction("trainee profile");
+      return;
+    }
+    setSelectedPersonForProfile(trainee);
+    setTraineeProfileInitialTab(tab);
+    if (tab === "hatesheet") {
+      setSelectedTraineeForHateSheet(trainee);
+    }
+    handleNavigation(activeView === "Trainee" ? "Trainee" : "CourseRoster");
+  }, [activeView, canViewTraineeProfile, denyPlatformAction]);
+  reactExports.useEffect(() => {
+    if (activeView !== "HateSheet") return;
+    if (selectedTraineeForHateSheet) {
+      setSelectedPersonForProfile(selectedTraineeForHateSheet);
+      setTraineeProfileInitialTab("hatesheet");
+    }
+    setPreviousView("HateSheet");
+    setActiveView("CourseRoster");
+  }, [activeView, selectedTraineeForHateSheet]);
   const openPt051FromTraineeProfile = reactExports.useCallback((trainee, assessment) => {
     if (!canViewTraineePt051(trainee)) {
       denyPlatformAction("PT-051 record");
@@ -77621,9 +77658,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     setDate(newDateStr);
     void loadSnapshotForDate(newDateStr);
   };
-  const handleDateSelect = (selectedDate2) => {
-    setDate(selectedDate2);
-    void loadSnapshotForDate(selectedDate2);
+  const handleDateSelect = (selectedDate) => {
+    setDate(selectedDate);
+    void loadSnapshotForDate(selectedDate);
   };
   const onSavePT051Assessment = (assessment) => {
     const saveKey = `pt051-${assessment.eventId}-${assessment.traineeFullName}`;
@@ -80364,6 +80401,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   }, []);
   const handleProfileOpened = reactExports.useCallback(() => {
     setSelectedPersonForProfile(null);
+    setTraineeProfileInitialTab(null);
   }, []);
   const handleProfileTabConsumed = reactExports.useCallback(() => {
     setProfileInitialTab(null);
@@ -82059,8 +82097,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 denyPlatformAction("PT-051 performance history");
                 return;
               }
-              setSelectedTraineeForHateSheet(trainee);
-              handleNavigation("HateSheet");
+              openTraineeProfileTab(trainee, "hatesheet");
             },
             onRestoreCourse: () => {
             },
@@ -82084,7 +82121,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             locations,
             units,
             selectedPersonForProfile,
-            onProfileOpened: () => setSelectedPersonForProfile(null),
+            selectedProfileInitialTab: traineeProfileInitialTab,
+            onProfileOpened: handleProfileOpened,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
@@ -82201,8 +82239,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                 denyPlatformAction("PT-051 performance history");
                 return;
               }
-              setSelectedTraineeForHateSheet(trainee);
-              handleNavigation("HateSheet");
+              openTraineeProfileTab(trainee, "hatesheet");
             },
             onRestoreCourse: () => {
             },
@@ -82225,7 +82262,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             locations,
             units,
             selectedPersonForProfile,
-            onProfileOpened: () => setSelectedPersonForProfile(null),
+            selectedProfileInitialTab: traineeProfileInitialTab,
+            onProfileOpened: handleProfileOpened,
             traineeLMPs,
             onViewLogbook: handleViewLogbook,
             onDeleteTrainee: (trainee) => {
@@ -82315,150 +82353,10 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           }
         );
       case "HateSheet":
-        if (selectedTraineeForHateSheet) {
-          if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow PT-051 records for this trainee." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("CourseRoster"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
-            ] }) });
-          }
-          const traineeAssessments = Array.from(pt051Assessments.values()).filter(
-            // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
-            (a) => a.traineeFullName === selectedTraineeForHateSheet.fullName
-          );
-          const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents];
-          return /* @__PURE__ */ jsxRuntimeExports.jsx(
-            HateSheetView,
-            {
-              trainee: selectedTraineeForHateSheet,
-              lmpScores: scores.get(selectedTraineeForHateSheet.fullName) || [],
-              assessments: traineeAssessments,
-              pt051Events: traineeAssessments,
-              traineeLmp: traineeLMPs.get(selectedTraineeForHateSheet.fullName) || [],
-              userProfile: currentUser2,
-              isLoading: pt051PerformanceLoading,
-              refreshEvents: () => {
-                loadEventsForDate(selectedDate, selectedCourse);
-              },
-              onSelectLmpScore: (score) => {
-                setSelectedScoreForDetail(score);
-                handleNavigation("ScoreDetail");
-              },
-              onSelectPt051: (assessment) => {
-                if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
-                  denyPlatformAction("PT-051 record");
-                  return;
-                }
-                console.log("onSelectPt051 called with assessment:", assessment);
-                logAudit("Performance History", "View", `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
-                const event = eventFromSchedules.find((a) => a.id === assessment.eventId);
-                if (event) {
-                  console.log("Found event in schedules:", event);
-                  setEventForPt051(event);
-                  handleNavigation("PT051");
-                } else {
-                  const eventFromBuild = nextDayBuildEvents.find((e) => e.id === assessment.eventId);
-                  if (eventFromBuild) {
-                    console.log("Found event in build:", eventFromBuild);
-                    setEventForPt051({ ...eventFromBuild, date: buildDfpDate });
-                    handleNavigation("PT051");
-                  } else {
-                    console.log("Event not found, creating mock event for assessment");
-                    let eventType = "flight";
-                    const flightNum = assessment.flightNumber || "";
-                    if (flightNum.includes("CPT") || flightNum.includes("Cpt")) {
-                      eventType = "cpt";
-                    } else if (flightNum.includes("MB") || flightNum.includes("GS") || flightNum.includes("Ground") || flightNum.includes("GROUND")) {
-                      eventType = "ground";
-                    }
-                    const mockEvent = {
-                      id: assessment.eventId,
-                      flightNumber: assessment.flightNumber,
-                      date: assessment.date,
-                      startTime: "08:00",
-                      endTime: "09:00",
-                      instructor: assessment.instructorName || "Unknown",
-                      student: assessment.traineeFullName,
-                      syllabus: assessment.flightNumber,
-                      aircraft: "",
-                      type: eventType,
-                      status: "Scheduled",
-                      notes: "",
-                      crew: []
-                    };
-                    console.log("Created mock event:", mockEvent);
-                    setEventForPt051(mockEvent);
-                    handleNavigation("PT051");
-                  }
-                }
-              },
-              onBackToRoster: () => {
-                setSelectedPersonForProfile(selectedTraineeForHateSheet);
-                handleNavigation("CourseRoster");
-              },
-              onInsertPt051: (insertIndex, targetDate) => {
-                if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
-                  denyPlatformAction("insert PT-051 assessment");
-                  return;
-                }
-                const newAssessment = {
-                  id: v4(),
-                  traineeFullName: selectedTraineeForHateSheet.fullName,
-                  eventId: `inserted-pt051-${Date.now()}`,
-                  flightNumber: "PT-051 Assessment",
-                  date: targetDate,
-                  instructorName: "",
-                  overallGrade: null,
-                  overallResult: null,
-                  scores: ALL_ELEMENTS.map((element) => ({
-                    element,
-                    grade: null,
-                    comment: ""
-                  })),
-                  isCompleted: false
-                };
-                const mockEvent = {
-                  id: newAssessment.eventId,
-                  flightNumber: newAssessment.flightNumber,
-                  date: targetDate,
-                  startTime: 9,
-                  // 9 AM (in hours)
-                  duration: 2,
-                  // 2 hours
-                  type: "flight",
-                  // Changed from 'ground' to enable Core Dimensions
-                  status: "Scheduled",
-                  instructor: "",
-                  crew: [],
-                  location: "",
-                  syllabusId: "",
-                  syllabusCode: "",
-                  remarks: "",
-                  isCompleted: false,
-                  buildId: "",
-                  isOracleGenerated: false,
-                  priority: 0,
-                  // Add additional fields that might be needed
-                  student: selectedTraineeForHateSheet.fullName,
-                  syllabus: newAssessment.flightNumber,
-                  aircraft: "",
-                  notes: ""
-                };
-                logAudit("Performance History", "Insert", `Inserted PT-051 for ${selectedTraineeForHateSheet.fullName} at position ${insertIndex} on ${targetDate}`);
-                const assessmentKey = `pt051-${newAssessment.eventId}-${selectedTraineeForHateSheet.fullName}`;
-                const updatedAssessments = new Map(pt051Assessments).set(assessmentKey, newAssessment);
-                setPt051Assessments(updatedAssessments);
-                void persistPt051AssessmentsForDate(targetDate, updatedAssessments).catch((err) => console.warn("[PT051] Failed to persist inserted PT-051:", err));
-                setEventForPt051(mockEvent);
-                handleNavigation("PT051");
-              },
-              canEditPt051: canEditTraineePt051(selectedTraineeForHateSheet),
-              onAccessDenied: denyPlatformAction
-            }
-          );
-        }
-        return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-gray-700 bg-gray-800 p-6 text-center", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-semibold text-sky-300 mb-2", children: "Opening Trainee Profile" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-400", children: "Performance History now opens inside the Trainee Profile flyout." })
+        ] }) });
       case "ScoreDetail":
         if (selectedTraineeForHateSheet && selectedScoreForDetail) {
           return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -82466,7 +82364,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             {
               trainee: selectedTraineeForHateSheet,
               scoreData: selectedScoreForDetail,
-              onBack: () => handleNavigation("HateSheet")
+              onBack: () => openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet")
             }
           );
         }
@@ -83330,7 +83228,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow this PT-051 record." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("HateSheet"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("CourseRoster"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
             ] }) });
           }
           const assessmentKey = `pt051-${eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
@@ -83369,7 +83267,8 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               initialAssessment: existingAssessment,
               instructorLabel,
               onBack: () => {
-                handleNavigation("HateSheet");
+                setEventForPt051(null);
+                openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");
               },
               onEventUpdate: (updatedEvent) => {
                 console.log("Updating eventForPt051 with:", updatedEvent);
@@ -84152,8 +84051,8 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
           courseColors,
           eventsForDate,
           onNavigateToHateSheet: (trainee) => {
-            setSelectedTraineeForHateSheet(trainee);
-            handleNavigation("HateSheet");
+            setSelectedEvent(null);
+            openTraineeProfileTab(trainee, "hatesheet");
           },
           onNavigateToSyllabus: (id) => {
             onNavigateToSyllabus(id);

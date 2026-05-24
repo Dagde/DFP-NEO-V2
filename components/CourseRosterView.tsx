@@ -33,6 +33,7 @@ interface CourseRosterViewProps {
     locations: string[];
     units: string[];
     selectedPersonForProfile?: Trainee | null;
+    selectedProfileInitialTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null;
     onProfileOpened?: () => void;
     traineeLMPs: Map<string, SyllabusItemDetail[]>;
     onViewLogbook?: (person: Trainee) => void;
@@ -108,6 +109,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     locations,
     units,
     selectedPersonForProfile,
+    selectedProfileInitialTab = null,
     onProfileOpened,
     traineeLMPs,
     onViewLogbook,
@@ -138,6 +140,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
     const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
+    const [profileInitialTab, setProfileInitialTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
     const [isCreatingNew, setIsCreatingNew] = useState(false);
     const [newTraineeTemplate, setNewTraineeTemplate] = useState<Trainee | null>(null);
     const [courseToRestore, setCourseToRestore] = useState<string | null>(null);
@@ -159,11 +162,12 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                 onProfileOpened?.();
                 return;
             }
+            setProfileInitialTab(selectedProfileInitialTab);
             setSelectedTrainee(selectedPersonForProfile);
             setIsCreatingNew(false);
             onProfileOpened?.();
         }
-    }, [selectedPersonForProfile, onProfileOpened, canViewTraineeProfile, onAccessDenied]);
+    }, [selectedPersonForProfile, selectedProfileInitialTab, onProfileOpened, canViewTraineeProfile, onAccessDenied]);
 
     const groupedTrainees = useMemo(() => {
         const groups: { [course: string]: Trainee[] } = {};
@@ -462,6 +466,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     trainee={isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!}
                     onClose={() => {
                         setSelectedTrainee(null);
+                        setProfileInitialTab(null);
                         setIsCreatingNew(false);
                         setNewTraineeTemplate(null);
                     }}
@@ -493,6 +498,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}
                     userProfile={userProfile}
+                    initialActiveTab={profileInitialTab}
                     canViewPt051={canViewTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canEditPt051={canEditTraineePt051(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     canViewIndividualLmp={canViewTraineeLmp(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}

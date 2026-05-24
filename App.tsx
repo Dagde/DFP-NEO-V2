@@ -95,7 +95,6 @@ import ScheduleView from './components/ScheduleView';
 import InstructorScheduleView from './components/InstructorScheduleView';
 import TraineeScheduleView from './components/TraineeScheduleView';
 import CourseRosterView from './components/CourseRosterView';
-import HateSheetView from './components/HateSheetView';
 import ScoreDetailView from './components/ScoreDetailView';
 import { EventDetailModal } from './components/FlightDetailModal';
 import AddFlightTileModal from './components/AddFlightTileModal';
@@ -7919,6 +7918,7 @@ const App: React.FC = () => {
     // Navigation and Modals state
     const [selectedPersonForProfile, setSelectedPersonForProfile] = useState<Instructor | Trainee | null>(null);
     const [profileInitialTab, setProfileInitialTab] = useState<'currency' | null>(null);
+    const [traineeProfileInitialTab, setTraineeProfileInitialTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
     const [showPublishConfirm, setShowPublishConfirm] = useState(false);
     const [showAddGroundEvent, setShowAddGroundEvent] = useState(false);
     const [cptConflict, setCptConflict] = useState<Conflict | null>(null);
@@ -9556,6 +9556,29 @@ const App: React.FC = () => {
             navigateToView(view);
         }
     };
+
+    const openTraineeProfileTab = useCallback((trainee: Trainee, tab: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null = null) => {
+        if (!canViewTraineeProfile(trainee)) {
+            denyPlatformAction('trainee profile');
+            return;
+        }
+        setSelectedPersonForProfile(trainee);
+        setTraineeProfileInitialTab(tab);
+        if (tab === 'hatesheet') {
+            setSelectedTraineeForHateSheet(trainee);
+        }
+        handleNavigation(activeView === 'Trainee' ? 'Trainee' : 'CourseRoster');
+    }, [activeView, canViewTraineeProfile, denyPlatformAction]);
+
+    useEffect(() => {
+        if (activeView !== 'HateSheet') return;
+        if (selectedTraineeForHateSheet) {
+            setSelectedPersonForProfile(selectedTraineeForHateSheet);
+            setTraineeProfileInitialTab('hatesheet');
+        }
+        setPreviousView('HateSheet');
+        setActiveView('CourseRoster');
+    }, [activeView, selectedTraineeForHateSheet]);
 
     const openPt051FromTraineeProfile = useCallback((trainee: Trainee, assessment: Pt051Assessment) => {
         if (!canViewTraineePt051(trainee)) {
@@ -14090,6 +14113,7 @@ updates.forEach(update => {
 
     const handleProfileOpened = useCallback(() => {
         setSelectedPersonForProfile(null);
+        setTraineeProfileInitialTab(null);
     }, []);
 
     const handleProfileTabConsumed = useCallback(() => {
@@ -16269,8 +16293,7 @@ updates.forEach(update => {
                                     denyPlatformAction('PT-051 performance history');
                                     return;
                                 }
-                                setSelectedTraineeForHateSheet(trainee);
-                                handleNavigation('HateSheet');
+                                openTraineeProfileTab(trainee, 'hatesheet');
                             }}
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={handleUpdateTrainee}
@@ -16293,7 +16316,8 @@ updates.forEach(update => {
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as any}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            selectedProfileInitialTab={traineeProfileInitialTab}
+                            onProfileOpened={handleProfileOpened}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => {
@@ -16420,8 +16444,7 @@ updates.forEach(update => {
                                     denyPlatformAction('PT-051 performance history');
                                     return;
                                 }
-                                setSelectedTraineeForHateSheet(trainee);
-                                handleNavigation('HateSheet');
+                                openTraineeProfileTab(trainee, 'hatesheet');
                             }}
                             onRestoreCourse={() => {}}
                             onUpdateTrainee={handleUpdateTrainee}
@@ -16443,7 +16466,8 @@ updates.forEach(update => {
                             locations={locations}
                             units={units}
                             selectedPersonForProfile={selectedPersonForProfile as Trainee | null}
-                            onProfileOpened={() => setSelectedPersonForProfile(null)}
+                            selectedProfileInitialTab={traineeProfileInitialTab}
+                            onProfileOpened={handleProfileOpened}
                             traineeLMPs={traineeLMPs}
                             onViewLogbook={handleViewLogbook}
                             onDeleteTrainee={(trainee) => {
@@ -16552,171 +16576,18 @@ updates.forEach(update => {
                             userProfile={currentUser}
                         />;
             case 'HateSheet':
-                if (selectedTraineeForHateSheet) {
-                    if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
-                        return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
-                            <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
-                                <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
-                                <p className="text-sm text-gray-300 mb-4">Your permission profile does not allow PT-051 records for this trainee.</p>
-                                <button onClick={() => handleNavigation('CourseRoster')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
-                            </div>
-                        </div>;
-                    }
-                    const traineeAssessments = Array.from(pt051Assessments.values()).filter(
-                        // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
-                        (a: Pt051Assessment) => a.traineeFullName === selectedTraineeForHateSheet.fullName
-                    );
-                    const eventFromSchedules = [...eventsForDate, ...highestPriorityEvents];
-                    return <HateSheetView
-                                trainee={selectedTraineeForHateSheet}
-                                lmpScores={scores.get(selectedTraineeForHateSheet.fullName) || []}
-                                assessments={traineeAssessments}
-                                pt051Events={traineeAssessments}
-                                traineeLmp={traineeLMPs.get(selectedTraineeForHateSheet.fullName) || []}
-                                userProfile={currentUser}
-                                isLoading={pt051PerformanceLoading}
-                                refreshEvents={() => {
-                                    // Refresh events by calling the existing refresh functions
-                                    loadEventsForDate(selectedDate, selectedCourse);
-                                }}
-                                onSelectLmpScore={(score) => {
-                                    setSelectedScoreForDetail(score);
-                                    handleNavigation('ScoreDetail');
-                                }}
-                                onSelectPt051={(assessment: Pt051Assessment) => {
-                                    if (!canViewTraineePt051(selectedTraineeForHateSheet)) {
-                                        denyPlatformAction('PT-051 record');
-                                        return;
-                                    }
-                                    console.log('onSelectPt051 called with assessment:', assessment);
-
-                                    // Log PT-051 view to audit trail
-                                    logAudit('Performance History', 'View', `Viewed PT-051 for ${assessment.traineeFullName} - Event: ${assessment.flightNumber} (${assessment.date})`);
-
-                                    // FIX: Add explicit type annotation for `a` as TypeScript was failing to infer it.
-                                    const event = eventFromSchedules.find((a: ScheduleEvent) => a.id === assessment.eventId);
-                                    if(event) {
-                                        console.log('Found event in schedules:', event);
-                                        setEventForPt051(event);
-                                        handleNavigation('PT051');
-                                    } else {
-                                        const eventFromBuild = nextDayBuildEvents.find(e => e.id === assessment.eventId);
-                                        if (eventFromBuild) {
-                                            console.log('Found event in build:', eventFromBuild);
-                                            setEventForPt051({ ...eventFromBuild, date: buildDfpDate });
-                                            handleNavigation('PT051');
-                                        } else {
-                                            console.log('Event not found, creating mock event for assessment');
-                                            // Create a mock event for the assessment
-                                            // Determine event type based on flight number
-                                            let eventType: 'flight' | 'ground' | 'cpt' = 'flight';
-                                            const flightNum = assessment.flightNumber || '';
-
-                                            if (flightNum.includes('CPT') || flightNum.includes('Cpt')) {
-                                                eventType = 'cpt';
-                                            } else if (flightNum.includes('MB') || flightNum.includes('GS') ||
-                                                       flightNum.includes('Ground') || flightNum.includes('GROUND')) {
-                                                eventType = 'ground';
-                                            }
-
-                                            const mockEvent: ScheduleEvent = {
-                                                id: assessment.eventId,
-                                                flightNumber: assessment.flightNumber,
-                                                date: assessment.date,
-                                                startTime: '08:00',
-                                                endTime: '09:00',
-                                                instructor: assessment.instructorName || 'Unknown',
-                                                student: assessment.traineeFullName,
-                                                syllabus: assessment.flightNumber,
-                                                aircraft: '',
-                                                type: eventType,
-                                                status: 'Scheduled',
-                                                notes: '',
-                                                crew: []
-                                            };
-                                            console.log('Created mock event:', mockEvent);
-                                            setEventForPt051(mockEvent);
-                                            handleNavigation('PT051');
-                                        }
-                                    }
-                                }}
-                                onBackToRoster={() => {
-                                    setSelectedPersonForProfile(selectedTraineeForHateSheet);
-                                    handleNavigation('CourseRoster');
-                                }}
-                                onInsertPt051={(insertIndex: number, targetDate: string) => {
-                                    if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
-                                        denyPlatformAction('insert PT-051 assessment');
-                                        return;
-                                    }
-                                    // Create a new PT-051 assessment
-                                    const newAssessment: Pt051Assessment = {
-                                        id: uuidv4(),
-                                        traineeFullName: selectedTraineeForHateSheet!.fullName,
-                                        eventId: `inserted-pt051-${Date.now()}`,
-                                        flightNumber: 'PT-051 Assessment',
-                                        date: targetDate,
-                                        instructorName: '',
-                                        overallGrade: null,
-                                        overallResult: null,
-                                        scores: ALL_ELEMENTS.map(element => ({
-                                            element,
-                                            grade: null,
-                                            comment: ''
-                                        })),
-                                        isCompleted: false
-                                    };
-
-                                    // Create a mock event for the PT-051 with proper time structure
-                                    const mockEvent: ScheduleEvent = {
-                                        id: newAssessment.eventId,
-                                        flightNumber: newAssessment.flightNumber,
-                                        date: targetDate,
-                                        startTime: 9, // 9 AM (in hours)
-                                        duration: 2, // 2 hours
-                                        type: 'flight', // Changed from 'ground' to enable Core Dimensions
-                                        status: 'Scheduled',
-                                        instructor: '',
-                                        crew: [],
-                                        location: '',
-                                        syllabusId: '',
-                                        syllabusCode: '',
-                                        remarks: '',
-                                        isCompleted: false,
-                                        buildId: '',
-                                        isOracleGenerated: false,
-                                        priority: 0,
-                                        // Add additional fields that might be needed
-                                        student: selectedTraineeForHateSheet!.fullName,
-                                        syllabus: newAssessment.flightNumber,
-                                        aircraft: '',
-                                        notes: ''
-                                    };
-
-                                    // Log the insertion to audit trail
-                                    logAudit('Performance History', 'Insert', `Inserted PT-051 for ${selectedTraineeForHateSheet!.fullName} at position ${insertIndex} on ${targetDate}`);
-
-                                    const assessmentKey = `pt051-${newAssessment.eventId}-${selectedTraineeForHateSheet!.fullName}`;
-                                    const updatedAssessments = new Map(pt051Assessments).set(assessmentKey, newAssessment);
-                                    setPt051Assessments(updatedAssessments);
-                                    void persistPt051AssessmentsForDate(targetDate, updatedAssessments)
-                                        .catch(err => console.warn('[PT051] Failed to persist inserted PT-051:', err));
-
-                                    // Set the event and navigate to PT-051 view
-                                    setEventForPt051(mockEvent);
-                                    handleNavigation('PT051');
-                                }}
-                                canEditPt051={canEditTraineePt051(selectedTraineeForHateSheet)}
-                                onAccessDenied={denyPlatformAction}
-                            />;
-                }
-                return null;
+                return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
+                    <div className="rounded-lg border border-gray-700 bg-gray-800 p-6 text-center">
+                        <h2 className="text-lg font-semibold text-sky-300 mb-2">Opening Trainee Profile</h2>
+                        <p className="text-sm text-gray-400">Performance History now opens inside the Trainee Profile flyout.</p>
+                    </div>
+                </div>;
             case 'ScoreDetail':
                 if (selectedTraineeForHateSheet && selectedScoreForDetail) {
                     return <ScoreDetailView
                                 trainee={selectedTraineeForHateSheet}
                                 scoreData={selectedScoreForDetail}
-                                onBack={() => handleNavigation('HateSheet')}
+                                onBack={() => openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet')}
                            />;
                 }
                 return null;
@@ -17599,7 +17470,7 @@ updates.forEach(update => {
                             <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
                                 <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
                                 <p className="text-sm text-gray-300 mb-4">Your permission profile does not allow this PT-051 record.</p>
-                                <button onClick={() => handleNavigation('HateSheet')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
+                                <button onClick={() => handleNavigation('CourseRoster')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
                             </div>
                         </div>;
                     }
@@ -17649,7 +17520,8 @@ updates.forEach(update => {
                         initialAssessment={existingAssessment}
                         instructorLabel={instructorLabel}
                         onBack={() => {
-                            handleNavigation('HateSheet');
+                            setEventForPt051(null);
+                            openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');
                         }}
                         onEventUpdate={(updatedEvent) => {
                             // Update the eventForPt051 state when event is modified
@@ -18530,8 +18402,8 @@ updates.forEach(update => {
                     courseColors={courseColors}
                     eventsForDate={eventsForDate}
                     onNavigateToHateSheet={(trainee) => {
-                        setSelectedTraineeForHateSheet(trainee);
-                        handleNavigation('HateSheet');
+                        setSelectedEvent(null);
+                        openTraineeProfileTab(trainee, 'hatesheet');
                     }}
                     onNavigateToSyllabus={(id) => {
                         onNavigateToSyllabus(id);

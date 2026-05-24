@@ -57,6 +57,7 @@ interface TraineeProfileFlyoutProps {
   pt051PerformanceLoading?: boolean;
   traineeLMPs?: Map<string, SyllabusItemDetail[]>;
   userProfile?: any;
+  initialActiveTab?: 'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null;
   onSelectPt051ForEvent?: (assessment: Pt051Assessment) => void;
   canViewPt051?: boolean;
   canEditPt051?: boolean;
@@ -289,6 +290,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   pt051PerformanceLoading = false,
   traineeLMPs,
   userProfile,
+  initialActiveTab = null,
   onSelectPt051ForEvent,
   canViewPt051 = true,
   canEditPt051 = true,
@@ -320,7 +322,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const card3dStyle = { background: 'linear-gradient(180deg, #243044 0%, #1e2d42 60%)', boxShadow: '0 6px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)' };
 
     // Tab state — null means no tab open
-    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(null);
+    const [activeTab, setActiveTab] = useState<'unavailable' | 'currency' | 'logbook' | 'hatesheet' | 'lmp' | null>(initialActiveTab);
     // Edit controls exposed by CurrencyPanel (so we can render them in the tab header)
     const [currencyEditState, setCurrencyEditState] = useState<{
       isEditing: boolean; isSaving: boolean;
@@ -498,6 +500,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
         resetState();
         setIsEditing(isCreating);
     }, [trainee, isCreating]);
+
+    useEffect(() => {
+        if (initialActiveTab) {
+            setActiveTab(initialActiveTab);
+            setTimeout(() => { contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
+        }
+    }, [initialActiveTab, trainee.fullName]);
 
     // Use ref to prevent double-logging in React StrictMode
     const hasLoggedViewRef = useRef(false);
