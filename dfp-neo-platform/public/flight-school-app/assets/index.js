@@ -76980,7 +76980,7 @@ ${"=".repeat(60)}`);
 Please wait while NEO redirects you to the existing PT-051.`,
         "PT-051 Already Exists",
         "info",
-        1800
+        3600
       );
       handleNavigation("PT051");
       return;

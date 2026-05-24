@@ -9790,7 +9790,7 @@ const App: React.FC = () => {
                 `A PT-051 already exists for ${item.code}.\n\nPlease wait while NEO redirects you to the existing PT-051.`,
                 'PT-051 Already Exists',
                 'info',
-                1800
+                3600
             );
             handleNavigation('PT051');
             return;
