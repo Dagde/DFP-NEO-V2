@@ -78736,11 +78736,12 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     remedialRequests.forEach((remedialReq) => {
       if (remedialReq.forceSchedule) {
         console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
+        const remedialPriorityEventId = `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`;
         const existingEvent = newPriorityEvents.find(
-          (e) => e.flightNumber === remedialReq.eventCode && e.isRemedial
+          (e) => e.id === remedialPriorityEventId
         );
         if (existingEvent) {
-          console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
+          console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
         } else if (!existingEvent) {
           const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
           let syllabusItem = null;
@@ -78770,7 +78771,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             const allocatedInstructor = syllabusItem.resourcesHuman && syllabusItem.resourcesHuman.length > 0 ? syllabusItem.resourcesHuman[0] : "";
             console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || "None"}`);
             const newEvent = {
-              id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
+              id: remedialPriorityEventId,
               date: buildDfpDate,
               type: syllabusItem.type === "FTD" ? "ftd" : syllabusItem.type === "Ground School" ? "ground" : syllabusItem.type === "Flight" ? "flight" : "flight",
               instructor: allocatedInstructor,
@@ -82682,10 +82683,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   newRequests = [...prev, { traineeId, eventCode, forceSchedule: true }];
                 }
                 console.log(`📋 Updated remedialRequests:`, newRequests.filter((r) => r.forceSchedule));
-                setTimeout(() => {
-                  console.log("🔄 Manual sync triggered from setTimeout");
-                  syncPriorityEventsWithSctAndRemedial();
-                }, 100);
                 return newRequests;
               });
             },

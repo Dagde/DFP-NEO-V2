@@ -11978,13 +11978,13 @@ const App: React.FC = () => {
             if (remedialReq.forceSchedule) {
                 console.log(`🔎 Processing Force Schedule remedial: traineeId=${remedialReq.traineeId}, eventCode=${remedialReq.eventCode}`);
 
+                const remedialPriorityEventId = `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`;
                 const existingEvent = newPriorityEvents.find(e =>
-                    e.flightNumber === remedialReq.eventCode &&
-                    e.isRemedial
+                    e.id === remedialPriorityEventId
                 );
 
                 if (existingEvent) {
-                    console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode}`);
+                    console.log(`⚠️ Event already exists in priority list: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
                 } else if (!existingEvent) {
                     // For remedial events, look in the trainee's Individual LMP first, then fallback to master syllabus
                     const trainee = allTraineesData.find(t => t.idNumber === remedialReq.traineeId);
@@ -12027,7 +12027,7 @@ const App: React.FC = () => {
                         console.log(`📋 Allocated instructor for ${syllabusItem.code}: ${allocatedInstructor || 'None'}`);
 
                         const newEvent: ScheduleEvent = {
-                            id: `remedial-${remedialReq.traineeId}-${remedialReq.eventCode}`,
+                            id: remedialPriorityEventId,
                             date: buildDfpDate,
                             type: syllabusItem.type === 'FTD' ? 'ftd' :
                                   syllabusItem.type === 'Ground School' ? 'ground' :
@@ -16923,15 +16923,6 @@ updates.forEach(update => {
                             }
 
                             console.log(`📋 Updated remedialRequests:`, newRequests.filter(r => r.forceSchedule));
-
-                            // Trigger priority sync after a short delay to ensure state is updated
-                            setTimeout(() => {
-                                // Force a sync with the latest state by triggering the useEffect
-                                // The useEffect will catch the updated remedialRequests state
-                                console.log('🔄 Manual sync triggered from setTimeout');
-                                syncPriorityEventsWithSctAndRemedial();
-                            }, 100);
-
                             return newRequests;
                         });
                     }}
