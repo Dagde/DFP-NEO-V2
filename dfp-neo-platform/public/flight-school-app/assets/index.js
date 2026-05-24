@@ -10275,6 +10275,7 @@ const TraineeProfileFlyout = ({
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
   const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? " active" : ""}`;
   const contentScrollRef = reactExports.useRef(null);
+  const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const handleTabClick = (tab) => setActiveTab((prev) => {
     const next = prev === tab ? null : tab;
     if (next !== null) {
@@ -10962,7 +10963,7 @@ const TraineeProfileFlyout = ({
                     lmpScores: scores.get(trainee.fullName) || [],
                     assessments: traineeAssessments,
                     pt051Events: traineeAssessments,
-                    traineeLmp: individualLMP || [],
+                    traineeLmp: currentIndividualLMP || [],
                     userProfile: userProfile || {},
                     refreshEvents: () => {
                     },
@@ -10981,13 +10982,11 @@ const TraineeProfileFlyout = ({
               })(),
               activeTab === "lmp" && (() => {
                 const traineeScores = scores.get(trainee.fullName) || [];
-                let individualLMP2 = traineeLMPs ? traineeLMPs.get(trainee.fullName) : individualLmp;
-                if (!individualLMP2) individualLMP2 = individualLmp;
                 return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-0 overflow-hidden h-full min-h-0 flex flex-col", style: card3dStyle2, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   TraineeLmpView,
                   {
                     trainee,
-                    traineeLmp: individualLMP2 || [],
+                    traineeLmp: currentIndividualLMP || [],
                     scores: traineeScores,
                     onBack: () => setActiveTab(null),
                     onDeleteRemedialItem,
@@ -10995,7 +10994,7 @@ const TraineeProfileFlyout = ({
                   }
                 ) });
               })(),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + " p-3", style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: card3d2 + ` p-3 ${activeTab === "lmp" ? "hidden" : ""}`, style: card3dStyle2, children: isEditing ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700/70 pb-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx("h4", { className: "text-sm font-semibold text-white", children: "Profile Details" }),
@@ -13117,13 +13116,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
       console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - missing traineeLMPs or traineeName`);
       return "Dual";
     }
-    const individualLMP2 = traineeLMPs.get(traineeName);
-    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] individualLMP found for ${traineeName}:`, !!individualLMP2, individualLMP2 ? individualLMP2.length : 0, "items");
-    if (!individualLMP2) {
+    const individualLMP = traineeLMPs.get(traineeName);
+    console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] individualLMP found for ${traineeName}:`, !!individualLMP, individualLMP ? individualLMP.length : 0, "items");
+    if (!individualLMP) {
       console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Returning 'Dual' - no Individual LMP found for ${traineeName}`);
       return "Dual";
     }
-    const syllabusItem = individualLMP2.find(
+    const syllabusItem = individualLMP.find(
       (item) => item.id === flightNumber2 || item.code === flightNumber2
     );
     console.log(`ud83dudcdd [getDualSoloFromIndividualLMP] Searching for flightNumber: ${flightNumber2}, found item:`, !!syllabusItem);
@@ -13448,8 +13447,8 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           console.log(`📝 [Flight Number Change] No pilot selected - searching for default from any trainee with LMP ${flightNumber}`);
           let defaultFlightType = "Dual";
           let foundTrainee = "";
-          for (const [traineeName2, individualLMP2] of traineeLMPs.entries()) {
-            const syllabusItem = individualLMP2.find(
+          for (const [traineeName2, individualLMP] of traineeLMPs.entries()) {
+            const syllabusItem = individualLMP.find(
               (item) => item.id === flightNumber || item.code === flightNumber
             );
             if (syllabusItem && syllabusItem.sortieType) {
@@ -21080,10 +21079,10 @@ const PeopleTab = ({
     const waitingList = [];
     const activeTrainees = traineesData.filter((t) => !t.isPaused);
     activeTrainees.forEach((trainee) => {
-      const individualLMP2 = traineeLMPs.get(trainee.fullName) || [];
+      const individualLMP = traineeLMPs.get(trainee.fullName) || [];
       const traineeScores = scores.get(trainee.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
-      for (const item of individualLMP2) {
+      for (const item of individualLMP) {
         if (completedEventIds.has(item.id) || item.code.includes(" MB")) continue;
         const prereqsMet = item.prerequisites.every((p) => completedEventIds.has(p));
         if (prereqsMet) {
@@ -21198,14 +21197,14 @@ const PeopleTab = ({
     const nextPlusOneLists2 = { flight: [], ftd: [], cpt: [], ground: [] };
     const activeTrainees = traineesData.filter((t) => !t.isPaused);
     activeTrainees.forEach((trainee) => {
-      const individualLMP2 = traineeLMPs.get(trainee.fullName) || [];
+      const individualLMP = traineeLMPs.get(trainee.fullName) || [];
       const traineeScores = scores.get(trainee.fullName) || [];
       const completedEventIds = new Set(traineeScores.map((s) => s.event));
       let nextEvt = null;
       let plusOneEvt = null;
       let nextEventIndex = -1;
-      for (let i = 0; i < individualLMP2.length; i++) {
-        const item = individualLMP2[i];
+      for (let i = 0; i < individualLMP.length; i++) {
+        const item = individualLMP[i];
         if (completedEventIds.has(item.id) || item.code.includes(" MB")) {
           continue;
         }
@@ -21217,8 +21216,8 @@ const PeopleTab = ({
         }
       }
       if (nextEventIndex !== -1) {
-        for (let i = nextEventIndex + 1; i < individualLMP2.length; i++) {
-          const item = individualLMP2[i];
+        for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
+          const item = individualLMP[i];
           if (!item.code.includes(" MB")) {
             plusOneEvt = item;
             break;
@@ -63611,8 +63610,8 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
   });
   const totalEvents = progressEvents.length;
   const trainees = courseTrainees.map((trainee) => {
-    const individualLMP2 = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || representativeLMP;
-    const traineeProgressEvents = individualLMP2.filter(isProgressEvent);
+    const individualLMP = traineeLMPs.get(trainee.fullName) || traineeLMPs.get(trainee.name) || representativeLMP;
+    const traineeProgressEvents = individualLMP.filter(isProgressEvent);
     const traineeValidCodes = new Set(traineeProgressEvents.map(getEventCode).filter(Boolean));
     const traineeEventIdToCode = new Map(eventIdToCode);
     traineeProgressEvents.forEach((item) => {
@@ -63669,8 +63668,8 @@ const calculateCourseProgressMetric = (course, allTrainees, traineeLMPs, pt051As
     weekEnd.setDate(weekEnd.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
     const traineeWeeklyCounts = trainees.map((metric) => {
-      const individualLMP2 = traineeLMPs.get(metric.trainee.fullName) || traineeLMPs.get(metric.trainee.name) || representativeLMP;
-      const traineeProgressEvents = individualLMP2.filter(isProgressEvent);
+      const individualLMP = traineeLMPs.get(metric.trainee.fullName) || traineeLMPs.get(metric.trainee.name) || representativeLMP;
+      const traineeProgressEvents = individualLMP.filter(isProgressEvent);
       const traineeValidCodes = new Set(traineeProgressEvents.map(getEventCode).filter(Boolean));
       const traineeEventIdToCode = new Map(eventIdToCode);
       traineeProgressEvents.forEach((item) => {
@@ -70508,22 +70507,22 @@ const areLmpPrerequisitesMet = (item, completedEventIds) => {
 const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabus, publishedSchedules, buildDate, dbElceMap) => {
   const verboseNeoBuild = isNeoBuildVerboseDiagnosticsEnabled();
   const hasIndividualLMP = traineeLMPs.has(trainee.fullName);
-  const individualLMP2 = traineeLMPs.get(trainee.fullName) || masterSyllabus;
+  const individualLMP = traineeLMPs.get(trainee.fullName) || masterSyllabus;
   if (verboseNeoBuild && hasIndividualLMP) {
-    const remedialEvents = individualLMP2.filter((item) => item.isRemedial);
+    const remedialEvents = individualLMP.filter((item) => item.isRemedial);
     if (remedialEvents.length > 0) {
       console.log(`🔍 [${trainee.fullName}] Has Individual LMP with ${remedialEvents.length} remedial events`);
     }
   } else if (verboseNeoBuild) {
     console.log(`⚠️ [${trainee.fullName}] Using Master LMP (no Individual LMP found)`);
   }
-  if (!individualLMP2 || individualLMP2.length === 0) {
+  if (!individualLMP || individualLMP.length === 0) {
     return { next: null, plusOne: null };
   }
   const traineeScores = scores.get(trainee.fullName) || [];
   const completedEventIds = /* @__PURE__ */ new Set();
   traineeScores.forEach((score) => addLmpCompletionAlias(completedEventIds, score.event));
-  individualLMP2.forEach((item) => {
+  individualLMP.forEach((item) => {
     const maybeCompleted = item;
     if (item.completedAt || maybeCompleted.isComplete || maybeCompleted.completed) {
       addLmpCompletionAlias(completedEventIds, item.id);
@@ -70552,8 +70551,8 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
   let nextEvt = null;
   let plusOneEvt = null;
   let nextEventIndex = -1;
-  for (let i = 0; i < individualLMP2.length; i++) {
-    const item = individualLMP2[i];
+  for (let i = 0; i < individualLMP.length; i++) {
+    const item = individualLMP[i];
     if (isCompletedLmpItem(item, completedEventIds) || item.code.includes(" MB")) {
       continue;
     }
@@ -70568,8 +70567,8 @@ const computeNextEventsForTrainee = (trainee, traineeLMPs, scores, masterSyllabu
     }
   }
   if (nextEventIndex !== -1) {
-    for (let i = nextEventIndex + 1; i < individualLMP2.length; i++) {
-      const item = individualLMP2[i];
+    for (let i = nextEventIndex + 1; i < individualLMP.length; i++) {
+      const item = individualLMP[i];
       if (!item.code.includes(" MB") && !isCompletedLmpItem(item, completedEventIds)) {
         plusOneEvt = item;
         break;
@@ -77799,11 +77798,11 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (!traineeLMPs || !traineeName) {
       return "Dual";
     }
-    const individualLMP2 = traineeLMPs.get(traineeName);
-    if (!individualLMP2) {
+    const individualLMP = traineeLMPs.get(traineeName);
+    if (!individualLMP) {
       return "Dual";
     }
-    const syllabusItem = individualLMP2.find(
+    const syllabusItem = individualLMP.find(
       (item) => item.id === flightNumber || item.code === flightNumber
     );
     if (syllabusItem && syllabusItem.sortieType) {
@@ -77912,9 +77911,9 @@ ${error instanceof Error ? error.message : String(error)}`,
     }));
     const lmpCompletedIdsMap = {};
     traineesData.forEach((t) => {
-      const individualLMP2 = traineeLMPs.get(t.fullName);
-      if (individualLMP2) {
-        const completedIds = individualLMP2.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
+      const individualLMP = traineeLMPs.get(t.fullName);
+      if (individualLMP) {
+        const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
         if (completedIds.length > 0) {
           lmpCompletedIdsMap[t.fullName] = completedIds;
         }
@@ -78687,9 +78686,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           const trainee = allTraineesData.find((t) => t.idNumber === remedialReq.traineeId);
           let syllabusItem = null;
           if (trainee) {
-            const individualLMP2 = traineeLMPs.get(trainee.fullName);
-            if (individualLMP2) {
-              syllabusItem = individualLMP2.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
+            const individualLMP = traineeLMPs.get(trainee.fullName);
+            if (individualLMP) {
+              syllabusItem = individualLMP.find((s) => s.id === remedialReq.eventCode || s.code === remedialReq.eventCode);
               if (syllabusItem) {
                 console.log(`✅ Found remedial event in Individual LMP: ${remedialReq.eventCode}`);
               }
@@ -79906,9 +79905,9 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       }));
       const lmpCompletedIdsMap = {};
       traineesData.forEach((t) => {
-        const individualLMP2 = traineeLMPs.get(t.fullName);
-        if (individualLMP2) {
-          const completedIds = individualLMP2.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
+        const individualLMP = traineeLMPs.get(t.fullName);
+        if (individualLMP) {
+          const completedIds = individualLMP.filter((item) => item.completedAt || item.isComplete).map((item) => (item.id || item.code || "").replace("*", ""));
           if (completedIds.length > 0) {
             lmpCompletedIdsMap[t.fullName] = completedIds;
           }

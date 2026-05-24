@@ -335,6 +335,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
     // Ref for scrollable content area - used to scroll to top when a tab opens
     const contentScrollRef = useRef<HTMLDivElement>(null);
+    const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
 
     const handleTabClick = (tab: typeof activeTab) => setActiveTab(prev => {
       const next = prev === tab ? null : tab;
@@ -1180,7 +1181,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             lmpScores={scores.get(trainee.fullName) || []}
                             assessments={traineeAssessments}
                             pt051Events={traineeAssessments}
-                            traineeLmp={individualLMP || []}
+                            traineeLmp={currentIndividualLMP || []}
                             userProfile={userProfile || {}}
                             refreshEvents={() => {}}
                             onSelectLmpScore={() => {}}
@@ -1199,13 +1200,11 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     {/* ── INDIVIDUAL LMP TAB (inline) ── */}
                     {activeTab === 'lmp' && (() => {
                       const traineeScores = scores.get(trainee.fullName) || [];
-                      let individualLMP = traineeLMPs ? traineeLMPs.get(trainee.fullName) : individualLmp;
-                      if (!individualLMP) individualLMP = individualLmp;
                       return (
                         <div className={card3d + " p-0 overflow-hidden h-full min-h-0 flex flex-col"} style={card3dStyle}>
                           <TraineeLmpView
                             trainee={trainee}
-                            traineeLmp={individualLMP || []}
+                            traineeLmp={currentIndividualLMP || []}
                             scores={traineeScores}
                             onBack={() => setActiveTab(null)}
                             onDeleteRemedialItem={onDeleteRemedialItem}
@@ -1216,7 +1215,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                     })()}
 
                     {/* ── SECTION 1: MAIN PROFILE CARD ── */}
-                    <div className={card3d + " p-3"} style={card3dStyle}>
+                    <div className={card3d + ` p-3 ${activeTab === 'lmp' ? 'hidden' : ''}`} style={card3dStyle}>
                       {isEditing ? (
                         <div className="space-y-4">
                           <div className="flex items-center justify-between border-b border-gray-700/70 pb-2">
