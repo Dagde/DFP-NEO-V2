@@ -21,7 +21,6 @@ interface TraineeViewProps {
   syllabusDetails: any[];
   onNavigateToSyllabus: (item: any) => void;
   onNavigateToCurrency: (person: any) => void;
-  onViewIndividualLMP: (trainee: any) => void;
   onAddRemedialPackage: (trainee: any) => void;
   onSelectPt051ForEvent?: (trainee: any, assessment: any) => void;
   locations: string[];
@@ -130,7 +129,6 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             syllabusDetails={props.syllabusDetails}
             onNavigateToSyllabus={props.onNavigateToSyllabus}
             onNavigateToCurrency={props.onNavigateToCurrency}
-            onViewIndividualLMP={props.onViewIndividualLMP}
             onAddRemedialPackage={props.onAddRemedialPackage}
             onSelectPt051ForEvent={props.onSelectPt051ForEvent}
             locations={props.locations}

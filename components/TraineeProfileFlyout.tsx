@@ -35,7 +35,6 @@ interface TraineeProfileFlyoutProps {
   events: ScheduleEvent[];
   school: 'ESL' | 'PEA';
   onNavigateToHateSheet: (trainee: Trainee) => void;
-  onViewIndividualLMP: (trainee: Trainee) => void;
   onAddRemedialPackage: (trainee: Trainee) => void;
   personnelData: Map<string, { callsignPrefix: string; callsignNumber: number; callsign?: string }>;
   courseColors: { [key: string]: string };
@@ -268,7 +267,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   events,
   school,
   onNavigateToHateSheet,
-  onViewIndividualLMP,
   onAddRemedialPackage,
   personnelData,
   courseColors,
@@ -758,14 +756,13 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
             onAccessDenied?.('Individual LMP');
             return;
         }
-        if (traineeLMPs !== undefined) {
-            // Render inline as a tab (keeps flyout/sidebar open)
-            setActiveTab(prev => prev === 'lmp' ? null : 'lmp');
-            setTimeout(() => { contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
-        } else {
-            onViewIndividualLMP(trainee);
-            onClose();
+        if (traineeLMPs === undefined) {
+            onAccessDenied?.('Individual LMP');
+            return;
         }
+
+        setActiveTab(prev => prev === 'lmp' ? null : 'lmp');
+        setTimeout(() => { contentScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }, 50);
     };
 
     const handleExperienceChange = (

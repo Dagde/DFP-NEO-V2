@@ -10193,7 +10193,6 @@ const TraineeProfileFlyout = ({
   events,
   school,
   onNavigateToHateSheet,
-  onViewIndividualLMP,
   onAddRemedialPackage,
   personnelData,
   courseColors,
@@ -10572,15 +10571,14 @@ const TraineeProfileFlyout = ({
       onAccessDenied?.("Individual LMP");
       return;
     }
-    if (traineeLMPs !== void 0) {
-      setActiveTab((prev) => prev === "lmp" ? null : "lmp");
-      setTimeout(() => {
-        contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-      }, 50);
-    } else {
-      onViewIndividualLMP(trainee);
-      onClose();
+    if (traineeLMPs === void 0) {
+      onAccessDenied?.("Individual LMP");
+      return;
     }
+    setActiveTab((prev) => prev === "lmp" ? null : "lmp");
+    setTimeout(() => {
+      contentScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    }, 50);
   };
   const handleExperienceChange = (section, field, value) => {
     setPriorExperience((prev) => {
@@ -11859,7 +11857,6 @@ const CourseRosterView = ({
   syllabusDetails,
   onNavigateToSyllabus,
   onNavigateToCurrency,
-  onViewIndividualLMP,
   onAddRemedialPackage,
   onSelectPt051ForEvent,
   locations,
@@ -12156,7 +12153,6 @@ const CourseRosterView = ({
         events,
         school,
         onNavigateToHateSheet,
-        onViewIndividualLMP,
         onAddRemedialPackage,
         personnelData,
         courseColors,
@@ -28144,7 +28140,6 @@ const TraineeView = (props) => {
           syllabusDetails: props.syllabusDetails,
           onNavigateToSyllabus: props.onNavigateToSyllabus,
           onNavigateToCurrency: props.onNavigateToCurrency,
-          onViewIndividualLMP: props.onViewIndividualLMP,
           onAddRemedialPackage: props.onAddRemedialPackage,
           onSelectPt051ForEvent: props.onSelectPt051ForEvent,
           locations: props.locations,
@@ -75582,7 +75577,6 @@ ${"=".repeat(60)}`);
   const [successMessage, setSuccessMessage] = reactExports.useState(null);
   const [initialSyllabusId, setInitialSyllabusId] = reactExports.useState(null);
   const [syllabusBackTarget, setSyllabusBackTarget] = reactExports.useState("Program Schedule");
-  const [selectedTraineeForLMP, setSelectedTraineeForLMP] = reactExports.useState(null);
   const [showAddRemedialPackage, setShowAddRemedialPackage] = reactExports.useState(false);
   const [selectedTraineeForRemedial, setSelectedTraineeForRemedial] = reactExports.useState(null);
   const [isAddingTile, setIsAddingTile] = reactExports.useState(false);
@@ -77045,15 +77039,6 @@ ${error instanceof Error ? error.message : String(error)}`,
     setSelectedTraineeForHateSheet(trainee);
     setEventForPt051(eventForAssessment);
     handleNavigation("PT051");
-  };
-  const handleViewTraineeLMP = async (trainee) => {
-    if (!canViewTraineeLmp(trainee)) {
-      denyPlatformAction("Individual LMP");
-      return;
-    }
-    await loadPersistedTraineeLmp(trainee);
-    setSelectedTraineeForLMP(trainee);
-    handleNavigation("TraineeLMP");
   };
   const handleViewLogbook = reactExports.useCallback((person) => {
     setSelectedPersonForLogbook(person);
@@ -82097,7 +82082,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             syllabusDetails,
             onNavigateToSyllabus,
             onNavigateToCurrency: handleNavigateToCurrency,
-            onViewIndividualLMP: handleViewTraineeLMP,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
             onSelectPt051ForEvent: openPt051FromTraineeProfile,
             canViewTraineeProfile,
@@ -82240,7 +82224,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             syllabusDetails,
             onNavigateToSyllabus,
             onNavigateToCurrency: handleNavigateToCurrency,
-            onViewIndividualLMP: handleViewTraineeLMP,
             onAddRemedialPackage: handleOpenAddRemedialPackage,
             onSelectPt051ForEvent: openPt051FromTraineeProfile,
             canViewTraineeProfile,
@@ -83245,82 +83228,6 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
             onAddItem: handleAddSyllabusItem
           }
         );
-      case "TraineeLMP":
-        if (selectedTraineeForLMP) {
-          if (!canViewTraineeLmp(selectedTraineeForLMP)) {
-            return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 flex items-center justify-center bg-gray-900 text-white", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-xl font-bold text-red-200 mb-2", children: "Access denied" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-gray-300 mb-4", children: "Your permission profile does not allow the Individual LMP for this trainee." }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleNavigation("CourseRoster"), className: "px-4 py-2 rounded-md btn-aluminium-brushed font-semibold", children: "Back" })
-            ] }) });
-          }
-          const traineeScores = scores.get(selectedTraineeForLMP.fullName) || [];
-          let individualLMP = traineeLMPs.get(selectedTraineeForLMP.fullName);
-          if (!individualLMP && selectedTraineeForLMP.lmpType) {
-            console.log(`[DEBUG] TraineeLMP view - Initializing missing LMP for ${selectedTraineeForLMP.fullName}`);
-            const masterLMP = syllabusDetails.filter((item) => {
-              return item.courses.includes(selectedTraineeForLMP.lmpType);
-            });
-            if (masterLMP.length > 0) {
-              setTraineeLMPs((prev) => {
-                const newLMPs = new Map(prev);
-                newLMPs.set(selectedTraineeForLMP.fullName, mergeIndividualLmpWithMaster(newLMPs.get(selectedTraineeForLMP.fullName), masterLMP));
-                console.log(`[Individual LMP] Emergency initialized ${selectedTraineeForLMP.fullName}'s Individual LMP with ${selectedTraineeForLMP.lmpType} (${masterLMP.length} events)`);
-                return newLMPs;
-              });
-              individualLMP = mergeIndividualLmpWithMaster(individualLMP, masterLMP);
-            } else {
-              console.warn(`[Individual LMP] No Master LMP found for LMP type: ${selectedTraineeForLMP.lmpType}`);
-            }
-          }
-          if (individualLMP) {
-            const courseForLmp = courses.find((c) => c.name === selectedTraineeForLMP.course);
-            const traineeWithAcademicLmp = selectedTraineeForLMP.academicLmpType ? selectedTraineeForLMP : { ...selectedTraineeForLMP, academicLmpType: courseForLmp?.academicLmpType || "" };
-            return /* @__PURE__ */ jsxRuntimeExports.jsx(
-              TraineeLmpView,
-              {
-                trainee: traineeWithAcademicLmp,
-                traineeLmp: individualLMP,
-                scores: traineeScores,
-                onBack: () => {
-                  setSelectedPersonForProfile(selectedTraineeForLMP);
-                  handleNavigation("CourseRoster");
-                },
-                syllabusDetails,
-                allTraineesData,
-                onOpenPt051ForLesson: (trainee, lessonCode) => {
-                  if (!canViewTraineePt051(trainee)) {
-                    denyPlatformAction("PT-051 from Individual LMP");
-                    return;
-                  }
-                  const mockEvent = {
-                    id: `academic-${lessonCode}-${trainee.idNumber}-${Date.now()}`,
-                    flightNumber: lessonCode,
-                    date: (/* @__PURE__ */ new Date()).toISOString().split("T")[0],
-                    startTime: "08:00",
-                    endTime: "09:00",
-                    instructor: "",
-                    student: trainee.fullName,
-                    syllabus: lessonCode,
-                    aircraft: "",
-                    type: "ground",
-                    status: "Scheduled",
-                    notes: "",
-                    crew: []
-                  };
-                  setSelectedTraineeForHateSheet(trainee);
-                  setEventForPt051(mockEvent);
-                  handleNavigation("PT051");
-                },
-                canOpenPt051: canViewTraineePt051(selectedTraineeForLMP),
-                onAccessDenied: denyPlatformAction,
-                onDeleteRemedialItem: handleDeleteRemedialLmpItem,
-                onGeneratePt051ForItem: handleGeneratePt051FromLmpItem
-              }
-            );
-          }
-        }
-        return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { children: "Error: Could not load trainee LMP." });
       case "Currency":
         if (selectedPersonForCurrency) {
           return /* @__PURE__ */ jsxRuntimeExports.jsx(

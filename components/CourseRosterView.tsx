@@ -28,7 +28,6 @@ interface CourseRosterViewProps {
     syllabusDetails: SyllabusItemDetail[];
     onNavigateToSyllabus: (syllabusId: string) => void;
     onNavigateToCurrency: (person: Instructor | Trainee) => void;
-    onViewIndividualLMP: (trainee: Trainee) => void;
     onAddRemedialPackage: (trainee: Trainee) => void;
     onSelectPt051ForEvent?: (trainee: Trainee, assessment: Pt051Assessment) => void;
     locations: string[];
@@ -104,7 +103,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     syllabusDetails,
     onNavigateToSyllabus,
     onNavigateToCurrency,
-    onViewIndividualLMP,
     onAddRemedialPackage,
     onSelectPt051ForEvent,
     locations,
@@ -471,7 +469,6 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     events={events}
                     school={school}
                     onNavigateToHateSheet={onNavigateToHateSheet}
-                    onViewIndividualLMP={onViewIndividualLMP}
                     onAddRemedialPackage={onAddRemedialPackage}
                     personnelData={personnelData}
                     courseColors={courseColors}

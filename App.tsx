@@ -133,7 +133,6 @@ import { SettingsViewWithMenu } from './components/SettingsViewWithMenu';
 import AuthorisationView from './components/AuthorisationView';
 import LocalityChangeFlyout from './components/LocalityChangeFlyout';
 import { PostFlightView } from './components/PostFlightView';
-import TraineeLmpView from './components/TraineeLmpView';
 import AddRemedialPackageFlyout from './components/AddRemedialPackageFlyout';
 import CourseProgressView from './components/CourseProgressView';
 import TrainingRecordsView from './components/TrainingRecordsView';
@@ -7927,7 +7926,6 @@ const App: React.FC = () => {
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
     const [initialSyllabusId, setInitialSyllabusId] = useState<string | null>(null);
     const [syllabusBackTarget, setSyllabusBackTarget] = useState('Program Schedule');
-    const [selectedTraineeForLMP, setSelectedTraineeForLMP] = useState<Trainee | null>(null);
     const [showAddRemedialPackage, setShowAddRemedialPackage] = useState(false);
     const [selectedTraineeForRemedial, setSelectedTraineeForRemedial] = useState<Trainee | null>(null);
     const [isAddingTile, setIsAddingTile] = useState(false);
@@ -9853,16 +9851,6 @@ const App: React.FC = () => {
         setSelectedTraineeForHateSheet(trainee);
         setEventForPt051(eventForAssessment);
         handleNavigation('PT051');
-    };
-
-    const handleViewTraineeLMP = async (trainee: Trainee) => {
-        if (!canViewTraineeLmp(trainee)) {
-            denyPlatformAction('Individual LMP');
-            return;
-        }
-        await loadPersistedTraineeLmp(trainee);
-        setSelectedTraineeForLMP(trainee);
-        handleNavigation('TraineeLMP');
     };
 
     const handleViewLogbook = useCallback((person: Instructor | Trainee) => {
@@ -16280,7 +16268,6 @@ updates.forEach(update => {
                             syllabusDetails={syllabusDetails}
                             onNavigateToSyllabus={onNavigateToSyllabus}
                             onNavigateToCurrency={handleNavigateToCurrency}
-                            onViewIndividualLMP={handleViewTraineeLMP}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
                             onSelectPt051ForEvent={openPt051FromTraineeProfile}
                             canViewTraineeProfile={canViewTraineeProfile}
@@ -16432,7 +16419,6 @@ updates.forEach(update => {
                             syllabusDetails={syllabusDetails}
                             onNavigateToSyllabus={onNavigateToSyllabus}
                             onNavigateToCurrency={handleNavigateToCurrency}
-                            onViewIndividualLMP={handleViewTraineeLMP}
                             onAddRemedialPackage={handleOpenAddRemedialPackage}
                             onSelectPt051ForEvent={openPt051FromTraineeProfile}
                             canViewTraineeProfile={canViewTraineeProfile}
@@ -17492,94 +17478,6 @@ updates.forEach(update => {
                            onUpdateItem={handleUpdateSyllabusItem}
                            onAddItem={handleAddSyllabusItem}
                        />;
-            case 'TraineeLMP':
-                if (selectedTraineeForLMP) {
-                    if (!canViewTraineeLmp(selectedTraineeForLMP)) {
-                        return <div className="flex-1 flex items-center justify-center bg-gray-900 text-white">
-                            <div className="rounded-lg border border-red-500/40 bg-red-950/30 p-6 text-center max-w-md">
-                                <h2 className="text-xl font-bold text-red-200 mb-2">Access denied</h2>
-                                <p className="text-sm text-gray-300 mb-4">Your permission profile does not allow the Individual LMP for this trainee.</p>
-                                <button onClick={() => handleNavigation('CourseRoster')} className="px-4 py-2 rounded-md btn-aluminium-brushed font-semibold">Back</button>
-                            </div>
-                        </div>;
-                    }
-                    const traineeScores = scores.get(selectedTraineeForLMP.fullName) || [];
-                    let individualLMP = traineeLMPs.get(selectedTraineeForLMP.fullName);
-
-                    // Initialize LMP if missing
-                    if (!individualLMP && selectedTraineeForLMP.lmpType) {
-                        console.log(`[DEBUG] TraineeLMP view - Initializing missing LMP for ${selectedTraineeForLMP.fullName}`);
-
-                        // Find the Master LMP for this trainee's LMP type
-                        const masterLMP = syllabusDetails.filter(item => {
-                            return item.courses.includes(selectedTraineeForLMP.lmpType);
-                        });
-
-                        if (masterLMP.length > 0) {
-                            // Set the LMP data immediately
-                            setTraineeLMPs(prev => {
-                                const newLMPs = new Map(prev);
-                                newLMPs.set(selectedTraineeForLMP.fullName, mergeIndividualLmpWithMaster(newLMPs.get(selectedTraineeForLMP.fullName), masterLMP));
-                                console.log(`[Individual LMP] Emergency initialized ${selectedTraineeForLMP.fullName}'s Individual LMP with ${selectedTraineeForLMP.lmpType} (${masterLMP.length} events)`);
-                                return newLMPs;
-                            });
-
-                            // Use the newly set LMP
-                            individualLMP = mergeIndividualLmpWithMaster(individualLMP, masterLMP);
-                        } else {
-                            console.warn(`[Individual LMP] No Master LMP found for LMP type: ${selectedTraineeForLMP.lmpType}`);
-                        }
-                    }
-
-                    if (individualLMP) {
-                        // Inherit academicLmpType from course if not set on trainee
-                        const courseForLmp = courses.find(c => c.name === selectedTraineeForLMP.course);
-                        const traineeWithAcademicLmp = selectedTraineeForLMP.academicLmpType
-                            ? selectedTraineeForLMP
-                            : { ...selectedTraineeForLMP, academicLmpType: (courseForLmp as any)?.academicLmpType || '' };
-
-                        return <TraineeLmpView
-                            trainee={traineeWithAcademicLmp}
-                            traineeLmp={individualLMP}
-                            scores={traineeScores}
-                            onBack={() => {
-                                setSelectedPersonForProfile(selectedTraineeForLMP);
-                                handleNavigation('CourseRoster');
-                            }}
-                            syllabusDetails={syllabusDetails}
-                            allTraineesData={allTraineesData}
-                            onOpenPt051ForLesson={(trainee, lessonCode) => {
-                                if (!canViewTraineePt051(trainee)) {
-                                    denyPlatformAction('PT-051 from Individual LMP');
-                                    return;
-                                }
-                                const mockEvent: ScheduleEvent = {
-                                    id: `academic-${lessonCode}-${trainee.idNumber}-${Date.now()}`,
-                                    flightNumber: lessonCode,
-                                    date: new Date().toISOString().split('T')[0],
-                                    startTime: '08:00',
-                                    endTime: '09:00',
-                                    instructor: '',
-                                    student: trainee.fullName,
-                                    syllabus: lessonCode,
-                                    aircraft: '',
-                                    type: 'ground',
-                                    status: 'Scheduled',
-                                    notes: '',
-                                    crew: []
-                                };
-                                setSelectedTraineeForHateSheet(trainee);
-                                setEventForPt051(mockEvent);
-                                handleNavigation('PT051');
-                            }}
-                            canOpenPt051={canViewTraineePt051(selectedTraineeForLMP)}
-                            onAccessDenied={denyPlatformAction}
-                            onDeleteRemedialItem={handleDeleteRemedialLmpItem}
-                            onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
-                        />;
-                    }
-                }
-                return <div>Error: Could not load trainee LMP.</div>;
              case 'Currency':
                 if (selectedPersonForCurrency) {
                     return <CurrencyStatusPage
