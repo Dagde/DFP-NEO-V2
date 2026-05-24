@@ -71239,7 +71239,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       queue: [],
       matchAudit: [],
       normalFlightListExclusions: [],
-      finalAssignments: []
+      finalAssignments: [],
+      remedialInstructorOverrides: [],
+      forcedInstructorConflicts: []
     },
     final: null
   };
@@ -71311,6 +71313,24 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const existingWindow = getPriorityBookingWindow(existing);
     return candidateWindow.start < existingWindow.end && candidateWindow.end > existingWindow.start;
   };
+  const remedialInstructorOverrideKey = (traineeName, eventCode) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || "")}`;
+  const remedialInstructorOverrides = /* @__PURE__ */ new Map();
+  highestPriorityEvents.forEach((event) => {
+    if (event.date !== buildDate || !event.isTimeFixed || !event.isRemedial) return;
+    const traineeName = event.student || event.pilot || "";
+    const eventCode = event.flightNumber || "";
+    const instructorName = (event.instructor || "").trim();
+    if (!traineeName || !eventCode || !instructorName) return;
+    remedialInstructorOverrides.set(remedialInstructorOverrideKey(traineeName, eventCode), {
+      trainee: traineeName,
+      eventCode,
+      instructor: instructorName,
+      priorityEventId: event.id
+    });
+  });
+  const getRemedialInstructorOverride = (traineeName, eventCode) => remedialInstructorOverrides.get(remedialInstructorOverrideKey(traineeName, eventCode))?.instructor || "";
+  const forcedRemedialInstructorConflicts = [];
+  neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
   const placeRemedialPriorityEvent = (event) => {
     if (!event.isRemedial) return event;
     const isNightRemedial = event.dayNight === "Night";
@@ -71327,14 +71347,41 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
       for (const resourceId of resourceOptions) {
         const candidate = { ...event, startTime, resourceId };
-        const conflicts = generatedEvents.some(
-          (existing) => priorityResourceConflict(candidate, existing) || priorityPersonnelConflict(candidate, existing)
-        );
+        const remedialInstructor = getRemedialInstructorOverride(candidate.student || candidate.pilot || "", candidate.flightNumber);
+        const ignoredInstructorConflicts = [];
+        const conflicts = generatedEvents.some((existing) => {
+          if (priorityResourceConflict(candidate, existing)) return true;
+          if (!priorityPersonnelConflict(candidate, existing)) return false;
+          const commonPersonnel = getPersonnel(candidate).filter((person) => person && eventHasPerson(existing, person));
+          const onlyRemedialInstructorConflict = !!remedialInstructor && commonPersonnel.length > 0 && commonPersonnel.every((person) => normalizeBuildPersonnelName(person) === normalizeBuildPersonnelName(remedialInstructor));
+          if (onlyRemedialInstructorConflict) {
+            ignoredInstructorConflicts.push(
+              `${remedialInstructor} overlaps ${existing.flightNumber} (${existing.type}) ${_fmtT(existing.startTime)}-${_fmtT(existing.startTime + existing.duration)}`
+            );
+            return false;
+          }
+          return true;
+        });
         if (!conflicts) {
+          const placedCandidate = ignoredInstructorConflicts.length > 0 ? {
+            ...candidate,
+            forcedInstructorConflict: true,
+            forcedInstructorConflictDetails: ignoredInstructorConflicts
+          } : candidate;
+          if (ignoredInstructorConflicts.length > 0 && remedialInstructor) {
+            forcedRemedialInstructorConflicts.push({
+              trainee: candidate.student || candidate.pilot || "",
+              event: candidate.flightNumber,
+              instructor: remedialInstructor,
+              startTime,
+              endTime: startTime + candidate.duration,
+              details: ignoredInstructorConflicts
+            });
+          }
           if (startTime !== event.startTime || resourceId !== event.resourceId) {
             buildDebugLog(`  ↻ DEBUG MOVED remedial ${event.flightNumber} from ${event.startTime.toFixed(2)} to ${startTime.toFixed(2)} on ${resourceId} to respect turnaround/pre-post windows`);
           }
-          return candidate;
+          return placedCandidate;
         }
       }
     }
@@ -71994,6 +72041,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const _isNext = !isPlusOne;
     const _fbEnd = startTime + syllabusItem.duration;
     const traineeCounts = eventCounts.get(trainee.fullName);
+    const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
+    let forcedInstructorConflictDetails = [];
     if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
       return null;
     }
@@ -72145,7 +72194,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       candidates = candidates.filter((ip) => {
         return canAssignPersonForScheduledWindow(ip.name, startTime);
       });
-      const requiredRemedialInstructor = isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "";
+      const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "");
       if (requiredRemedialInstructor) {
         candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
       }
@@ -72195,7 +72244,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           ...bucket4OtherSameUnit,
           ...bucket5Other
         ];
-        if (primaryOnlyMode) {
+        if (primaryOnlyMode && !remedialInstructorOverride) {
           candidates = candidates.filter((i) => {
             if ((softGroups.primary || hardGroups.primary) && isPrimary(i)) return true;
             if ((softGroups.secondary || hardGroups.secondary) && isSecondary(i)) return true;
@@ -72279,7 +72328,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             continue;
           }
         }
-        const hasOverlap = generatedEvents.some((e) => {
+        const overlappingEvents = generatedEvents.filter((e) => {
           if (e.resourceId.startsWith("STBY") || e.resourceId.startsWith("BNF-STBY")) return false;
           if (!eventHasPerson(e, ip.name)) return false;
           const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
@@ -72315,9 +72364,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           return overlaps;
         });
-        if (hasOverlap) {
-          _dRej.timeOverlap++;
-          continue;
+        if (overlappingEvents.length > 0) {
+          if (remedialInstructorOverride && ip.name === remedialInstructorOverride) {
+            forcedInstructorConflictDetails = overlappingEvents.map(
+              (e) => `${ip.name} overlaps ${e.flightNumber} (${e.type}) ${_fmtT(e.startTime)}-${_fmtT(e.startTime + e.duration)}`
+            );
+            buildDebugLog(`[REMEDIAL INSTRUCTOR OVERRIDE] ${syllabusItemForCheck.code} for ${traineeForCheck.fullName} is keeping ${ip.name} despite ${overlappingEvents.length} instructor conflict(s).`);
+          } else {
+            _dRej.timeOverlap++;
+            continue;
+          }
         }
         const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.code, instructor: ip.name, type }];
         const ipEvents = proposedEvents.filter((e) => getPersonnel(e).includes(ip.name) && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
@@ -72541,8 +72597,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       area,
       preStart: syllabusItem.preFlightTime,
       postEnd: syllabusItem.postFlightTime,
-      dayNight: syllabusItem.dayNight
+      dayNight: syllabusItem.dayNight,
+      forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || void 0,
+      forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : void 0
     };
+    if (forcedInstructorConflictDetails.length > 0 && remedialInstructorOverride) {
+      forcedRemedialInstructorConflicts.push({
+        trainee: trainee.fullName,
+        event: syllabusItem.code,
+        instructor: remedialInstructorOverride,
+        startTime,
+        endTime: startTime + syllabusItem.duration,
+        details: forcedInstructorConflictDetails
+      });
+    }
     if (_isFlight) {
       _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || "", result.area);
     }
@@ -73818,6 +73886,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }))
     };
   });
+  neoBuildDiag.mandatoryRemedialFlights.forcedInstructorConflicts = forcedRemedialInstructorConflicts;
   neoBuildDiag.final = {
     totalEvents: sortedEvents.length,
     byType: sortedEvents.reduce((acc, event) => {
@@ -79349,6 +79418,23 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
         setNextDayBuildEvents(generated);
         markNeoBuildTiming(timingReport, "state:setNextDayBuildEvents", { generated: generated.length });
         console.log("🚀 [NEO-Build] setNextDayBuildEvents called with", generated.length, "events");
+        const remedialInstructorConflictEvents = generated.filter((event) => event.forcedInstructorConflict);
+        if (remedialInstructorConflictEvents.length > 0) {
+          const conflictLines = remedialInstructorConflictEvents.slice(0, 5).map((event) => {
+            const details = event.forcedInstructorConflictDetails?.[0] || "assigned instructor has an overlapping event";
+            return `${event.flightNumber} for ${event.student || event.pilot || "trainee"}: ${details}`;
+          });
+          const moreText = remedialInstructorConflictEvents.length > conflictLines.length ? `
++${remedialInstructorConflictEvents.length - conflictLines.length} more remedial instructor conflict(s).` : "";
+          void showDarkAlert2(
+            `NEO Build scheduled remedial priority event(s) with the assigned instructor despite an instructor conflict:
+
+${conflictLines.join("\n")}${moreText}`,
+            "Remedial Instructor Conflict",
+            "warning",
+            9e3
+          );
+        }
         markNeoBuildTiming(timingReport, "analysis:start");
         const analysis = analyzeBuildResults(
           generated,
