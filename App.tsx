@@ -3466,33 +3466,41 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             // ── DIAGNOSTIC: per-trainee tracking ──
             const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
 
-            // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
-            if (type === 'ftd') {
-                // FTD: SIM IPs first, then QFIs (role='QFI' OR isQFI=true)
-                const simIps = instructors.filter(i =>
-                    i.role === 'SIM IP'
-                );
-                const availableQfis = instructors.filter(i =>
-                    (i.role === 'QFI' || i.isQFI === true)
-                );
-                candidates = [...simIps, ...availableQfis];
-            } else {
-                // FLIGHT = QFI only (role='QFI' OR isQFI=true); CPT/GROUND = any instructor
-                candidates = instructors.filter(ip => {
-                    if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
-                    return true;
-                });
-            }
-
-            candidates = candidates.filter(ip => {
-                return canAssignPersonForScheduledWindow(ip.name, startTime);
-            });
-
             const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck)
                 ? (syllabusItemForCheck.resourcesHuman || []).find(name => typeof name === 'string' && name.trim().length > 0)?.trim()
                 : '');
-            if (requiredRemedialInstructor) {
-                candidates = candidates.filter(ip => ip.name === requiredRemedialInstructor);
+
+            // ── STEP 1: Build base pool filtered by role/type and night-separation rule ──
+            if (remedialInstructorOverride) {
+                // Remedial priority is an exact build-time override from Highest Priority Events.
+                // Start with the assigned instructor directly so normal day/night schedule filters
+                // cannot remove them before the remedial conflict override is evaluated.
+                candidates = instructors.filter(ip => ip.name === remedialInstructorOverride);
+            } else {
+                if (type === 'ftd') {
+                    // FTD: SIM IPs first, then QFIs (role='QFI' OR isQFI=true)
+                    const simIps = instructors.filter(i =>
+                        i.role === 'SIM IP'
+                    );
+                    const availableQfis = instructors.filter(i =>
+                        (i.role === 'QFI' || i.isQFI === true)
+                    );
+                    candidates = [...simIps, ...availableQfis];
+                } else {
+                    // FLIGHT = QFI only (role='QFI' OR isQFI=true); CPT/GROUND = any instructor
+                    candidates = instructors.filter(ip => {
+                        if (type === 'flight' && ip.role !== 'QFI' && !ip.isQFI) return false;
+                        return true;
+                    });
+                }
+
+                candidates = candidates.filter(ip => {
+                    return canAssignPersonForScheduledWindow(ip.name, startTime);
+                });
+
+                if (requiredRemedialInstructor) {
+                    candidates = candidates.filter(ip => ip.name === requiredRemedialInstructor);
+                }
             }
 
             // ── DIAGNOSTIC: after qualification filter ──
@@ -3676,7 +3684,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 };
                 const currentDutyHours = calculateInstructorDutyHours(ip.name, proposedEvent);
 
-                if (currentDutyHours > preferredDutyPeriod) {
+                if (!remedialInstructorOverride && currentDutyHours > preferredDutyPeriod) {
                     buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
                     _dRej.softDutyLimit++;
                     if (isTracedRemedialAttempt) {
@@ -3698,12 +3706,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 // NEW RULE: Ground event limits based on Flight/FTD activity
                 // If instructor has Flight or FTD events: max 1 ground event
                 // If instructor has no Flight or FTD events: max 4 ground events
-                if (eventTypeForCheck === 'ground') {
+                if (!remedialInstructorOverride && eventTypeForCheck === 'ground') {
                     const maxGroundEvents = ipCounts.flightFtd > 0 ? 1 : 4;
                     if (ipCounts.ground >= maxGroundEvents) { _dRej.groundLimit++; continue; }
                 }
 
-                if (ip.isExecutive) {
+                if (!remedialInstructorOverride && ip.isExecutive) {
                     if (isNightPass && (eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd')) {
                         if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
                     } else {
@@ -3711,10 +3719,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     }
                     if (ipCounts.flightFtd + ipCounts.dutySup >= eventLimits.exec.maxDutySup) { _dRej.eventLimit++; continue; }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.exec.maxTotal) { _dRej.eventLimit++; continue; }
-                } else if (ip.role === 'SIM IP') {
+                } else if (!remedialInstructorOverride && ip.role === 'SIM IP') {
                     if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) { _dRej.eventLimit++; continue; }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt) >= eventLimits.simIp.maxTotal) { _dRej.eventLimit++; continue; }
-                } else {
+                } else if (!remedialInstructorOverride) {
                     if ((eventTypeForCheck === 'flight' || eventTypeForCheck === 'ftd') && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) { _dRej.eventLimit++; continue; }
                     if ((ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt + ipCounts.dutySup) >= eventLimits.instructor.maxTotal) { _dRej.eventLimit++; continue; }
                     // Check duty supervisor limit for Flying Supervisors (included in total events)
@@ -3804,7 +3812,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
                 const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.code, instructor: ip.name, type } as Omit<ScheduleEvent, 'date'>];
                 const ipEvents = proposedEvents.filter(e => getPersonnel(e).includes(ip.name) && (e.type === 'flight' || e.type === 'ftd' || e.flightNumber.includes('Duty Sup')));
-                if (ipEvents.length > 0) {
+                if (!remedialInstructorOverride && ipEvents.length > 0) {
                     const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
                     const firstEvent = sortedIpEvents[0];
                     const lastEvent = sortedIpEvents[sortedIpEvents.length - 1];

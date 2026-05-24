@@ -72285,26 +72285,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       let candidates = [];
       const _dRej = { staticUnavailable: 0, softDutyLimit: 0, groundLimit: 0, eventLimit: 0, timeOverlap: 0, crewDutyPeriod: 0 };
-      if (type === "ftd") {
-        const simIps = instructors.filter(
-          (i) => i.role === "SIM IP"
-        );
-        const availableQfis = instructors.filter(
-          (i) => i.role === "QFI" || i.isQFI === true
-        );
-        candidates = [...simIps, ...availableQfis];
-      } else {
-        candidates = instructors.filter((ip) => {
-          if (type === "flight" && ip.role !== "QFI" && !ip.isQFI) return false;
-          return true;
-        });
-      }
-      candidates = candidates.filter((ip) => {
-        return canAssignPersonForScheduledWindow(ip.name, startTime);
-      });
       const requiredRemedialInstructor = remedialInstructorOverride || (isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "");
-      if (requiredRemedialInstructor) {
-        candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
+      if (remedialInstructorOverride) {
+        candidates = instructors.filter((ip) => ip.name === remedialInstructorOverride);
+      } else {
+        if (type === "ftd") {
+          const simIps = instructors.filter(
+            (i) => i.role === "SIM IP"
+          );
+          const availableQfis = instructors.filter(
+            (i) => i.role === "QFI" || i.isQFI === true
+          );
+          candidates = [...simIps, ...availableQfis];
+        } else {
+          candidates = instructors.filter((ip) => {
+            if (type === "flight" && ip.role !== "QFI" && !ip.isQFI) return false;
+            return true;
+          });
+        }
+        candidates = candidates.filter((ip) => {
+          return canAssignPersonForScheduledWindow(ip.name, startTime);
+        });
+        if (requiredRemedialInstructor) {
+          candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
+        }
       }
       const _afterQualFilter = candidates.length;
       if (isTracedRemedialAttempt) {
@@ -72423,7 +72427,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           type: syllabusItemForCheck.type
         };
         const currentDutyHours = calculateInstructorDutyHours(ip.name, proposedEvent);
-        if (currentDutyHours > preferredDutyPeriod) {
+        if (!remedialInstructorOverride && currentDutyHours > preferredDutyPeriod) {
           buildDebugLog(`SOFT LIMIT VIOLATION: ${ip.name} would exceed ${preferredDutyPeriod}hrs (current: ${currentDutyHours.toFixed(2)}hrs)`);
           _dRej.softDutyLimit++;
           if (isTracedRemedialAttempt) {
@@ -72441,14 +72445,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }
           continue;
         }
-        if (eventTypeForCheck === "ground") {
+        if (!remedialInstructorOverride && eventTypeForCheck === "ground") {
           const maxGroundEvents = ipCounts.flightFtd > 0 ? 1 : 4;
           if (ipCounts.ground >= maxGroundEvents) {
             _dRej.groundLimit++;
             continue;
           }
         }
-        if (ip.isExecutive) {
+        if (!remedialInstructorOverride && ip.isExecutive) {
           if (isNightPass && (eventTypeForCheck === "flight" || eventTypeForCheck === "ftd")) {
             if (ipCounts.flightFtd + ipCounts.ground + ipCounts.cpt >= eventLimits.exec.maxTotal) {
               _dRej.eventLimit++;
@@ -72468,7 +72472,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _dRej.eventLimit++;
             continue;
           }
-        } else if (ip.role === "SIM IP") {
+        } else if (!remedialInstructorOverride && ip.role === "SIM IP") {
           if ((eventTypeForCheck === "flight" || eventTypeForCheck === "ftd") && ipCounts.flightFtd >= eventLimits.simIp.maxFtd) {
             _dRej.eventLimit++;
             continue;
@@ -72477,7 +72481,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
             _dRej.eventLimit++;
             continue;
           }
-        } else {
+        } else if (!remedialInstructorOverride) {
           if ((eventTypeForCheck === "flight" || eventTypeForCheck === "ftd") && ipCounts.flightFtd >= eventLimits.instructor.maxFlightFtd) {
             _dRej.eventLimit++;
             continue;
@@ -72567,7 +72571,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         }
         const proposedEvents = [...generatedEvents, { startTime, duration: syllabusItem.duration, flightNumber: syllabusItem.code, instructor: ip.name, type }];
         const ipEvents = proposedEvents.filter((e) => getPersonnel(e).includes(ip.name) && (e.type === "flight" || e.type === "ftd" || e.flightNumber.includes("Duty Sup")));
-        if (ipEvents.length > 0) {
+        if (!remedialInstructorOverride && ipEvents.length > 0) {
           const sortedIpEvents = ipEvents.sort((a, b) => a.startTime - b.startTime);
           const firstEvent = sortedIpEvents[0];
           const lastEvent = sortedIpEvents[sortedIpEvents.length - 1];
