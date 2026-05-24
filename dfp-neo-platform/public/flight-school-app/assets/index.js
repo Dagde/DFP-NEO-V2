@@ -77294,14 +77294,15 @@ ${error instanceof Error ? error.message : String(error)}`,
     if (trainee.course && trainee.course.toUpperCase().startsWith("FIC")) return "FIC";
     return "BPC+IPC";
   };
-  const persistTraineeLmp = async (trainee, lmp) => {
+  const persistTraineeLmp = async (trainee, lmp, excludedCompletedEvents = []) => {
     const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
     const traineeDbId = trainee.id || matchedTrainee?.id;
     if (!traineeDbId) {
       throw new Error(`Cannot save Individual LMP: trainee database record not found for ${trainee.fullName}`);
     }
-    const completedFromLmp = lmp.filter((item) => item.completedAt).map((item) => item.id || item.code).filter(Boolean);
-    const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter(Boolean);
+    const excludedCompletedSet = new Set(excludedCompletedEvents.filter(Boolean));
+    const completedFromLmp = lmp.filter((item) => item.completedAt).map((item) => item.id || item.code).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
+    const completedFromScores = (scores.get(trainee.fullName) || []).map((score) => score.event).filter((eventId) => Boolean(eventId) && !excludedCompletedSet.has(eventId));
     const completedEventIds = Array.from(/* @__PURE__ */ new Set([...completedFromLmp, ...completedFromScores]));
     const apiBase2 = getApiBaseUrl();
     const response = await fetch(`${apiBase2}/trainees/${encodeURIComponent(traineeDbId)}/lmp`, {
@@ -77325,6 +77326,76 @@ ${error instanceof Error ? error.message : String(error)}`,
       throw new Error("Individual LMP save response did not include persisted events");
     }
     return savedEvents;
+  };
+  const deletePersistedIndividualLmpEventRecords = async (trainee, item) => {
+    const matchedTrainee = allTraineesData.find((candidate) => candidate.fullName === trainee.fullName);
+    const traineeDbId = trainee.id || matchedTrainee?.id;
+    if (!traineeDbId) {
+      throw new Error(`Cannot delete persisted event records: trainee database record not found for ${trainee.fullName}`);
+    }
+    const eventRefs = Array.from(new Set([
+      item.id,
+      item.code,
+      buildPt051EventFromLmpItem(trainee, item).id
+    ].filter(Boolean)));
+    const eventCodeRefs = new Set([item.id, item.code].filter(Boolean));
+    const apiBase2 = getApiBaseUrl();
+    const scoreResponse = await fetch(`${apiBase2}/scores/trainee/${encodeURIComponent(traineeDbId)}/events`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ events: Array.from(eventCodeRefs) })
+    });
+    if (!scoreResponse.ok) {
+      const errorText = await scoreResponse.text().catch(() => "");
+      throw new Error(errorText || `Failed to delete score records for ${item.code} (${scoreResponse.status})`);
+    }
+    const performanceResponse = await fetch(`${apiBase2}/trainee-performance?traineeFullName=${encodeURIComponent(trainee.fullName)}&limit=2000`, {
+      credentials: "include"
+    });
+    if (performanceResponse.ok) {
+      const rows = await performanceResponse.json();
+      if (Array.isArray(rows)) {
+        const performanceEventIds = Array.from(new Set(rows.filter(
+          (assessment) => eventRefs.includes(assessment.eventId) || eventRefs.includes(assessment.id) || eventCodeRefs.has(assessment.flightNumber)
+        ).map((assessment) => assessment.eventId).filter(Boolean)));
+        for (const eventId of performanceEventIds) {
+          const deleteResponse = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(eventId)}`, {
+            method: "DELETE",
+            credentials: "include"
+          });
+          if (!deleteResponse.ok) {
+            const errorText = await deleteResponse.text().catch(() => "");
+            throw new Error(errorText || `Failed to delete PT-051 record for ${item.code} (${deleteResponse.status})`);
+          }
+        }
+      }
+    } else {
+      console.warn(`[Individual LMP] Could not scan PT-051 records while deleting ${item.code}:`, await performanceResponse.text().catch(() => ""));
+    }
+    setScores((prev) => {
+      const traineeScores = prev.get(trainee.fullName) || [];
+      const updatedScores = traineeScores.filter((score) => !eventCodeRefs.has(score.event));
+      if (updatedScores.length === traineeScores.length) return prev;
+      const updated = new Map(prev);
+      updated.set(trainee.fullName, updatedScores);
+      return updated;
+    });
+    setPt051Assessments((prev) => {
+      const updated = new Map(prev);
+      Array.from(updated.entries()).forEach(([key, assessment]) => {
+        if (assessment.traineeFullName === trainee.fullName && (eventRefs.includes(assessment.eventId) || eventRefs.includes(assessment.id) || eventCodeRefs.has(assessment.flightNumber))) {
+          updated.delete(key);
+        }
+      });
+      return updated;
+    });
+    setLoadedPt051Keys((prev) => {
+      const updated = new Set(prev);
+      eventRefs.forEach((eventRef) => updated.delete(`${eventRef}-${trainee.fullName}`));
+      return updated;
+    });
+    return eventRefs;
   };
   const handleSaveRemedialPackage = async (trainee, eventToRemediate, newEvents) => {
     const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
@@ -77384,13 +77455,9 @@ This will remove the remedial event from the package sequence and cannot be undo
       ...lmpItem,
       prerequisites: (lmpItem.prerequisites || []).filter((prerequisite) => prerequisite !== itemId && prerequisite !== itemCode)
     }));
-    setTraineeLMPs((prevLMPs) => {
-      const newLMPs = new Map(prevLMPs);
-      newLMPs.set(trainee.fullName, updatedLmp);
-      return newLMPs;
-    });
     try {
-      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      const deletedEventRefs = await deletePersistedIndividualLmpEventRecords(trainee, item);
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp, deletedEventRefs);
       setTraineeLMPs((prevLMPs) => {
         const newLMPs = new Map(prevLMPs);
         newLMPs.set(trainee.fullName, persistedLmp);
@@ -77413,7 +77480,7 @@ This will remove the remedial event from the package sequence and cannot be undo
     } catch (error) {
       console.error("[Individual LMP] Failed to delete remedial item:", error);
       await showDarkAlert2(
-        `Remedial event ${item.code} was removed locally, but could not be saved to the database. Please try again before refreshing.
+        `Remedial event ${item.code} could not be deleted from the database. It has not been removed locally.
 
 ${error instanceof Error ? error.message : String(error)}`,
         "Individual LMP Delete Failed",
