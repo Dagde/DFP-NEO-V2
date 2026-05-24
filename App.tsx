@@ -430,10 +430,14 @@ const getEventBookingWindowForAlgo = (
  * @returns 'Day', 'Night', or 'Day/Night' based on the syllabus classification
  */
 const getEventDayNightClassification = (
-    event: { flightNumber: string },
+    event: { flightNumber: string; dayNight?: 'Day' | 'Night' | 'Day/Night' },
     syllabusDetails: SyllabusItemDetail[],
     sctEvents?: string[]
 ): 'Day' | 'Night' | 'Day/Night' => {
+    if (event.dayNight) {
+        return event.dayNight;
+    }
+
     if (event.flightNumber === 'Night Duty Sup') {
         return 'Night';
     }
@@ -1992,6 +1996,9 @@ function generateDfpInternal(
     const getGeneratedEventDayNightClassification = (
         event: Omit<ScheduleEvent, 'date'> | ScheduleEvent
     ): 'Day' | 'Night' | 'Day/Night' => {
+        if (event.dayNight) {
+            return event.dayNight;
+        }
         if (typeof event.startTime === 'number') {
             return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? 'Night' : 'Day';
         }
@@ -2184,8 +2191,19 @@ function generateDfpInternal(
     ): Omit<ScheduleEvent, 'date'> => {
         if (!event.isRemedial) return event;
 
-        const searchStart = Math.max(event.startTime || 0, REMEDIAL_EARLIEST_START);
-        const searchEnd = event.type === 'ftd' ? ftdEndTime : flyingEndTime;
+        const isNightRemedial = event.dayNight === 'Night';
+        const isDayRemedial = event.dayNight === 'Day';
+        const normalEndTime = event.type === 'ftd' ? ftdEndTime : flyingEndTime;
+        const searchStart = Math.max(
+            event.startTime || 0,
+            REMEDIAL_EARLIEST_START,
+            isNightRemedial ? commenceNightFlying : 0
+        );
+        const searchEnd = isNightRemedial
+            ? ceaseNightFlying
+            : isDayRemedial
+                ? Math.min(normalEndTime, commenceNightFlying)
+                : normalEndTime;
         const timeIncrement = event.type === 'flight' ? 5 / 60 : 15 / 60;
         const resourceOptions = getPriorityResourceOptions(event);
 
@@ -3069,6 +3087,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return null;
         }
 
+        if (syllabusItem.dayNight === 'Night' && getScheduledDayNightForStart(startTime) !== 'Night') {
+            return null;
+        }
+        if (syllabusItem.dayNight === 'Day' && getScheduledDayNightForStart(startTime) !== 'Day') {
+            return null;
+        }
+
         if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
             buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'DAY_NIGHT_SEPARATION');
@@ -3078,7 +3103,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // CRITICAL FIX: For night flying BNF events, allow 2 flights per night.
         // Remedial BNF flights can be scheduled as day mandatory events and must use
         // the normal day-flight path rather than the BNF night pairing/window rules.
-        const isBnfEvent = isNightPass && syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight';
+        const isBnfEvent = isNightPass && syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight' && !isRemedialSyllabusItem(syllabusItem);
         const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
 
         if (type === 'flight' || type === 'ftd') {
@@ -3121,7 +3146,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             isPlusOneCheck: boolean,
             primaryOnlyMode: boolean = false
         ): Instructor | null => {
-            const isBnfEvent = isNightPass && syllabusItemForCheck.code.startsWith('BNF');
+            const isBnfEvent = isNightPass && syllabusItemForCheck.code.startsWith('BNF') && !isRemedialSyllabusItem(syllabusItemForCheck);
 
             if (isBnfEvent) {
                 const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
@@ -3268,11 +3293,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 return canAssignPersonForScheduledWindow(ip.name, startTime);
             });
 
+            const requiredRemedialInstructor = isRemedialSyllabusItem(syllabusItemForCheck)
+                ? (syllabusItemForCheck.resourcesHuman || []).find(name => typeof name === 'string' && name.trim().length > 0)?.trim()
+                : '';
+            if (requiredRemedialInstructor) {
+                candidates = candidates.filter(ip => ip.name === requiredRemedialInstructor);
+            }
+
             // ── DIAGNOSTIC: after qualification filter ──
             const _afterQualFilter = candidates.length;
 
             // ── STEP 2: Filter by unit eligibility (staff sharing rules) ──
-            candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+            if (!requiredRemedialInstructor) {
+                candidates = candidates.filter(ip => isInstructorEligibleByUnit(ip, traineeForCheck));
+            }
 
             // ── DIAGNOSTIC: after unit filter ──
             const _afterUnitFilter = candidates.length;
@@ -3771,6 +3805,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             color: courseColors[trainee.course] || 'bg-gray-500',
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
+            dayNight: syllabusItem.dayNight,
         };
         // Log successful flight events (first 2 only)
         if (_isFlight) {
@@ -4056,7 +4091,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const _isMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
         return mandatoryRemedialFlightItems.has(trainee.fullName);
     };
-    const _mandatoryFlightList = applyCoursePriority(activeTrainees.filter(_isMandatoryRemedialFlightTrainee));
+    const _isNightMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
+        return mandatoryRemedialFlightItems.get(trainee.fullName)?.dayNight === 'Night';
+    };
+    const _isDayMandatoryRemedialFlightTrainee = (trainee: Trainee): boolean => {
+        const item = mandatoryRemedialFlightItems.get(trainee.fullName);
+        return !!item && item.dayNight !== 'Night';
+    };
+    const _mandatoryDayFlightList = applyCoursePriority(activeTrainees.filter(_isDayMandatoryRemedialFlightTrainee));
+    const _mandatoryNightFlightList = applyCoursePriority(activeTrainees.filter(_isNightMandatoryRemedialFlightTrainee));
+    const _mandatoryFlightList = [..._mandatoryDayFlightList, ..._mandatoryNightFlightList];
     const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter(t => !_isMandatoryRemedialFlightTrainee(t))));
     const _dualFlightList = _allFlightList.filter(t => !_isSoloTrainee(t));
     const _soloFlightList = _allFlightList.filter(t => _isSoloTrainee(t));
@@ -4111,12 +4155,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
     });
 
-    buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
     buildDebugLog('[MANDATORY-REMEDIAL-DIAG] Match audit:', neoBuildDiag.mandatoryRemedialFlights.matchAudit);
     (window as any).__fbFlightListSize = _allFlightList.length;
 
     // Step 3a: Schedule DUAL flights first
-    if (_mandatoryFlightList.length > 0) {
+    if (_mandatoryDayFlightList.length > 0) {
         const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
         const roundUpToFlightSlot = (time: number): number => Math.ceil((time - 1e-9) * 12) / 12;
         if (flyingStartTime < REMEDIAL_EARLIEST_START) {
@@ -4147,7 +4191,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean PC-21 wave.`);
 
         scheduleList(
-            _mandatoryFlightList,
+            _mandatoryDayFlightList,
             'flight',
             false,
             alignedPostMandatoryStart,
@@ -4289,6 +4333,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
          // Schedule Night Flight Next Events (Wave One)
          const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter(t => !_isMandatoryRemedialFlightTrainee(t)));
          scheduleList(bnfWaveOneList, 'flight', false, commenceNightFlying, ceaseNightFlying, null, true);
+    }
+    if (_mandatoryNightFlightList.length > 0) {
+         scheduleList(
+             _mandatoryNightFlightList,
+             'flight',
+             false,
+             commenceNightFlying,
+             ceaseNightFlying,
+             null,
+             true,
+             'FLIGHT Mandatory Night Remedial',
+             mandatoryRemedialFlightItems
+         );
     }
 
     // 5. Schedule FTD Events: a) Highest Priority, b) Next Events
@@ -10030,7 +10087,7 @@ const App: React.FC = () => {
     const buildRemedialPackageLmp = (
         originalTraineeLMP: SyllabusItemDetail[],
         eventToRemediate: SyllabusItemDetail,
-        newEvents: { id?: string, code?: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string }[]
+        newEvents: { id?: string, code?: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string, dayNight?: 'Day' | 'Night' | 'Day/Night' }[]
     ): SyllabusItemDetail[] | null => {
         // Req 3.2, 3.3.1-3.3.3: Create all new remedial items and the re-fly event.
         let lastNewEventId = eventToRemediate.id;
@@ -10056,6 +10113,7 @@ const App: React.FC = () => {
                 completedAt: null,
                 eventDescription: remedialCode,
                 module: 'Remedial', prerequisites: [lastNewEventId],
+                dayNight: remEvent.dayNight || eventToRemediate.dayNight || 'Day',
                 duration: remEvent.duration, flightOrSimHours: remEvent.duration,
                 totalEventHours: remEvent.duration + (type === 'Ground School' ? 0.25 : 1.0), type,
                 prerequisitesGround: [], prerequisitesFlying: [],
@@ -12040,6 +12098,7 @@ const App: React.FC = () => {
                             resourceId: '', // Will be assigned during scheduling
                             color: courseColors[trainee.course] || 'bg-gray-500',
                             flightType: syllabusItem.sortieType === 'Solo' ? 'Solo' : 'Dual',
+                            dayNight: syllabusItem.dayNight,
                             locationType: 'Local',
                             origin: school,
                             destination: school,

@@ -63211,9 +63211,9 @@ const AddRemedialPackageFlyout = ({
   const [remedialEvents, setRemedialEvents] = reactExports.useState([]);
   const [validationMessage, setValidationMessage] = reactExports.useState("");
   const [openInstructorField, setOpenInstructorField] = reactExports.useState(null);
-  const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "" });
-  const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
-  const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "" });
+  const [tutState, setTutState] = reactExports.useState({ quantity: 0, duration: 1, instructor: "", dayNight: "Day" });
+  const [ftdState, setFtdState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "", dayNight: "Day" });
+  const [flightState, setFlightState] = reactExports.useState({ quantity: 0, duration: 1.5, instructor: "", dayNight: "Day" });
   const getRemedialBaseEventCode2 = (event) => String(event.code || event.id || event.masterEventId || "").replace(/-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i, "");
   const getRemedialCodePrefix = (type) => {
     if (type === "TUT") return "RT";
@@ -63319,24 +63319,24 @@ const AddRemedialPackageFlyout = ({
   const handleAddEvents = () => {
     const eventsToAdd = [];
     const baseCode = eventToRemediate ? getRemedialBaseEventCode2(eventToRemediate) : "";
-    const appendRemedialEvents = (type, quantity, duration, instructor) => {
+    const appendRemedialEvents = (type, quantity, duration, instructor, dayNight) => {
       if (!baseCode || quantity <= 0 || !instructor || duration <= 0) return;
       let sequence = getNextRemedialSequence([...remedialEvents, ...eventsToAdd], baseCode, type);
       for (let i = 0; i < quantity; i++) {
         const code = buildRemedialEventCode(baseCode, type, sequence);
-        eventsToAdd.push({ id: code, code, type, duration, instructor });
+        eventsToAdd.push({ id: code, code, type, duration, instructor, dayNight });
         sequence++;
       }
     };
-    appendRemedialEvents("TUT", tutState.quantity, tutState.duration, tutState.instructor);
-    appendRemedialEvents("FTD", ftdState.quantity, ftdState.duration, ftdState.instructor);
-    appendRemedialEvents("Flight", flightState.quantity, flightState.duration, flightState.instructor);
+    appendRemedialEvents("TUT", tutState.quantity, tutState.duration, tutState.instructor, tutState.dayNight);
+    appendRemedialEvents("FTD", ftdState.quantity, ftdState.duration, ftdState.instructor, ftdState.dayNight);
+    appendRemedialEvents("Flight", flightState.quantity, flightState.duration, flightState.instructor, flightState.dayNight);
     if (eventsToAdd.length > 0) {
       setRemedialEvents((prev) => [...prev, ...eventsToAdd]);
       setValidationMessage("");
-      setTutState({ quantity: 0, duration: 1, instructor: "" });
-      setFtdState({ quantity: 0, duration: 1.5, instructor: "" });
-      setFlightState({ quantity: 0, duration: 1.5, instructor: "" });
+      setTutState({ quantity: 0, duration: 1, instructor: "", dayNight: "Day" });
+      setFtdState({ quantity: 0, duration: 1.5, instructor: "", dayNight: "Day" });
+      setFlightState({ quantity: 0, duration: 1.5, instructor: "", dayNight: "Day" });
     } else {
       setValidationMessage("Please enter a quantity, duration, and instructor for at least one event type.");
     }
@@ -63361,6 +63361,21 @@ const AddRemedialPackageFlyout = ({
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "6rem" }, children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Dur (hrs)" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("input", { type: "number", step: "0.1", min: "0", value: state.duration, onChange: (e) => setState((p) => ({ ...p, duration: parseFloat(e.target.value) || 0 })), className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { width: "7rem" }, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Day/Night" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "select",
+        {
+          value: state.dayNight,
+          onChange: (e) => setState((p) => ({ ...p, dayNight: e.target.value })),
+          className: "mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Day", children: "Day" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Night", children: "Night" })
+          ]
+        }
+      )
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-grow relative", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400", children: "Instructor" }),
@@ -63484,7 +63499,9 @@ const AddRemedialPackageFlyout = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-bold text-sky-400 w-24", children: event.code }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-gray-300", children: [
                 event.duration.toFixed(1),
-                " hrs with ",
+                " hrs · ",
+                event.dayNight,
+                " · ",
                 (event.instructor || "").split(",")[0]
               ] })
             ] }),
@@ -70206,6 +70223,9 @@ const getEventBookingWindowForAlgo = (event, syllabusDetails) => {
   return { start: event.startTime, end: event.startTime + event.duration };
 };
 const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
+  if (event.dayNight) {
+    return event.dayNight;
+  }
   if (event.flightNumber === "Night Duty Sup") {
     return "Night";
   }
@@ -71160,6 +71180,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (personKey2) intendedNightStaff.add(personKey2);
   };
   const getGeneratedEventDayNightClassification = (event) => {
+    if (event.dayNight) {
+      return event.dayNight;
+    }
     if (typeof event.startTime === "number") {
       return event.startTime >= commenceNightFlying && event.startTime < ceaseNightFlying ? "Night" : "Day";
     }
@@ -71304,8 +71327,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   const placeRemedialPriorityEvent = (event) => {
     if (!event.isRemedial) return event;
-    const searchStart = Math.max(event.startTime || 0, REMEDIAL_EARLIEST_START);
-    const searchEnd = event.type === "ftd" ? ftdEndTime : flyingEndTime;
+    const isNightRemedial = event.dayNight === "Night";
+    const isDayRemedial = event.dayNight === "Day";
+    const normalEndTime = event.type === "ftd" ? ftdEndTime : flyingEndTime;
+    const searchStart = Math.max(
+      event.startTime || 0,
+      REMEDIAL_EARLIEST_START,
+      isNightRemedial ? commenceNightFlying : 0
+    );
+    const searchEnd = isNightRemedial ? ceaseNightFlying : isDayRemedial ? Math.min(normalEndTime, commenceNightFlying) : normalEndTime;
     const timeIncrement = event.type === "flight" ? 5 / 60 : 15 / 60;
     const resourceOptions = getPriorityResourceOptions(event);
     for (let startTime = searchStart; startTime + event.duration <= searchEnd + 1e-3; startTime += timeIncrement) {
@@ -71981,12 +72011,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (isRemedialSyllabusItem(syllabusItem) && startTime < REMEDIAL_EARLIEST_START) {
       return null;
     }
+    if (syllabusItem.dayNight === "Night" && getScheduledDayNightForStart(startTime) !== "Night") {
+      return null;
+    }
+    if (syllabusItem.dayNight === "Day" && getScheduledDayNightForStart(startTime) !== "Day") {
+      return null;
+    }
     if (!canAssignPersonForScheduledWindow(trainee.fullName, startTime)) {
       buildDebugLog(`DAY/NIGHT BLOCK: ${trainee.fullName} cannot be scheduled for ${getScheduledDayNightForStart(startTime)} event ${syllabusItem.code}`);
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "DAY_NIGHT_SEPARATION");
       return null;
     }
-    const isBnfEvent = isNightPass && syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight";
+    const isBnfEvent = isNightPass && syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight" && !isRemedialSyllabusItem(syllabusItem);
     const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
     if (type === "flight" || type === "ftd") {
       if (traineeCounts.flightFtd >= bnfFlightLimit) {
@@ -72017,7 +72053,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       return null;
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
-      const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF");
+      const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF") && !isRemedialSyllabusItem(syllabusItemForCheck);
       if (isBnfEvent2) {
         const pairedInstructorName = nightPairings.get(traineeForCheck.fullName);
         if (!pairedInstructorName) return null;
@@ -72123,8 +72159,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       candidates = candidates.filter((ip) => {
         return canAssignPersonForScheduledWindow(ip.name, startTime);
       });
+      const requiredRemedialInstructor = isRemedialSyllabusItem(syllabusItemForCheck) ? (syllabusItemForCheck.resourcesHuman || []).find((name) => typeof name === "string" && name.trim().length > 0)?.trim() : "";
+      if (requiredRemedialInstructor) {
+        candidates = candidates.filter((ip) => ip.name === requiredRemedialInstructor);
+      }
       const _afterQualFilter = candidates.length;
-      candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
+      if (!requiredRemedialInstructor) {
+        candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
+      }
       const _afterUnitFilter = candidates.length;
       const workloadOf = (i) => {
         const c = eventCounts.get(i.name);
@@ -72512,7 +72554,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       destination: school,
       area,
       preStart: syllabusItem.preFlightTime,
-      postEnd: syllabusItem.postFlightTime
+      postEnd: syllabusItem.postFlightTime,
+      dayNight: syllabusItem.dayNight
     };
     if (_isFlight) {
       _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || "", result.area);
@@ -72732,7 +72775,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const _isMandatoryRemedialFlightTrainee = (trainee) => {
     return mandatoryRemedialFlightItems.has(trainee.fullName);
   };
-  const _mandatoryFlightList = applyCoursePriority(activeTrainees.filter(_isMandatoryRemedialFlightTrainee));
+  const _isNightMandatoryRemedialFlightTrainee = (trainee) => {
+    return mandatoryRemedialFlightItems.get(trainee.fullName)?.dayNight === "Night";
+  };
+  const _isDayMandatoryRemedialFlightTrainee = (trainee) => {
+    const item = mandatoryRemedialFlightItems.get(trainee.fullName);
+    return !!item && item.dayNight !== "Night";
+  };
+  const _mandatoryDayFlightList = applyCoursePriority(activeTrainees.filter(_isDayMandatoryRemedialFlightTrainee));
+  const _mandatoryNightFlightList = applyCoursePriority(activeTrainees.filter(_isNightMandatoryRemedialFlightTrainee));
+  const _mandatoryFlightList = [..._mandatoryDayFlightList, ..._mandatoryNightFlightList];
   const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter((t) => !_isMandatoryRemedialFlightTrainee(t))));
   const _dualFlightList = _allFlightList.filter((t) => !_isSoloTrainee(t));
   const _soloFlightList = _allFlightList.filter((t) => _isSoloTrainee(t));
@@ -72783,10 +72835,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
   });
   buildDebugLog(`
-🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
   buildDebugLog("[MANDATORY-REMEDIAL-DIAG] Match audit:", neoBuildDiag.mandatoryRemedialFlights.matchAudit);
   window.__fbFlightListSize = _allFlightList.length;
-  if (_mandatoryFlightList.length > 0) {
+  if (_mandatoryDayFlightList.length > 0) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
     const roundUpToFlightSlot = (time) => Math.ceil((time - 1e-9) * 12) / 12;
     if (flyingStartTime < REMEDIAL_EARLIEST_START) {
@@ -72813,7 +72865,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     );
     buildDebugLog(`[FLIGHT-WAVE] Mandatory/post-1000 wave aligned from ${_fmtT(firstRemedialFlightStart)} to ${_fmtT(alignedPostMandatoryStart)} so remedials start the clean PC-21 wave.`);
     scheduleList(
-      _mandatoryFlightList,
+      _mandatoryDayFlightList,
       "flight",
       false,
       alignedPostMandatoryStart,
@@ -72905,6 +72957,19 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   if (nextEventLists.bnf.length >= 2) {
     const bnfWaveOneList = applyCoursePriority(nextEventLists.bnf.filter((t) => !_isMandatoryRemedialFlightTrainee(t)));
     scheduleList(bnfWaveOneList, "flight", false, commenceNightFlying, ceaseNightFlying, null, true);
+  }
+  if (_mandatoryNightFlightList.length > 0) {
+    scheduleList(
+      _mandatoryNightFlightList,
+      "flight",
+      false,
+      commenceNightFlying,
+      ceaseNightFlying,
+      null,
+      true,
+      "FLIGHT Mandatory Night Remedial",
+      mandatoryRemedialFlightItems
+    );
   }
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Priority)...`, percentage: 60 });
   recordProgress({ message: `Scheduling ${ftdResourceLabel} Events (Next)...`, percentage: 65 });
@@ -77215,6 +77280,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         eventDescription: remedialCode,
         module: "Remedial",
         prerequisites: [lastNewEventId],
+        dayNight: remEvent.dayNight || eventToRemediate.dayNight || "Day",
         duration: remEvent.duration,
         flightOrSimHours: remEvent.duration,
         totalEventHours: remEvent.duration + (type === "Ground School" ? 0.25 : 1),
@@ -78784,6 +78850,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
               // Will be assigned during scheduling
               color: courseColors[trainee.course] || "bg-gray-500",
               flightType: syllabusItem.sortieType === "Solo" ? "Solo" : "Dual",
+              dayNight: syllabusItem.dayNight,
               locationType: "Local",
               origin: school,
               destination: school,

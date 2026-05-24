@@ -227,9 +227,10 @@ export interface ScheduleEvent {
       // Cancellation fields
       isCancelled?: boolean;
       cancellationCode?: string;
-      cancellationManualEntry?: string; // For OTHER option
-      cancelledBy?: string;
-      cancelledAt?: string;
+  cancellationManualEntry?: string; // For OTHER option
+  cancelledBy?: string;
+  cancelledAt?: string;
+  dayNight?: 'Day' | 'Night' | 'Day/Night';
 }
 
 export interface EventSegment extends ScheduleEvent {

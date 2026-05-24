@@ -3,7 +3,9 @@ import { Trainee, Score, SyllabusItemDetail, Instructor, Pt051Assessment } from 
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, ResourceDisplayNames } from '../utils/resourceDisplayNames';
 
-type RemedialPackageEvent = { id: string, code: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string };
+type RemedialDayNight = 'Day' | 'Night';
+type RemedialPackageEvent = { id: string, code: string, type: 'TUT' | 'FTD' | 'Flight', duration: number, instructor: string, dayNight: RemedialDayNight };
+type RemedialRowState = { quantity: number; duration: number; instructor: string; dayNight: RemedialDayNight; };
 
 interface AddRemedialPackageFlyoutProps {
   trainee: Trainee;
@@ -38,9 +40,9 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const [openInstructorField, setOpenInstructorField] = useState<string | null>(null);
 
   // State for the three new rows
-  const [tutState, setTutState] = useState({ quantity: 0, duration: 1.0, instructor: '' });
-  const [ftdState, setFtdState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
-  const [flightState, setFlightState] = useState({ quantity: 0, duration: 1.5, instructor: '' });
+  const [tutState, setTutState] = useState<RemedialRowState>({ quantity: 0, duration: 1.0, instructor: '', dayNight: 'Day' });
+  const [ftdState, setFtdState] = useState<RemedialRowState>({ quantity: 0, duration: 1.5, instructor: '', dayNight: 'Day' });
+  const [flightState, setFlightState] = useState<RemedialRowState>({ quantity: 0, duration: 1.5, instructor: '', dayNight: 'Day' });
 
   const getRemedialBaseEventCode = (event: SyllabusItemDetail): string =>
     String(event.code || event.id || event.masterEventId || '').replace(/-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i, '');
@@ -211,31 +213,32 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
       type: RemedialPackageEvent['type'],
       quantity: number,
       duration: number,
-      instructor: string
+      instructor: string,
+      dayNight: RemedialDayNight
     ) => {
       if (!baseCode || quantity <= 0 || !instructor || duration <= 0) return;
       let sequence = getNextRemedialSequence([...remedialEvents, ...eventsToAdd], baseCode, type);
       for (let i = 0; i < quantity; i++) {
         const code = buildRemedialEventCode(baseCode, type, sequence);
-        eventsToAdd.push({ id: code, code, type, duration, instructor });
+        eventsToAdd.push({ id: code, code, type, duration, instructor, dayNight });
         sequence++;
       }
     };
 
     // Process Tutorials
-    appendRemedialEvents('TUT', tutState.quantity, tutState.duration, tutState.instructor);
+    appendRemedialEvents('TUT', tutState.quantity, tutState.duration, tutState.instructor, tutState.dayNight);
     // Process FTDs
-    appendRemedialEvents('FTD', ftdState.quantity, ftdState.duration, ftdState.instructor);
+    appendRemedialEvents('FTD', ftdState.quantity, ftdState.duration, ftdState.instructor, ftdState.dayNight);
     // Process Flights
-    appendRemedialEvents('Flight', flightState.quantity, flightState.duration, flightState.instructor);
+    appendRemedialEvents('Flight', flightState.quantity, flightState.duration, flightState.instructor, flightState.dayNight);
 
     if (eventsToAdd.length > 0) {
         setRemedialEvents(prev => [...prev, ...eventsToAdd]);
         setValidationMessage('');
         // Reset forms
-        setTutState({ quantity: 0, duration: 1.0, instructor: '' });
-        setFtdState({ quantity: 0, duration: 1.5, instructor: '' });
-        setFlightState({ quantity: 0, duration: 1.5, instructor: '' });
+        setTutState({ quantity: 0, duration: 1.0, instructor: '', dayNight: 'Day' });
+        setFtdState({ quantity: 0, duration: 1.5, instructor: '', dayNight: 'Day' });
+        setFlightState({ quantity: 0, duration: 1.5, instructor: '', dayNight: 'Day' });
     } else {
         setValidationMessage("Please enter a quantity, duration, and instructor for at least one event type.");
     }
@@ -257,8 +260,8 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
   const InputRow: React.FC<{
     fieldId: string;
     label: string;
-    state: { quantity: number; duration: number; instructor: string; };
-    setState: React.Dispatch<React.SetStateAction<{ quantity: number; duration: number; instructor: string; }>>;
+    state: RemedialRowState;
+    setState: React.Dispatch<React.SetStateAction<RemedialRowState>>;
   }> = ({ fieldId, label, state, setState }) => (
     <div className="flex items-end space-x-2">
         <div className="w-28 flex-shrink-0">
@@ -271,6 +274,17 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
         <div style={{ width: '6rem' }}>
             <label className="block text-xs font-medium text-gray-400">Dur (hrs)</label>
             <input type="number" step="0.1" min="0" value={state.duration} onChange={e => setState(p => ({ ...p, duration: parseFloat(e.target.value) || 0 }))} className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm" />
+        </div>
+        <div style={{ width: '7rem' }}>
+            <label className="block text-xs font-medium text-gray-400">Day/Night</label>
+            <select
+              value={state.dayNight}
+              onChange={e => setState(p => ({ ...p, dayNight: e.target.value as RemedialDayNight }))}
+              className="mt-1 w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white text-sm"
+            >
+              <option value="Day">Day</option>
+              <option value="Night">Night</option>
+            </select>
         </div>
         <div className="flex-grow relative">
             <label className="block text-xs font-medium text-gray-400">Instructor</label>
@@ -412,7 +426,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
                         <div key={event.id} className="flex items-center justify-between p-2 bg-gray-700/50 rounded-md text-sm">
                             <div className="flex items-center space-x-3">
                                 <span className="font-bold text-sky-400 w-24">{event.code}</span>
-                                <span className="text-gray-300">{event.duration.toFixed(1)} hrs with {(event.instructor || '').split(',')[0]}</span>
+                                <span className="text-gray-300">{event.duration.toFixed(1)} hrs · {event.dayNight} · {(event.instructor || '').split(',')[0]}</span>
                             </div>
                             <button onClick={() => handleRemoveEvent(event.id)} className="p-1 text-gray-400 hover:text-red-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd" /></svg></button>
                         </div>
