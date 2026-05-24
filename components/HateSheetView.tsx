@@ -226,6 +226,27 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         return <span className={`px-3 py-1 text-sm font-bold rounded-full ${colorClass}`}>{score}</span>;
     };
 
+    const getStatusDisplay = (item: (typeof combinedHistory)[0]) => {
+        if (item.type !== 'PT-051') {
+            return <span className="text-sm text-gray-500">-</span>;
+        }
+
+        const status = item.dcoResult || 'None';
+        const statusClass = status === 'DCO'
+            ? 'bg-green-500/20 text-green-300'
+            : status === 'DPCO'
+                ? 'bg-amber-500/20 text-amber-300'
+                : status === 'DNCO'
+                    ? 'bg-red-500/20 text-red-300'
+                    : 'bg-gray-600/40 text-gray-300';
+
+        return (
+            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`}>
+                {status}
+            </span>
+        );
+    };
+
     const handleRowClick = (item: (typeof combinedHistory)[0]) => {
         // Always navigate to PT-051 for all events (including ground events)
         if (item.type === 'LMP Score') {
@@ -478,6 +499,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Date</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Event</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Type</th>
+                                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                                     <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider">Overall Score</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Instructor</th>
                                     
@@ -524,6 +546,9 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'LMP Score' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>
                                                     {item.type}
                                                 </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                {getStatusDisplay(item)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-center">
                                                 {getScoreDisplay(item)}

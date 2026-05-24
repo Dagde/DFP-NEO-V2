@@ -11125,7 +11125,7 @@ app.get('/api/trainee-performance', async (req, res) => {
     const offsetVal = parseInt(offset) || 0;
 
     const rows = await db.$queryRawUnsafe(
-      `SELECT * FROM "TraineePerformance" ${whereClause} ORDER BY "date" DESC, "eventSequence" ASC LIMIT ${limitVal} OFFSET ${offsetVal}`,
+      `SELECT * FROM "TraineePerformance" ${whereClause} ORDER BY "date" DESC, "eventSequence" ASC NULLS LAST, "id" ASC LIMIT ${limitVal} OFFSET ${offsetVal}`,
       ...params
     );
 

@@ -9446,6 +9446,14 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     }
     return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-3 py-1 text-sm font-bold rounded-full ${colorClass}`, children: score });
   };
+  const getStatusDisplay = (item) => {
+    if (item.type !== "PT-051") {
+      return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm text-gray-500", children: "-" });
+    }
+    const status = item.dcoResult || "None";
+    const statusClass = status === "DCO" ? "bg-green-500/20 text-green-300" : status === "DPCO" ? "bg-amber-500/20 text-amber-300" : status === "DNCO" ? "bg-red-500/20 text-red-300" : "bg-gray-600/40 text-gray-300";
+    return /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`, children: status });
+  };
   const handleRowClick = (item) => {
     if (item.type === "LMP Score") {
       const existingAssessment = assessments2.find(
@@ -9581,6 +9589,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Date" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Event" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Type" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Status" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Overall Score" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("th", { scope: "col", className: "px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider", children: "Instructor" })
           ] }) }),
@@ -9603,6 +9612,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-400", children: item.date }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-semibold text-sky-400", children: item.type === "LMP Score" ? item.event : item.flightNumber }) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === "LMP Score" ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"}`, children: item.type }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getStatusDisplay(item) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-center", children: getScoreDisplay(item) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-6 py-4 whitespace-nowrap text-sm text-gray-300", children: item.type === "LMP Score" ? item.instructor : item.instructorName })
               ]
