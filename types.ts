@@ -231,9 +231,6 @@ export interface ScheduleEvent {
   cancelledBy?: string;
   cancelledAt?: string;
   dayNight?: 'Day' | 'Night' | 'Day/Night';
-  requiredInstructor?: string;
-  forcedInstructorConflict?: boolean;
-  forcedInstructorConflictDetails?: string[];
 }
 
 export interface EventSegment extends ScheduleEvent {
