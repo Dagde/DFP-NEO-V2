@@ -71351,11 +71351,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const eventCode = event.flightNumber || "";
     const instructorName = (event.instructor || "").trim();
     if (!traineeName || !eventCode || !instructorName) return;
+    const dayNight = event.dayNight || "";
+    if (dayNight === "Night") {
+      markIntendedNightPerson(instructorName);
+    }
     remedialInstructorOverrides.set(remedialInstructorOverrideKey(traineeName, eventCode), {
       trainee: traineeName,
       eventCode,
       instructor: instructorName,
-      priorityEventId: event.id
+      priorityEventId: event.id,
+      dayNight
     });
   });
   const getRemedialInstructorOverride = (traineeName, eventCode) => remedialInstructorOverrides.get(remedialInstructorOverrideKey(traineeName, eventCode))?.instructor || "";

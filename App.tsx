@@ -2226,6 +2226,7 @@ function generateDfpInternal(
         eventCode: string;
         instructor: string;
         priorityEventId: string;
+        dayNight?: string;
     }>();
 
     highestPriorityEvents.forEach(event => {
@@ -2234,11 +2235,16 @@ function generateDfpInternal(
         const eventCode = event.flightNumber || '';
         const instructorName = (event.instructor || '').trim();
         if (!traineeName || !eventCode || !instructorName) return;
+        const dayNight = (event as any).dayNight || '';
+        if (dayNight === 'Night') {
+            markIntendedNightPerson(instructorName);
+        }
         remedialInstructorOverrides.set(remedialInstructorOverrideKey(traineeName, eventCode), {
             trainee: traineeName,
             eventCode,
             instructor: instructorName,
             priorityEventId: event.id,
+            dayNight,
         });
     });
 
