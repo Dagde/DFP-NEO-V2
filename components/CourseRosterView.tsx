@@ -12,6 +12,7 @@ import DeleteTraineeConfirmation from './DeleteTraineeConfirmation';
 import CourseEditFlyout from './CourseEditFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -61,6 +62,7 @@ interface CourseRosterViewProps {
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
+    trainingReportTerminology?: TrainingReportTerminology;
 }
 
 const generateNewTraineeTemplate = (): Trainee => ({
@@ -136,6 +138,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
+    trainingReportTerminology,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [view, setView] = useState<'active' | 'archived'>('active');
@@ -494,6 +497,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     currentUserName={currentUserName}
                     resourceDisplayNames={resourceDisplayNames}
                     personnelDisplaySettings={personnelDisplaySettings}
+                    trainingReportTerminology={trainingReportTerminology}
                     pt051Assessments={pt051Assessments}
                     pt051PerformanceLoading={pt051PerformanceLoading}
                     traineeLMPs={traineeLMPs}

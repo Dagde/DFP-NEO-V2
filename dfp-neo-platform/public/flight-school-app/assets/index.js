@@ -1623,7 +1623,7 @@ const PLATFORM_PERMISSION_CATALOG = [
       ["settings.schedulingRules.edit", "Edit scheduling rules"],
       ["settings.userAccess.edit", "Edit user permissions"],
       ["settings.platform.edit", "Edit platform configuration"],
-      ["settings.rankTerminology.edit", "Edit rank and terminology settings"],
+      ["settings.rankTerminology.edit", "Edit rank, terminology and label settings"],
       ["settings.superAdmin", "Super Admin: unrestricted platform access"]
     ]
   }
@@ -1943,7 +1943,7 @@ const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   ftd: "FTD",
   cpt: "CPT"
 };
-const cleanLabel = (value, fallback) => {
+const cleanLabel$1 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
@@ -1951,9 +1951,9 @@ const cleanLabel = (value, fallback) => {
 const getResourceDisplayNames = (resourcePool) => {
   const settings = resourcePool?.settings || {};
   return {
-    aircraft: cleanLabel(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
-    ftd: cleanLabel(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
-    cpt: cleanLabel(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
+    aircraft: cleanLabel$1(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
+    ftd: cleanLabel$1(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
+    cpt: cleanLabel$1(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
   };
 };
 const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES) => {
@@ -2153,6 +2153,25 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
     }
   }
   return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
+};
+const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
+  name: "PT-051",
+  shortName: "Training Report"
+};
+const cleanLabel = (value, fallback) => {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+};
+const normaliseTrainingReportTerminology = (input) => ({
+  name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name),
+  shortName: cleanLabel(input?.shortName, DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName)
+});
+const getTrainingReportTerminology = (config) => {
+  const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  const settings = activeOrganisation?.settings || {};
+  return normaliseTrainingReportTerminology(settings.trainingReportTerminology || null);
 };
 const CALLSIGN_LIMIT = 50;
 const norm = (value) => String(value || "").trim().toUpperCase();
@@ -10195,7 +10214,8 @@ const TraineeProfileFlyout = ({
   onGeneratePt051ForItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS
+  personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY
 }) => {
   const [isEditing, setIsEditing] = reactExports.useState(isCreating);
   const { isFrozen } = useSystemFreeze();
@@ -10218,6 +10238,13 @@ const TraineeProfileFlyout = ({
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
   const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? " active" : ""}`;
+  const trainingReportShortLabel = (trainingReportTerminology?.shortName || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName;
+  const trainingReportButtonLines = trainingReportShortLabel.split(/\s+/).filter(Boolean);
+  const trainingReportButtonLabel = trainingReportButtonLines.length > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    trainingReportButtonLines[0],
+    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+    trainingReportButtonLines.slice(1).join(" ")
+  ] }) : trainingReportShortLabel;
   const contentScrollRef = reactExports.useRef(null);
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const handleTabClick = (tab) => setActiveTab((prev) => {
@@ -11248,11 +11275,15 @@ const TraineeProfileFlyout = ({
           !isEditing && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("unavailable"), className: tabBtnClass("unavailable"), children: "Unavail­able" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("currency"), className: tabBtnClass("currency"), children: "Currency" }),
-            canViewPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleHateSheetClick, className: tabBtnClass("hatesheet"), children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
-              "Training",
-              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-              "Report"
-            ] }) }),
+            canViewPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                onClick: handleHateSheetClick,
+                className: tabBtnClass("hatesheet"),
+                title: trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name,
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "leading-tight", children: trainingReportButtonLabel })
+              }
+            ),
             canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
             canAddRemedialPackage && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => onAddRemedialPackage(trainee), className: btnClass, children: "Add Remedial Package" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => handleTabClick("logbook"), className: tabBtnClass("logbook"), children: "Logbook" }),
@@ -11878,7 +11909,8 @@ const CourseRosterView = ({
   onGeneratePt051ForItem,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
-  personnelDisplaySettings
+  personnelDisplaySettings,
+  trainingReportTerminology
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [view2, setView] = reactExports.useState("active");
@@ -12167,6 +12199,7 @@ const CourseRosterView = ({
         currentUserName,
         resourceDisplayNames,
         personnelDisplaySettings,
+        trainingReportTerminology,
         pt051Assessments,
         pt051PerformanceLoading,
         traineeLMPs,
@@ -28157,6 +28190,7 @@ const TraineeView = (props) => {
           currentUserName: props.currentUserName,
           resourceDisplayNames: props.resourceDisplayNames,
           personnelDisplaySettings: props.personnelDisplaySettings,
+          trainingReportTerminology: props.trainingReportTerminology,
           pt051Assessments: props.pt051Assessments,
           pt051PerformanceLoading: props.pt051PerformanceLoading,
           userProfile: props.userProfile,
@@ -48206,7 +48240,8 @@ const PhraseSelector = ({ element, onClose, onInsert, phraseBank }) => {
   ] }) });
 };
 const ai = new GoogleGenAI({ apiKey: "" });
-const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI" }) => {
+const PT051View = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = "QFI", trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+  const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
   const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = reactExports.useState(false);
   const { checkAndWarn } = useSystemFreeze$1();
   const [isDirty, setIsDirty] = reactExports.useState(false);
@@ -48568,7 +48603,7 @@ ${commentFields[key]}`).join("\n\n");
   const handleSave = async (isAutoSave = false) => {
     if (!canEditPt051) {
       if (!isAutoSave) {
-        await showDarkAlert("Your permission profile allows you to view this PT-051, but not edit or save it.", "Access Denied", "error");
+        await showDarkAlert(`Your permission profile allows you to view this ${trainingReportName}, but not edit or save it.`, "Access Denied", "error");
       }
       return false;
     }
@@ -48576,7 +48611,7 @@ ${commentFields[key]}`).join("\n\n");
     if (_freezeRaw) {
       const _freeze = JSON.parse(_freezeRaw);
       if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
-        await showDarkAlert("System is currently frozen. PT-051 entries are not permitted during a system freeze.", "System Frozen", "error");
+        await showDarkAlert(`System is currently frozen. ${trainingReportName} entries are not permitted during a system freeze.`, "System Frozen", "error");
         return false;
       }
     }
@@ -48613,13 +48648,13 @@ ${commentFields[key]}`).join("\n\n");
   };
   const handleDeleteAssessment = async () => {
     if (!canEditPt051) {
-      await showDarkAlert("Your permission profile does not allow PT-051 deletion.", "Access Denied", "error");
+      await showDarkAlert(`Your permission profile does not allow ${trainingReportName} deletion.`, "Access Denied", "error");
       return;
     }
     await confirmDeleteAssessment();
   };
   const confirmDeleteAssessment = async () => {
-    const confirmMessage = `Are you sure you want to delete this PT-051 assessment?
+    const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?
 
 Trainee: ${assessment.traineeFullName}
 Date: ${assessment.date}
@@ -48739,7 +48774,7 @@ This action cannot be undone.`;
         initialAssessment && initialAssessment.id && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: () => {
           console.log("Editing mode enabled for PT-051:", initialAssessment.id);
         }, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Edit" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : "Your permission profile does not allow PT-051 editing", className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleManualSaveAndExit, disabled: !canEditPt051, title: canEditPt051 ? void 0 : `Your permission profile does not allow ${trainingReportName} editing`, className: `w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? "opacity-50 cursor-not-allowed" : ""}`, children: "Save" }),
         assessment.id && onDeleteAssessment && canEditPt051 && /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -48749,7 +48784,7 @@ This action cannot be undone.`;
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onBack, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Back" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "PT-051 Assessment" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: `${trainingReportName} Assessment` })
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-4 md:p-6 w-full max-w-full mx-auto", children: [
@@ -58625,8 +58660,8 @@ const PlatformConfigurationSettings = ({
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
     const password = await showDarkPrompt({
-      title: "Edit Rank & Terminology",
-      message: "Enter your password to edit Rank & Terminology.",
+      title: "Edit Rank, Terminology & Labels",
+      message: "Enter your password to edit Rank, Terminology & Labels.",
       inputLabel: "Password",
       inputType: "password",
       inputPlaceholder: "Enter password",
@@ -58649,13 +58684,13 @@ const PlatformConfigurationSettings = ({
       });
       const verifyData = await verifyResp.json().catch(() => ({}));
       if (!verifyResp.ok || !verifyData.valid) {
-        setError("Rank & Terminology editing was not unlocked. The password was not accepted.");
+        setError("Rank, Terminology & Labels editing was not unlocked. The password was not accepted.");
         return;
       }
       setRankTerminologyUnlocked(true);
-      onShowSuccess("Rank & Terminology editing unlocked.");
+      onShowSuccess("Rank, Terminology & Labels editing unlocked.");
     } catch (err) {
-      setError(err?.message || "Could not verify password for Rank & Terminology editing.");
+      setError(err?.message || "Could not verify password for Rank, Terminology & Labels editing.");
     }
   };
   reactExports.useEffect(() => {
@@ -58730,6 +58765,9 @@ const PlatformConfigurationSettings = ({
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null
   );
+  const trainingReportTerminology = normaliseTrainingReportTerminology(
+    primaryOrganisationSettings.trainingReportTerminology || null
+  );
   const operationalSignals = [
     {
       label: "Support owner",
@@ -58796,6 +58834,15 @@ const PlatformConfigurationSettings = ({
       ...settings,
       personnelDisplaySettings: normalisePersonnelDisplaySettings({
         ...settings.personnelDisplaySettings || settings.personnelSettings || {},
+        ...changes
+      })
+    }));
+  };
+  const updateTrainingReportTerminology = (changes) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      trainingReportTerminology: normaliseTrainingReportTerminology({
+        ...settings.trainingReportTerminology || {},
         ...changes
       })
     }));
@@ -59934,8 +59981,8 @@ const PlatformConfigurationSettings = ({
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         SectionHeader,
         {
-          title: "Rank & Terminology",
-          subtitle: "Configure personnel display order and local instructor terminology without changing internal role codes.",
+          title: "Rank, Terminology & Labels",
+          subtitle: "Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes.",
           action: canUnlockRankTerminology ? rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             "button",
             {
@@ -59956,7 +60003,7 @@ const PlatformConfigurationSettings = ({
         }
       ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
-        !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank & Terminology is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank & Terminology is locked. Press Edit and confirm your password before changing rank order or terminology." }) : null,
+        !hasRankTerminologyEditPermission ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80", children: "Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited." }) : !rankTerminologyUnlocked ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80", children: "Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels." }) : null,
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             SelectField,
@@ -60004,6 +60051,28 @@ const PlatformConfigurationSettings = ({
                 });
               },
               info: "Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Training Report Name",
+              value: trainingReportTerminology.name,
+              disabled: !canEditRankTerminology,
+              onChange: (value) => updateTrainingReportTerminology({ name: value }),
+              info: "The organisation-specific name for the trainee assessment form. Examples: PT-051, Training Assessment, Flight Assessment Report."
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Field,
+            {
+              label: "Training Report Short Label",
+              value: trainingReportTerminology.shortName,
+              disabled: !canEditRankTerminology,
+              onChange: (value) => updateTrainingReportTerminology({ shortName: value }),
+              info: "The compact label used where space is tight, such as Trainee Profile action buttons. Example: Training Report."
             }
           )
         ] }),
@@ -60882,7 +60951,7 @@ const sectionLabels = {
   "platform-operational-runbook": "Operational Runbook",
   "platform-licensing": "Licensing & Deployment",
   "platform-permission-profiles": "Permission Profiles",
-  "platform-rank-terminology": "Rank & Terminology",
+  "platform-rank-terminology": "Rank, Terminology & Labels",
   "platform-user-access": "User Access Scopes",
   "platform-scheduling-rule-sets": "Enterprise Rule Sets",
   "appearance": "App Appearance",
@@ -75594,6 +75663,10 @@ const App = () => {
     () => getPersonnelDisplaySettings(platformConfig),
     [platformConfig]
   );
+  const trainingReportTerminology = reactExports.useMemo(
+    () => getTrainingReportTerminology(platformConfig),
+    [platformConfig]
+  );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const formatResourceDisplayLabel = reactExports.useCallback(
     (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
@@ -82886,6 +82959,7 @@ ${conflictLines.join("\n")}${moreText}`,
             currentUserName,
             resourceDisplayNames,
             personnelDisplaySettings,
+            trainingReportTerminology,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2
@@ -83013,6 +83087,7 @@ ${conflictLines.join("\n")}${moreText}`,
             currentUserName,
             resourceDisplayNames,
             personnelDisplaySettings,
+            trainingReportTerminology,
             pt051Assessments,
             pt051PerformanceLoading,
             userProfile: currentUser2
@@ -83928,6 +84003,7 @@ ${conflictLines.join("\n")}${moreText}`,
               event: eventForPt051,
               initialAssessment: existingAssessment,
               instructorLabel,
+              trainingReportTerminology,
               onBack: () => {
                 setEventForPt051(null);
                 openTraineeProfileTab(selectedTraineeForHateSheet, "hatesheet");

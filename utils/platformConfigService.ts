@@ -128,7 +128,7 @@ export const PLATFORM_PERMISSION_CATALOG: PlatformPermissionCatalogGroup[] = [
       ['settings.schedulingRules.edit', 'Edit scheduling rules'],
       ['settings.userAccess.edit', 'Edit user permissions'],
       ['settings.platform.edit', 'Edit platform configuration'],
-      ['settings.rankTerminology.edit', 'Edit rank and terminology settings'],
+      ['settings.rankTerminology.edit', 'Edit rank, terminology and label settings'],
       ['settings.superAdmin', 'Super Admin: unrestricted platform access'],
     ],
   },

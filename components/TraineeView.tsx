@@ -4,6 +4,7 @@ import CourseRosterView from './CourseRosterView';
 import TraineeScheduleView from './TraineeScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
+import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -53,6 +54,7 @@ interface TraineeViewProps {
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
+  trainingReportTerminology?: TrainingReportTerminology;
 
   // Props for TraineeScheduleView
   date: string;
@@ -152,6 +154,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             currentUserName={props.currentUserName}
             resourceDisplayNames={props.resourceDisplayNames}
             personnelDisplaySettings={props.personnelDisplaySettings}
+            trainingReportTerminology={props.trainingReportTerminology}
             pt051Assessments={props.pt051Assessments}
             pt051PerformanceLoading={props.pt051PerformanceLoading}
             userProfile={props.userProfile}

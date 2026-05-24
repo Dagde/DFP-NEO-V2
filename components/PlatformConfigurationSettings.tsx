@@ -10,6 +10,10 @@ import {
   parseRankOrderText,
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
+import {
+  normaliseTrainingReportTerminology,
+  type TrainingReportTerminology,
+} from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
 import { showDarkPrompt } from './DarkMessageModal';
 
@@ -653,8 +657,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const unlockRankTerminology = async () => {
     if (!canUnlockRankTerminology) return;
     const password = await showDarkPrompt({
-      title: 'Edit Rank & Terminology',
-      message: 'Enter your password to edit Rank & Terminology.',
+      title: 'Edit Rank, Terminology & Labels',
+      message: 'Enter your password to edit Rank, Terminology & Labels.',
       inputLabel: 'Password',
       inputType: 'password',
       inputPlaceholder: 'Enter password',
@@ -677,13 +681,13 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       });
       const verifyData = await verifyResp.json().catch(() => ({}));
       if (!verifyResp.ok || !verifyData.valid) {
-        setError('Rank & Terminology editing was not unlocked. The password was not accepted.');
+        setError('Rank, Terminology & Labels editing was not unlocked. The password was not accepted.');
         return;
       }
       setRankTerminologyUnlocked(true);
-      onShowSuccess('Rank & Terminology editing unlocked.');
+      onShowSuccess('Rank, Terminology & Labels editing unlocked.');
     } catch (err: any) {
-      setError(err?.message || 'Could not verify password for Rank & Terminology editing.');
+      setError(err?.message || 'Could not verify password for Rank, Terminology & Labels editing.');
     }
   };
 
@@ -765,6 +769,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const personnelDisplaySettings = normalisePersonnelDisplaySettings(
     primaryOrganisationSettings.personnelDisplaySettings || primaryOrganisationSettings.personnelSettings || null,
   );
+  const trainingReportTerminology = normaliseTrainingReportTerminology(
+    primaryOrganisationSettings.trainingReportTerminology || null,
+  );
   const operationalSignals = [
     {
       label: 'Support owner',
@@ -843,6 +850,16 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
       ...settings,
       personnelDisplaySettings: normalisePersonnelDisplaySettings({
         ...(settings.personnelDisplaySettings || settings.personnelSettings || {}),
+        ...changes,
+      }),
+    }));
+  };
+
+  const updateTrainingReportTerminology = (changes: Partial<TrainingReportTerminology>) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      trainingReportTerminology: normaliseTrainingReportTerminology({
+        ...(settings.trainingReportTerminology || {}),
         ...changes,
       }),
     }));
@@ -2128,8 +2145,8 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-rank-terminology" className={getSectionClass('platform-rank-terminology')}>
         <SectionHeader
-          title="Rank & Terminology"
-          subtitle="Configure personnel display order and local instructor terminology without changing internal role codes."
+          title="Rank, Terminology & Labels"
+          subtitle="Configure personnel display order, local role terminology and customer-facing report labels without changing internal codes."
           action={canUnlockRankTerminology ? (
             rankTerminologyUnlocked ? (
               <button
@@ -2153,11 +2170,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         <div className="space-y-4 p-4">
           {!hasRankTerminologyEditPermission ? (
             <div className="rounded border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-50/80">
-              Rank & Terminology is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited.
+              Rank, Terminology & Labels is read-only for your permission profile. Grant “Edit rank and terminology settings” in Permission Profiles before this section can be edited.
             </div>
           ) : !rankTerminologyUnlocked ? (
             <div className="rounded border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50/80">
-              Rank & Terminology is locked. Press Edit and confirm your password before changing rank order or terminology.
+              Rank, Terminology & Labels is locked. Press Edit and confirm your password before changing rank order, terminology or labels.
             </div>
           ) : null}
           <div className="grid gap-3 lg:grid-cols-2">
@@ -2196,6 +2213,22 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
                 });
               }}
               info="Choose Use staff rank order when staff and trainees share the same rank/title priority. Choose Use separate trainee rank order if trainees need their own ordering."
+            />
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Field
+              label="Training Report Name"
+              value={trainingReportTerminology.name}
+              disabled={!canEditRankTerminology}
+              onChange={(value) => updateTrainingReportTerminology({ name: value })}
+              info="The organisation-specific name for the trainee assessment form. Examples: PT-051, Training Assessment, Flight Assessment Report."
+            />
+            <Field
+              label="Training Report Short Label"
+              value={trainingReportTerminology.shortName}
+              disabled={!canEditRankTerminology}
+              onChange={(value) => updateTrainingReportTerminology({ shortName: value })}
+              info="The compact label used where space is tight, such as Trainee Profile action buttons. Example: Training Report."
             />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

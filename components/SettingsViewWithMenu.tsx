@@ -214,7 +214,7 @@ const sectionLabels: Record<SettingsMenuSection, string> = {
     'platform-operational-runbook': 'Operational Runbook',
     'platform-licensing': 'Licensing & Deployment',
     'platform-permission-profiles': 'Permission Profiles',
-    'platform-rank-terminology': 'Rank & Terminology',
+    'platform-rank-terminology': 'Rank, Terminology & Labels',
     'platform-user-access': 'User Access Scopes',
     'platform-scheduling-rule-sets': 'Enterprise Rule Sets',
     'appearance': 'App Appearance',

@@ -5,6 +5,10 @@ import AuditButton from './AuditButton';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { showDarkAlert, showDarkConfirm } from './DarkMessageModal';
 import { useSystemFreeze } from '../context/SystemFreezeContext';
+import {
+    DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+    type TrainingReportTerminology,
+} from '../utils/trainingReportTerminology';
 
 interface PT051ViewProps {
     trainee: Trainee;
@@ -24,6 +28,7 @@ interface PT051ViewProps {
     currentUserPin: string;
     canEditPt051?: boolean;
     instructorLabel?: string;
+    trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
 }
 
 const PT051_STRUCTURE = [
@@ -201,7 +206,8 @@ const PhraseSelector: React.FC<PhraseSelectorProps> = ({ element, onClose, onIns
 // FIX: Moved GoogleGenAI instance creation outside the component to prevent re-initialization on re-renders.
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
 
-const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI' }) => {
+const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, onDeleteAssessment, onEventUpdate, initialAssessment, instructors, pt051Assessments, events, lmpScores, syllabusDetails, registerDirtyCheck, phraseBank, currentUserPin, canEditPt051 = true, instructorLabel = 'QFI', trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+    const trainingReportName = (trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name;
     const [showDoubleMarginalWarning, setShowDoubleMarginalWarning] = useState(false);
     const { checkAndWarn } = useSystemFreeze();
     const [isDirty, setIsDirty] = useState(false);
@@ -630,7 +636,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
     const handleSave = async (isAutoSave = false): Promise<boolean> => {
         if (!canEditPt051) {
             if (!isAutoSave) {
-                await showDarkAlert('Your permission profile allows you to view this PT-051, but not edit or save it.', 'Access Denied', 'error');
+                await showDarkAlert(`Your permission profile allows you to view this ${trainingReportName}, but not edit or save it.`, 'Access Denied', 'error');
             }
             return false;
         }
@@ -639,7 +645,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
         if (_freezeRaw) {
             const _freeze = JSON.parse(_freezeRaw);
             if (_freeze.isFrozen && !_freeze.allowedActions?.pt051Entries) {
-                await showDarkAlert('System is currently frozen. PT-051 entries are not permitted during a system freeze.', 'System Frozen', 'error');
+                await showDarkAlert(`System is currently frozen. ${trainingReportName} entries are not permitted during a system freeze.`, 'System Frozen', 'error');
                 return false;
             }
         }
@@ -682,7 +688,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const handleDeleteAssessment = async () => {
         if (!canEditPt051) {
-            await showDarkAlert('Your permission profile does not allow PT-051 deletion.', 'Access Denied', 'error');
+            await showDarkAlert(`Your permission profile does not allow ${trainingReportName} deletion.`, 'Access Denied', 'error');
             return;
         }
         await confirmDeleteAssessment();
@@ -690,7 +696,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
 
     const confirmDeleteAssessment = async () => {
         // Simple confirmation - no PIN required
-        const confirmMessage = `Are you sure you want to delete this PT-051 assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${assessment.date}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
+        const confirmMessage = `Are you sure you want to delete this ${trainingReportName} assessment?\n\nTrainee: ${assessment.traineeFullName}\nDate: ${assessment.date}\nGrade: ${assessment.overallGrade || 'N/A'}\n\nThis action cannot be undone.`;
         
         console.log('🗑️ PT051View: Delete button clicked');
         // Use custom dark confirm modal instead of browser default
@@ -804,7 +810,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                             Edit
                         </button>
                     )}
-                    <button onClick={handleManualSaveAndExit} disabled={!canEditPt051} title={canEditPt051 ? undefined : 'Your permission profile does not allow PT-051 editing'} className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <button onClick={handleManualSaveAndExit} disabled={!canEditPt051} title={canEditPt051 ? undefined : `Your permission profile does not allow ${trainingReportName} editing`} className={`w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed ${!canEditPt051 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         Save
                     </button>
                     {assessment.id && onDeleteAssessment && canEditPt051 && (
@@ -818,7 +824,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
                     <button onClick={onBack} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">
                         Back
                     </button>
-                    <AuditButton pageName="PT-051 Assessment" />
+                    <AuditButton pageName={`${trainingReportName} Assessment`} />
                 </div>
             </div>
 

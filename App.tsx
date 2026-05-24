@@ -36,6 +36,7 @@ import {
     comparePeopleByConfiguredRank,
     getPersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
+import { getTrainingReportTerminology } from './utils/trainingReportTerminology';
 import {
     getStaffCallsignAssignments,
     getStaffCallsignKey,
@@ -7900,6 +7901,10 @@ const App: React.FC = () => {
     );
     const personnelDisplaySettings = useMemo(
         () => getPersonnelDisplaySettings(platformConfig),
+        [platformConfig]
+    );
+    const trainingReportTerminology = useMemo(
+        () => getTrainingReportTerminology(platformConfig),
         [platformConfig]
     );
     const instructorLabel = personnelDisplaySettings.instructorLabel;
@@ -17185,6 +17190,7 @@ updates.forEach(update => {
                             currentUserName={currentUserName}
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
+                            trainingReportTerminology={trainingReportTerminology}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
@@ -17328,6 +17334,7 @@ updates.forEach(update => {
                             currentUserName={currentUserName}
                             resourceDisplayNames={resourceDisplayNames}
                             personnelDisplaySettings={personnelDisplaySettings}
+                            trainingReportTerminology={trainingReportTerminology}
                             pt051Assessments={pt051Assessments}
                             pt051PerformanceLoading={pt051PerformanceLoading}
                             userProfile={currentUser}
@@ -18267,6 +18274,7 @@ updates.forEach(update => {
                         event={eventForPt051}
                         initialAssessment={existingAssessment}
                         instructorLabel={instructorLabel}
+                        trainingReportTerminology={trainingReportTerminology}
                         onBack={() => {
                             setEventForPt051(null);
                             openTraineeProfileTab(selectedTraineeForHateSheet, 'hatesheet');

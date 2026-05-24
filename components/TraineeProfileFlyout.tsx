@@ -20,6 +20,10 @@ import {
   type PersonnelDisplaySettings,
 } from '../utils/personnelDisplaySettings';
 import {
+  DEFAULT_TRAINING_REPORT_TERMINOLOGY,
+  type TrainingReportTerminology,
+} from '../utils/trainingReportTerminology';
+import {
   getVisiblePermissions,
   isTraineeSuspended,
   setTraineeSuspendedMarker,
@@ -68,6 +72,7 @@ interface TraineeProfileFlyoutProps {
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
+  trainingReportTerminology?: Partial<TrainingReportTerminology> | null;
 }
 
 const InfoRow: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -301,6 +306,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
+  trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY,
 }) => {
     const [isEditing, setIsEditing] = useState(isCreating);
     const { isFrozen } = useSystemFreeze();
@@ -335,6 +341,16 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
+    const trainingReportShortLabel = (trainingReportTerminology?.shortName || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName;
+    const trainingReportButtonLines = trainingReportShortLabel.split(/\s+/).filter(Boolean);
+    const trainingReportButtonLabel = trainingReportButtonLines.length > 1
+      ? (
+        <>
+          {trainingReportButtonLines[0]}<br />
+          {trainingReportButtonLines.slice(1).join(' ')}
+        </>
+      )
+      : trainingReportShortLabel;
     // Ref for scrollable content area - used to scroll to top when a tab opens
     const contentScrollRef = useRef<HTMLDivElement>(null);
     const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
@@ -1543,8 +1559,12 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                           <button onClick={() => handleTabClick('unavailable')} className={tabBtnClass('unavailable')}>Unavail&shy;able</button>
                           <button onClick={() => handleTabClick('currency')} className={tabBtnClass('currency')}>Currency</button>
                           {canViewPt051 && (
-                            <button onClick={handleHateSheetClick} className={tabBtnClass('hatesheet')}>
-                              <span className="leading-tight">Training<br />Report</span>
+                            <button
+                              onClick={handleHateSheetClick}
+                              className={tabBtnClass('hatesheet')}
+                              title={trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name}
+                            >
+                              <span className="leading-tight">{trainingReportButtonLabel}</span>
                             </button>
                           )}
                           {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}
