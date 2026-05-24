@@ -11,7 +11,7 @@ interface PT051ViewProps {
     event: ScheduleEvent;
     onBack: () => void;
     onSave: (assessment: Pt051Assessment, isAutoSave?: boolean) => void | Promise<void>;
-    onDeleteAssessment?: (assessmentId: string) => void;
+    onDeleteAssessment?: (assessmentId: string) => void | Promise<void>;
     onEventUpdate?: (event: ScheduleEvent) => void;
     initialAssessment?: Pt051Assessment;
     instructors: Instructor[];
@@ -698,7 +698,7 @@ const PT051View: React.FC<PT051ViewProps> = ({ trainee, event, onBack, onSave, o
             console.log('✅ PT051View: User confirmed deletion');
             if (onDeleteAssessment && assessment.id) {
                 console.log('🗑️ PT051View: Calling onDeleteAssessment with ID:', assessment.id);
-                onDeleteAssessment(assessment.id);
+                await onDeleteAssessment(assessment.id);
                 onBack();
             } else {
                 console.log('❌ PT051View: onDeleteAssessment or assessment.id is missing');

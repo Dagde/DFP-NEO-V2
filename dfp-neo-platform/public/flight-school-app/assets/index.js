@@ -48627,7 +48627,7 @@ This action cannot be undone.`;
       console.log("✅ PT051View: User confirmed deletion");
       if (onDeleteAssessment && assessment.id) {
         console.log("🗑️ PT051View: Calling onDeleteAssessment with ID:", assessment.id);
-        onDeleteAssessment(assessment.id);
+        await onDeleteAssessment(assessment.id);
         onBack();
       } else {
         console.log("❌ PT051View: onDeleteAssessment or assessment.id is missing");
@@ -83283,19 +83283,44 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
                   return prevEvents;
                 });
               },
-              onDeleteAssessment: (assessmentId) => {
+              onDeleteAssessment: async (assessmentId) => {
                 if (!canEditTraineePt051(selectedTraineeForHateSheet)) {
                   denyPlatformAction("delete PT-051 assessment");
                   return;
                 }
                 console.log("🗑️ App.tsx: onDeleteAssessment called with ID:", assessmentId);
-                const assessmentKey2 = `pt051-${existingAssessment?.eventId || eventForPt051.id}-${selectedTraineeForHateSheet.fullName}`;
+                const deleteEventId = existingAssessment?.eventId || eventForPt051.id || assessmentId;
+                const apiBase2 = getApiBaseUrl();
+                const response = await fetch(`${apiBase2}/trainee-performance/${encodeURIComponent(deleteEventId)}`, {
+                  method: "DELETE"
+                });
+                if (!response.ok) {
+                  const errorText = await response.text().catch(() => "");
+                  await showDarkAlert2(
+                    `PT-051 could not be deleted from the database. It has not been removed locally.
+
+${errorText || `HTTP ${response.status}`}`,
+                    "PT-051 Delete Failed",
+                    "error"
+                  );
+                  throw new Error(errorText || `Failed to delete PT-051 record (${response.status})`);
+                }
+                const assessmentKey2 = `pt051-${deleteEventId}-${selectedTraineeForHateSheet.fullName}`;
                 console.log("🗑️ App.tsx: Deleting assessment with key:", assessmentKey2);
                 const updatedAssessments = new Map(pt051Assessments);
                 const deleted = updatedAssessments.delete(assessmentKey2);
+                Array.from(updatedAssessments.entries()).forEach(([key, assessment]) => {
+                  if (assessment.traineeFullName === selectedTraineeForHateSheet.fullName && (assessment.eventId === deleteEventId || assessment.id === assessmentId)) {
+                    updatedAssessments.delete(key);
+                  }
+                });
                 console.log("🗑️ App.tsx: Assessment deleted from map:", deleted);
                 setPt051Assessments(updatedAssessments);
-                void persistPt051AssessmentsForDate(eventForPt051.date || date, updatedAssessments).catch((err) => console.warn("[PT051] Failed to persist assessment deletion:", err));
+                setLoadedPt051Keys((prev) => {
+                  const updated = new Set(prev);
+                  updated.delete(`${deleteEventId}-${selectedTraineeForHateSheet.fullName}`);
+                  return updated;
+                });
                 console.log("📋 App.tsx: Logging to audit...");
                 logAudit("Performance History", "Delete", `Deleted PT-051 for ${selectedTraineeForHateSheet.fullName} - Event: ${eventForPt051.flightNumber} (${eventForPt051.date})`);
                 console.log("✅ App.tsx: Audit logged successfully");

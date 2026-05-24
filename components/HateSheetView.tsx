@@ -344,8 +344,8 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
         try {
             console.log('🗑️ Starting PT-051 deletion process for:', assessmentToDelete.id);
             
-            // Delete from database first (using the eventId from the assessment)
-            const response = await fetch(`/api/events/${assessmentToDelete.eventId}`, {
+            // Delete from the authoritative PT-051 performance table first.
+            const response = await fetch(`/api/trainee-performance/${encodeURIComponent(assessmentToDelete.eventId)}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
