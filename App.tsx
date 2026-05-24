@@ -9730,6 +9730,131 @@ const App: React.FC = () => {
         void loadPersistedPt051Assessment(selectedTraineeForHateSheet, eventForPt051);
     }, [activeView, eventForPt051, selectedTraineeForHateSheet, loadedPt051Keys, loadPersistedPt051Assessment]);
 
+    const buildPt051EventFromLmpItem = (trainee: Trainee, item: SyllabusItemDetail): ScheduleEvent => {
+        const eventType: ScheduleEvent['type'] =
+            item.type === 'Flight' ? 'flight' :
+            item.type === 'FTD' ? 'ftd' :
+            item.code.includes('CPT') ? 'cpt' :
+            'ground';
+        const eventDate = getLocalDateString();
+        const duration = item.totalEventHours || item.duration || item.flightOrSimHours || 1;
+
+        return {
+            id: `lmp-${(trainee as any).id || trainee.idNumber}-${item.code}`,
+            date: eventDate,
+            type: eventType,
+            instructor: '',
+            student: trainee.fullName,
+            pilot: item.sortieType === 'Solo' ? trainee.fullName : '',
+            flightNumber: item.code,
+            duration,
+            startTime: 8,
+            resourceId: '',
+            color: '',
+            flightType: item.sortieType || 'Dual',
+            locationType: 'Local',
+            origin: '',
+            destination: '',
+            notes: '',
+            crew: '',
+            eventCode: item.code,
+            eventCategory: 'lmp_event',
+        };
+    };
+
+    const handleGeneratePt051FromLmpItem = async (trainee: Trainee, item: SyllabusItemDetail) => {
+        if (!canViewTraineePt051(trainee)) {
+            denyPlatformAction('PT-051 from Individual LMP');
+            return;
+        }
+
+        const eventForAssessment = buildPt051EventFromLmpItem(trainee, item);
+        const existingAssessment = Array.from(pt051Assessments.values()).find(
+            assessment =>
+                assessment.traineeFullName === trainee.fullName &&
+                (
+                    assessment.eventId === eventForAssessment.id ||
+                    assessment.flightNumber === item.code
+                )
+        ) || await loadPersistedPt051Assessment(trainee, eventForAssessment);
+
+        if (existingAssessment) {
+            setSelectedTraineeForHateSheet(trainee);
+            setEventForPt051({
+                ...eventForAssessment,
+                id: existingAssessment.eventId || eventForAssessment.id,
+                date: existingAssessment.date || eventForAssessment.date,
+                instructor: existingAssessment.instructorName || eventForAssessment.instructor,
+                startTime: existingAssessment.startTime ?? eventForAssessment.startTime,
+                duration: existingAssessment.duration ?? eventForAssessment.duration,
+            });
+            await showDarkAlert(
+                `A PT-051 already exists for ${item.code}.\n\nPlease wait while NEO redirects you to the existing PT-051.`,
+                'PT-051 Already Exists',
+                'info',
+                1800
+            );
+            handleNavigation('PT051');
+            return;
+        }
+
+        if (!canEditTraineePt051(trainee)) {
+            denyPlatformAction('generate PT-051 from Individual LMP');
+            return;
+        }
+
+        const newAssessment: Pt051Assessment = {
+            id: `pt051-${eventForAssessment.id}-${trainee.fullName}`,
+            traineeFullName: trainee.fullName,
+            eventId: eventForAssessment.id,
+            flightNumber: item.code,
+            date: eventForAssessment.date,
+            instructorName: eventForAssessment.instructor || '',
+            overallGrade: null,
+            overallResult: null,
+            dcoResult: '',
+            overallComments: '',
+            startTime: eventForAssessment.startTime,
+            duration: eventForAssessment.duration,
+            endTime: eventForAssessment.startTime + eventForAssessment.duration,
+            isCompleted: false,
+            scores: ALL_ELEMENTS.map(element => ({
+                element,
+                grade: null,
+                comment: ''
+            })),
+            groundSchoolAssessment: { isAssessment: false, result: undefined },
+        };
+
+        const assessmentKey = `pt051-${newAssessment.eventId}-${trainee.fullName}`;
+        try {
+            await persistPt051AssessmentRecord(newAssessment);
+            setPt051Assessments(prev => {
+                const updated = new Map(prev);
+                updated.set(assessmentKey, newAssessment);
+                return updated;
+            });
+            setLoadedPt051Keys(prev => {
+                const updated = new Set(prev);
+                updated.add(`${eventForAssessment.id}-${trainee.fullName}`);
+                return updated;
+            });
+            logAudit('Individual LMP', 'Generate', `Generated PT-051 for ${trainee.fullName} - Event: ${item.code} (${eventForAssessment.date})`);
+        } catch (error) {
+            console.warn('[PT051] Failed to persist generated Individual LMP PT-051:', error);
+            await showDarkAlert(
+                `PT-051 was generated locally, but could not be saved to the database.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'PT-051 Save Failed',
+                'error'
+            );
+            return;
+        }
+
+        setSelectedTraineeForHateSheet(trainee);
+        setEventForPt051(eventForAssessment);
+        handleNavigation('PT051');
+    };
+
     const handleViewTraineeLMP = async (trainee: Trainee) => {
         if (!canViewTraineeLmp(trainee)) {
             denyPlatformAction('Individual LMP');
@@ -17448,6 +17573,7 @@ updates.forEach(update => {
                             canOpenPt051={canViewTraineePt051(selectedTraineeForLMP)}
                             onAccessDenied={denyPlatformAction}
                             onDeleteRemedialItem={handleDeleteRemedialLmpItem}
+                            onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
                         />;
                     }
                 }

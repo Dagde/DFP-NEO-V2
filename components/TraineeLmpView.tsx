@@ -18,6 +18,7 @@ interface TraineeLmpViewProps {
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
+  onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
 }
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
@@ -547,6 +548,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     canOpenPt051 = true,
     onAccessDenied,
     onDeleteRemedialItem,
+    onGeneratePt051ForItem,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
@@ -597,6 +599,14 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     >
                         ← Back
                     </button>
+                    {activeTab === 'neo' && selectedItem && onGeneratePt051ForItem && (
+                        <button
+                            onClick={() => onGeneratePt051ForItem(trainee, selectedItem)}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
+                        >
+                            Generate<br />PT-051
+                        </button>
+                    )}
                     <AuditButton pageName="Individual LMP" />
                 </div>
             </div>

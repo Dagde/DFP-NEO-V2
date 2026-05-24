@@ -8,6 +8,7 @@ interface TraineeLmpViewProps {
   traineeLmp: SyllabusItemDetail[];
   scores: Score[];
   onBack: () => void;
+  onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
 }
 
 const DetailCard: React.FC<{ label: string; value: React.ReactNode; className?: string }> = ({ label, value, className = '' }) => (
@@ -133,7 +134,7 @@ const CheckIcon = () => (
 );
 
 
-const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, scores, onBack }) => {
+const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, scores, onBack, onGeneratePt051ForItem }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
 
@@ -182,6 +183,14 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({ trainee, traineeLmp, sc
         >
           ← Back
         </button>
+        {selectedItem && onGeneratePt051ForItem && (
+          <button
+            onClick={() => onGeneratePt051ForItem(trainee, selectedItem)}
+            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed"
+          >
+            Generate<br />PT-051
+          </button>
+        )}
              <AuditButton pageName="Individual LMP" />
            </div>
       </div>
