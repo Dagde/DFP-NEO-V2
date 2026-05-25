@@ -3692,6 +3692,45 @@ const stampMasterLmpItemsForSync = (masterSyllabus) =>
     placementNeedsReview: false,
   }));
 
+const INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC = [
+  'code',
+  'eventDescription',
+  'phase',
+  'module',
+  'type',
+  'sortieType',
+  'dayNight',
+  'methodOfDelivery',
+  'methodOfAssessment',
+  'resourcesPhysical',
+  'resourceNumber',
+  'resourcesHuman',
+  'eventDetailsCommon',
+  'eventDetailsSortie',
+  'flightOrSimHours',
+  'totalEventHours',
+  'duration',
+  'preFlightTime',
+  'postFlightTime',
+  'prerequisites',
+  'prerequisitesGround',
+  'prerequisitesFlying',
+  'location',
+  'twrDiReqd',
+  'cctOnly',
+  'notes',
+];
+
+const getIndividualLmpMasterOverridesForSync = (item) => {
+  if (!item) return {};
+  return INDIVIDUAL_LMP_EDITABLE_FIELDS_FOR_SYNC.reduce((overrides, field) => {
+    if (Object.prototype.hasOwnProperty.call(item, field)) {
+      overrides[field] = item[field];
+    }
+    return overrides;
+  }, {});
+};
+
 const normalizeLmpCompletionKeyForSync = (value) => String(value || '').replace(/\*/g, '').trim();
 const getLmpCompletionKeysForSync = (item) => [
   item?.id,
@@ -3801,6 +3840,10 @@ const mergeIndividualLmpWithMasterForSync = (existingEvents, masterSyllabus, sco
     const existingItem = existingByMasterId.get(getLmpMasterEventId(masterItem));
     return {
       ...masterItem,
+      ...getIndividualLmpMasterOverridesForSync(existingItem),
+      id: masterItem.id,
+      masterEventId: getLmpMasterEventId(masterItem),
+      lmpSource: 'master',
       completedAt: getLmpCompletionTimestampForSync(masterItem, scoreMap),
       userLockedPosition: existingItem?.userLockedPosition,
       orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKeyForSync(index),

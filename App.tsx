@@ -531,6 +531,45 @@ const getFormationEventKey = (item?: Partial<SyllabusItemDetail> | null): string
         .toUpperCase()
         .replace(/\s+/g, '');
 
+const INDIVIDUAL_LMP_EDITABLE_FIELDS: (keyof SyllabusItemDetail)[] = [
+    'code',
+    'eventDescription',
+    'phase',
+    'module',
+    'type',
+    'sortieType',
+    'dayNight',
+    'methodOfDelivery',
+    'methodOfAssessment',
+    'resourcesPhysical',
+    'resourceNumber',
+    'resourcesHuman',
+    'eventDetailsCommon',
+    'eventDetailsSortie',
+    'flightOrSimHours',
+    'totalEventHours',
+    'duration',
+    'preFlightTime',
+    'postFlightTime',
+    'prerequisites',
+    'prerequisitesGround',
+    'prerequisitesFlying',
+    'location',
+    'twrDiReqd',
+    'cctOnly',
+    'notes',
+];
+
+const getIndividualLmpMasterOverrides = (item?: SyllabusItemDetail): Partial<SyllabusItemDetail> => {
+    if (!item) return {};
+    return INDIVIDUAL_LMP_EDITABLE_FIELDS.reduce((overrides, field) => {
+        if (Object.prototype.hasOwnProperty.call(item, field)) {
+            (overrides as any)[field] = (item as any)[field];
+        }
+        return overrides;
+    }, {} as Partial<SyllabusItemDetail>);
+};
+
 const mergeIndividualLmpWithMaster = (
     existingLmp: SyllabusItemDetail[] | undefined,
     masterLMP: SyllabusItemDetail[]
@@ -550,6 +589,10 @@ const mergeIndividualLmpWithMaster = (
         const existingItem = existingByMasterId.get(getMasterEventId(masterItem));
         return {
             ...masterItem,
+            ...getIndividualLmpMasterOverrides(existingItem),
+            id: masterItem.id,
+            masterEventId: getMasterEventId(masterItem),
+            lmpSource: 'master',
             completedAt: (existingItem as any)?.completedAt ?? (masterItem as any).completedAt ?? null,
             userLockedPosition: existingItem?.userLockedPosition,
             orderKey: existingItem?.orderKey || masterItem.orderKey || createLmpOrderKey(index),
@@ -2689,11 +2732,13 @@ function generateDfpInternal(
             nextCode: nextEvents.next?.code || null,
             nextId: nextEvents.next?.id || null,
             nextType: nextEvents.next?.type || null,
+            nextRawResourceNumber: nextEvents.next?.resourceNumber ?? null,
             nextResourceNumber: getLmpResourceNumber(nextEvents.next),
             nextIsMultiResource,
             plusOneCode: nextEvents.plusOne?.code || null,
             plusOneId: nextEvents.plusOne?.id || null,
             plusOneType: nextEvents.plusOne?.type || null,
+            plusOneRawResourceNumber: nextEvents.plusOne?.resourceNumber ?? null,
             plusOneResourceNumber: getLmpResourceNumber(nextEvents.plusOne),
             plusOneIsMultiResource,
             multiResourceLmpItems: multiResourceItems.map(({ item, index }) => ({
@@ -2702,6 +2747,7 @@ function generateDfpInternal(
                 id: item.id || null,
                 type: item.type || null,
                 dayNight: item.dayNight || null,
+                rawResourceNumber: item.resourceNumber ?? null,
                 resourceNumber: getLmpResourceNumber(item),
                 completed: !!item.completed,
                 completedAt: (item as any).completedAt || null,
@@ -2747,12 +2793,20 @@ function generateDfpInternal(
             trainee: trainee.fullName,
             event: next.code || next.id || null,
             eventKey: key,
+            rawResourceNumber: next.resourceNumber ?? null,
             resourceNumber: getLmpResourceNumber(next),
             dayNight: next.dayNight || null,
         });
     });
+    const getFormationItemForTrainee = (trainee: Trainee, fallback: SyllabusItemDetail): SyllabusItemDetail =>
+        traineeNextEventMap.get(trainee.fullName)?.next || fallback;
+    const getFormationGroupResourceNumber = (group: { item: SyllabusItemDetail; trainees: Trainee[] }): number =>
+        Math.max(
+            getLmpResourceNumber(group.item),
+            ...group.trainees.map(trainee => getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item)))
+        );
     neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
-        const resourceNumber = getLmpResourceNumber(group.item);
+        const resourceNumber = getFormationGroupResourceNumber(group);
         return {
             eventKey,
             eventCode: group.item.code || group.item.id || null,
@@ -2763,6 +2817,8 @@ function generateDfpInternal(
                 name: trainee.fullName,
                 course: trainee.course,
                 assignedPrimary: trainee.primaryInstructor || null,
+                rawResourceNumber: getFormationItemForTrainee(trainee, group.item).resourceNumber ?? null,
+                resourceNumber: getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item)),
             })),
             selectedCandidates: group.trainees.slice(0, resourceNumber).map(trainee => trainee.fullName),
         };
@@ -4895,7 +4951,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         neoBuildDiag.scheduleLists[diagnosticLabel] = listDiag;
 
         groups.forEach(group => {
-            const resourceNumber = getLmpResourceNumber(group.item);
+            const resourceNumber = getFormationGroupResourceNumber(group);
             const selectedTrainees = group.trainees.slice(0, resourceNumber);
             const eventKey = getFormationEventKey(group.item);
 
@@ -4904,9 +4960,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 diagnosticLabel,
                 eventKey,
                 event: group.item.code || group.item.id || null,
+                rawResourceNumber: group.item.resourceNumber ?? null,
                 resourceNumber,
                 candidateCount: group.trainees.length,
-                candidates: group.trainees.map(trainee => trainee.fullName),
+                candidates: group.trainees.map(trainee => ({
+                    trainee: trainee.fullName,
+                    rawResourceNumber: getFormationItemForTrainee(trainee, group.item).resourceNumber ?? null,
+                    resourceNumber: getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item)),
+                })),
                 selectedTrainees: selectedTrainees.map(trainee => trainee.fullName),
                 startTimeBoundary,
                 endTimeBoundary,
@@ -5002,22 +5063,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const stagedEvents: Omit<ScheduleEvent, 'date'>[] = [];
                 for (let index = 0; index < selectedTrainees.length; index++) {
                     const trainee = selectedTrainees[index];
+                    const traineeFormationItem = getFormationItemForTrainee(trainee, group.item);
                     traceFormation('groupBuildTrace', {
                         phase: 'formation-member-attempt',
                         diagnosticLabel,
                         eventKey,
-                        event: group.item.code || group.item.id || null,
+                        event: traineeFormationItem.code || traineeFormationItem.id || null,
                         trainee: trainee.fullName,
                         formationPosition: index + 1,
+                        rawResourceNumber: traineeFormationItem.resourceNumber ?? null,
+                        resourceNumber: getLmpResourceNumber(traineeFormationItem),
                         time,
                         displayTime: _fmtT(time),
                     }, 4000);
                     const result = scheduleEvent(
                         trainee,
-                        group.item,
+                        traineeFormationItem,
                         time,
                         'flight',
-                        group.item.dayNight === 'Night',
+                        traineeFormationItem.dayNight === 'Night',
                         false,
                         false,
                         false,
@@ -5034,9 +5098,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             phase: 'formation-member-rejected',
                             diagnosticLabel,
                             eventKey,
-                            event: group.item.code || group.item.id || null,
+                            event: traineeFormationItem.code || traineeFormationItem.id || null,
                             trainee: trainee.fullName,
                             formationPosition: index + 1,
+                            rawResourceNumber: traineeFormationItem.resourceNumber ?? null,
+                            resourceNumber: getLmpResourceNumber(traineeFormationItem),
                             time,
                             displayTime: _fmtT(time),
                             reason: 'SCHEDULE_EVENT_RETURNED_NULL',
@@ -5059,9 +5125,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         phase: 'formation-member-staged',
                         diagnosticLabel,
                         eventKey,
-                        event: group.item.code || group.item.id || null,
+                        event: traineeFormationItem.code || traineeFormationItem.id || null,
                         trainee: trainee.fullName,
                         formationPosition: index + 1,
+                        rawResourceNumber: traineeFormationItem.resourceNumber ?? null,
+                        resourceNumber: getLmpResourceNumber(traineeFormationItem),
                         time,
                         displayTime: _fmtT(time),
                         resourceId: stagedEvent.resourceId,
@@ -5206,8 +5274,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         formationGroups: _formationFlightGroups.map(group => ({
             event: group.item.code || group.item.id || null,
             eventKey: getFormationEventKey(group.item),
-            resourceNumber: getLmpResourceNumber(group.item),
-            trainees: group.trainees.map(trainee => trainee.fullName),
+            rawResourceNumber: group.item.resourceNumber ?? null,
+            resourceNumber: getFormationGroupResourceNumber(group),
+            trainees: group.trainees.map(trainee => ({
+                trainee: trainee.fullName,
+                rawResourceNumber: getFormationItemForTrainee(trainee, group.item).resourceNumber ?? null,
+                resourceNumber: getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item)),
+            })),
         })),
         normalFlightList: _normalFlightList.map(trainee => ({
             trainee: trainee.fullName,
@@ -5264,7 +5337,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         eventKey,
                         event: group.item.code || group.item.id || null,
                         leadTrainee: trainee.fullName,
-                        resourceNumber: getLmpResourceNumber(group.item),
+                        rawResourceNumber: group.item.resourceNumber ?? null,
+                        resourceNumber: getFormationGroupResourceNumber(group),
                         candidates: group.trainees.map(candidate => candidate.fullName),
                         normalLabel,
                         formationLabel,
