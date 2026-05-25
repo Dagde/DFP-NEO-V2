@@ -2125,8 +2125,12 @@ function generateDfpInternal(
         },
         formationResourceDiagnostics: {
             groups: [] as any[],
+            nextEventAudit: [] as any[],
+            groupBuildTrace: [] as any[],
+            scheduleEventTrace: [] as any[],
             skippedSinglePlacements: [] as any[],
             standbyExclusions: [] as any[],
+            laterScheduledEvents: [] as any[],
         },
         final: null,
     };
@@ -2152,6 +2156,15 @@ function generateDfpInternal(
                     ...neoBuildDiag.mandatoryRemedialFlights,
                     scheduleAttempts: neoBuildDiag.mandatoryRemedialFlights.scheduleAttempts.slice(-500),
                     instructorAllocationTrace: neoBuildDiag.mandatoryRemedialFlights.instructorAllocationTrace.slice(-500),
+                },
+                formationResourceDiagnostics: {
+                    ...neoBuildDiag.formationResourceDiagnostics,
+                    nextEventAudit: neoBuildDiag.formationResourceDiagnostics.nextEventAudit.slice(-300),
+                    groupBuildTrace: neoBuildDiag.formationResourceDiagnostics.groupBuildTrace.slice(-800),
+                    scheduleEventTrace: neoBuildDiag.formationResourceDiagnostics.scheduleEventTrace.slice(-1200),
+                    skippedSinglePlacements: neoBuildDiag.formationResourceDiagnostics.skippedSinglePlacements.slice(-800),
+                    standbyExclusions: neoBuildDiag.formationResourceDiagnostics.standbyExclusions.slice(-300),
+                    laterScheduledEvents: neoBuildDiag.formationResourceDiagnostics.laterScheduledEvents.slice(-500),
                 },
             };
             try {
@@ -2304,6 +2317,20 @@ function generateDfpInternal(
         limit: number = 8000
     ) => {
         const list = neoBuildDiag.dayFlightGapDiagnostics[bucket] as any[];
+        if (list.length >= limit) return;
+        list.push({
+            sequence: list.length + 1,
+            timestamp: new Date().toISOString(),
+            ...entry,
+        });
+    };
+
+    const traceFormation = (
+        bucket: 'nextEventAudit' | 'groupBuildTrace' | 'scheduleEventTrace' | 'skippedSinglePlacements' | 'standbyExclusions' | 'laterScheduledEvents',
+        entry: Record<string, any>,
+        limit: number = 2000
+    ) => {
+        const list = neoBuildDiag.formationResourceDiagnostics[bucket] as any[];
         if (list.length >= limit) return;
         list.push({
             sequence: list.length + 1,
@@ -2634,16 +2661,84 @@ function generateDfpInternal(
     Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
     Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
 
+    activeTrainees.forEach(trainee => {
+        const nextEvents = traineeNextEventMap.get(trainee.fullName) || { next: null, plusOne: null };
+        const individualLmp = traineeLMPs.get(trainee.fullName) || [];
+        const multiResourceItems = individualLmp
+            .map((item, index) => ({ item, index }))
+            .filter(({ item }) => isMultiResourceFlightItem(item));
+        const nextIsMultiResource = isMultiResourceFlightItem(nextEvents.next);
+        const plusOneIsMultiResource = isMultiResourceFlightItem(nextEvents.plusOne);
+        if (!nextIsMultiResource && !plusOneIsMultiResource && multiResourceItems.length === 0) return;
+
+        traceFormation('nextEventAudit', {
+            phase: 'computed-next-event',
+            trainee: trainee.fullName,
+            course: trainee.course,
+            nextCode: nextEvents.next?.code || null,
+            nextId: nextEvents.next?.id || null,
+            nextType: nextEvents.next?.type || null,
+            nextResourceNumber: getLmpResourceNumber(nextEvents.next),
+            nextIsMultiResource,
+            plusOneCode: nextEvents.plusOne?.code || null,
+            plusOneId: nextEvents.plusOne?.id || null,
+            plusOneType: nextEvents.plusOne?.type || null,
+            plusOneResourceNumber: getLmpResourceNumber(nextEvents.plusOne),
+            plusOneIsMultiResource,
+            multiResourceLmpItems: multiResourceItems.map(({ item, index }) => ({
+                index,
+                code: item.code || null,
+                id: item.id || null,
+                type: item.type || null,
+                dayNight: item.dayNight || null,
+                resourceNumber: getLmpResourceNumber(item),
+                completed: !!item.completed,
+                completedAt: (item as any).completedAt || null,
+                lmpSource: item.lmpSource || null,
+                orderKey: item.orderKey || null,
+            })),
+        });
+    });
+
     const formationGroups = new Map<string, { item: SyllabusItemDetail; trainees: Trainee[] }>();
     nextEventLists.flight.forEach(trainee => {
         const next = traineeNextEventMap.get(trainee.fullName)?.next;
-        if (!next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next)) return;
+        if (!next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next)) {
+            if (next && isMultiResourceFlightItem(next)) {
+                traceFormation('groupBuildTrace', {
+                    phase: 'candidate-excluded-from-group',
+                    trainee: trainee.fullName,
+                    event: next.code || next.id || null,
+                    eventKey: getFormationEventKey(next),
+                    resourceNumber: getLmpResourceNumber(next),
+                    reason: isRemedialSyllabusItem(next) ? 'REMEDIAL_ITEM_NOT_GROUPED' : 'NOT_MULTI_RESOURCE_FLIGHT',
+                });
+            }
+            return;
+        }
         const key = getFormationEventKey(next);
-        if (!key) return;
+        if (!key) {
+            traceFormation('groupBuildTrace', {
+                phase: 'candidate-excluded-from-group',
+                trainee: trainee.fullName,
+                event: next.code || next.id || null,
+                resourceNumber: getLmpResourceNumber(next),
+                reason: 'EMPTY_FORMATION_EVENT_KEY',
+            });
+            return;
+        }
         if (!formationGroups.has(key)) {
             formationGroups.set(key, { item: next, trainees: [] });
         }
         formationGroups.get(key)!.trainees.push(trainee);
+        traceFormation('groupBuildTrace', {
+            phase: 'candidate-added-to-group',
+            trainee: trainee.fullName,
+            event: next.code || next.id || null,
+            eventKey: key,
+            resourceNumber: getLmpResourceNumber(next),
+            dayNight: next.dayNight || null,
+        });
     });
     neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
         const resourceNumber = getLmpResourceNumber(group.item);
@@ -3161,7 +3256,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
                 const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
                 if (type === 'flight' && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
-                    neoBuildDiag.formationResourceDiagnostics.skippedSinglePlacements.push({
+                    traceFormation('skippedSinglePlacements', {
                         listName,
                         trainee: trainee.fullName,
                         event: syllabusItem.code || syllabusItem.id || null,
@@ -3254,6 +3349,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 }
                                 if (result && typeof result === 'object' && 'id' in result) {
                                     generatedEvents.push({ ...result, _source: 'generated', _isNext: !isPlusOne, _traineeName: trainee.fullName });
+                                    if (isPlusOne && next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
+                                        traceFormation('laterScheduledEvents', {
+                                            phase: 'plus-one-scheduled-after-unscheduled-formation-next',
+                                            listName,
+                                            trainee: trainee.fullName,
+                                            formationNextEvent: next.code || next.id || null,
+                                            scheduledEvent: syllabusItem.code || syllabusItem.id || null,
+                                            startTime: result.startTime,
+                                            displayTime: _fmtT(result.startTime),
+                                            resourceId: result.resourceId,
+                                            instructor: result.instructor,
+                                        });
+                                    }
                                     listDiag.successes++;
                                     // Only get instructor counts if not a solo flight
                                        const ipCounts = result.instructor ? eventCounts.get(result.instructor)! : null;
@@ -3388,9 +3496,31 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const traineeCounts = eventCounts.get(trainee.fullName)!;
         const remedialInstructorOverride = getRemedialInstructorOverride(trainee.fullName, syllabusItem.code);
         let forcedInstructorConflictDetails: string[] = [];
+        const isFormationTraceAttempt = !!options.formationGroupId || (type === 'flight' && isMultiResourceFlightItem(syllabusItem) && !isRemedialSyllabusItem(syllabusItem));
         const isTracedRemedialAttempt = isRemedialSyllabusItem(syllabusItem) || !!remedialInstructorOverride;
         const isDayFlightGapTraceAttempt = type === 'flight' && !isNightPass && !isPlusOne && !isTracedRemedialAttempt;
         const traceScheduleReject = (reason: string, details: Record<string, any> = {}): ScheduleEventResult => {
+            if (isFormationTraceAttempt) {
+                traceFormation('scheduleEventTrace', {
+                    phase: 'schedule-event',
+                    outcome: 'rejected',
+                    reason,
+                    trainee: trainee.fullName,
+                    event: syllabusItem.code,
+                    eventId: syllabusItem.id,
+                    eventKey: getFormationEventKey(syllabusItem),
+                    resourceNumber: getLmpResourceNumber(syllabusItem),
+                    type,
+                    startTime,
+                    displayTime: _fmtT(startTime),
+                    dayNight: syllabusItem.dayNight,
+                    isNightPass,
+                    isPlusOne,
+                    formationGroupId: options.formationGroupId || null,
+                    formationPosition: options.formationPosition || null,
+                    details,
+                }, 3000);
+            }
             if (isTracedRemedialAttempt) {
                 traceMandatoryRemedial('scheduleAttempts', {
                     phase: 'schedule-event',
@@ -4364,6 +4494,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             formationType: options.formationGroupId ? 'Multi-Resource' : undefined,
             formationPosition: options.formationPosition,
             callsign: options.formationCallsign,
+            formationSize: options.formationSize,
             forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || undefined,
             forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : undefined,
         };
@@ -4414,6 +4545,28 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 remedialInstructorOverride,
                 forcedInstructorConflictDetails,
             });
+        }
+        if (isFormationTraceAttempt) {
+            traceFormation('scheduleEventTrace', {
+                phase: 'schedule-event',
+                outcome: 'placed',
+                trainee: trainee.fullName,
+                event: syllabusItem.code,
+                eventId: syllabusItem.id,
+                eventKey: getFormationEventKey(syllabusItem),
+                resourceNumber: getLmpResourceNumber(syllabusItem),
+                type,
+                startTime,
+                displayTime: _fmtT(startTime),
+                resourceId,
+                instructor: result.instructor,
+                pilot: result.pilot,
+                student: result.student,
+                area,
+                dayNight: syllabusItem.dayNight,
+                formationGroupId: options.formationGroupId || null,
+                formationPosition: options.formationPosition || null,
+            }, 3000);
         }
         // Log successful flight events (first 2 only)
         if (_isFlight) {
@@ -4734,7 +4887,30 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const selectedTrainees = group.trainees.slice(0, resourceNumber);
             const eventKey = getFormationEventKey(group.item);
 
+            traceFormation('groupBuildTrace', {
+                phase: 'formation-group-scheduling-start',
+                diagnosticLabel,
+                eventKey,
+                event: group.item.code || group.item.id || null,
+                resourceNumber,
+                candidateCount: group.trainees.length,
+                candidates: group.trainees.map(trainee => trainee.fullName),
+                selectedTrainees: selectedTrainees.map(trainee => trainee.fullName),
+                startTimeBoundary,
+                endTimeBoundary,
+                dayNight: group.item.dayNight || null,
+            });
+
             if (selectedTrainees.length < resourceNumber) {
+                traceFormation('groupBuildTrace', {
+                    phase: 'formation-group-rejected',
+                    diagnosticLabel,
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    candidateCount: group.trainees.length,
+                    reason: 'INSUFFICIENT_MATCHING_TRAINEES',
+                });
                 listDiag.unplaced.push({
                     eventKey,
                     event: group.item.code || group.item.id || null,
@@ -4756,8 +4932,29 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const latestEventStart = windowEnd - group.item.duration;
 
             for (let time = windowStart; time <= latestEventStart && !placed; time += timeIncrement) {
+                traceFormation('groupBuildTrace', {
+                    phase: 'formation-slot-attempt',
+                    diagnosticLabel,
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    time,
+                    displayTime: _fmtT(time),
+                    selectedTrainees: selectedTrainees.map(trainee => trainee.fullName),
+                }, 4000);
                 const dispatchesInPreviousHour = countFormationDispatchesInPreviousHour(time);
                 if (dispatchesInPreviousHour + resourceNumber > 8) {
+                    traceFormation('groupBuildTrace', {
+                        phase: 'formation-slot-rejected',
+                        diagnosticLabel,
+                        eventKey,
+                        event: group.item.code || group.item.id || null,
+                        time,
+                        displayTime: _fmtT(time),
+                        reason: 'HOURLY_DISPATCH_LIMIT',
+                        dispatchesInPreviousHour,
+                        resourceNumber,
+                    }, 4000);
                     listDiag.attempts.push({
                         eventKey,
                         time,
@@ -4771,6 +4968,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 if (hasNonFormationTakeoffConflict(time)) {
+                    traceFormation('groupBuildTrace', {
+                        phase: 'formation-slot-rejected',
+                        diagnosticLabel,
+                        eventKey,
+                        event: group.item.code || group.item.id || null,
+                        time,
+                        displayTime: _fmtT(time),
+                        reason: 'TAKEOFF_SEPARATION_VIOLATION',
+                    }, 4000);
                     listDiag.attempts.push({
                         eventKey,
                         time,
@@ -4784,6 +4990,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 const stagedEvents: Omit<ScheduleEvent, 'date'>[] = [];
                 for (let index = 0; index < selectedTrainees.length; index++) {
                     const trainee = selectedTrainees[index];
+                    traceFormation('groupBuildTrace', {
+                        phase: 'formation-member-attempt',
+                        diagnosticLabel,
+                        eventKey,
+                        event: group.item.code || group.item.id || null,
+                        trainee: trainee.fullName,
+                        formationPosition: index + 1,
+                        time,
+                        displayTime: _fmtT(time),
+                    }, 4000);
                     const result = scheduleEvent(
                         trainee,
                         group.item,
@@ -4801,7 +5017,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         }
                     );
 
-                    if (!result || typeof result !== 'object' || !('id' in result)) break;
+                    if (!result || typeof result !== 'object' || !('id' in result)) {
+                        traceFormation('groupBuildTrace', {
+                            phase: 'formation-member-rejected',
+                            diagnosticLabel,
+                            eventKey,
+                            event: group.item.code || group.item.id || null,
+                            trainee: trainee.fullName,
+                            formationPosition: index + 1,
+                            time,
+                            displayTime: _fmtT(time),
+                            reason: 'SCHEDULE_EVENT_RETURNED_NULL',
+                        }, 4000);
+                        break;
+                    }
 
                     const stagedEvent = {
                         ...result,
@@ -4814,6 +5043,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     };
                     stagedEvents.push(stagedEvent);
                     generatedEvents.push(stagedEvent);
+                    traceFormation('groupBuildTrace', {
+                        phase: 'formation-member-staged',
+                        diagnosticLabel,
+                        eventKey,
+                        event: group.item.code || group.item.id || null,
+                        trainee: trainee.fullName,
+                        formationPosition: index + 1,
+                        time,
+                        displayTime: _fmtT(time),
+                        resourceId: stagedEvent.resourceId,
+                        instructor: stagedEvent.instructor,
+                    }, 4000);
                 }
 
                 if (stagedEvents.length !== resourceNumber) {
@@ -4831,6 +5072,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         reason: 'FORMATION_MEMBER_PLACEMENT_FAILED',
                         placedMembersBeforeRollback: stagedEvents.length,
                     });
+                    traceFormation('groupBuildTrace', {
+                        phase: 'formation-slot-rollback',
+                        diagnosticLabel,
+                        eventKey,
+                        event: group.item.code || group.item.id || null,
+                        time,
+                        displayTime: _fmtT(time),
+                        resourceNumber,
+                        placedMembersBeforeRollback: stagedEvents.length,
+                        reason: 'FORMATION_MEMBER_PLACEMENT_FAILED',
+                    }, 4000);
                     continue;
                 }
 
@@ -4857,10 +5109,32 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     resources: stagedEvents.map(event => event.resourceId),
                     callsigns: stagedEvents.map(event => event.callsign),
                 });
+                traceFormation('groupBuildTrace', {
+                    phase: 'formation-group-placed',
+                    diagnosticLabel,
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    startTime: time,
+                    displayTime: _fmtT(time),
+                    trainees: selectedTrainees.map(trainee => trainee.fullName),
+                    instructors: stagedEvents.map(event => event.instructor),
+                    resources: stagedEvents.map(event => event.resourceId),
+                    callsigns: stagedEvents.map(event => event.callsign),
+                });
                 placed = true;
             }
 
             if (!placed) {
+                traceFormation('groupBuildTrace', {
+                    phase: 'formation-group-unplaced',
+                    diagnosticLabel,
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    candidates: group.trainees.map(trainee => trainee.fullName),
+                    reason: 'NO_VALID_GROUP_SLOT',
+                });
                 listDiag.unplaced.push({
                     eventKey,
                     event: group.item.code || group.item.id || null,
@@ -4906,6 +5180,25 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const _normalFlightList = _allFlightList.filter(trainee => {
         const next = traineeNextEventMap.get(trainee.fullName)?.next;
         return !next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next);
+    });
+    traceFormation('groupBuildTrace', {
+        phase: 'formation-flight-list-built',
+        allFlightList: _allFlightList.map(trainee => ({
+            trainee: trainee.fullName,
+            next: traineeNextEventMap.get(trainee.fullName)?.next?.code || null,
+            nextResourceNumber: getLmpResourceNumber(traineeNextEventMap.get(trainee.fullName)?.next),
+            isFormationNext: isMultiResourceFlightItem(traineeNextEventMap.get(trainee.fullName)?.next),
+        })),
+        formationGroups: _formationFlightGroups.map(group => ({
+            event: group.item.code || group.item.id || null,
+            eventKey: getFormationEventKey(group.item),
+            resourceNumber: getLmpResourceNumber(group.item),
+            trainees: group.trainees.map(trainee => trainee.fullName),
+        })),
+        normalFlightList: _normalFlightList.map(trainee => ({
+            trainee: trainee.fullName,
+            next: traineeNextEventMap.get(trainee.fullName)?.next?.code || null,
+        })),
     });
     const _dualFlightList = _normalFlightList.filter(t => !_isSoloTrainee(t));
     const _soloFlightList = _normalFlightList.filter(t => _isSoloTrainee(t));
@@ -5551,7 +5844,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next) return false;
         if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
-            neoBuildDiag.formationResourceDiagnostics.standbyExclusions.push({
+            traceFormation('standbyExclusions', {
                 trainee: trainee.fullName,
                 event: next.code || next.id || null,
                 eventKey: getFormationEventKey(next),
