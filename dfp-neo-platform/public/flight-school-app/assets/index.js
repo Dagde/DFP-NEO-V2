@@ -72410,10 +72410,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     });
   });
   const getFormationItemForTrainee = (trainee, fallback) => traineeNextEventMap.get(trainee.fullName)?.next || fallback;
-  const getFormationGroupResourceNumber = (group) => Math.max(
-    getLmpResourceNumber(group.item),
-    ...group.trainees.map((trainee) => getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item)))
-  );
+  const hasExplicitLmpResourceNumber = (item) => {
+    const rawResourceNumber = Number(item?.resourceNumber);
+    const rawResourceCount = Number(item?.resourceCount);
+    const physicalResourceCount = Array.isArray(item?.resourcesPhysical) ? item.resourcesPhysical.filter((resource) => String(resource || "").trim().length > 0).length : 0;
+    return Number.isFinite(rawResourceNumber) && rawResourceNumber > 0 || Number.isFinite(rawResourceCount) && rawResourceCount > 0 || physicalResourceCount > 0;
+  };
+  const getFormationGroupResourceNumber = (group) => {
+    const groupItems = group.trainees.map((trainee) => getFormationItemForTrainee(trainee, group.item));
+    const explicitResourceNumbers = groupItems.filter(hasExplicitLmpResourceNumber).map(getLmpResourceNumber);
+    if (explicitResourceNumbers.length > 0) {
+      return Math.max(...explicitResourceNumbers);
+    }
+    return Math.max(getLmpResourceNumber(group.item), group.trainees.length);
+  };
   neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
     const resourceNumber = getFormationGroupResourceNumber(group);
     return {
