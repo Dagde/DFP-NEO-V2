@@ -4881,8 +4881,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         startTimeBoundary: number,
         endTimeBoundary: number,
         diagnosticLabel: string
-    ) => {
-        if (groups.length === 0) return;
+    ): Set<string> => {
+        const placedFormationKeys = new Set<string>();
+        if (groups.length === 0) return placedFormationKeys;
 
         const timeIncrement = 5 / 60;
         const listDiag = {
@@ -5134,6 +5135,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     callsigns: stagedEvents.map(event => event.callsign),
                 });
                 placed = true;
+                placedFormationKeys.add(eventKey);
             }
 
             if (!placed) {
@@ -5157,6 +5159,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         });
 
         saveNeoBuildDiag(`schedule-list-end:${diagnosticLabel}`);
+        return placedFormationKeys;
     };
 
     const mandatoryRemedialFlightItems = new Map<string, SyllabusItemDetail>();
@@ -5213,6 +5216,75 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     });
     const _dualFlightList = _normalFlightList.filter(t => !_isSoloTrainee(t));
     const _soloFlightList = _normalFlightList.filter(t => _isSoloTrainee(t));
+    const _formationGroupByKey = new Map(_formationFlightGroups.map(group => [getFormationEventKey(group.item), group]));
+    const _placedFormationKeys = new Set<string>();
+    const _schedulePrioritizedDualsAndFormations = (
+        prioritizedFlightList: Trainee[],
+        startTimeBoundary: number,
+        endTimeBoundary: number,
+        normalLabel: string,
+        formationLabel: string,
+        latestStartBefore?: number
+    ) => {
+        const pendingNormalDuals: Trainee[] = [];
+        const attemptedFormationKeys = new Set<string>();
+        let normalSegment = 1;
+        let formationSegment = 1;
+
+        const flushPendingNormals = () => {
+            if (pendingNormalDuals.length === 0) return;
+            scheduleList(
+                [...pendingNormalDuals],
+                'flight',
+                false,
+                startTimeBoundary,
+                endTimeBoundary,
+                null,
+                false,
+                `${normalLabel} ${normalSegment++}`,
+                undefined,
+                latestStartBefore
+            );
+            pendingNormalDuals.length = 0;
+        };
+
+        prioritizedFlightList.forEach(trainee => {
+            if (_isSoloTrainee(trainee)) return;
+            const next = traineeNextEventMap.get(trainee.fullName)?.next;
+            if (next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
+                const eventKey = getFormationEventKey(next);
+                if (_placedFormationKeys.has(eventKey)) return;
+                if (attemptedFormationKeys.has(eventKey)) return;
+                attemptedFormationKeys.add(eventKey);
+                const group = _formationGroupByKey.get(eventKey);
+                flushPendingNormals();
+                if (group) {
+                    traceFormation('groupBuildTrace', {
+                        phase: 'formation-group-reached-priority-position',
+                        eventKey,
+                        event: group.item.code || group.item.id || null,
+                        leadTrainee: trainee.fullName,
+                        resourceNumber: getLmpResourceNumber(group.item),
+                        candidates: group.trainees.map(candidate => candidate.fullName),
+                        normalLabel,
+                        formationLabel,
+                    });
+                    const placedKeys = scheduleFormationGroups(
+                        [group],
+                        startTimeBoundary,
+                        endTimeBoundary,
+                        `${formationLabel} ${formationSegment++}`
+                    );
+                    placedKeys.forEach(key => _placedFormationKeys.add(key));
+                }
+                return;
+            }
+
+            pendingNormalDuals.push(trainee);
+        });
+
+        flushPendingNormals();
+    };
     neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map(event => {
         const eventTrainee = event.student || event.pilot || '';
         const trainee = activeTrainees.find(t => t.fullName === eventTrainee) || null;
@@ -5275,16 +5347,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
         const roundUpToFlightSlot = (time: number): number => Math.ceil((time - 1e-9) * 12) / 12;
         if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-            scheduleList(
-                _dualFlightList,
-                'flight',
-                false,
+            _schedulePrioritizedDualsAndFormations(
+                _allFlightList,
                 flyingStartTime,
                 flyingEndTime,
-                null,
-                false,
                 'FLIGHT Next Pre-1000 Normal Dual',
-                undefined,
+                'FLIGHT Formation Groups Pre-1000',
                 REMEDIAL_EARLIEST_START
             );
         }
@@ -5313,39 +5381,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             mandatoryRemedialFlightItems
         );
 
-        scheduleFormationGroups(
-            _formationFlightGroups,
+        _schedulePrioritizedDualsAndFormations(
+            _allFlightList,
             alignedPostMandatoryStart,
             flyingEndTime,
-            'FLIGHT Formation Groups'
-        );
-
-        scheduleList(
-            _dualFlightList,
-            'flight',
-            false,
-            alignedPostMandatoryStart,
-            flyingEndTime,
-            null,
-            false,
-            'FLIGHT Next Post-1000 Normal Dual'
+            'FLIGHT Next Post-1000 Normal Dual',
+            'FLIGHT Formation Groups Post-1000'
         );
     } else {
-        scheduleFormationGroups(
-            _formationFlightGroups,
+        _schedulePrioritizedDualsAndFormations(
+            _allFlightList,
             flyingStartTime,
             flyingEndTime,
+            'FLIGHT Next Normal Dual',
             'FLIGHT Formation Groups'
-        );
-
-        scheduleList(
-            _dualFlightList,
-            'flight',
-            false,
-            flyingStartTime,
-            flyingEndTime,
-            null,
-            false
         );
     }
 

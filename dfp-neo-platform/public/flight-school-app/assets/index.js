@@ -73861,7 +73861,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     return (prefix || school || "FORM").slice(0, 4).toUpperCase();
   };
   const scheduleFormationGroups = (groups, startTimeBoundary, endTimeBoundary, diagnosticLabel) => {
-    if (groups.length === 0) return;
+    const placedFormationKeys = /* @__PURE__ */ new Set();
+    if (groups.length === 0) return placedFormationKeys;
     const timeIncrement = 5 / 60;
     const listDiag = {
       inputGroups: groups.length,
@@ -74096,6 +74097,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           callsigns: stagedEvents.map((event) => event.callsign)
         });
         placed = true;
+        placedFormationKeys.add(eventKey);
       }
       if (!placed) {
         traceFormation("groupBuildTrace", {
@@ -74117,6 +74119,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     });
     saveNeoBuildDiag(`schedule-list-end:${diagnosticLabel}`);
+    return placedFormationKeys;
   };
   const mandatoryRemedialFlightItems = /* @__PURE__ */ new Map();
   activeTrainees.forEach((trainee) => {
@@ -74170,6 +74173,64 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   });
   const _dualFlightList = _normalFlightList.filter((t) => !_isSoloTrainee(t));
   const _soloFlightList = _normalFlightList.filter((t) => _isSoloTrainee(t));
+  const _formationGroupByKey = new Map(_formationFlightGroups.map((group) => [getFormationEventKey(group.item), group]));
+  const _placedFormationKeys = /* @__PURE__ */ new Set();
+  const _schedulePrioritizedDualsAndFormations = (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
+    const pendingNormalDuals = [];
+    const attemptedFormationKeys = /* @__PURE__ */ new Set();
+    let normalSegment = 1;
+    let formationSegment = 1;
+    const flushPendingNormals = () => {
+      if (pendingNormalDuals.length === 0) return;
+      scheduleList(
+        [...pendingNormalDuals],
+        "flight",
+        false,
+        startTimeBoundary,
+        endTimeBoundary,
+        null,
+        false,
+        `${normalLabel} ${normalSegment++}`,
+        void 0,
+        latestStartBefore
+      );
+      pendingNormalDuals.length = 0;
+    };
+    prioritizedFlightList.forEach((trainee) => {
+      if (_isSoloTrainee(trainee)) return;
+      const next = traineeNextEventMap.get(trainee.fullName)?.next;
+      if (next && isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
+        const eventKey = getFormationEventKey(next);
+        if (_placedFormationKeys.has(eventKey)) return;
+        if (attemptedFormationKeys.has(eventKey)) return;
+        attemptedFormationKeys.add(eventKey);
+        const group = _formationGroupByKey.get(eventKey);
+        flushPendingNormals();
+        if (group) {
+          traceFormation("groupBuildTrace", {
+            phase: "formation-group-reached-priority-position",
+            eventKey,
+            event: group.item.code || group.item.id || null,
+            leadTrainee: trainee.fullName,
+            resourceNumber: getLmpResourceNumber(group.item),
+            candidates: group.trainees.map((candidate) => candidate.fullName),
+            normalLabel,
+            formationLabel
+          });
+          const placedKeys = scheduleFormationGroups(
+            [group],
+            startTimeBoundary,
+            endTimeBoundary,
+            `${formationLabel} ${formationSegment++}`
+          );
+          placedKeys.forEach((key) => _placedFormationKeys.add(key));
+        }
+        return;
+      }
+      pendingNormalDuals.push(trainee);
+    });
+    flushPendingNormals();
+  };
   neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map((event) => {
     const eventTrainee = event.student || event.pilot || "";
     const trainee = activeTrainees.find((t) => t.fullName === eventTrainee) || null;
@@ -74225,16 +74286,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
     const roundUpToFlightSlot = (time) => Math.ceil((time - 1e-9) * 12) / 12;
     if (flyingStartTime < REMEDIAL_EARLIEST_START) {
-      scheduleList(
-        _dualFlightList,
-        "flight",
-        false,
+      _schedulePrioritizedDualsAndFormations(
+        _allFlightList,
         flyingStartTime,
         flyingEndTime,
-        null,
-        false,
         "FLIGHT Next Pre-1000 Normal Dual",
-        void 0,
+        "FLIGHT Formation Groups Pre-1000",
         REMEDIAL_EARLIEST_START
       );
     }
@@ -74258,37 +74315,20 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       "FLIGHT Mandatory Remedial",
       mandatoryRemedialFlightItems
     );
-    scheduleFormationGroups(
-      _formationFlightGroups,
+    _schedulePrioritizedDualsAndFormations(
+      _allFlightList,
       alignedPostMandatoryStart,
       flyingEndTime,
-      "FLIGHT Formation Groups"
-    );
-    scheduleList(
-      _dualFlightList,
-      "flight",
-      false,
-      alignedPostMandatoryStart,
-      flyingEndTime,
-      null,
-      false,
-      "FLIGHT Next Post-1000 Normal Dual"
+      "FLIGHT Next Post-1000 Normal Dual",
+      "FLIGHT Formation Groups Post-1000"
     );
   } else {
-    scheduleFormationGroups(
-      _formationFlightGroups,
+    _schedulePrioritizedDualsAndFormations(
+      _allFlightList,
       flyingStartTime,
       flyingEndTime,
+      "FLIGHT Next Normal Dual",
       "FLIGHT Formation Groups"
-    );
-    scheduleList(
-      _dualFlightList,
-      "flight",
-      false,
-      flyingStartTime,
-      flyingEndTime,
-      null,
-      false
     );
   }
   if (_soloFlightList.length > 0) {
