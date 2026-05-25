@@ -51,6 +51,22 @@ const splitListInput = (value: string): string[] =>
 
 const joinListInput = (items?: string[]): string => (items || []).join('\n');
 
+const alignPhysicalResourcesToResourceNumber = (
+    resources: string[],
+    resourceNumber: number,
+    resourceLabel = 'Aircraft'
+): string[] => {
+    const count = Math.max(0, Math.round(Number(resourceNumber) || 0));
+    const existing = resources.filter(resource => String(resource || '').trim().length > 0);
+    if (count === 0) return existing;
+
+    const aligned = existing.slice(0, count);
+    for (let index = aligned.length; index < count; index++) {
+        aligned.push(count === 1 ? resourceLabel : `${resourceLabel} ${index + 1}`);
+    }
+    return aligned;
+};
+
 const LmpEventEditModal: React.FC<{
     item: SyllabusItemDetail;
     onCancel: () => void;
@@ -83,6 +99,10 @@ const LmpEventEditModal: React.FC<{
         }
 
         const roundedResourceNumber = Math.max(0, Math.round(Number(resourceNumber) || 0));
+        const normalizedPhysicalResources = alignPhysicalResourcesToResourceNumber(
+            splitListInput(resourcesPhysical),
+            roundedResourceNumber
+        );
         onSave({
             ...item,
             code: trimmedCode,
@@ -96,9 +116,10 @@ const LmpEventEditModal: React.FC<{
             preFlightTime: Math.max(0, Number(preFlightTime) || 0),
             postFlightTime: Math.max(0, Number(postFlightTime) || 0),
             resourceNumber: roundedResourceNumber,
-            resourcesPhysical: splitListInput(resourcesPhysical),
+            resourceCount: roundedResourceNumber,
+            resourcesPhysical: normalizedPhysicalResources,
             resourcesHuman: splitListInput(resourcesHuman),
-        });
+        } as SyllabusItemDetail & { resourceCount: number });
     };
 
     return (

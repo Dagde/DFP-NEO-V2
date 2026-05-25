@@ -9655,6 +9655,16 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
 };
 const splitListInput = (value) => value.split("\n").map((item) => item.trim()).filter(Boolean);
 const joinListInput = (items) => (items || []).join("\n");
+const alignPhysicalResourcesToResourceNumber = (resources, resourceNumber, resourceLabel = "Aircraft") => {
+  const count = Math.max(0, Math.round(Number(resourceNumber) || 0));
+  const existing = resources.filter((resource) => String(resource || "").trim().length > 0);
+  if (count === 0) return existing;
+  const aligned = existing.slice(0, count);
+  for (let index = aligned.length; index < count; index++) {
+    aligned.push(count === 1 ? resourceLabel : `${resourceLabel} ${index + 1}`);
+  }
+  return aligned;
+};
 const LmpEventEditModal = ({ item, onCancel, onSave }) => {
   const [code, setCode] = reactExports.useState(item.code || item.id || "");
   const [eventDescription, setEventDescription] = reactExports.useState(item.eventDescription || "");
@@ -9681,6 +9691,10 @@ const LmpEventEditModal = ({ item, onCancel, onSave }) => {
       return;
     }
     const roundedResourceNumber = Math.max(0, Math.round(Number(resourceNumber) || 0));
+    const normalizedPhysicalResources = alignPhysicalResourcesToResourceNumber(
+      splitListInput(resourcesPhysical),
+      roundedResourceNumber
+    );
     onSave({
       ...item,
       code: trimmedCode,
@@ -9694,7 +9708,8 @@ const LmpEventEditModal = ({ item, onCancel, onSave }) => {
       preFlightTime: Math.max(0, Number(preFlightTime) || 0),
       postFlightTime: Math.max(0, Number(postFlightTime) || 0),
       resourceNumber: roundedResourceNumber,
-      resourcesPhysical: splitListInput(resourcesPhysical),
+      resourceCount: roundedResourceNumber,
+      resourcesPhysical: normalizedPhysicalResources,
       resourcesHuman: splitListInput(resourcesHuman)
     });
   };
@@ -70829,7 +70844,8 @@ const stampMasterLmpItems = (masterLMP) => masterLMP.map((item, index) => ({
 }));
 const isLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || item.id?.includes("REM") || isRemedialEventCode(item.id) || item.code?.includes("REM") || isRemedialEventCode(item.code) || item.id?.endsWith("-CUR") || item.code?.endsWith("-CUR");
 const getLmpResourceNumber = (item) => {
-  const parsed = Number(item?.resourceNumber);
+  const resourceCountAlias = item?.resourceCount;
+  const parsed = Number(item?.resourceNumber ?? resourceCountAlias);
   if (Number.isFinite(parsed) && parsed > 1) return Math.max(1, Math.round(parsed));
   const physicalResourceCount = Array.isArray(item?.resourcesPhysical) ? item.resourcesPhysical.filter((resource) => String(resource || "").trim().length > 0).length : 0;
   if (physicalResourceCount > 1) return physicalResourceCount;
@@ -72321,12 +72337,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       nextId: nextEvents.next?.id || null,
       nextType: nextEvents.next?.type || null,
       nextRawResourceNumber: nextEvents.next?.resourceNumber ?? null,
+      nextRawResourceCount: nextEvents.next?.resourceCount ?? null,
+      nextPhysicalResourceCount: nextEvents.next?.resourcesPhysical?.length ?? 0,
       nextResourceNumber: getLmpResourceNumber(nextEvents.next),
       nextIsMultiResource,
       plusOneCode: nextEvents.plusOne?.code || null,
       plusOneId: nextEvents.plusOne?.id || null,
       plusOneType: nextEvents.plusOne?.type || null,
       plusOneRawResourceNumber: nextEvents.plusOne?.resourceNumber ?? null,
+      plusOneRawResourceCount: nextEvents.plusOne?.resourceCount ?? null,
+      plusOnePhysicalResourceCount: nextEvents.plusOne?.resourcesPhysical?.length ?? 0,
       plusOneResourceNumber: getLmpResourceNumber(nextEvents.plusOne),
       plusOneIsMultiResource,
       multiResourceLmpItems: multiResourceItems.map(({ item, index }) => ({
@@ -72336,6 +72356,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         type: item.type || null,
         dayNight: item.dayNight || null,
         rawResourceNumber: item.resourceNumber ?? null,
+        rawResourceCount: item.resourceCount ?? null,
+        physicalResourceCount: item.resourcesPhysical?.length ?? 0,
         resourceNumber: getLmpResourceNumber(item),
         completed: !!item.completed,
         completedAt: item.completedAt || null,
@@ -72381,6 +72403,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       event: next.code || next.id || null,
       eventKey: key,
       rawResourceNumber: next.resourceNumber ?? null,
+      rawResourceCount: next.resourceCount ?? null,
+      physicalResourceCount: next.resourcesPhysical?.length ?? 0,
       resourceNumber: getLmpResourceNumber(next),
       dayNight: next.dayNight || null
     });
@@ -72403,6 +72427,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         course: trainee.course,
         assignedPrimary: trainee.primaryInstructor || null,
         rawResourceNumber: getFormationItemForTrainee(trainee, group.item).resourceNumber ?? null,
+        rawResourceCount: getFormationItemForTrainee(trainee, group.item).resourceCount ?? null,
+        physicalResourceCount: getFormationItemForTrainee(trainee, group.item).resourcesPhysical?.length ?? 0,
         resourceNumber: getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item))
       })),
       selectedCandidates: group.trainees.slice(0, resourceNumber).map((trainee) => trainee.fullName)
@@ -74093,11 +74119,15 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         eventKey,
         event: group.item.code || group.item.id || null,
         rawResourceNumber: group.item.resourceNumber ?? null,
+        rawResourceCount: group.item.resourceCount ?? null,
+        physicalResourceCount: group.item.resourcesPhysical?.length ?? 0,
         resourceNumber,
         candidateCount: group.trainees.length,
         candidates: group.trainees.map((trainee) => ({
           trainee: trainee.fullName,
           rawResourceNumber: getFormationItemForTrainee(trainee, group.item).resourceNumber ?? null,
+          rawResourceCount: getFormationItemForTrainee(trainee, group.item).resourceCount ?? null,
+          physicalResourceCount: getFormationItemForTrainee(trainee, group.item).resourcesPhysical?.length ?? 0,
           resourceNumber: getLmpResourceNumber(getFormationItemForTrainee(trainee, group.item))
         })),
         selectedTrainees: selectedTrainees.map((trainee) => trainee.fullName),
@@ -79321,6 +79351,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       methodOfAssessment: [],
       resourcesPhysical: physicalResources,
       resourceNumber: request.resourceCount,
+      resourceCount: request.resourceCount,
       resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : ["QFI", "Trainee"],
       completedAt: null,
       masterEventId: void 0,

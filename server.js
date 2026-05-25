@@ -3731,6 +3731,30 @@ const getIndividualLmpMasterOverridesForSync = (item) => {
   }, {});
 };
 
+const getLmpResourceNumberForSync = (item) => {
+  const parsed = Number(item?.resourceNumber ?? item?.resourceCount);
+  if (Number.isFinite(parsed) && parsed >= 0) return Math.max(0, Math.round(parsed));
+
+  const physicalResourceCount = Array.isArray(item?.resourcesPhysical)
+    ? item.resourcesPhysical.filter(resource => String(resource || '').trim().length > 0).length
+    : 0;
+  return physicalResourceCount;
+};
+
+const alignPhysicalResourcesForSync = (resourcesPhysical, resourceNumber, resourceLabel = 'Aircraft') => {
+  const count = Math.max(0, Math.round(Number(resourceNumber) || 0));
+  const existing = Array.isArray(resourcesPhysical)
+    ? resourcesPhysical.filter(resource => String(resource || '').trim().length > 0)
+    : [];
+  if (count === 0) return existing;
+
+  const aligned = existing.slice(0, count);
+  for (let index = aligned.length; index < count; index++) {
+    aligned.push(count === 1 ? resourceLabel : `${resourceLabel} ${index + 1}`);
+  }
+  return aligned;
+};
+
 const normalizeLmpCompletionKeyForSync = (value) => String(value || '').replace(/\*/g, '').trim();
 const getLmpCompletionKeysForSync = (item) => [
   item?.id,
@@ -8025,6 +8049,10 @@ async function upsertTraineeLmpOverlays(db, traineeId, traineeFullName, events, 
       lmpSource: item.lmpSource || (item.isRemedial ? 'remedial' : 'custom'),
       isRemedial: item.isRemedial === true || item.lmpSource === 'remedial',
     };
+    const normalizedResourceNumber = getLmpResourceNumberForSync(payload);
+    payload.resourceNumber = normalizedResourceNumber;
+    payload.resourceCount = normalizedResourceNumber;
+    payload.resourcesPhysical = alignPhysicalResourcesForSync(payload.resourcesPhysical, normalizedResourceNumber);
     const rowId = `tlmpo-${safeIdentifier(`${traineeId}-${overlayId}`)}`.slice(0, 180);
     const packageId = item.remedialPackageId || deriveRemedialPackageId(item) || null;
     await db.$executeRawUnsafe(`
