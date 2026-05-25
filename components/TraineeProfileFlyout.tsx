@@ -341,16 +341,6 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
     const [showCurrencyAudit, setShowCurrencyAudit] = useState(false);
     const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
     const tabBtnClass = (tab: string) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? ' active' : ''}`;
-    const trainingReportShortLabel = (trainingReportTerminology?.shortName || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName;
-    const trainingReportButtonLines = trainingReportShortLabel.split(/\s+/).filter(Boolean);
-    const trainingReportButtonLabel = trainingReportButtonLines.length > 1
-      ? (
-        <>
-          {trainingReportButtonLines[0]}<br />
-          {trainingReportButtonLines.slice(1).join(' ')}
-        </>
-      )
-      : trainingReportShortLabel;
     // Ref for scrollable content area - used to scroll to top when a tab opens
     const contentScrollRef = useRef<HTMLDivElement>(null);
     const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
@@ -1563,9 +1553,9 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             <button
                               onClick={handleHateSheetClick}
                               className={tabBtnClass('hatesheet')}
-                              title={trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name}
+                              title="Training Report"
                             >
-                              <span className="leading-tight">{trainingReportButtonLabel}</span>
+                              <span className="leading-tight">Training<br />Report</span>
                             </button>
                           )}
                           {canViewIndividualLmp && <button onClick={handleIndividualLMPClick} className={tabBtnClass('lmp')}>View Individual LMP</button>}

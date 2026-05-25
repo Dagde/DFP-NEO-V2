@@ -48,7 +48,6 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
     const [localPt051Events, setLocalPt051Events] = useState(pt051Events);
     const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
     const trainingReportName = reportTerminology.name;
-    const trainingReportShortLabel = reportTerminology.shortName;
 
     // Helper function to format date
     const formatDate = (timestamp: number) => {
@@ -192,7 +191,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
        }, [lmpScores, assessments, traineeLmp]);
 
     const getTypeDisplayLabel = (type: 'LMP Score' | 'PT-051') => (
-        type === 'PT-051' ? trainingReportShortLabel : type
+        type === 'PT-051' ? trainingReportName : type
     );
 
     const getTypeDisplayTitle = (type: 'LMP Score' | 'PT-051') => (
@@ -457,7 +456,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                                                 <div className="h-10 w-10 rounded-full border-4 border-sky-500/25 border-t-sky-400 animate-spin" />
                                                 <div>
                                                     <div className="text-sm font-semibold text-white">Loading performance history</div>
-                                                    <div className="mt-1 text-xs text-gray-400">Retrieving {trainingReportShortLabel} and LMP records...</div>
+                                                    <div className="mt-1 text-xs text-gray-400">Retrieving {trainingReportName} and LMP records...</div>
                                                 </div>
                                                 <div className="h-1.5 w-56 overflow-hidden rounded-full bg-gray-700">
                                                     <div className="h-full w-1/2 rounded-full bg-sky-400 animate-pulse" />

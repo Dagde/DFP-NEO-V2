@@ -12,7 +12,6 @@ import {
 } from '../utils/personnelDisplaySettings';
 import {
   TRAINING_REPORT_NAME_MAX_LENGTH,
-  TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH,
   normaliseTrainingReportTerminology,
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
@@ -2242,15 +2241,7 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               disabled={!canEditRankTerminology}
               maxLength={TRAINING_REPORT_NAME_MAX_LENGTH}
               onChange={(value) => updateTrainingReportTerminology({ name: value })}
-              info={`The organisation-specific name for the trainee assessment form. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Examples: PT-051, Training Assessment, Flight Assessment Report.`}
-            />
-            <Field
-              label="Training Report Short Label"
-              value={trainingReportTerminology.shortName}
-              disabled={!canEditRankTerminology}
-              maxLength={TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH}
-              onChange={(value) => updateTrainingReportTerminology({ shortName: value })}
-              info={`The compact label used where space is tight, such as Trainee Profile action buttons and Performance History type pills. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`}
+              info={`The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`}
             />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">

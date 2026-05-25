@@ -2,15 +2,12 @@ import type { PlatformConfig } from './platformConfigService';
 
 export interface TrainingReportTerminology {
   name: string;
-  shortName: string;
 }
 
-export const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
-export const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 16;
+export const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
 
 export const DEFAULT_TRAINING_REPORT_TERMINOLOGY: TrainingReportTerminology = {
-  name: 'PT-051',
-  shortName: 'Training Report',
+  name: 'Report',
 };
 
 const cleanLabel = (value: unknown, fallback: string, maxLength: number): string => {
@@ -23,7 +20,6 @@ export const normaliseTrainingReportTerminology = (
   input?: Partial<TrainingReportTerminology> | null,
 ): TrainingReportTerminology => ({
   name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH),
-  shortName: cleanLabel(input?.shortName, DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName, TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH),
 });
 
 export const getTrainingReportTerminology = (config?: PlatformConfig | null): TrainingReportTerminology => {

@@ -2154,11 +2154,9 @@ const comparePeopleByConfiguredRank = (a, b, settings, group = "staff") => {
   }
   return collator.compare(aName.surname, bName.surname) || collator.compare(aName.given, bName.given) || collator.compare(aName.full, bName.full);
 };
-const TRAINING_REPORT_NAME_MAX_LENGTH = 48;
-const TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH = 16;
+const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
 const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
-  name: "PT-051",
-  shortName: "Training Report"
+  name: "Report"
 };
 const cleanLabel = (value, fallback, maxLength) => {
   if (typeof value !== "string") return fallback;
@@ -2166,8 +2164,7 @@ const cleanLabel = (value, fallback, maxLength) => {
   return (trimmed || fallback).slice(0, maxLength);
 };
 const normaliseTrainingReportTerminology = (input) => ({
-  name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH),
-  shortName: cleanLabel(input?.shortName, DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName, TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH)
+  name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH)
 });
 const getTrainingReportTerminology = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
@@ -9343,7 +9340,6 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
   const trainingReportName = reportTerminology.name;
-  const trainingReportShortLabel = reportTerminology.shortName;
   const combinedHistory = React.useMemo(() => {
     const completedAssessments = assessments2.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
@@ -9439,7 +9435,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     console.log("Combined History:", combined.length, combined);
     return combined;
   }, [lmpScores, assessments2, traineeLmp]);
-  const getTypeDisplayLabel = (type) => type === "PT-051" ? trainingReportShortLabel : type;
+  const getTypeDisplayLabel = (type) => type === "PT-051" ? trainingReportName : type;
   const getTypeDisplayTitle = (type) => type === "PT-051" ? trainingReportName : type;
   const getScoreDisplay = (item) => {
     let score = null;
@@ -9569,7 +9565,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
             /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm font-semibold text-white", children: "Loading performance history" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-1 text-xs text-gray-400", children: [
               "Retrieving ",
-              trainingReportShortLabel,
+              trainingReportName,
               " and LMP records..."
             ] })
           ] }),
@@ -10256,13 +10252,6 @@ const TraineeProfileFlyout = ({
   const [showCurrencyAudit, setShowCurrencyAudit] = reactExports.useState(false);
   const btnClass = "w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed";
   const tabBtnClass = (tab) => `w-[75px] h-[55px] flex items-center justify-center text-center px-1 py-1 text-[12px] font-semibold rounded-md btn-aluminium-brushed${activeTab === tab ? " active" : ""}`;
-  const trainingReportShortLabel = (trainingReportTerminology?.shortName || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName).trim() || DEFAULT_TRAINING_REPORT_TERMINOLOGY.shortName;
-  const trainingReportButtonLines = trainingReportShortLabel.split(/\s+/).filter(Boolean);
-  const trainingReportButtonLabel = trainingReportButtonLines.length > 1 ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-    trainingReportButtonLines[0],
-    /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
-    trainingReportButtonLines.slice(1).join(" ")
-  ] }) : trainingReportShortLabel;
   const contentScrollRef = reactExports.useRef(null);
   const currentIndividualLMP = traineeLMPs?.get(trainee.fullName) || individualLmp;
   const handleTabClick = (tab) => setActiveTab((prev) => {
@@ -11299,8 +11288,12 @@ const TraineeProfileFlyout = ({
               {
                 onClick: handleHateSheetClick,
                 className: tabBtnClass("hatesheet"),
-                title: trainingReportTerminology?.name || DEFAULT_TRAINING_REPORT_TERMINOLOGY.name,
-                children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "leading-tight", children: trainingReportButtonLabel })
+                title: "Training Report",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "leading-tight", children: [
+                  "Training",
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+                  "Report"
+                ] })
               }
             ),
             canViewIndividualLmp && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleIndividualLMPClick, className: tabBtnClass("lmp"), children: "View Individual LMP" }),
@@ -60090,30 +60083,17 @@ const PlatformConfigurationSettings = ({
             }
           )
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Field,
-            {
-              label: "Training Report Name",
-              value: trainingReportTerminology.name,
-              disabled: !canEditRankTerminology,
-              maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
-              onChange: (value) => updateTrainingReportTerminology({ name: value }),
-              info: `The organisation-specific name for the trainee assessment form. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Examples: PT-051, Training Assessment, Flight Assessment Report.`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Field,
-            {
-              label: "Training Report Short Label",
-              value: trainingReportTerminology.shortName,
-              disabled: !canEditRankTerminology,
-              maxLength: TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH,
-              onChange: (value) => updateTrainingReportTerminology({ shortName: value }),
-              info: `The compact label used where space is tight, such as Trainee Profile action buttons and Performance History type pills. Maximum ${TRAINING_REPORT_SHORT_LABEL_MAX_LENGTH} characters. Example: Training Report.`
-            }
-          )
-        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid gap-3 lg:grid-cols-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Field,
+          {
+            label: "Training Report Name",
+            value: trainingReportTerminology.name,
+            disabled: !canEditRankTerminology,
+            maxLength: TRAINING_REPORT_NAME_MAX_LENGTH,
+            onChange: (value) => updateTrainingReportTerminology({ name: value }),
+            info: `The compact organisation-specific report name used in tight spaces such as Performance History type pills. Maximum ${TRAINING_REPORT_NAME_MAX_LENGTH} characters. Default: Report. Examples: PT-051, Report, Grade Form.`
+          }
+        ) }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 lg:grid-cols-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             TextAreaField,
