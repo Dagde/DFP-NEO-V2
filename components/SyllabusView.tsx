@@ -565,6 +565,9 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           setIsEditing(false);
           setEditedItem(null);
           setEditingCourseTitle('');
+          window.setTimeout(() => {
+              window.location.reload();
+          }, 700);
       } catch (err: any) {
           alert(`Save failed: ${err.message}`);
       } finally {
