@@ -2136,7 +2136,7 @@ function generateDfpInternal(
     };
 
     const saveNeoBuildDiag = (stage: string) => {
-        if (stage !== 'final' && !neoBuildLiveDiagnostics) return;
+        if (stage !== 'build-start' && stage !== 'final' && !neoBuildLiveDiagnostics) return;
         neoBuildDiag.stage = stage;
         neoBuildDiag.updatedAt = new Date().toISOString();
         try {
@@ -2175,6 +2175,7 @@ function generateDfpInternal(
             }
         }
     };
+    saveNeoBuildDiag('build-start');
 
     const eventCounts = new Map<string, { flightFtd: number, ground: number, cpt: number, dutySup: number, isStby: boolean }>();
     originalInstructors.forEach(i => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));

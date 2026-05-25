@@ -71693,7 +71693,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
-    if (stage !== "final" && !neoBuildLiveDiagnostics) return;
+    if (stage !== "build-start" && stage !== "final" && !neoBuildLiveDiagnostics) return;
     neoBuildDiag.stage = stage;
     neoBuildDiag.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     try {
@@ -71732,6 +71732,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
   };
+  saveNeoBuildDiag("build-start");
   const eventCounts = /* @__PURE__ */ new Map();
   originalInstructors.forEach((i) => eventCounts.set(i.name, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
   trainees.forEach((t) => eventCounts.set(t.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false }));
