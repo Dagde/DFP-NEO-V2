@@ -9843,7 +9843,8 @@ const DetailView$1 = ({ item, score, resourceDisplayNames = DEFAULT_RESOURCE_DIS
         item.flightOrSimHours.toFixed(1),
         " ",
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-normal", children: "hrs" })
-      ] }) })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Resource Number", value: item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0) })
     ] })
   ] }),
   score && /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-sky-700 rounded-lg bg-sky-900/10", children: [
@@ -28851,6 +28852,20 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           )
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Resource Number" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "input",
+            {
+              type: "number",
+              step: "1",
+              min: "0",
+              value: currentItem.resourceNumber ?? (currentItem.resourcesPhysical?.length ? 1 : 0),
+              onChange: (e) => handleFieldChange("resourceNumber", Math.max(0, Math.round(Number(e.target.value) || 0))),
+              className: "mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "bg-gray-700/50 p-1 rounded-lg", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-[9px] font-medium text-gray-400 uppercase tracking-wider", children: "Pre-Flight (min)" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             "input",
@@ -28941,6 +28956,7 @@ const DetailView = ({ item, isEditing, editedItem, onItemChange, onDeleteEvent, 
           " ",
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] font-normal", children: "hrs" })
         ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Resource Number", value: item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard, { label: "Pre-Flight", value: /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
           Math.round(item.preFlightTime * 60),
           " ",
@@ -29329,6 +29345,7 @@ const SyllabusView = ({
       methodOfDelivery: [],
       methodOfAssessment: [],
       resourcesPhysical: [],
+      resourceNumber: 0,
       resourcesHuman: [],
       location: "",
       courses: [courseCode],
@@ -29372,6 +29389,7 @@ const SyllabusView = ({
       methodOfDelivery: [],
       methodOfAssessment: [],
       resourcesPhysical: [],
+      resourceNumber: 0,
       resourcesHuman: [],
       location: "",
       courses: [selectedCourseType],
@@ -29893,7 +29911,7 @@ const SyllabusView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { style: { fontSize: 11, color: "#6b7280", marginBottom: 20, lineHeight: 1.6 }, children: [
                 "The spreadsheet must have a sheet named ",
                 /* @__PURE__ */ jsxRuntimeExports.jsx("strong", { style: { color: "#d1d5db" }, children: "Syllabus_LMP" }),
-                " with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical)."
+                " with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number."
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { marginBottom: 16 }, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { style: {
@@ -53363,6 +53381,8 @@ const SettingsView = ({
     if (assessment) parsed.methodOfAssessment = assessment;
     const resourcesPhy = getStrArray(row, ["Resources Required (physical)", "resourcesPhysical"]);
     if (resourcesPhy) parsed.resourcesPhysical = resourcesPhy;
+    const resourceNumber = getNum(row, ["Resource Number", "resourceNumber", "Resources Required Number"]);
+    if (resourceNumber !== void 0) parsed.resourceNumber = Math.max(0, Math.round(resourceNumber));
     const resourcesHum = getStrArray(row, ["Resources Required (Human)", "resourcesHuman"]);
     if (resourcesHum) parsed.resourcesHuman = resourcesHum;
     return parsed;
@@ -78190,6 +78210,7 @@ ${error instanceof Error ? error.message : String(error)}`,
         methodOfDelivery: [],
         methodOfAssessment: [],
         resourcesPhysical: [],
+        resourceNumber: 0,
         resourcesHuman: [remEvent.instructor],
         eventDetailsCommon: [],
         eventDetailsSortie: []
@@ -78497,6 +78518,7 @@ ${error instanceof Error ? error.message : String(error)}`,
       methodOfDelivery: [],
       methodOfAssessment: [],
       resourcesPhysical: physicalResources,
+      resourceNumber: request.resourceCount,
       resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : ["QFI", "Trainee"],
       completedAt: null,
       masterEventId: void 0,

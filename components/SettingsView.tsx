@@ -1390,6 +1390,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         const delivery = getStrArray(row, ['Method/s of Delivery', 'methodOfDelivery']); if (delivery) parsed.methodOfDelivery = delivery;
         const assessment = getStrArray(row, ['Type/s and Method/s of Assessment', 'methodOfAssessment']); if (assessment) parsed.methodOfAssessment = assessment;
         const resourcesPhy = getStrArray(row, ['Resources Required (physical)', 'resourcesPhysical']); if (resourcesPhy) parsed.resourcesPhysical = resourcesPhy;
+        const resourceNumber = getNum(row, ['Resource Number', 'resourceNumber', 'Resources Required Number']);
+        if (resourceNumber !== undefined) parsed.resourceNumber = Math.max(0, Math.round(resourceNumber));
         const resourcesHum = getStrArray(row, ['Resources Required (Human)', 'resourcesHuman']); if (resourcesHum) parsed.resourcesHuman = resourcesHum;
         
         return parsed;

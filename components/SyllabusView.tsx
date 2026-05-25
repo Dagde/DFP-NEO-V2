@@ -216,6 +216,17 @@ const DetailView: React.FC<{
                             />
                         </div>
                         <div className="bg-gray-700/50 p-1 rounded-lg">
+                            <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Resource Number</label>
+                            <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={currentItem.resourceNumber ?? (currentItem.resourcesPhysical?.length ? 1 : 0)}
+                                onChange={(e) => handleFieldChange('resourceNumber', Math.max(0, Math.round(Number(e.target.value) || 0)))}
+                                className="mt-0.5 block w-full bg-gray-800 border border-gray-600 rounded shadow-sm py-0.5 px-1 text-white focus:outline-none focus:ring-sky-500 focus:border-sky-500 text-[10px]"
+                            />
+                        </div>
+                        <div className="bg-gray-700/50 p-1 rounded-lg">
                             <label className="block text-[9px] font-medium text-gray-400 uppercase tracking-wider">Pre-Flight (min)</label>
                             <input
                                 type="number"
@@ -282,6 +293,7 @@ const DetailView: React.FC<{
                         <DetailCard label="TWR DI Reqd" value={item.twrDiReqd || (item.code === 'BGF11' || item.code === 'BGF18' ? 'YES' : 'NO')} />
                         <DetailCard label="Total Event Hrs" value={<>{item.totalEventHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
                         <DetailCard label="Flight/Sim Hrs" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-[10px] font-normal">hrs</span></>} />
+                        <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
                         <DetailCard label="Pre-Flight" value={<>{Math.round(item.preFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Post-Flight" value={<>{Math.round(item.postFlightTime * 60)} <span className="text-[10px] font-normal">min</span></>} />
                         <DetailCard label="Code" value={item.code} />
@@ -746,6 +758,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           methodOfDelivery: [],
           methodOfAssessment: [],
           resourcesPhysical: [],
+          resourceNumber: 0,
           resourcesHuman: [],
           location: '',
           courses: [courseCode],
@@ -795,6 +808,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
           methodOfDelivery: [],
           methodOfAssessment: [],
           resourcesPhysical: [],
+          resourceNumber: 0,
           resourcesHuman: [],
           location: '',
           courses: [selectedCourseType],
@@ -1198,7 +1212,7 @@ const SyllabusView: React.FC<SyllabusViewProps> = ({
                     Upload an Excel (.xlsx) file to populate <strong style={{ color: '#f9fafb' }}>{getCourseTitle(selectedCourseType)}</strong> with LMP events.
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 20, lineHeight: 1.6 }}>
-                    The spreadsheet must have a sheet named <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong> with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical).
+                    The spreadsheet must have a sheet named <strong style={{ color: '#d1d5db' }}>Syllabus_LMP</strong> with columns: Code, Course, Type, Event description, Event Details - Sortie, Total Event Hours, Method/s of Delivery, Resources Required (Human). Optional columns: Phase, Module, Day/Night, Dual/Solo, prerequisites, Event Details - Common, Flight or Sim Hours, Method/s of Assessment, Resources Required (physical), Resource Number.
                 </p>
 
                 <div style={{ marginBottom: 16 }}>

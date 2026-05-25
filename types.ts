@@ -266,6 +266,7 @@ export interface SyllabusItemDetail {
   methodOfDelivery: string[];
   methodOfAssessment: string[];
   resourcesPhysical: string[];
+  resourceNumber?: number;
   resourcesHuman: string[];
   isRemedial?: boolean;
   completedAt?: string | null;

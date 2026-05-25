@@ -10703,7 +10703,7 @@ const App: React.FC = () => {
                 prerequisitesGround: [], prerequisitesFlying: [],
                 preFlightTime: type === 'Ground School' ? 0.25 : (type === 'FTD' ? 0.5 : 1.0),
                 postFlightTime: type === 'Ground School' ? 0 : (type === 'FTD' ? 0.5 : 0.5),
-                location: '', methodOfDelivery: [], methodOfAssessment: [], resourcesPhysical: [], resourcesHuman: [remEvent.instructor], eventDetailsCommon: [], eventDetailsSortie: [],
+                location: '', methodOfDelivery: [], methodOfAssessment: [], resourcesPhysical: [], resourceNumber: 0, resourcesHuman: [remEvent.instructor], eventDetailsCommon: [], eventDetailsSortie: [],
             };
             remedialPackageItems.push(newItem);
             lastNewEventId = newItem.id;
@@ -11069,6 +11069,7 @@ const App: React.FC = () => {
             methodOfDelivery: [],
             methodOfAssessment: [],
             resourcesPhysical: physicalResources,
+            resourceNumber: request.resourceCount,
             resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : ['QFI', 'Trainee'],
             completedAt: null,
             masterEventId: undefined,

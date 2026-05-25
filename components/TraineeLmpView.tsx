@@ -278,6 +278,7 @@ const DetailView: React.FC<{
                 <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
                 <DetailCard label="Total Event Hours" value={<>{item.totalEventHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Flight/Sim Hours" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
+                <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
             </div>
         </fieldset>
 

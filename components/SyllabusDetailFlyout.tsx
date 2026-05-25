@@ -28,6 +28,7 @@ const SyllabusDetailFlyout: React.FC<SyllabusDetailFlyoutProps> = ({ item, posit
         <DetailRow label="Module" value={item.module}/>
         <DetailRow label="Total Time" value={item.totalEventHours} unit="hrs"/>
         <DetailRow label="Flight/Sim Time" value={item.flightOrSimHours} unit="hrs"/>
+        <DetailRow label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
       </div>
 
       <div className="mb-4">
