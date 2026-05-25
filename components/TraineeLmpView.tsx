@@ -3,6 +3,12 @@ import { Trainee, SyllabusItemDetail, Score } from '../types';
 import AuditButton from './AuditButton';
 import { useSystemFreeze } from '../hooks/useSystemFreeze';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
+import {
+    DEFAULT_INSERT_EVENT_TYPES,
+    INSERT_EVENT_LABEL_MAX_LENGTH,
+    type InsertEventDayNight,
+    type InsertEventTypeConfig,
+} from '../utils/insertEventTypes';
 
 interface TraineeLmpViewProps {
   trainee: Trainee;
@@ -19,6 +25,21 @@ interface TraineeLmpViewProps {
   resourceDisplayNames?: ResourceDisplayNames;
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
   onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
+  insertEventTypes?: InsertEventTypeConfig[];
+  onInsertCustomEvent?: (trainee: Trainee, event: InsertLmpEventRequest) => Promise<boolean> | boolean;
+}
+
+export interface InsertLmpEventRequest {
+    eventType: InsertEventTypeConfig;
+    label: string;
+    dayNight: InsertEventDayNight;
+    duration: number;
+    flightOrSimHours: number;
+    totalEventHours: number;
+    preFlightTime: number;
+    postFlightTime: number;
+    resourceCount: number;
+    followsEventId: string;
 }
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
@@ -44,6 +65,138 @@ const DetailList: React.FC<{ title: string; items: string[] }> = ({ title, items
         </div>
     </div>
 );
+
+const InsertEventModal: React.FC<{
+    traineeLmp: SyllabusItemDetail[];
+    insertEventTypes: InsertEventTypeConfig[];
+    onCancel: () => void;
+    onSave: (request: InsertLmpEventRequest) => void;
+}> = ({ traineeLmp, insertEventTypes, onCancel, onSave }) => {
+    const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
+    const [selectedLabel, setSelectedLabel] = useState(options[0]?.label || 'GF');
+    const selectedType = options.find(option => option.label === selectedLabel) || options[0];
+    const [label, setLabel] = useState((selectedType?.label || '').slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
+    const [dayNight, setDayNight] = useState<InsertEventDayNight>(selectedType?.dayNight || 'Day');
+    const [duration, setDuration] = useState(selectedType?.duration || 1);
+    const [flightOrSimHours, setFlightOrSimHours] = useState(selectedType?.flightOrSimHours || 0);
+    const [totalEventHours, setTotalEventHours] = useState(selectedType?.totalEventHours || 1);
+    const [preFlightTime, setPreFlightTime] = useState(selectedType?.preFlightTime || 0);
+    const [postFlightTime, setPostFlightTime] = useState(selectedType?.postFlightTime || 0);
+    const [resourceCount, setResourceCount] = useState(selectedType?.resourceCount || 0);
+    const [followsEventId, setFollowsEventId] = useState(traineeLmp[0]?.id || traineeLmp[0]?.code || '');
+    const [validationMessage, setValidationMessage] = useState('');
+
+    const handleTypeChange = (nextLabel: string) => {
+        const nextType = options.find(option => option.label === nextLabel) || options[0];
+        setSelectedLabel(nextLabel);
+        setLabel((nextType?.label || '').slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
+        setDayNight(nextType?.dayNight || 'Day');
+        setDuration(nextType?.duration || 1);
+        setFlightOrSimHours(nextType?.flightOrSimHours || 0);
+        setTotalEventHours(nextType?.totalEventHours || 1);
+        setPreFlightTime(nextType?.preFlightTime || 0);
+        setPostFlightTime(nextType?.postFlightTime || 0);
+        setResourceCount(nextType?.resourceCount || 0);
+    };
+
+    const handleSave = () => {
+        const trimmedLabel = label.trim().slice(0, INSERT_EVENT_LABEL_MAX_LENGTH);
+        if (!trimmedLabel) {
+            setValidationMessage('Enter an event label.');
+            return;
+        }
+        if (!followsEventId) {
+            setValidationMessage('Select the event this new event immediately follows.');
+            return;
+        }
+        if (!Number.isFinite(duration) || duration <= 0) {
+            setValidationMessage('Duration must be greater than zero.');
+            return;
+        }
+        onSave({
+            eventType: selectedType,
+            label: trimmedLabel,
+            dayNight,
+            duration,
+            flightOrSimHours: Math.max(0, flightOrSimHours),
+            totalEventHours: Math.max(duration, totalEventHours),
+            preFlightTime: Math.max(0, preFlightTime),
+            postFlightTime: Math.max(0, postFlightTime),
+            resourceCount: Math.max(0, Math.round(resourceCount)),
+            followsEventId,
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-3xl rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">Insert Event</h2>
+                        <p className="mt-1 text-xs text-gray-400">Create an Individual LMP event with the scheduling fields NEO Build needs.</p>
+                    </div>
+                    <button type="button" onClick={onCancel} className="text-2xl leading-none text-gray-400 hover:text-white">×</button>
+                </div>
+                <div className="grid gap-4 p-5 md:grid-cols-2">
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Event Type</span>
+                        <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={selectedLabel} onChange={(event) => handleTypeChange(event.target.value)}>
+                            {options.map(option => <option key={option.label} value={option.label}>{option.label}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tile Label</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={label} maxLength={INSERT_EVENT_LABEL_MAX_LENGTH} onChange={(event) => setLabel(event.target.value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH))} />
+                        <span className="block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label.length}/{INSERT_EVENT_LABEL_MAX_LENGTH}</span>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Day/Night</span>
+                        <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={dayNight} onChange={(event) => setDayNight(event.target.value as InsertEventDayNight)}>
+                            <option value="Day">Day</option>
+                            <option value="Night">Night</option>
+                            <option value="Day/Night">Both</option>
+                        </select>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Immediately Follows</span>
+                        <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={followsEventId} onChange={(event) => setFollowsEventId(event.target.value)}>
+                            {traineeLmp.map(item => <option key={item.id || item.code} value={item.id || item.code}>{item.code}</option>)}
+                        </select>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Flight/Sim Hours</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pre Event Time</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Post Event Time</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Resources Required</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="1" min="0" value={resourceCount} onChange={(event) => setResourceCount(Number(event.target.value))} />
+                    </label>
+                </div>
+                {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
+                <div className="flex justify-end gap-2 border-t border-gray-700 px-5 py-4">
+                    <button type="button" onClick={onCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
+                    <button type="button" onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Insert</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const getScoreColor = (score: number, type: 'text' | 'bg') => {
     const colors = {
@@ -549,10 +702,13 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onAccessDenied,
     onDeleteRemedialItem,
     onGeneratePt051ForItem,
+    insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+    onInsertCustomEvent,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
     const [activeTab, setActiveTab] = useState<'neo' | 'academic'>('neo');
+    const [showInsertEventModal, setShowInsertEventModal] = useState(false);
 
     // Always show Academic tab when syllabusDetails prop is provided
     // The tab itself will show a "configure" message if academicLmpType not set
@@ -610,6 +766,15 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     >
                         ← Back
                     </button>
+                    {activeTab === 'neo' && (
+                        <button
+                            onClick={() => setShowInsertEventModal(true)}
+                            disabled={!onInsertCustomEvent || traineeLmp.length === 0}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            Insert<br />Event
+                        </button>
+                    )}
                     {activeTab === 'neo' && selectedItem && onGeneratePt051ForItem && (
                         <button
                             onClick={() => onGeneratePt051ForItem(trainee, selectedItem)}
@@ -621,6 +786,18 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     <AuditButton pageName="Individual LMP" />
                 </div>
             </div>
+
+            {showInsertEventModal && (
+                <InsertEventModal
+                    traineeLmp={traineeLmp}
+                    insertEventTypes={insertEventTypes}
+                    onCancel={() => setShowInsertEventModal(false)}
+                    onSave={async (request) => {
+                        const inserted = await onInsertCustomEvent?.(trainee, request);
+                        if (inserted !== false) setShowInsertEventModal(false);
+                    }}
+                />
+            )}
 
             {/* Tab switcher — only show if academic syllabus exists */}
             {hasAcademicSyllabus && (

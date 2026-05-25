@@ -16,6 +16,14 @@ import {
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
 import { normaliseAircraftNumberSettings } from '../utils/aircraftNumberFormat';
+import {
+  DEFAULT_INSERT_EVENT_TYPES,
+  INSERT_EVENT_LABEL_MAX_LENGTH,
+  normaliseInsertEventTypes,
+  type InsertEventTypeConfig,
+  type InsertEventDayNight,
+  type InsertEventSyllabusType,
+} from '../utils/insertEventTypes';
 import { showDarkConfirm, showDarkPrompt } from './DarkMessageModal';
 
 type PlatformConfig = {
@@ -789,6 +797,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null,
   );
+  const insertEventTypes = normaliseInsertEventTypes(
+    primaryOrganisationSettings.insertEventTypes || null,
+  );
   const operationalSignals = [
     {
       label: 'Support owner',
@@ -882,6 +893,35 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         ...changes,
       }),
     }));
+  };
+
+  const updateInsertEventTypes = (nextEventTypes: InsertEventTypeConfig[]) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      insertEventTypes: normaliseInsertEventTypes(nextEventTypes),
+    }));
+  };
+
+  const updateInsertEventType = (index: number, changes: Partial<InsertEventTypeConfig>) => {
+    const next = insertEventTypes.map((eventType, eventTypeIndex) => (
+      eventTypeIndex === index ? { ...eventType, ...changes } : eventType
+    ));
+    updateInsertEventTypes(next);
+  };
+
+  const addInsertEventType = () => {
+    updateInsertEventTypes([
+      ...insertEventTypes,
+      {
+        ...DEFAULT_INSERT_EVENT_TYPES[0],
+        label: `EVT${insertEventTypes.length + 1}`.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH),
+      },
+    ]);
+  };
+
+  const removeInsertEventType = (index: number) => {
+    if (insertEventTypes.length <= 1) return;
+    updateInsertEventTypes(insertEventTypes.filter((_, eventTypeIndex) => eventTypeIndex !== index));
   };
 
   const toggleDeploymentReadiness = (itemId: string, checked: boolean) => {
@@ -2441,7 +2481,65 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
 
       <section id="platform-scheduling-rule-sets" className={getSectionClass('platform-scheduling-rule-sets')}>
         <SectionHeader title="Scheduling Rule Sets" subtitle="Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." />
-        <div className="space-y-3 p-4">
+        <div className="space-y-4 p-4">
+          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <div>
+                <h5 className="text-sm font-bold text-cyan-100">Individual LMP Insert Event Types</h5>
+                <p className="mt-1 text-xs leading-relaxed text-cyan-100/75">
+                  Controls the event types available from the Individual LMP Insert Event action. Labels are capped at {INSERT_EVENT_LABEL_MAX_LENGTH} characters because they are used on schedule tiles.
+                </p>
+              </div>
+              {canEdit && (
+                <button type="button" onClick={addInsertEventType} className="ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200">
+                  Add Event Type
+                </button>
+              )}
+            </div>
+            <div className="space-y-3">
+              {insertEventTypes.map((eventType, eventTypeIndex) => (
+                <div key={`${eventType.label}-${eventTypeIndex}`} className="grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6">
+                  <Field
+                    label="Label"
+                    value={eventType.label}
+                    disabled={!canEdit}
+                    maxLength={INSERT_EVENT_LABEL_MAX_LENGTH}
+                    onChange={(value) => updateInsertEventType(eventTypeIndex, { label: value })}
+                  />
+                  <SelectField
+                    label="Build Type"
+                    value={eventType.syllabusType}
+                    disabled={!canEdit}
+                    options={['Flight', 'FTD', 'Ground School', 'Academics']}
+                    onChange={(value) => updateInsertEventType(eventTypeIndex, { syllabusType: value as InsertEventSyllabusType })}
+                  />
+                  <SelectField
+                    label="Day/Night"
+                    value={eventType.dayNight}
+                    disabled={!canEdit}
+                    options={['Day', 'Night', 'Day/Night']}
+                    onChange={(value) => updateInsertEventType(eventTypeIndex, { dayNight: value as InsertEventDayNight })}
+                  />
+                  <NumberField label="Duration" value={eventType.duration} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { duration: value })} />
+                  <NumberField label="Flt/Sim Hrs" value={eventType.flightOrSimHours} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value })} />
+                  <NumberField label="Resources" value={eventType.resourceCount} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) })} />
+                  <NumberField label="Total Hrs" value={eventType.totalEventHours} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value })} />
+                  <NumberField label="Pre Time" value={eventType.preFlightTime} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value })} />
+                  <NumberField label="Post Time" value={eventType.postFlightTime} disabled={!canEdit} onChange={(value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value })} />
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      disabled={!canEdit || insertEventTypes.length <= 1}
+                      onClick={() => removeInsertEventType(eventTypeIndex)}
+                      className="h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           {config.schedulingRuleSets.map((ruleSet, index) => (
             <div key={ruleSet.id || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5">
               <Field label="Name" value={ruleSet.name} disabled={!canEdit} onChange={(value) => updateRow('schedulingRuleSets', index, { name: value })} />

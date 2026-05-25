@@ -23,6 +23,8 @@ import {
   DEFAULT_TRAINING_REPORT_TERMINOLOGY,
   type TrainingReportTerminology,
 } from '../utils/trainingReportTerminology';
+import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
+import type { InsertLmpEventRequest } from './TraineeLmpView';
 import {
   getVisiblePermissions,
   isTraineeSuspended,
@@ -69,6 +71,8 @@ interface TraineeProfileFlyoutProps {
   canAddRemedialPackage?: boolean;
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
   onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
+  onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
+  insertEventTypes?: InsertEventTypeConfig[];
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: Partial<PersonnelDisplaySettings> | null;
@@ -303,6 +307,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   canAddRemedialPackage = true,
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
+  onInsertCustomLmpEvent,
+  insertEventTypes,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -1225,6 +1231,8 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             onBack={() => setActiveTab(null)}
                             onDeleteRemedialItem={onDeleteRemedialItem}
                             onGeneratePt051ForItem={onGeneratePt051ForItem}
+                            onInsertCustomEvent={onInsertCustomLmpEvent}
+                            insertEventTypes={insertEventTypes}
                           />
                         </div>
                       );

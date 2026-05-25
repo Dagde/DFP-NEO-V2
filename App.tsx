@@ -37,6 +37,8 @@ import {
     getPersonnelDisplaySettings,
 } from './utils/personnelDisplaySettings';
 import { getTrainingReportTerminology } from './utils/trainingReportTerminology';
+import { getInsertEventTypes } from './utils/insertEventTypes';
+import type { InsertLmpEventRequest } from './components/TraineeLmpView';
 import {
     getStaffCallsignAssignments,
     getStaffCallsignKey,
@@ -7907,6 +7909,10 @@ const App: React.FC = () => {
         () => getTrainingReportTerminology(platformConfig),
         [platformConfig]
     );
+    const insertEventTypes = useMemo(
+        () => getInsertEventTypes(platformConfig),
+        [platformConfig]
+    );
     const instructorLabel = personnelDisplaySettings.instructorLabel;
     const formatResourceDisplayLabel = useCallback(
         (resourceId: string) => formatConfiguredResourceLabel(resourceId, resourceDisplayNames),
@@ -11003,6 +11009,114 @@ const App: React.FC = () => {
             await showDarkAlert(
                 `Remedial event ${item.code} could not be deleted from the database. It has not been removed locally.\n\n${error instanceof Error ? error.message : String(error)}`,
                 'Individual LMP Delete Failed',
+                'error'
+            );
+            return false;
+        }
+    };
+
+    const handleInsertCustomLmpEvent = async (trainee: Trainee, request: InsertLmpEventRequest): Promise<boolean> => {
+        const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+        if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
+            await showDarkAlert(`Could not insert ${request.label}: Individual LMP not found for ${trainee.fullName}.`, 'Insert Event Failed', 'error');
+            return false;
+        }
+
+        const insertionIndex = originalTraineeLMP.findIndex(item => (
+            (item.id || item.code) === request.followsEventId ||
+            (item.code || item.id) === request.followsEventId
+        ));
+        if (insertionIndex === -1) {
+            await showDarkAlert('Could not insert event: the selected follow-on event was not found in the Individual LMP.', 'Insert Event Failed', 'error');
+            return false;
+        }
+
+        const cleanedLabel = request.label.trim().slice(0, 8);
+        const existingCodes = new Set(originalTraineeLMP.map(item => String(item.code || item.id || '').toUpperCase()));
+        let sequence = 1;
+        let eventCode = cleanedLabel;
+        while (existingCodes.has(eventCode.toUpperCase())) {
+            const suffix = String(sequence);
+            eventCode = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
+            sequence++;
+        }
+
+        const followsItem = originalTraineeLMP[insertionIndex];
+        const nextMasterItem = originalTraineeLMP.slice(insertionIndex + 1).find(item => !isLmpOverlayItem(item));
+        const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => (
+            request.resourceCount === 1 ? 'Aircraft' : `Aircraft ${index + 1}`
+        ));
+
+        const newItem: SyllabusItemDetail = {
+            id: `custom-${Date.now()}-${eventCode}`,
+            code: eventCode,
+            phase: followsItem.phase || '',
+            module: 'Inserted Event',
+            dayNight: request.dayNight,
+            eventDescription: eventCode,
+            prerequisites: [followsItem.id || followsItem.code].filter(Boolean),
+            prerequisitesGround: [],
+            prerequisitesFlying: [],
+            eventDetailsCommon: [],
+            eventDetailsSortie: [],
+            totalEventHours: request.totalEventHours,
+            flightOrSimHours: request.flightOrSimHours,
+            duration: request.duration,
+            preFlightTime: request.preFlightTime,
+            postFlightTime: request.postFlightTime,
+            type: request.eventType.syllabusType,
+            sortieType: request.eventType.syllabusType === 'Flight' ? 'Dual' : undefined,
+            methodOfDelivery: [],
+            methodOfAssessment: [],
+            resourcesPhysical: physicalResources,
+            resourcesHuman: request.eventType.syllabusType === 'Academics' ? [] : ['QFI', 'Trainee'],
+            completedAt: null,
+            masterEventId: undefined,
+            lmpSource: 'custom',
+            orderKey: `${createLmpOrderKey(insertionIndex)}.${String(Date.now()).slice(-6)}`,
+            anchorAfterMasterEventId: getMasterEventId(followsItem),
+            anchorBeforeMasterEventId: nextMasterItem ? getMasterEventId(nextMasterItem) : undefined,
+            anchorPolicy: 'between',
+            userLockedPosition: true,
+            placementNeedsReview: false,
+            location: followsItem.location || '',
+            courses: followsItem.courses || [],
+            lmpType: followsItem.lmpType,
+        };
+
+        const updatedLmp = [
+            ...originalTraineeLMP.slice(0, insertionIndex + 1),
+            newItem,
+            ...originalTraineeLMP.slice(insertionIndex + 1),
+        ];
+
+        try {
+            const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            setTraineeLMPs(prevLMPs => {
+                const newLMPs = new Map(prevLMPs);
+                newLMPs.set(trainee.fullName, persistedLmp);
+                return newLMPs;
+            });
+            logAudit(
+                'Individual LMP',
+                'Insert',
+                `Inserted event ${eventCode} into ${trainee.fullName}'s Individual LMP`,
+                [
+                    `Event: ${eventCode}`,
+                    `Type: ${request.eventType.label}`,
+                    `Day/Night: ${request.dayNight}`,
+                    `Resources: ${request.resourceCount}`,
+                    `Follows: ${followsItem.code}`,
+                    `Trainee: ${trainee.rank ? `${trainee.rank} ` : ''}${trainee.name}`,
+                ].join('; ')
+            );
+            setSuccessMessage(`Inserted event ${eventCode} into Individual LMP.`);
+            return true;
+        } catch (error) {
+            console.error('[Individual LMP] Failed to insert custom event:', error);
+            await showDarkAlert(
+                `The event was not saved to the database, so it has not been inserted.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Insert Event Failed',
                 'error'
             );
             return false;
@@ -17074,6 +17188,8 @@ updates.forEach(update => {
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
                             onDeleteRemedialItem={handleDeleteRemedialLmpItem}
                             onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
+                            onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
+                            insertEventTypes={insertEventTypes}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}
@@ -17225,6 +17341,8 @@ updates.forEach(update => {
                             canViewTraineeLmp={canViewTraineeLmp}
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
                             onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
+                            onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
+                            insertEventTypes={insertEventTypes}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
                             units={units}

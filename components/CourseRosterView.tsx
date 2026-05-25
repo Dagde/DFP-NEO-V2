@@ -13,6 +13,8 @@ import CourseEditFlyout from './CourseEditFlyout';
 import { DEFAULT_RESOURCE_DISPLAY_NAMES, type ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
+import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
+import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 interface CourseRosterViewProps {
     events: ScheduleEvent[];
@@ -59,6 +61,8 @@ interface CourseRosterViewProps {
     canAddRemedialPackageForTrainee?: (trainee: Trainee) => boolean;
     onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
     onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
+    onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
+    insertEventTypes?: InsertEventTypeConfig[];
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
     personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -135,6 +139,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     canAddRemedialPackageForTrainee = () => true,
     onDeleteRemedialItem,
     onGeneratePt051ForItem,
+    onInsertCustomLmpEvent,
+    insertEventTypes,
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
     personnelDisplaySettings,
@@ -509,6 +515,8 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     canAddRemedialPackage={canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!)}
                     onDeleteRemedialItem={onDeleteRemedialItem}
                     onGeneratePt051ForItem={onGeneratePt051ForItem}
+                    onInsertCustomLmpEvent={onInsertCustomLmpEvent}
+                    insertEventTypes={insertEventTypes}
                     onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,
                         assessment

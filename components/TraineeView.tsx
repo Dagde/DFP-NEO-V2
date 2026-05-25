@@ -5,6 +5,8 @@ import TraineeScheduleView from './TraineeScheduleView';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
 import { comparePeopleByConfiguredRank, type PersonnelDisplaySettings } from '../utils/personnelDisplaySettings';
 import type { TrainingReportTerminology } from '../utils/trainingReportTerminology';
+import type { InsertEventTypeConfig } from '../utils/insertEventTypes';
+import type { InsertLmpEventRequest } from './TraineeLmpView';
 
 interface TraineeViewProps {
   // Props for CourseRosterView
@@ -51,6 +53,8 @@ interface TraineeViewProps {
   canEditTraineePt051?: (trainee: any) => boolean;
   canViewTraineeLmp?: (trainee: any) => boolean;
   canAddRemedialPackageForTrainee?: (trainee: any) => boolean;
+  onInsertCustomLmpEvent?: (trainee: any, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
+  insertEventTypes?: InsertEventTypeConfig[];
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
   personnelDisplaySettings?: PersonnelDisplaySettings;
@@ -144,6 +148,8 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onDeleteTrainee={props.onDeleteTrainee}
             onDeleteRemedialItem={props.onDeleteRemedialItem}
             onGeneratePt051ForItem={props.onGeneratePt051ForItem}
+            onInsertCustomLmpEvent={props.onInsertCustomLmpEvent}
+            insertEventTypes={props.insertEventTypes}
             onOpenInstructorProfile={props.onOpenInstructorProfile}
             onUpdateCourseNumber={props.onUpdateCourseNumber}
             onUpdateCourseUnit={props.onUpdateCourseUnit}

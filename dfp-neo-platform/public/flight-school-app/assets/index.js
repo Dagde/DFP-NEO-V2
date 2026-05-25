@@ -1943,7 +1943,7 @@ const DEFAULT_RESOURCE_DISPLAY_NAMES = {
   ftd: "FTD",
   cpt: "CPT"
 };
-const cleanLabel$1 = (value, fallback) => {
+const cleanLabel$2 = (value, fallback) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
@@ -1951,9 +1951,9 @@ const cleanLabel$1 = (value, fallback) => {
 const getResourceDisplayNames = (resourcePool) => {
   const settings = resourcePool?.settings || {};
   return {
-    aircraft: cleanLabel$1(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
-    ftd: cleanLabel$1(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
-    cpt: cleanLabel$1(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
+    aircraft: cleanLabel$2(settings.aircraftLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.aircraft),
+    ftd: cleanLabel$2(settings.ftdLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.ftd),
+    cpt: cleanLabel$2(settings.cptLabel, DEFAULT_RESOURCE_DISPLAY_NAMES.cpt)
   };
 };
 const formatResourceLabel = (resourceId, names = DEFAULT_RESOURCE_DISPLAY_NAMES) => {
@@ -2003,11 +2003,11 @@ const parseAircraftNumber = (value, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS)
 };
 const formatAircraftNumber = (number, prefix, settings = DEFAULT_AIRCRAFT_NUMBER_SETTINGS) => {
   const parsed = parseAircraftNumber(number, settings);
-  const cleanNumber = parsed.number || cleanToken(number);
-  if (!cleanNumber) return "";
-  if (!settings.usePrefix) return cleanNumber;
+  const cleanNumber2 = parsed.number || cleanToken(number);
+  if (!cleanNumber2) return "";
+  if (!settings.usePrefix) return cleanNumber2;
   const cleanPrefix = cleanToken(prefix) || parsed.prefix || settings.defaultPrefix || settings.prefixes[0] || "";
-  return cleanPrefix ? `${cleanPrefix} ${cleanNumber}` : cleanNumber;
+  return cleanPrefix ? `${cleanPrefix} ${cleanNumber2}` : cleanNumber2;
 };
 const DEFAULT_STAFF_RANK_ORDER = [
   "AIRMSHL",
@@ -2158,19 +2158,68 @@ const TRAINING_REPORT_NAME_MAX_LENGTH = 10;
 const DEFAULT_TRAINING_REPORT_TERMINOLOGY = {
   name: "Report"
 };
-const cleanLabel = (value, fallback, maxLength) => {
+const cleanLabel$1 = (value, fallback, maxLength) => {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return (trimmed || fallback).slice(0, maxLength);
 };
 const normaliseTrainingReportTerminology = (input) => ({
-  name: cleanLabel(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH)
+  name: cleanLabel$1(input?.name, DEFAULT_TRAINING_REPORT_TERMINOLOGY.name, TRAINING_REPORT_NAME_MAX_LENGTH)
 });
 const getTrainingReportTerminology = (config) => {
   const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
   const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
   const settings = activeOrganisation?.settings || {};
   return normaliseTrainingReportTerminology(settings.trainingReportTerminology || null);
+};
+const INSERT_EVENT_LABEL_MAX_LENGTH = 8;
+const DEFAULT_INSERT_EVENT_TYPES = [
+  { label: "GF", syllabusType: "Ground School", dayNight: "Day", duration: 1, flightOrSimHours: 0, totalEventHours: 1, preFlightTime: 0.25, postFlightTime: 0, resourceCount: 0 },
+  { label: "IF", syllabusType: "Flight", dayNight: "Day", duration: 1.5, flightOrSimHours: 1.5, totalEventHours: 2.5, preFlightTime: 1, postFlightTime: 0.5, resourceCount: 1 },
+  { label: "NF", syllabusType: "Flight", dayNight: "Night", duration: 1.5, flightOrSimHours: 1.5, totalEventHours: 2.5, preFlightTime: 1, postFlightTime: 0.5, resourceCount: 1 },
+  { label: "FORM", syllabusType: "Flight", dayNight: "Day/Night", duration: 1.5, flightOrSimHours: 1.5, totalEventHours: 2.5, preFlightTime: 1, postFlightTime: 0.5, resourceCount: 2 },
+  { label: "Nav", syllabusType: "Flight", dayNight: "Day/Night", duration: 2, flightOrSimHours: 2, totalEventHours: 3, preFlightTime: 1, postFlightTime: 0.5, resourceCount: 1 },
+  { label: "Currency", syllabusType: "Flight", dayNight: "Day/Night", duration: 1.5, flightOrSimHours: 1.5, totalEventHours: 2.5, preFlightTime: 1, postFlightTime: 0.5, resourceCount: 1 }
+];
+const cleanLabel = (value, fallback) => {
+  const raw = typeof value === "string" ? value.trim() : fallback;
+  return (raw || fallback).slice(0, INSERT_EVENT_LABEL_MAX_LENGTH);
+};
+const cleanNumber = (value, fallback, min = 0) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(min, numeric);
+};
+const cleanSyllabusType = (value, fallback) => {
+  return value === "Flight" || value === "FTD" || value === "Ground School" || value === "Academics" ? value : fallback;
+};
+const cleanDayNight = (value, fallback) => {
+  return value === "Day" || value === "Night" || value === "Day/Night" ? value : fallback;
+};
+const normaliseInsertEventTypes = (input) => {
+  const source = Array.isArray(input) && input.length > 0 ? input : DEFAULT_INSERT_EVENT_TYPES;
+  return source.map((item, index) => {
+    const fallback = DEFAULT_INSERT_EVENT_TYPES[index] || DEFAULT_INSERT_EVENT_TYPES[0];
+    const syllabusType = cleanSyllabusType(item?.syllabusType || item?.type, fallback.syllabusType);
+    const duration = cleanNumber(item?.duration, fallback.duration, 0.25);
+    const flightOrSimHours = cleanNumber(item?.flightOrSimHours, syllabusType === "Ground School" ? 0 : duration, 0);
+    return {
+      label: cleanLabel(item?.label || item?.code, fallback.label),
+      syllabusType,
+      dayNight: cleanDayNight(item?.dayNight, fallback.dayNight),
+      duration,
+      flightOrSimHours,
+      totalEventHours: cleanNumber(item?.totalEventHours, Math.max(duration, flightOrSimHours), 0.25),
+      preFlightTime: cleanNumber(item?.preFlightTime, fallback.preFlightTime, 0),
+      postFlightTime: cleanNumber(item?.postFlightTime, fallback.postFlightTime, 0),
+      resourceCount: Math.round(cleanNumber(item?.resourceCount, fallback.resourceCount, 0))
+    };
+  }).filter((item) => item.label);
+};
+const getInsertEventTypes = (config) => {
+  const organisations = Array.isArray(config?.organisations) ? config.organisations : [];
+  const activeOrganisation = organisations.find((org) => String(org.status || "ACTIVE").toUpperCase() === "ACTIVE") || organisations[0];
+  return normaliseInsertEventTypes(activeOrganisation?.settings?.insertEventTypes || null);
 };
 const CALLSIGN_LIMIT = 50;
 const norm = (value) => String(value || "").trim().toUpperCase();
@@ -9612,6 +9661,125 @@ const DetailList$1 = ({ title, items }) => /* @__PURE__ */ jsxRuntimeExports.jsx
   /* @__PURE__ */ jsxRuntimeExports.jsx("h3", { className: "text-md font-semibold text-sky-400 mb-2", children: title }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-gray-700/50 p-3 rounded-lg text-sm text-gray-300", children: items && items.length > 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("ul", { className: "space-y-1 list-disc list-inside", children: items.map((item, index) => /* @__PURE__ */ jsxRuntimeExports.jsx("li", { children: item }, index)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "italic text-gray-500", children: "None" }) })
 ] });
+const InsertEventModal = ({ traineeLmp, insertEventTypes, onCancel, onSave }) => {
+  const options = insertEventTypes.length > 0 ? insertEventTypes : DEFAULT_INSERT_EVENT_TYPES;
+  const [selectedLabel, setSelectedLabel] = reactExports.useState(options[0]?.label || "GF");
+  const selectedType = options.find((option) => option.label === selectedLabel) || options[0];
+  const [label, setLabel] = reactExports.useState((selectedType?.label || "").slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
+  const [dayNight, setDayNight] = reactExports.useState(selectedType?.dayNight || "Day");
+  const [duration, setDuration] = reactExports.useState(selectedType?.duration || 1);
+  const [flightOrSimHours, setFlightOrSimHours] = reactExports.useState(selectedType?.flightOrSimHours || 0);
+  const [totalEventHours, setTotalEventHours] = reactExports.useState(selectedType?.totalEventHours || 1);
+  const [preFlightTime, setPreFlightTime] = reactExports.useState(selectedType?.preFlightTime || 0);
+  const [postFlightTime, setPostFlightTime] = reactExports.useState(selectedType?.postFlightTime || 0);
+  const [resourceCount, setResourceCount] = reactExports.useState(selectedType?.resourceCount || 0);
+  const [followsEventId, setFollowsEventId] = reactExports.useState(traineeLmp[0]?.id || traineeLmp[0]?.code || "");
+  const [validationMessage, setValidationMessage] = reactExports.useState("");
+  const handleTypeChange = (nextLabel) => {
+    const nextType = options.find((option) => option.label === nextLabel) || options[0];
+    setSelectedLabel(nextLabel);
+    setLabel((nextType?.label || "").slice(0, INSERT_EVENT_LABEL_MAX_LENGTH));
+    setDayNight(nextType?.dayNight || "Day");
+    setDuration(nextType?.duration || 1);
+    setFlightOrSimHours(nextType?.flightOrSimHours || 0);
+    setTotalEventHours(nextType?.totalEventHours || 1);
+    setPreFlightTime(nextType?.preFlightTime || 0);
+    setPostFlightTime(nextType?.postFlightTime || 0);
+    setResourceCount(nextType?.resourceCount || 0);
+  };
+  const handleSave = () => {
+    const trimmedLabel = label.trim().slice(0, INSERT_EVENT_LABEL_MAX_LENGTH);
+    if (!trimmedLabel) {
+      setValidationMessage("Enter an event label.");
+      return;
+    }
+    if (!followsEventId) {
+      setValidationMessage("Select the event this new event immediately follows.");
+      return;
+    }
+    if (!Number.isFinite(duration) || duration <= 0) {
+      setValidationMessage("Duration must be greater than zero.");
+      return;
+    }
+    onSave({
+      eventType: selectedType,
+      label: trimmedLabel,
+      dayNight,
+      duration,
+      flightOrSimHours: Math.max(0, flightOrSimHours),
+      totalEventHours: Math.max(duration, totalEventHours),
+      preFlightTime: Math.max(0, preFlightTime),
+      postFlightTime: Math.max(0, postFlightTime),
+      resourceCount: Math.max(0, Math.round(resourceCount)),
+      followsEventId
+    });
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-3xl rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Insert Event" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Create an Individual LMP event with the scheduling fields NEO Build needs." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-2xl leading-none text-gray-400 hover:text-white", children: "×" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-5 md:grid-cols-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Event Type" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: selectedLabel, onChange: (event) => handleTypeChange(event.target.value), children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: option.label, children: option.label }, option.label)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Tile Label" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: label, maxLength: INSERT_EVENT_LABEL_MAX_LENGTH, onChange: (event) => setLabel(event.target.value.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
+          label.length,
+          "/",
+          INSERT_EVENT_LABEL_MAX_LENGTH
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Day/Night" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: dayNight, onChange: (event) => setDayNight(event.target.value), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Day", children: "Day" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Night", children: "Night" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Day/Night", children: "Both" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Immediately Follows" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: followsEventId, onChange: (event) => setFollowsEventId(event.target.value), children: traineeLmp.map((item) => /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: item.id || item.code, children: item.code }, item.id || item.code)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Flight/Sim Hours" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Pre Event Time" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Post Event Time" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Resources Required" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "1", min: "0", value: resourceCount, onChange: (event) => setResourceCount(Number(event.target.value)) })
+      ] })
+    ] }),
+    validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Insert" })
+    ] })
+  ] }) });
+};
 const getScoreColor = (score, type) => {
   const colors = {
     "2-5": { text: "text-green-300", bg: "bg-green-500/20" },
@@ -10002,11 +10170,14 @@ const TraineeLmpView = ({
   canOpenPt051 = true,
   onAccessDenied,
   onDeleteRemedialItem,
-  onGeneratePt051ForItem
+  onGeneratePt051ForItem,
+  insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
+  onInsertCustomEvent
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
   const [activeTab, setActiveTab] = reactExports.useState("neo");
+  const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
   const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
@@ -10054,6 +10225,19 @@ const TraineeLmpView = ({
             children: "← Back"
           }
         ),
+        activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "button",
+          {
+            onClick: () => setShowInsertEventModal(true),
+            disabled: !onInsertCustomEvent || traineeLmp.length === 0,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
+            children: [
+              "Insert",
+              /* @__PURE__ */ jsxRuntimeExports.jsx("br", {}),
+              "Event"
+            ]
+          }
+        ),
         activeTab === "neo" && selectedItem && onGeneratePt051ForItem && /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -10069,6 +10253,18 @@ const TraineeLmpView = ({
         /* @__PURE__ */ jsxRuntimeExports.jsx(AuditButton, { pageName: "Individual LMP" })
       ] })
     ] }),
+    showInsertEventModal && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      InsertEventModal,
+      {
+        traineeLmp,
+        insertEventTypes,
+        onCancel: () => setShowInsertEventModal(false),
+        onSave: async (request) => {
+          const inserted = await onInsertCustomEvent?.(trainee, request);
+          if (inserted !== false) setShowInsertEventModal(false);
+        }
+      }
+    ),
     hasAcademicSyllabus && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 bg-gray-800 px-4 pt-2 flex gap-1 border-b border-gray-700", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: tabClass("neo"), onClick: () => setActiveTab("neo"), children: "NEO Build LMP" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { className: tabClass("academic"), onClick: () => setActiveTab("academic"), children: "Academic LMP" })
@@ -10226,6 +10422,8 @@ const TraineeProfileFlyout = ({
   canAddRemedialPackage = true,
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
+  onInsertCustomLmpEvent,
+  insertEventTypes,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings = DEFAULT_PERSONNEL_DISPLAY_SETTINGS,
@@ -10977,7 +11175,9 @@ const TraineeProfileFlyout = ({
                     scores: traineeScores,
                     onBack: () => setActiveTab(null),
                     onDeleteRemedialItem,
-                    onGeneratePt051ForItem
+                    onGeneratePt051ForItem,
+                    onInsertCustomEvent: onInsertCustomLmpEvent,
+                    insertEventTypes
                   }
                 ) });
               })(),
@@ -11919,6 +12119,8 @@ const CourseRosterView = ({
   canAddRemedialPackageForTrainee = () => true,
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
+  onInsertCustomLmpEvent,
+  insertEventTypes,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
   personnelDisplaySettings,
@@ -12223,6 +12425,8 @@ const CourseRosterView = ({
         canAddRemedialPackage: canAddRemedialPackageForTrainee(isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee),
         onDeleteRemedialItem,
         onGeneratePt051ForItem,
+        onInsertCustomLmpEvent,
+        insertEventTypes,
         onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
           assessment
@@ -28192,6 +28396,8 @@ const TraineeView = (props) => {
           onDeleteTrainee: props.onDeleteTrainee,
           onDeleteRemedialItem: props.onDeleteRemedialItem,
           onGeneratePt051ForItem: props.onGeneratePt051ForItem,
+          onInsertCustomLmpEvent: props.onInsertCustomLmpEvent,
+          insertEventTypes: props.insertEventTypes,
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
           onUpdateCourseUnit: props.onUpdateCourseUnit,
@@ -58795,6 +59001,9 @@ const PlatformConfigurationSettings = ({
   const trainingReportTerminology = normaliseTrainingReportTerminology(
     primaryOrganisationSettings.trainingReportTerminology || null
   );
+  const insertEventTypes = normaliseInsertEventTypes(
+    primaryOrganisationSettings.insertEventTypes || null
+  );
   const operationalSignals = [
     {
       label: "Support owner",
@@ -58875,6 +59084,29 @@ const PlatformConfigurationSettings = ({
         ...changes
       })
     }));
+  };
+  const updateInsertEventTypes = (nextEventTypes) => {
+    updatePrimaryOrganisationSettings((settings) => ({
+      ...settings,
+      insertEventTypes: normaliseInsertEventTypes(nextEventTypes)
+    }));
+  };
+  const updateInsertEventType = (index, changes) => {
+    const next = insertEventTypes.map((eventType, eventTypeIndex) => eventTypeIndex === index ? { ...eventType, ...changes } : eventType);
+    updateInsertEventTypes(next);
+  };
+  const addInsertEventType = () => {
+    updateInsertEventTypes([
+      ...insertEventTypes,
+      {
+        ...DEFAULT_INSERT_EVENT_TYPES[0],
+        label: `EVT${insertEventTypes.length + 1}`.slice(0, INSERT_EVENT_LABEL_MAX_LENGTH)
+      }
+    ]);
+  };
+  const removeInsertEventType = (index) => {
+    if (insertEventTypes.length <= 1) return;
+    updateInsertEventTypes(insertEventTypes.filter((_, eventTypeIndex) => eventTypeIndex !== index));
   };
   const toggleDeploymentReadiness = (itemId, checked) => {
     updatePrimaryOrganisationSettings((settings) => ({
@@ -60283,13 +60515,76 @@ const PlatformConfigurationSettings = ({
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("section", { id: "platform-scheduling-rule-sets", className: getSectionClass("platform-scheduling-rule-sets"), children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(SectionHeader, { title: "Scheduling Rule Sets", subtitle: "Stage-one records current scheduling assumptions as named, editable rule sets for units and aircraft types." }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3 p-4", children: config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEdit, options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEdit, options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
-      ] }, ruleSet.id || index)) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-cyan-500/25 bg-cyan-500/10 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-3 flex flex-wrap items-center gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("h5", { className: "text-sm font-bold text-cyan-100", children: "Individual LMP Insert Event Types" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-1 text-xs leading-relaxed text-cyan-100/75", children: [
+                "Controls the event types available from the Individual LMP Insert Event action. Labels are capped at ",
+                INSERT_EVENT_LABEL_MAX_LENGTH,
+                " characters because they are used on schedule tiles."
+              ] })
+            ] }),
+            canEdit && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: addInsertEventType, className: "ml-auto rounded border border-gray-500 bg-gray-300 px-3 py-2 text-xs font-bold text-gray-900 hover:bg-gray-200", children: "Add Event Type" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: insertEventTypes.map((eventType, eventTypeIndex) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-950 p-3 md:grid-cols-6", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Field,
+              {
+                label: "Label",
+                value: eventType.label,
+                disabled: !canEdit,
+                maxLength: INSERT_EVENT_LABEL_MAX_LENGTH,
+                onChange: (value) => updateInsertEventType(eventTypeIndex, { label: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Build Type",
+                value: eventType.syllabusType,
+                disabled: !canEdit,
+                options: ["Flight", "FTD", "Ground School", "Academics"],
+                onChange: (value) => updateInsertEventType(eventTypeIndex, { syllabusType: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectField,
+              {
+                label: "Day/Night",
+                value: eventType.dayNight,
+                disabled: !canEdit,
+                options: ["Day", "Night", "Day/Night"],
+                onChange: (value) => updateInsertEventType(eventTypeIndex, { dayNight: value })
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Duration", value: eventType.duration, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { duration: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Flt/Sim Hrs", value: eventType.flightOrSimHours, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { flightOrSimHours: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Resources", value: eventType.resourceCount, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { resourceCount: Math.max(0, Math.round(value)) }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Total Hrs", value: eventType.totalEventHours, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { totalEventHours: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Pre Time", value: eventType.preFlightTime, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { preFlightTime: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(NumberField, { label: "Post Time", value: eventType.postFlightTime, disabled: !canEdit, onChange: (value) => updateInsertEventType(eventTypeIndex, { postFlightTime: value }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-end", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "button",
+              {
+                type: "button",
+                disabled: !canEdit || insertEventTypes.length <= 1,
+                onClick: () => removeInsertEventType(eventTypeIndex),
+                className: "h-[38px] rounded border border-gray-600 bg-gray-900 px-3 text-xs font-bold text-red-200 hover:bg-red-950/50 disabled:cursor-not-allowed disabled:opacity-50",
+                children: "Remove"
+              }
+            ) })
+          ] }, `${eventType.label}-${eventTypeIndex}`)) })
+        ] }),
+        config.schedulingRuleSets.map((ruleSet, index) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Field, { label: "Name", value: ruleSet.name, disabled: !canEdit, onChange: (value) => updateRow("schedulingRuleSets", index, { name: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Unit", value: ruleSet.unitCode || "", disabled: !canEdit, options: ["", ...config.units.map((unit) => unit.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { unitCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Aircraft Type", value: ruleSet.aircraftTypeCode || "", disabled: !canEdit, options: ["", ...config.aircraftTypes.map((aircraft) => aircraft.code)], onChange: (value) => updateRow("schedulingRuleSets", index, { aircraftTypeCode: value || null }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Scope", value: ruleSet.scope || "Unit", disabled: !canEdit, options: ["Organisation", "Location", "Unit", "AircraftType"], onChange: (value) => updateRow("schedulingRuleSets", index, { scope: value }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(SelectField, { label: "Active", value: ruleSet.isActive === false ? "No" : "Yes", disabled: !canEdit, options: ["Yes", "No"], onChange: (value) => updateRow("schedulingRuleSets", index, { isActive: value === "Yes" }) })
+        ] }, ruleSet.id || index))
+      ] })
     ] })
   ] });
 };
@@ -75699,6 +75994,10 @@ const App = () => {
     () => getTrainingReportTerminology(platformConfig),
     [platformConfig]
   );
+  const insertEventTypes = reactExports.useMemo(
+    () => getInsertEventTypes(platformConfig),
+    [platformConfig]
+  );
   const instructorLabel = personnelDisplaySettings.instructorLabel;
   const formatResourceDisplayLabel = reactExports.useCallback(
     (resourceId) => formatResourceLabel(resourceId, resourceDisplayNames),
@@ -78148,6 +78447,104 @@ This will remove the remedial event from the package sequence and cannot be undo
 
 ${error instanceof Error ? error.message : String(error)}`,
         "Individual LMP Delete Failed",
+        "error"
+      );
+      return false;
+    }
+  };
+  const handleInsertCustomLmpEvent = async (trainee, request) => {
+    const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+    if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
+      await showDarkAlert2(`Could not insert ${request.label}: Individual LMP not found for ${trainee.fullName}.`, "Insert Event Failed", "error");
+      return false;
+    }
+    const insertionIndex = originalTraineeLMP.findIndex((item) => (item.id || item.code) === request.followsEventId || (item.code || item.id) === request.followsEventId);
+    if (insertionIndex === -1) {
+      await showDarkAlert2("Could not insert event: the selected follow-on event was not found in the Individual LMP.", "Insert Event Failed", "error");
+      return false;
+    }
+    const cleanedLabel = request.label.trim().slice(0, 8);
+    const existingCodes = new Set(originalTraineeLMP.map((item) => String(item.code || item.id || "").toUpperCase()));
+    let sequence = 1;
+    let eventCode = cleanedLabel;
+    while (existingCodes.has(eventCode.toUpperCase())) {
+      const suffix = String(sequence);
+      eventCode = `${cleanedLabel.slice(0, Math.max(1, 8 - suffix.length))}${suffix}`;
+      sequence++;
+    }
+    const followsItem = originalTraineeLMP[insertionIndex];
+    const nextMasterItem = originalTraineeLMP.slice(insertionIndex + 1).find((item) => !isLmpOverlayItem(item));
+    const physicalResources = Array.from({ length: request.resourceCount }, (_, index) => request.resourceCount === 1 ? "Aircraft" : `Aircraft ${index + 1}`);
+    const newItem = {
+      id: `custom-${Date.now()}-${eventCode}`,
+      code: eventCode,
+      phase: followsItem.phase || "",
+      module: "Inserted Event",
+      dayNight: request.dayNight,
+      eventDescription: eventCode,
+      prerequisites: [followsItem.id || followsItem.code].filter(Boolean),
+      prerequisitesGround: [],
+      prerequisitesFlying: [],
+      eventDetailsCommon: [],
+      eventDetailsSortie: [],
+      totalEventHours: request.totalEventHours,
+      flightOrSimHours: request.flightOrSimHours,
+      duration: request.duration,
+      preFlightTime: request.preFlightTime,
+      postFlightTime: request.postFlightTime,
+      type: request.eventType.syllabusType,
+      sortieType: request.eventType.syllabusType === "Flight" ? "Dual" : void 0,
+      methodOfDelivery: [],
+      methodOfAssessment: [],
+      resourcesPhysical: physicalResources,
+      resourcesHuman: request.eventType.syllabusType === "Academics" ? [] : ["QFI", "Trainee"],
+      completedAt: null,
+      masterEventId: void 0,
+      lmpSource: "custom",
+      orderKey: `${createLmpOrderKey(insertionIndex)}.${String(Date.now()).slice(-6)}`,
+      anchorAfterMasterEventId: getMasterEventId(followsItem),
+      anchorBeforeMasterEventId: nextMasterItem ? getMasterEventId(nextMasterItem) : void 0,
+      anchorPolicy: "between",
+      userLockedPosition: true,
+      placementNeedsReview: false,
+      location: followsItem.location || "",
+      courses: followsItem.courses || [],
+      lmpType: followsItem.lmpType
+    };
+    const updatedLmp = [
+      ...originalTraineeLMP.slice(0, insertionIndex + 1),
+      newItem,
+      ...originalTraineeLMP.slice(insertionIndex + 1)
+    ];
+    try {
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prevLMPs) => {
+        const newLMPs = new Map(prevLMPs);
+        newLMPs.set(trainee.fullName, persistedLmp);
+        return newLMPs;
+      });
+      logAudit(
+        "Individual LMP",
+        "Insert",
+        `Inserted event ${eventCode} into ${trainee.fullName}'s Individual LMP`,
+        [
+          `Event: ${eventCode}`,
+          `Type: ${request.eventType.label}`,
+          `Day/Night: ${request.dayNight}`,
+          `Resources: ${request.resourceCount}`,
+          `Follows: ${followsItem.code}`,
+          `Trainee: ${trainee.rank ? `${trainee.rank} ` : ""}${trainee.name}`
+        ].join("; ")
+      );
+      setSuccessMessage(`Inserted event ${eventCode} into Individual LMP.`);
+      return true;
+    } catch (error) {
+      console.error("[Individual LMP] Failed to insert custom event:", error);
+      await showDarkAlert2(
+        `The event was not saved to the database, so it has not been inserted.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Insert Event Failed",
         "error"
       );
       return false;
@@ -82888,6 +83285,8 @@ ${conflictLines.join("\n")}${moreText}`,
             canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
             onDeleteRemedialItem: handleDeleteRemedialLmpItem,
             onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
+            onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
+            insertEventTypes,
             onAccessDenied: denyPlatformAction,
             locations,
             units,
@@ -83030,6 +83429,8 @@ ${conflictLines.join("\n")}${moreText}`,
             canViewTraineeLmp,
             canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
             onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
+            onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
+            insertEventTypes,
             onAccessDenied: denyPlatformAction,
             locations,
             units,
