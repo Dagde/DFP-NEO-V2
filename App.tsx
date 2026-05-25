@@ -3363,6 +3363,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
 
     type ScheduleEventResult = Omit<ScheduleEvent, 'date'> | null;
+    type ScheduleEventOptions = {
+        formationGroupId?: string;
+        formationPosition?: number;
+        formationSize?: number;
+        formationCallsign?: string;
+        allowSameFormationTakeoff?: boolean;
+    };
 
     const scheduleEvent = (
         trainee: Trainee,
@@ -3372,7 +3379,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         isNightPass: boolean,
         isPlusOne: boolean,
         primaryPreferOnly: boolean = false,
-        requirePreferredNightAircraft: boolean = false
+        requirePreferredNightAircraft: boolean = false,
+        options: ScheduleEventOptions = {}
     ): ScheduleEventResult => {
         const _isFlight = type === 'flight' && !isNightPass;
         const _isNext = !isPlusOne;
@@ -4301,7 +4309,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
 
             // All flights (including solo) count toward the rolling 60-min dispatch cap of 8.
             // Solo flights use the runway and must comply with the same capacity limit as duals.
-            const takeoffsInLastHour = nonStbyFlights.filter(e => e.type === 'flight' && e.startTime > startTime - 1 && e.startTime <= startTime).length;
+            const takeoffsInLastHour = nonStbyFlights.filter(e =>
+                e.type === 'flight' &&
+                e.startTime > startTime - 1 &&
+                e.startTime <= startTime &&
+                (!options.allowSameFormationTakeoff || !options.formationGroupId || e.formationId !== options.formationGroupId)
+            ).length;
             if (takeoffsInLastHour >= 8) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'HOURLY_DISPATCH_LIMIT');
                 return traceScheduleReject('HOURLY_DISPATCH_LIMIT', { takeoffsInLastHour, limit: 8 });
@@ -4311,6 +4324,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             // Solo flights depart the same runway and must observe the same spacing as dual flights.
             const takeoffConflict = nonStbyFlights.some(e => {
                 if (e.type !== 'flight') return false;
+                if (options.allowSameFormationTakeoff && options.formationGroupId && e.formationId === options.formationGroupId) return false;
                 const diffHours = Math.abs(e.startTime - startTime);
                 const diffMinutes = Math.round(diffHours * 60);
                 const isNightCheck = isNightPass && e.flightNumber.startsWith('BNF');
@@ -4346,6 +4360,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
             area, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
             dayNight: syllabusItem.dayNight,
+            formationId: options.formationGroupId,
+            formationType: options.formationGroupId ? 'Multi-Resource' : undefined,
+            formationPosition: options.formationPosition,
+            callsign: options.formationCallsign,
             forcedInstructorConflict: forcedInstructorConflictDetails.length > 0 || undefined,
             forcedInstructorConflictDetails: forcedInstructorConflictDetails.length > 0 ? forcedInstructorConflictDetails : undefined,
         };
@@ -4671,6 +4689,191 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             null
         );
     };
+
+    const countFormationDispatchesInPreviousHour = (startTime: number): number =>
+        generatedEvents.filter(event =>
+            event.type === 'flight' &&
+            !event.resourceId.startsWith('STBY') &&
+            !event.resourceId.startsWith('BNF-STBY') &&
+            event.startTime > startTime - 1 &&
+            event.startTime <= startTime
+        ).length;
+
+    const hasNonFormationTakeoffConflict = (startTime: number): boolean =>
+        generatedEvents.some(event => {
+            if (event.type !== 'flight') return false;
+            if (event.resourceId.startsWith('STBY') || event.resourceId.startsWith('BNF-STBY')) return false;
+            return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
+        });
+
+    const getFormationCallsignBase = (leadEvent: Omit<ScheduleEvent, 'date'>): string => {
+        const instructorCallsign = instructors.find(ip => ip.name === leadEvent.instructor)?.callsign || '';
+        const prefix = instructorCallsign.match(/^[A-Za-z]+/)?.[0];
+        return (prefix || school || 'FORM').slice(0, 4).toUpperCase();
+    };
+
+    const scheduleFormationGroups = (
+        groups: { item: SyllabusItemDetail; trainees: Trainee[] }[],
+        startTimeBoundary: number,
+        endTimeBoundary: number,
+        diagnosticLabel: string
+    ) => {
+        if (groups.length === 0) return;
+
+        const timeIncrement = 5 / 60;
+        const listDiag = {
+            inputGroups: groups.length,
+            attempts: [] as any[],
+            successes: [] as any[],
+            unplaced: [] as any[],
+        };
+        neoBuildDiag.scheduleLists[diagnosticLabel] = listDiag;
+
+        groups.forEach(group => {
+            const resourceNumber = getLmpResourceNumber(group.item);
+            const selectedTrainees = group.trainees.slice(0, resourceNumber);
+            const eventKey = getFormationEventKey(group.item);
+
+            if (selectedTrainees.length < resourceNumber) {
+                listDiag.unplaced.push({
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    candidateCount: group.trainees.length,
+                    reason: 'INSUFFICIENT_MATCHING_TRAINEES',
+                });
+                return;
+            }
+
+            let placed = false;
+            const groupId = `formation-${eventKey}-${uuidv4()}`;
+            const windowStart = group.item.dayNight === 'Night'
+                ? Math.max(startTimeBoundary, commenceNightFlying)
+                : startTimeBoundary;
+            const windowEnd = group.item.dayNight === 'Night'
+                ? Math.min(endTimeBoundary, ceaseNightFlying)
+                : endTimeBoundary;
+            const latestEventStart = windowEnd - group.item.duration;
+
+            for (let time = windowStart; time <= latestEventStart && !placed; time += timeIncrement) {
+                const dispatchesInPreviousHour = countFormationDispatchesInPreviousHour(time);
+                if (dispatchesInPreviousHour + resourceNumber > 8) {
+                    listDiag.attempts.push({
+                        eventKey,
+                        time,
+                        displayTime: _fmtT(time),
+                        outcome: 'rejected',
+                        reason: 'HOURLY_DISPATCH_LIMIT',
+                        dispatchesInPreviousHour,
+                        resourceNumber,
+                    });
+                    continue;
+                }
+
+                if (hasNonFormationTakeoffConflict(time)) {
+                    listDiag.attempts.push({
+                        eventKey,
+                        time,
+                        displayTime: _fmtT(time),
+                        outcome: 'rejected',
+                        reason: 'TAKEOFF_SEPARATION_VIOLATION',
+                    });
+                    continue;
+                }
+
+                const stagedEvents: Omit<ScheduleEvent, 'date'>[] = [];
+                for (let index = 0; index < selectedTrainees.length; index++) {
+                    const trainee = selectedTrainees[index];
+                    const result = scheduleEvent(
+                        trainee,
+                        group.item,
+                        time,
+                        'flight',
+                        group.item.dayNight === 'Night',
+                        false,
+                        false,
+                        false,
+                        {
+                            formationGroupId: groupId,
+                            formationPosition: index + 1,
+                            formationSize: resourceNumber,
+                            allowSameFormationTakeoff: true,
+                        }
+                    );
+
+                    if (!result || typeof result !== 'object' || !('id' in result)) break;
+
+                    const stagedEvent = {
+                        ...result,
+                        formationId: groupId,
+                        formationType: 'Multi-Resource',
+                        formationPosition: index + 1,
+                        _source: 'generated',
+                        _isNext: true,
+                        _traineeName: trainee.fullName,
+                    };
+                    stagedEvents.push(stagedEvent);
+                    generatedEvents.push(stagedEvent);
+                }
+
+                if (stagedEvents.length !== resourceNumber) {
+                    const stagedIds = new Set(stagedEvents.map(event => event.id));
+                    for (let removeIndex = generatedEvents.length - 1; removeIndex >= 0; removeIndex--) {
+                        if (stagedIds.has(generatedEvents[removeIndex].id)) {
+                            generatedEvents.splice(removeIndex, 1);
+                        }
+                    }
+                    listDiag.attempts.push({
+                        eventKey,
+                        time,
+                        displayTime: _fmtT(time),
+                        outcome: 'rejected',
+                        reason: 'FORMATION_MEMBER_PLACEMENT_FAILED',
+                        placedMembersBeforeRollback: stagedEvents.length,
+                    });
+                    continue;
+                }
+
+                const callsignBase = getFormationCallsignBase(stagedEvents[0]);
+                stagedEvents.forEach((event, index) => {
+                    event.callsign = `${callsignBase}${index + 1}`;
+                    const trainee = selectedTrainees[index];
+                    const traineeCounts = eventCounts.get(trainee.fullName)!;
+                    traineeCounts.flightFtd++;
+                    if (event.instructor) {
+                        const instructorCounts = eventCounts.get(event.instructor);
+                        if (instructorCounts) instructorCounts.flightFtd++;
+                    }
+                });
+
+                listDiag.successes.push({
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    startTime: time,
+                    displayTime: _fmtT(time),
+                    trainees: selectedTrainees.map(trainee => trainee.fullName),
+                    instructors: stagedEvents.map(event => event.instructor),
+                    resources: stagedEvents.map(event => event.resourceId),
+                    callsigns: stagedEvents.map(event => event.callsign),
+                });
+                placed = true;
+            }
+
+            if (!placed) {
+                listDiag.unplaced.push({
+                    eventKey,
+                    event: group.item.code || group.item.id || null,
+                    resourceNumber,
+                    candidates: group.trainees.map(trainee => trainee.fullName),
+                    reason: 'NO_VALID_GROUP_SLOT',
+                });
+            }
+        });
+
+        saveNeoBuildDiag(`schedule-list-end:${diagnosticLabel}`);
+    };
+
     const mandatoryRemedialFlightItems = new Map<string, SyllabusItemDetail>();
     activeTrainees.forEach(trainee => {
         const item = getMandatoryRemedialSyllabusItem(trainee);
@@ -4692,8 +4895,20 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const _mandatoryNightFlightList = applyCoursePriority(activeTrainees.filter(_isNightMandatoryRemedialFlightTrainee));
     const _mandatoryFlightList = [..._mandatoryDayFlightList, ..._mandatoryNightFlightList];
     const _allFlightList = applyCoursePriority(filterOutBnfTrainees(nextEventLists.flight.filter(t => !_isMandatoryRemedialFlightTrainee(t))));
-    const _dualFlightList = _allFlightList.filter(t => !_isSoloTrainee(t));
-    const _soloFlightList = _allFlightList.filter(t => _isSoloTrainee(t));
+    const _formationFlightGroups = Array.from(formationGroups.values())
+        .map(group => ({
+            item: group.item,
+            trainees: _allFlightList.filter(trainee =>
+                getFormationEventKey(traineeNextEventMap.get(trainee.fullName)?.next) === getFormationEventKey(group.item)
+            ),
+        }))
+        .filter(group => group.trainees.length > 0);
+    const _normalFlightList = _allFlightList.filter(trainee => {
+        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        return !next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next);
+    });
+    const _dualFlightList = _normalFlightList.filter(t => !_isSoloTrainee(t));
+    const _soloFlightList = _normalFlightList.filter(t => _isSoloTrainee(t));
     neoBuildDiag.mandatoryRemedialFlights.matchAudit = mandatoryRemedialFlights.map(event => {
         const eventTrainee = event.student || event.pilot || '';
         const trainee = activeTrainees.find(t => t.fullName === eventTrainee) || null;
@@ -4741,15 +4956,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             inMandatoryFlightList: _mandatoryFlightList.some(t => t.fullName === eventTrainee),
             inNormalDualFlightList: _dualFlightList.some(t => t.fullName === eventTrainee),
             inNormalSoloFlightList: _soloFlightList.some(t => t.fullName === eventTrainee),
+            inFormationFlightList: _formationFlightGroups.some(group => group.trainees.some(t => t.fullName === eventTrainee)),
             inBnfList: nextEventLists.bnf.some(t => t.fullName === eventTrainee),
         };
     });
 
-    buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
+    buildDebugLog(`\n🔴🔴🔴 [FLIGHT-DIAG] About to schedule flights. Mandatory remedial: ${_mandatoryFlightList.length} trainees (${_mandatoryDayFlightList.length} day, ${_mandatoryNightFlightList.length} night), Formation groups: ${_formationFlightGroups.length}, Dual: ${_dualFlightList.length} trainees, Solo: ${_soloFlightList.length} trainees. flyingStart=${_fmtT(flyingStartTime)} flyingEnd=${_fmtT(flyingEndTime)}`);
     buildDebugLog('[MANDATORY-REMEDIAL-DIAG] Match audit:', neoBuildDiag.mandatoryRemedialFlights.matchAudit);
     (window as any).__fbFlightListSize = _allFlightList.length;
 
-    // Step 3a: Schedule DUAL flights first
+    // Step 3a: Schedule day flights. Multi-resource formation groups run through
+    // a dedicated grouped pass so matching trainees are pulled together by event code.
     if (_mandatoryDayFlightList.length > 0) {
         const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
         const roundUpToFlightSlot = (time: number): number => Math.ceil((time - 1e-9) * 12) / 12;
@@ -4792,6 +5009,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             mandatoryRemedialFlightItems
         );
 
+        scheduleFormationGroups(
+            _formationFlightGroups,
+            alignedPostMandatoryStart,
+            flyingEndTime,
+            'FLIGHT Formation Groups'
+        );
+
         scheduleList(
             _dualFlightList,
             'flight',
@@ -4803,6 +5027,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             'FLIGHT Next Post-1000 Normal Dual'
         );
     } else {
+        scheduleFormationGroups(
+            _formationFlightGroups,
+            flyingStartTime,
+            flyingEndTime,
+            'FLIGHT Formation Groups'
+        );
+
         scheduleList(
             _dualFlightList,
             'flight',
