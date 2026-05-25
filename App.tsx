@@ -11778,6 +11778,92 @@ const App: React.FC = () => {
         }
     };
 
+    const handleUpdateIndividualLmpItem = async (
+        trainee: Trainee,
+        originalItem: SyllabusItemDetail,
+        updatedItem: SyllabusItemDetail
+    ): Promise<boolean> => {
+        const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+        if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
+            await showDarkAlert(`Could not update ${originalItem.code}: Individual LMP not found for ${trainee.fullName}.`, 'Individual LMP Save Failed', 'error');
+            return false;
+        }
+
+        const originalId = originalItem.id || originalItem.code;
+        const originalCode = originalItem.code || originalItem.id;
+        const updatedCode = String(updatedItem.code || updatedItem.id || '').trim().toUpperCase();
+        const duplicateCode = originalTraineeLMP.some(item => {
+            const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
+            if (matchesOriginal) return false;
+            return String(item.code || item.id || '').trim().toUpperCase() === updatedCode;
+        });
+        if (duplicateCode) {
+            await showDarkAlert(`Could not update ${originalItem.code}: another Individual LMP event already uses ${updatedItem.code}.`, 'Individual LMP Save Failed', 'error');
+            return false;
+        }
+
+        const updatedLmp = originalTraineeLMP.map(item => {
+            const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
+            if (matchesOriginal) return updatedItem;
+            return {
+                ...item,
+                prerequisites: (item.prerequisites || []).map(prerequisite =>
+                    prerequisite === originalCode ? updatedItem.code :
+                    prerequisite === originalId ? (updatedItem.id || updatedItem.code) :
+                    prerequisite
+                ),
+                prerequisitesGround: (item.prerequisitesGround || []).map(prerequisite =>
+                    prerequisite === originalCode ? updatedItem.code :
+                    prerequisite === originalId ? (updatedItem.id || updatedItem.code) :
+                    prerequisite
+                ),
+                prerequisitesFlying: (item.prerequisitesFlying || []).map(prerequisite =>
+                    prerequisite === originalCode ? updatedItem.code :
+                    prerequisite === originalId ? (updatedItem.id || updatedItem.code) :
+                    prerequisite
+                ),
+            };
+        });
+
+        if (!updatedLmp.some(item => (item.id || item.code) === (updatedItem.id || updatedItem.code))) {
+            await showDarkAlert(`Could not update ${originalItem.code}: selected event was not found in the Individual LMP.`, 'Individual LMP Save Failed', 'error');
+            return false;
+        }
+
+        try {
+            const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+            setTraineeLMPs(prevLMPs => {
+                const newLMPs = new Map(prevLMPs);
+                newLMPs.set(trainee.fullName, persistedLmp);
+                return newLMPs;
+            });
+            logAudit(
+                'Individual LMP',
+                'Edit',
+                `Edited event ${originalItem.code} in ${trainee.fullName}'s Individual LMP`,
+                [
+                    `Original Event: ${originalItem.code}`,
+                    `Updated Event: ${updatedItem.code}`,
+                    `Type: ${updatedItem.type}`,
+                    `Day/Night: ${updatedItem.dayNight}`,
+                    `Duration: ${updatedItem.duration}`,
+                    `Resource Number: ${updatedItem.resourceNumber ?? 0}`,
+                    `Trainee: ${trainee.rank ? `${trainee.rank} ` : ''}${trainee.name}`,
+                ].join('; ')
+            );
+            setSuccessMessage(`Updated ${updatedItem.code} in Individual LMP.`);
+            return true;
+        } catch (error) {
+            console.error('[Individual LMP] Failed to update event:', error);
+            await showDarkAlert(
+                `The event was not saved to the database, so it has not been updated.\n\n${error instanceof Error ? error.message : String(error)}`,
+                'Individual LMP Save Failed',
+                'error'
+            );
+            return false;
+        }
+    };
+
     const handleUnsavedConfirm = (action: 'save' | 'discard') => {
         if (action === 'save') {
             onSaveRef.current();
@@ -17844,6 +17930,7 @@ updates.forEach(update => {
                             onDeleteRemedialItem={handleDeleteRemedialLmpItem}
                             onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
+                            onUpdateLmpItem={handleUpdateIndividualLmpItem}
                             insertEventTypes={insertEventTypes}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}
@@ -17997,6 +18084,7 @@ updates.forEach(update => {
                             canAddRemedialPackageForTrainee={() => canAddRemedialPackage}
                             onGeneratePt051ForItem={handleGeneratePt051FromLmpItem}
                             onInsertCustomLmpEvent={handleInsertCustomLmpEvent}
+                            onUpdateLmpItem={handleUpdateIndividualLmpItem}
                             insertEventTypes={insertEventTypes}
                             onAccessDenied={denyPlatformAction}
                             locations={locations}

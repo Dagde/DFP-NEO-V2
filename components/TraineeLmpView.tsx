@@ -27,6 +27,7 @@ interface TraineeLmpViewProps {
   onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   insertEventTypes?: InsertEventTypeConfig[];
   onInsertCustomEvent?: (trainee: Trainee, event: InsertLmpEventRequest) => Promise<boolean> | boolean;
+  onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
 }
 
 export interface InsertLmpEventRequest {
@@ -41,6 +42,151 @@ export interface InsertLmpEventRequest {
     resourceCount: number;
     followsEventId: string;
 }
+
+const splitListInput = (value: string): string[] =>
+    value
+        .split('\n')
+        .map(item => item.trim())
+        .filter(Boolean);
+
+const joinListInput = (items?: string[]): string => (items || []).join('\n');
+
+const LmpEventEditModal: React.FC<{
+    item: SyllabusItemDetail;
+    onCancel: () => void;
+    onSave: (updatedItem: SyllabusItemDetail) => void;
+}> = ({ item, onCancel, onSave }) => {
+    const [code, setCode] = useState(item.code || item.id || '');
+    const [eventDescription, setEventDescription] = useState(item.eventDescription || '');
+    const [type, setType] = useState<SyllabusItemDetail['type']>(item.type || 'Flight');
+    const [dayNight, setDayNight] = useState<SyllabusItemDetail['dayNight']>(item.dayNight || 'Day');
+    const [sortieType, setSortieType] = useState<'Dual' | 'Solo'>(item.sortieType || 'Dual');
+    const [duration, setDuration] = useState(item.duration || 1);
+    const [flightOrSimHours, setFlightOrSimHours] = useState(item.flightOrSimHours || 0);
+    const [totalEventHours, setTotalEventHours] = useState(item.totalEventHours || item.duration || 1);
+    const [preFlightTime, setPreFlightTime] = useState(item.preFlightTime || 0);
+    const [postFlightTime, setPostFlightTime] = useState(item.postFlightTime || 0);
+    const [resourceNumber, setResourceNumber] = useState(item.resourceNumber ?? (item.resourcesPhysical?.length ? item.resourcesPhysical.length : 0));
+    const [resourcesPhysical, setResourcesPhysical] = useState(joinListInput(item.resourcesPhysical));
+    const [resourcesHuman, setResourcesHuman] = useState(joinListInput(item.resourcesHuman));
+    const [validationMessage, setValidationMessage] = useState('');
+
+    const handleSave = () => {
+        const trimmedCode = code.trim().slice(0, 8);
+        if (!trimmedCode) {
+            setValidationMessage('Enter an event label.');
+            return;
+        }
+        if (!Number.isFinite(duration) || duration <= 0) {
+            setValidationMessage('Duration must be greater than zero.');
+            return;
+        }
+
+        const roundedResourceNumber = Math.max(0, Math.round(Number(resourceNumber) || 0));
+        onSave({
+            ...item,
+            code: trimmedCode,
+            eventDescription: eventDescription.trim() || trimmedCode,
+            type,
+            dayNight,
+            sortieType: type === 'Flight' ? sortieType : undefined,
+            duration: Math.max(0.25, Number(duration) || 0.25),
+            flightOrSimHours: Math.max(0, Number(flightOrSimHours) || 0),
+            totalEventHours: Math.max(0.25, Number(totalEventHours) || 0.25),
+            preFlightTime: Math.max(0, Number(preFlightTime) || 0),
+            postFlightTime: Math.max(0, Number(postFlightTime) || 0),
+            resourceNumber: roundedResourceNumber,
+            resourcesPhysical: splitListInput(resourcesPhysical),
+            resourcesHuman: splitListInput(resourcesHuman),
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4">
+            <div className="w-full max-w-3xl rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl">
+                <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
+                    <div>
+                        <h2 className="text-lg font-bold text-white">Edit LMP Event</h2>
+                        <p className="mt-1 text-xs text-gray-400">Update the event details used by Individual LMP and NEO Build.</p>
+                    </div>
+                    <button type="button" onClick={onCancel} className="text-2xl leading-none text-gray-400 hover:text-white">×</button>
+                </div>
+                <div className="grid gap-4 p-5 md:grid-cols-2">
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Tile Label</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={code} maxLength={8} onChange={(event) => setCode(event.target.value.slice(0, 8))} />
+                        <span className="block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500">{code.length}/8</span>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Description</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={eventDescription} onChange={(event) => setEventDescription(event.target.value)} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Type</span>
+                        <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={type} onChange={(event) => setType(event.target.value as SyllabusItemDetail['type'])}>
+                            <option value="Flight">Flight</option>
+                            <option value="FTD">FTD</option>
+                            <option value="Ground School">Ground School</option>
+                            <option value="Academics">Academics</option>
+                        </select>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Day/Night</span>
+                        <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={dayNight} onChange={(event) => setDayNight(event.target.value as SyllabusItemDetail['dayNight'])}>
+                            <option value="Day">Day</option>
+                            <option value="Night">Night</option>
+                            <option value="Day/Night">Both</option>
+                        </select>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Dual/Solo</span>
+                        <select className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={sortieType} disabled={type !== 'Flight'} onChange={(event) => setSortieType(event.target.value as 'Dual' | 'Solo')}>
+                            <option value="Dual">Dual</option>
+                            <option value="Solo">Solo</option>
+                        </select>
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Resource Number</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="1" min="0" value={resourceNumber} onChange={(event) => setResourceNumber(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Duration</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={duration} onChange={(event) => setDuration(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Flight/Sim Hours</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={flightOrSimHours} onChange={(event) => setFlightOrSimHours(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Pre Event Time</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={preFlightTime} onChange={(event) => setPreFlightTime(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Post Event Time</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0" value={postFlightTime} onChange={(event) => setPostFlightTime(Number(event.target.value))} />
+                    </label>
+                    <label className="space-y-1 md:col-span-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Physical Resources</span>
+                        <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={resourcesPhysical} onChange={(event) => setResourcesPhysical(event.target.value)} />
+                    </label>
+                    <label className="space-y-1 md:col-span-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Human Resources</span>
+                        <textarea className="min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" value={resourcesHuman} onChange={(event) => setResourcesHuman(event.target.value)} />
+                    </label>
+                    <label className="space-y-1">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Total Event Hours</span>
+                        <input className="w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white" type="number" step="0.25" min="0.25" value={totalEventHours} onChange={(event) => setTotalEventHours(Number(event.target.value))} />
+                    </label>
+                </div>
+                {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
+                <div className="flex justify-end gap-2 border-t border-gray-700 px-5 py-4">
+                    <button type="button" onClick={onCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
+                    <button type="button" onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Save</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // ─── Shared sub-components ───────────────────────────────────────────────────
 
@@ -705,11 +851,13 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
     onGeneratePt051ForItem,
     insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
     onInsertCustomEvent,
+    onUpdateLmpItem,
 }) => {
     const { isFrozen } = useSystemFreeze();
     const [selectedItem, setSelectedItem] = useState<SyllabusItemDetail | null>(null);
     const [activeTab, setActiveTab] = useState<'neo' | 'academic'>('neo');
     const [showInsertEventModal, setShowInsertEventModal] = useState(false);
+    const [itemBeingEdited, setItemBeingEdited] = useState<SyllabusItemDetail | null>(null);
 
     // Always show Academic tab when syllabusDetails prop is provided
     // The tab itself will show a "configure" message if academicLmpType not set
@@ -776,6 +924,15 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                             Insert<br />Event
                         </button>
                     )}
+                    {activeTab === 'neo' && (
+                        <button
+                            onClick={() => selectedItem && setItemBeingEdited(selectedItem)}
+                            disabled={!selectedItem || !onUpdateLmpItem}
+                            className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            Edit
+                        </button>
+                    )}
                     {activeTab === 'neo' && selectedItem && onGeneratePt051ForItem && (
                         <button
                             onClick={() => onGeneratePt051ForItem(trainee, selectedItem)}
@@ -796,6 +953,20 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     onSave={async (request) => {
                         const inserted = await onInsertCustomEvent?.(trainee, request);
                         if (inserted !== false) setShowInsertEventModal(false);
+                    }}
+                />
+            )}
+
+            {itemBeingEdited && (
+                <LmpEventEditModal
+                    item={itemBeingEdited}
+                    onCancel={() => setItemBeingEdited(null)}
+                    onSave={async (updatedItem) => {
+                        const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
+                        if (updated !== false) {
+                            setSelectedItem(updatedItem);
+                            setItemBeingEdited(null);
+                        }
                     }}
                 />
             )}

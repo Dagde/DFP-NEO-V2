@@ -72,6 +72,7 @@ interface TraineeProfileFlyoutProps {
   onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
   onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
   onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
+  onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
   insertEventTypes?: InsertEventTypeConfig[];
   onAccessDenied?: (actionLabel: string) => void;
   resourceDisplayNames?: ResourceDisplayNames;
@@ -308,6 +309,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
   onInsertCustomLmpEvent,
+  onUpdateLmpItem,
   insertEventTypes,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -1232,6 +1234,7 @@ const TraineeProfileFlyout: React.FC<TraineeProfileFlyoutProps> = ({
                             onDeleteRemedialItem={onDeleteRemedialItem}
                             onGeneratePt051ForItem={onGeneratePt051ForItem}
                             onInsertCustomEvent={onInsertCustomLmpEvent}
+                            onUpdateLmpItem={onUpdateLmpItem}
                             insertEventTypes={insertEventTypes}
                           />
                         </div>

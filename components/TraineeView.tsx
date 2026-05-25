@@ -36,6 +36,7 @@ interface TraineeViewProps {
   onDeleteTrainee: (trainee: any) => void;
   onDeleteRemedialItem?: (trainee: any, item: any) => Promise<boolean> | boolean;
   onGeneratePt051ForItem?: (trainee: any, item: any) => void;
+  onUpdateLmpItem?: (trainee: any, originalItem: any, updatedItem: any) => Promise<boolean> | boolean;
   onOpenInstructorProfile?: (instructorName: string) => void;
   // Course edit callbacks
   onUpdateCourseNumber?: (oldCourseNumber: string, newCourseNumber: string) => void;
@@ -149,6 +150,7 @@ const TraineeView: React.FC<TraineeViewProps> = (props) => {
             onDeleteRemedialItem={props.onDeleteRemedialItem}
             onGeneratePt051ForItem={props.onGeneratePt051ForItem}
             onInsertCustomLmpEvent={props.onInsertCustomLmpEvent}
+            onUpdateLmpItem={props.onUpdateLmpItem}
             insertEventTypes={props.insertEventTypes}
             onOpenInstructorProfile={props.onOpenInstructorProfile}
             onUpdateCourseNumber={props.onUpdateCourseNumber}

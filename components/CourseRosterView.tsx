@@ -62,6 +62,7 @@ interface CourseRosterViewProps {
     onDeleteRemedialItem?: (trainee: Trainee, item: SyllabusItemDetail) => Promise<boolean> | boolean;
     onGeneratePt051ForItem?: (trainee: Trainee, item: SyllabusItemDetail) => void;
     onInsertCustomLmpEvent?: (trainee: Trainee, request: InsertLmpEventRequest) => Promise<boolean> | boolean;
+    onUpdateLmpItem?: (trainee: Trainee, originalItem: SyllabusItemDetail, updatedItem: SyllabusItemDetail) => Promise<boolean> | boolean;
     insertEventTypes?: InsertEventTypeConfig[];
     onAccessDenied?: (actionLabel: string) => void;
     resourceDisplayNames?: ResourceDisplayNames;
@@ -140,6 +141,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
     onDeleteRemedialItem,
     onGeneratePt051ForItem,
     onInsertCustomLmpEvent,
+    onUpdateLmpItem,
     insertEventTypes,
     onAccessDenied,
     resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -516,6 +518,7 @@ const CourseRosterView: React.FC<CourseRosterViewProps> = ({
                     onDeleteRemedialItem={onDeleteRemedialItem}
                     onGeneratePt051ForItem={onGeneratePt051ForItem}
                     onInsertCustomLmpEvent={onInsertCustomLmpEvent}
+                    onUpdateLmpItem={onUpdateLmpItem}
                     insertEventTypes={insertEventTypes}
                     onSelectPt051ForEvent={(assessment) => onSelectPt051ForEvent?.(
                         isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee!,

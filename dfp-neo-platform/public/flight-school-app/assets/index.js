@@ -9653,6 +9653,136 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     ] })
   ] });
 };
+const splitListInput = (value) => value.split("\n").map((item) => item.trim()).filter(Boolean);
+const joinListInput = (items) => (items || []).join("\n");
+const LmpEventEditModal = ({ item, onCancel, onSave }) => {
+  const [code, setCode] = reactExports.useState(item.code || item.id || "");
+  const [eventDescription, setEventDescription] = reactExports.useState(item.eventDescription || "");
+  const [type, setType] = reactExports.useState(item.type || "Flight");
+  const [dayNight, setDayNight] = reactExports.useState(item.dayNight || "Day");
+  const [sortieType, setSortieType] = reactExports.useState(item.sortieType || "Dual");
+  const [duration, setDuration] = reactExports.useState(item.duration || 1);
+  const [flightOrSimHours, setFlightOrSimHours] = reactExports.useState(item.flightOrSimHours || 0);
+  const [totalEventHours, setTotalEventHours] = reactExports.useState(item.totalEventHours || item.duration || 1);
+  const [preFlightTime, setPreFlightTime] = reactExports.useState(item.preFlightTime || 0);
+  const [postFlightTime, setPostFlightTime] = reactExports.useState(item.postFlightTime || 0);
+  const [resourceNumber, setResourceNumber] = reactExports.useState(item.resourceNumber ?? (item.resourcesPhysical?.length ? item.resourcesPhysical.length : 0));
+  const [resourcesPhysical, setResourcesPhysical] = reactExports.useState(joinListInput(item.resourcesPhysical));
+  const [resourcesHuman, setResourcesHuman] = reactExports.useState(joinListInput(item.resourcesHuman));
+  const [validationMessage, setValidationMessage] = reactExports.useState("");
+  const handleSave = () => {
+    const trimmedCode = code.trim().slice(0, 8);
+    if (!trimmedCode) {
+      setValidationMessage("Enter an event label.");
+      return;
+    }
+    if (!Number.isFinite(duration) || duration <= 0) {
+      setValidationMessage("Duration must be greater than zero.");
+      return;
+    }
+    const roundedResourceNumber = Math.max(0, Math.round(Number(resourceNumber) || 0));
+    onSave({
+      ...item,
+      code: trimmedCode,
+      eventDescription: eventDescription.trim() || trimmedCode,
+      type,
+      dayNight,
+      sortieType: type === "Flight" ? sortieType : void 0,
+      duration: Math.max(0.25, Number(duration) || 0.25),
+      flightOrSimHours: Math.max(0, Number(flightOrSimHours) || 0),
+      totalEventHours: Math.max(0.25, Number(totalEventHours) || 0.25),
+      preFlightTime: Math.max(0, Number(preFlightTime) || 0),
+      postFlightTime: Math.max(0, Number(postFlightTime) || 0),
+      resourceNumber: roundedResourceNumber,
+      resourcesPhysical: splitListInput(resourcesPhysical),
+      resourcesHuman: splitListInput(resourcesHuman)
+    });
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "fixed inset-0 z-[220] flex items-center justify-center bg-black/70 p-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full max-w-3xl rounded-xl border border-sky-500/35 bg-gray-900 shadow-2xl", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-gray-700 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-lg font-bold text-white", children: "Edit LMP Event" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-xs text-gray-400", children: "Update the event details used by Individual LMP and NEO Build." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "text-2xl leading-none text-gray-400 hover:text-white", children: "×" })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 p-5 md:grid-cols-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Tile Label" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: code, maxLength: 8, onChange: (event) => setCode(event.target.value.slice(0, 8)) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "block text-right text-[10px] font-semibold uppercase tracking-wide text-gray-500", children: [
+          code.length,
+          "/8"
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Description" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: eventDescription, onChange: (event) => setEventDescription(event.target.value) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Type" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: type, onChange: (event) => setType(event.target.value), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Flight", children: "Flight" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "FTD", children: "FTD" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Ground School", children: "Ground School" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Academics", children: "Academics" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Day/Night" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: dayNight, onChange: (event) => setDayNight(event.target.value), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Day", children: "Day" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Night", children: "Night" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Day/Night", children: "Both" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Dual/Solo" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: sortieType, disabled: type !== "Flight", onChange: (event) => setSortieType(event.target.value), children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Dual", children: "Dual" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "Solo", children: "Solo" })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Resource Number" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "1", min: "0", value: resourceNumber, onChange: (event) => setResourceNumber(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Duration" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: duration, onChange: (event) => setDuration(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Flight/Sim Hours" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: flightOrSimHours, onChange: (event) => setFlightOrSimHours(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Pre Event Time" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: preFlightTime, onChange: (event) => setPreFlightTime(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Post Event Time" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0", value: postFlightTime, onChange: (event) => setPostFlightTime(Number(event.target.value)) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Physical Resources" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: resourcesPhysical, onChange: (event) => setResourcesPhysical(event.target.value) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1 md:col-span-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Human Resources" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("textarea", { className: "min-h-[74px] w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", value: resourcesHuman, onChange: (event) => setResourcesHuman(event.target.value) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-wide text-gray-400", children: "Total Event Hours" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("input", { className: "w-full rounded border border-gray-600 bg-gray-950 px-3 py-2 text-sm text-white", type: "number", step: "0.25", min: "0.25", value: totalEventHours, onChange: (event) => setTotalEventHours(Number(event.target.value)) })
+      ] })
+    ] }),
+    validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-5 py-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Save" })
+    ] })
+  ] }) });
+};
 const DetailCard$1 = ({ label, value, className = "" }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: `bg-gray-700/50 p-3 rounded-lg ${className}`, children: [
   /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-xs font-medium text-gray-400 uppercase tracking-wider", children: label }),
   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-md font-semibold text-white", children: value })
@@ -10173,12 +10303,14 @@ const TraineeLmpView = ({
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
   insertEventTypes = DEFAULT_INSERT_EVENT_TYPES,
-  onInsertCustomEvent
+  onInsertCustomEvent,
+  onUpdateLmpItem
 }) => {
   const { isFrozen } = useSystemFreeze();
   const [selectedItem, setSelectedItem] = reactExports.useState(null);
   const [activeTab, setActiveTab] = reactExports.useState("neo");
   const [showInsertEventModal, setShowInsertEventModal] = reactExports.useState(false);
+  const [itemBeingEdited, setItemBeingEdited] = reactExports.useState(null);
   const hasAcademicSyllabus = !!(syllabusDetails && syllabusDetails.length > 0);
   const completedEventIds = reactExports.useMemo(() => {
     const ids = new Set(scores.map((s) => (s.event || "").replace("*", "")));
@@ -10239,6 +10371,15 @@ const TraineeLmpView = ({
             ]
           }
         ),
+        activeTab === "neo" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            onClick: () => selectedItem && setItemBeingEdited(selectedItem),
+            disabled: !selectedItem || !onUpdateLmpItem,
+            className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] leading-tight font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed",
+            children: "Edit"
+          }
+        ),
         activeTab === "neo" && selectedItem && onGeneratePt051ForItem && /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "button",
           {
@@ -10263,6 +10404,20 @@ const TraineeLmpView = ({
         onSave: async (request) => {
           const inserted = await onInsertCustomEvent?.(trainee, request);
           if (inserted !== false) setShowInsertEventModal(false);
+        }
+      }
+    ),
+    itemBeingEdited && /* @__PURE__ */ jsxRuntimeExports.jsx(
+      LmpEventEditModal,
+      {
+        item: itemBeingEdited,
+        onCancel: () => setItemBeingEdited(null),
+        onSave: async (updatedItem) => {
+          const updated = await onUpdateLmpItem?.(trainee, itemBeingEdited, updatedItem);
+          if (updated !== false) {
+            setSelectedItem(updatedItem);
+            setItemBeingEdited(null);
+          }
         }
       }
     ),
@@ -10424,6 +10579,7 @@ const TraineeProfileFlyout = ({
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
   onInsertCustomLmpEvent,
+  onUpdateLmpItem,
   insertEventTypes,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -11178,6 +11334,7 @@ const TraineeProfileFlyout = ({
                     onDeleteRemedialItem,
                     onGeneratePt051ForItem,
                     onInsertCustomEvent: onInsertCustomLmpEvent,
+                    onUpdateLmpItem,
                     insertEventTypes
                   }
                 ) });
@@ -12121,6 +12278,7 @@ const CourseRosterView = ({
   onDeleteRemedialItem,
   onGeneratePt051ForItem,
   onInsertCustomLmpEvent,
+  onUpdateLmpItem,
   insertEventTypes,
   onAccessDenied,
   resourceDisplayNames = DEFAULT_RESOURCE_DISPLAY_NAMES,
@@ -12427,6 +12585,7 @@ const CourseRosterView = ({
         onDeleteRemedialItem,
         onGeneratePt051ForItem,
         onInsertCustomLmpEvent,
+        onUpdateLmpItem,
         insertEventTypes,
         onSelectPt051ForEvent: (assessment) => onSelectPt051ForEvent?.(
           isCreatingNew && newTraineeTemplate ? newTraineeTemplate : selectedTrainee,
@@ -28398,6 +28557,7 @@ const TraineeView = (props) => {
           onDeleteRemedialItem: props.onDeleteRemedialItem,
           onGeneratePt051ForItem: props.onGeneratePt051ForItem,
           onInsertCustomLmpEvent: props.onInsertCustomLmpEvent,
+          onUpdateLmpItem: props.onUpdateLmpItem,
           insertEventTypes: props.insertEventTypes,
           onOpenInstructorProfile: props.onOpenInstructorProfile,
           onUpdateCourseNumber: props.onUpdateCourseNumber,
@@ -79144,6 +79304,79 @@ ${error instanceof Error ? error.message : String(error)}`,
       return false;
     }
   };
+  const handleUpdateIndividualLmpItem = async (trainee, originalItem, updatedItem) => {
+    const originalTraineeLMP = traineeLMPs.get(trainee.fullName);
+    if (!originalTraineeLMP || originalTraineeLMP.length === 0) {
+      await showDarkAlert2(`Could not update ${originalItem.code}: Individual LMP not found for ${trainee.fullName}.`, "Individual LMP Save Failed", "error");
+      return false;
+    }
+    const originalId = originalItem.id || originalItem.code;
+    const originalCode = originalItem.code || originalItem.id;
+    const updatedCode = String(updatedItem.code || updatedItem.id || "").trim().toUpperCase();
+    const duplicateCode = originalTraineeLMP.some((item) => {
+      const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
+      if (matchesOriginal) return false;
+      return String(item.code || item.id || "").trim().toUpperCase() === updatedCode;
+    });
+    if (duplicateCode) {
+      await showDarkAlert2(`Could not update ${originalItem.code}: another Individual LMP event already uses ${updatedItem.code}.`, "Individual LMP Save Failed", "error");
+      return false;
+    }
+    const updatedLmp = originalTraineeLMP.map((item) => {
+      const matchesOriginal = (item.id || item.code) === originalId || (item.code || item.id) === originalCode;
+      if (matchesOriginal) return updatedItem;
+      return {
+        ...item,
+        prerequisites: (item.prerequisites || []).map(
+          (prerequisite) => prerequisite === originalCode ? updatedItem.code : prerequisite === originalId ? updatedItem.id || updatedItem.code : prerequisite
+        ),
+        prerequisitesGround: (item.prerequisitesGround || []).map(
+          (prerequisite) => prerequisite === originalCode ? updatedItem.code : prerequisite === originalId ? updatedItem.id || updatedItem.code : prerequisite
+        ),
+        prerequisitesFlying: (item.prerequisitesFlying || []).map(
+          (prerequisite) => prerequisite === originalCode ? updatedItem.code : prerequisite === originalId ? updatedItem.id || updatedItem.code : prerequisite
+        )
+      };
+    });
+    if (!updatedLmp.some((item) => (item.id || item.code) === (updatedItem.id || updatedItem.code))) {
+      await showDarkAlert2(`Could not update ${originalItem.code}: selected event was not found in the Individual LMP.`, "Individual LMP Save Failed", "error");
+      return false;
+    }
+    try {
+      const persistedLmp = await persistTraineeLmp(trainee, updatedLmp);
+      setTraineeLMPs((prevLMPs) => {
+        const newLMPs = new Map(prevLMPs);
+        newLMPs.set(trainee.fullName, persistedLmp);
+        return newLMPs;
+      });
+      logAudit(
+        "Individual LMP",
+        "Edit",
+        `Edited event ${originalItem.code} in ${trainee.fullName}'s Individual LMP`,
+        [
+          `Original Event: ${originalItem.code}`,
+          `Updated Event: ${updatedItem.code}`,
+          `Type: ${updatedItem.type}`,
+          `Day/Night: ${updatedItem.dayNight}`,
+          `Duration: ${updatedItem.duration}`,
+          `Resource Number: ${updatedItem.resourceNumber ?? 0}`,
+          `Trainee: ${trainee.rank ? `${trainee.rank} ` : ""}${trainee.name}`
+        ].join("; ")
+      );
+      setSuccessMessage(`Updated ${updatedItem.code} in Individual LMP.`);
+      return true;
+    } catch (error) {
+      console.error("[Individual LMP] Failed to update event:", error);
+      await showDarkAlert2(
+        `The event was not saved to the database, so it has not been updated.
+
+${error instanceof Error ? error.message : String(error)}`,
+        "Individual LMP Save Failed",
+        "error"
+      );
+      return false;
+    }
+  };
   const handleUnsavedConfirm = (action) => {
     if (action === "save") {
       onSaveRef.current();
@@ -83880,6 +84113,7 @@ ${conflictLines.join("\n")}${moreText}`,
             onDeleteRemedialItem: handleDeleteRemedialLmpItem,
             onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
+            onUpdateLmpItem: handleUpdateIndividualLmpItem,
             insertEventTypes,
             onAccessDenied: denyPlatformAction,
             locations,
@@ -84024,6 +84258,7 @@ ${conflictLines.join("\n")}${moreText}`,
             canAddRemedialPackageForTrainee: () => canAddRemedialPackage,
             onGeneratePt051ForItem: handleGeneratePt051FromLmpItem,
             onInsertCustomLmpEvent: handleInsertCustomLmpEvent,
+            onUpdateLmpItem: handleUpdateIndividualLmpItem,
             insertEventTypes,
             onAccessDenied: denyPlatformAction,
             locations,
