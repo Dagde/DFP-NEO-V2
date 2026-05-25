@@ -70668,6 +70668,12 @@ const stampMasterLmpItems = (masterLMP) => masterLMP.map((item, index) => ({
   placementNeedsReview: false
 }));
 const isLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || item.id?.includes("REM") || isRemedialEventCode(item.id) || item.code?.includes("REM") || isRemedialEventCode(item.code) || item.id?.endsWith("-CUR") || item.code?.endsWith("-CUR");
+const getLmpResourceNumber = (item) => {
+  const parsed = Number(item?.resourceNumber);
+  return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
+};
+const isMultiResourceFlightItem = (item) => !!item && item.type === "Flight" && getLmpResourceNumber(item) > 1;
+const getFormationEventKey = (item) => String(item?.code || item?.masterEventId || item?.id || "").trim().toUpperCase().replace(/\s+/g, "");
 const mergeIndividualLmpWithMaster = (existingLmp, masterLMP) => {
   const stampedMaster = stampMasterLmpItems(masterLMP);
   if (!existingLmp || existingLmp.length === 0) return stampedMaster;
@@ -71675,6 +71681,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       placements: [],
       finalGaps: []
     },
+    formationResourceDiagnostics: {
+      groups: [],
+      skippedSinglePlacements: [],
+      standbyExclusions: []
+    },
     final: null
   };
   const saveNeoBuildDiag = (stage) => {
@@ -72066,6 +72077,33 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   };
   Object.values(nextEventLists).forEach((list) => list.sort(sortTrainees));
   Object.values(nextPlusOneLists).forEach((list) => list.sort(sortTrainees));
+  const formationGroups = /* @__PURE__ */ new Map();
+  nextEventLists.flight.forEach((trainee) => {
+    const next = traineeNextEventMap.get(trainee.fullName)?.next;
+    if (!next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next)) return;
+    const key = getFormationEventKey(next);
+    if (!key) return;
+    if (!formationGroups.has(key)) {
+      formationGroups.set(key, { item: next, trainees: [] });
+    }
+    formationGroups.get(key).trainees.push(trainee);
+  });
+  neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
+    const resourceNumber = getLmpResourceNumber(group.item);
+    return {
+      eventKey,
+      eventCode: group.item.code || group.item.id || null,
+      resourceNumber,
+      candidateCount: group.trainees.length,
+      ready: group.trainees.length >= resourceNumber,
+      candidates: group.trainees.map((trainee) => ({
+        name: trainee.fullName,
+        course: trainee.course,
+        assignedPrimary: trainee.primaryInstructor || null
+      })),
+      selectedCandidates: group.trainees.slice(0, resourceNumber).map((trainee) => trainee.fullName)
+    };
+  });
   neoBuildDiag.nextEventLists = {
     next: {
       flight: nextEventLists.flight.length,
@@ -72457,6 +72495,17 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           continue;
         }
         const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
+        if (type === "flight" && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
+          neoBuildDiag.formationResourceDiagnostics.skippedSinglePlacements.push({
+            listName,
+            trainee: trainee.fullName,
+            event: syllabusItem.code || syllabusItem.id || null,
+            eventKey: getFormationEventKey(syllabusItem),
+            resourceNumber: getLmpResourceNumber(syllabusItem),
+            reason: "Multi-resource flight requires grouped formation placement; skipped ordinary single-aircraft scheduling pass."
+          });
+          continue;
+        }
         let searchStartTime = isRemedialItem ? Math.max(startTimeBoundary, REMEDIAL_EARLIEST_START) : startTimeBoundary;
         if (isPlusOne) {
           const nextEventCodes = new Set([next?.id, next?.code].filter(Boolean));
@@ -74066,6 +74115,16 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const traineesNeedingStby = nextEventLists.flight.filter((trainee) => {
     const { next } = traineeNextEventMap.get(trainee.fullName);
     if (!next) return false;
+    if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
+      neoBuildDiag.formationResourceDiagnostics.standbyExclusions.push({
+        trainee: trainee.fullName,
+        event: next.code || next.id || null,
+        eventKey: getFormationEventKey(next),
+        resourceNumber: getLmpResourceNumber(next),
+        reason: "Multi-resource formation event excluded from ordinary single-aircraft STBY fallback."
+      });
+      return false;
+    }
     return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
   });
   if (traineesNeedingStby.length > 0) {

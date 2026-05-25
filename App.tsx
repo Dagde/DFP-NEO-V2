@@ -507,6 +507,20 @@ const isLmpOverlayItem = (item: SyllabusItemDetail): boolean =>
     item.id?.endsWith('-CUR') ||
     item.code?.endsWith('-CUR');
 
+const getLmpResourceNumber = (item?: Partial<SyllabusItemDetail> | null): number => {
+    const parsed = Number(item?.resourceNumber);
+    return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
+};
+
+const isMultiResourceFlightItem = (item?: Partial<SyllabusItemDetail> | null): boolean =>
+    !!item && item.type === 'Flight' && getLmpResourceNumber(item) > 1;
+
+const getFormationEventKey = (item?: Partial<SyllabusItemDetail> | null): string =>
+    String(item?.code || item?.masterEventId || item?.id || '')
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, '');
+
 const mergeIndividualLmpWithMaster = (
     existingLmp: SyllabusItemDetail[] | undefined,
     masterLMP: SyllabusItemDetail[]
@@ -2109,6 +2123,11 @@ function generateDfpInternal(
             placements: [] as any[],
             finalGaps: [] as any[],
         },
+        formationResourceDiagnostics: {
+            groups: [] as any[],
+            skippedSinglePlacements: [] as any[],
+            standbyExclusions: [] as any[],
+        },
         final: null,
     };
 
@@ -2614,6 +2633,35 @@ function generateDfpInternal(
 
     Object.values(nextEventLists).forEach(list => list.sort(sortTrainees));
     Object.values(nextPlusOneLists).forEach(list => list.sort(sortTrainees));
+
+    const formationGroups = new Map<string, { item: SyllabusItemDetail; trainees: Trainee[] }>();
+    nextEventLists.flight.forEach(trainee => {
+        const next = traineeNextEventMap.get(trainee.fullName)?.next;
+        if (!next || !isMultiResourceFlightItem(next) || isRemedialSyllabusItem(next)) return;
+        const key = getFormationEventKey(next);
+        if (!key) return;
+        if (!formationGroups.has(key)) {
+            formationGroups.set(key, { item: next, trainees: [] });
+        }
+        formationGroups.get(key)!.trainees.push(trainee);
+    });
+    neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
+        const resourceNumber = getLmpResourceNumber(group.item);
+        return {
+            eventKey,
+            eventCode: group.item.code || group.item.id || null,
+            resourceNumber,
+            candidateCount: group.trainees.length,
+            ready: group.trainees.length >= resourceNumber,
+            candidates: group.trainees.map(trainee => ({
+                name: trainee.fullName,
+                course: trainee.course,
+                assignedPrimary: trainee.primaryInstructor || null,
+            })),
+            selectedCandidates: group.trainees.slice(0, resourceNumber).map(trainee => trainee.fullName),
+        };
+    });
+
     neoBuildDiag.nextEventLists = {
         next: {
             flight: nextEventLists.flight.length,
@@ -3112,6 +3160,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
 
                 const isRemedialItem = isRemedialSyllabusItem(syllabusItem);
+                if (type === 'flight' && !isPlusOne && !isRemedialItem && isMultiResourceFlightItem(syllabusItem)) {
+                    neoBuildDiag.formationResourceDiagnostics.skippedSinglePlacements.push({
+                        listName,
+                        trainee: trainee.fullName,
+                        event: syllabusItem.code || syllabusItem.id || null,
+                        eventKey: getFormationEventKey(syllabusItem),
+                        resourceNumber: getLmpResourceNumber(syllabusItem),
+                        reason: 'Multi-resource flight requires grouped formation placement; skipped ordinary single-aircraft scheduling pass.',
+                    });
+                    continue;
+                }
+
                 let searchStartTime = isRemedialItem
                     ? Math.max(startTimeBoundary, REMEDIAL_EARLIEST_START)
                     : startTimeBoundary;
@@ -5259,6 +5319,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const traineesNeedingStby = nextEventLists.flight.filter(trainee => {
         const { next } = traineeNextEventMap.get(trainee.fullName)!;
         if (!next) return false;
+        if (isMultiResourceFlightItem(next) && !isRemedialSyllabusItem(next)) {
+            neoBuildDiag.formationResourceDiagnostics.standbyExclusions.push({
+                trainee: trainee.fullName,
+                event: next.code || next.id || null,
+                eventKey: getFormationEventKey(next),
+                resourceNumber: getLmpResourceNumber(next),
+                reason: 'Multi-resource formation event excluded from ordinary single-aircraft STBY fallback.',
+            });
+            return false;
+        }
         return !hasTraineeFlightOrFtdCommitment(trainee.fullName);
     });
 
