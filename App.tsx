@@ -509,6 +509,16 @@ const isLmpOverlayItem = (item: SyllabusItemDetail): boolean =>
 
 const getLmpResourceNumber = (item?: Partial<SyllabusItemDetail> | null): number => {
     const parsed = Number(item?.resourceNumber);
+    if (Number.isFinite(parsed) && parsed > 1) return Math.max(1, Math.round(parsed));
+
+    const physicalResourceCount = Array.isArray(item?.resourcesPhysical)
+        ? item.resourcesPhysical.filter(resource => String(resource || '').trim().length > 0).length
+        : 0;
+    if (physicalResourceCount > 1) return physicalResourceCount;
+
+    const eventCode = String(item?.code || item?.id || item?.masterEventId || '').trim().toUpperCase();
+    if (item?.type === 'Flight' && /^FORM/.test(eventCode)) return 2;
+
     return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
 };
 

@@ -70670,6 +70670,11 @@ const stampMasterLmpItems = (masterLMP) => masterLMP.map((item, index) => ({
 const isLmpOverlayItem = (item) => item.lmpSource === "remedial" || item.lmpSource === "custom" || item.isRemedial === true || item.id?.includes("REM") || isRemedialEventCode(item.id) || item.code?.includes("REM") || isRemedialEventCode(item.code) || item.id?.endsWith("-CUR") || item.code?.endsWith("-CUR");
 const getLmpResourceNumber = (item) => {
   const parsed = Number(item?.resourceNumber);
+  if (Number.isFinite(parsed) && parsed > 1) return Math.max(1, Math.round(parsed));
+  const physicalResourceCount = Array.isArray(item?.resourcesPhysical) ? item.resourcesPhysical.filter((resource) => String(resource || "").trim().length > 0).length : 0;
+  if (physicalResourceCount > 1) return physicalResourceCount;
+  const eventCode = String(item?.code || item?.id || item?.masterEventId || "").trim().toUpperCase();
+  if (item?.type === "Flight" && /^FORM/.test(eventCode)) return 2;
   return Number.isFinite(parsed) ? Math.max(1, Math.round(parsed)) : 1;
 };
 const isMultiResourceFlightItem = (item) => !!item && item.type === "Flight" && getLmpResourceNumber(item) > 1;
