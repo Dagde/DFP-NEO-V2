@@ -888,6 +888,7 @@ interface DfpConfig {
   formationCallsigns: FormationCallsign[];
   resourceDisplayNames?: ResourceDisplayNames;
   remedialPrioritySyncTrace?: any[];
+  remedialDataMovementTrace?: any[];
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
   staffSharingUnits: string[];
@@ -2211,6 +2212,15 @@ function generateDfpInternal(
         nextEventLists: null,
         nextSamples: [],
         scheduleLists: {},
+        remedialDataMovement: {
+            sourceTrace: config.remedialDataMovementTrace || [] as any[],
+            buildInputRequests: [] as any[],
+            buildInputPriorityEvents: [] as any[],
+            lmpLookupTrace: [] as any[],
+            priorityPlacementTrace: [] as any[],
+            finalScheduleTrace: [] as any[],
+            conclusion: [] as any[],
+        },
         mandatoryRemedialFlights: {
             prioritySyncTrace: config.remedialPrioritySyncTrace || [] as any[],
             priorityQueueAudit: [] as any[],
@@ -2268,6 +2278,16 @@ function generateDfpInternal(
                     scheduleAttempts: neoBuildDiag.mandatoryRemedialFlights.scheduleAttempts.slice(-500),
                     instructorAllocationTrace: neoBuildDiag.mandatoryRemedialFlights.instructorAllocationTrace.slice(-500),
                     placementTrace: neoBuildDiag.mandatoryRemedialFlights.placementTrace.slice(-500),
+                },
+                remedialDataMovement: {
+                    ...neoBuildDiag.remedialDataMovement,
+                    sourceTrace: neoBuildDiag.remedialDataMovement.sourceTrace.slice(-500),
+                    buildInputRequests: neoBuildDiag.remedialDataMovement.buildInputRequests.slice(-500),
+                    buildInputPriorityEvents: neoBuildDiag.remedialDataMovement.buildInputPriorityEvents.slice(-500),
+                    lmpLookupTrace: neoBuildDiag.remedialDataMovement.lmpLookupTrace.slice(-500),
+                    priorityPlacementTrace: neoBuildDiag.remedialDataMovement.priorityPlacementTrace.slice(-800),
+                    finalScheduleTrace: neoBuildDiag.remedialDataMovement.finalScheduleTrace.slice(-500),
+                    conclusion: neoBuildDiag.remedialDataMovement.conclusion.slice(-500),
                 },
                 formationResourceDiagnostics: {
                     ...neoBuildDiag.formationResourceDiagnostics,
@@ -2424,6 +2444,20 @@ function generateDfpInternal(
         });
     };
 
+    const traceRemedialMovement = (
+        bucket: 'sourceTrace' | 'buildInputRequests' | 'buildInputPriorityEvents' | 'lmpLookupTrace' | 'priorityPlacementTrace' | 'finalScheduleTrace' | 'conclusion',
+        entry: Record<string, any>,
+        limit: number = 1500
+    ) => {
+        const list = neoBuildDiag.remedialDataMovement[bucket] as any[];
+        if (list.length >= limit) return;
+        list.push({
+            sequence: list.length + 1,
+            timestamp: new Date().toISOString(),
+            ...entry,
+        });
+    };
+
     const traceDayFlightGap = (
         bucket: 'attempts' | 'instructorTrace' | 'placements' | 'finalGaps',
         entry: Record<string, any>,
@@ -2451,6 +2485,131 @@ function generateDfpInternal(
             ...entry,
         });
     };
+
+    const isMandatoryRemedialFlight = (event: ScheduleEvent): boolean =>
+        event.date === buildDate &&
+        event.isTimeFixed === true &&
+        event.isRemedial === true &&
+        event.type === 'flight';
+
+    const remedialPriorityEvents = highestPriorityEvents.filter(event =>
+        event.isRemedial || event.id?.startsWith('remedial-')
+    );
+
+    traceRemedialMovement('sourceTrace', {
+        phase: 'build-config-received',
+        buildDate,
+        remedialRequestsInConfig: remedialRequests.length,
+        forcedRemedialRequestsInConfig: remedialRequests.filter(r => r.forceSchedule).length,
+        highestPriorityEventsInConfig: highestPriorityEvents.length,
+        remedialPriorityEventsInConfig: remedialPriorityEvents.length,
+        note: remedialRequests.length === 0
+            ? 'No remedial Force Schedule requests reached generateDfpInternal.'
+            : 'Remedial Force Schedule requests reached generateDfpInternal.',
+    });
+
+    remedialRequests.forEach(request => {
+        const trainee = trainees.find(t => t.idNumber === request.traineeId);
+        const individualLmp = trainee ? traineeLMPs.get(trainee.fullName) : undefined;
+        const matchingLmpItem = individualLmp?.find(item =>
+            normalizeLmpEventId(item.id) === normalizeLmpEventId(request.eventCode) ||
+            normalizeLmpEventId(item.code) === normalizeLmpEventId(request.eventCode) ||
+            normalizeLmpEventId(item.masterEventId) === normalizeLmpEventId(request.eventCode)
+        );
+        const matchingPriorityEvent = remedialPriorityEvents.find(event =>
+            event.id === `remedial-${request.traineeId}-${request.eventCode}` ||
+            (
+                eventHasPerson(event, trainee?.fullName) &&
+                (
+                    normalizeLmpEventId(event.flightNumber) === normalizeLmpEventId(request.eventCode) ||
+                    normalizeLmpEventId(getRemedialBaseEventCode({ code: event.flightNumber })) === normalizeLmpEventId(request.eventCode)
+                )
+            )
+        );
+        traceRemedialMovement('buildInputRequests', {
+            phase: 'request-arrived-at-build',
+            traineeId: request.traineeId,
+            eventCode: request.eventCode,
+            forceSchedule: request.forceSchedule === true,
+            traineeFound: !!trainee,
+            traineeName: trainee?.fullName || null,
+            traineeCourse: trainee?.course || null,
+            individualLmpFound: !!individualLmp,
+            individualLmpLength: individualLmp?.length ?? null,
+            eventFoundInIndividualLmp: !!matchingLmpItem,
+            lmpEvent: matchingLmpItem ? {
+                id: matchingLmpItem.id,
+                code: matchingLmpItem.code,
+                masterEventId: matchingLmpItem.masterEventId || null,
+                type: matchingLmpItem.type,
+                lmpSource: matchingLmpItem.lmpSource || null,
+                isRemedial: matchingLmpItem.isRemedial === true,
+                duration: matchingLmpItem.duration,
+                resourcesHuman: matchingLmpItem.resourcesHuman || [],
+                methodOfDelivery: matchingLmpItem.methodOfDelivery || [],
+                prerequisites: matchingLmpItem.prerequisites || [],
+            } : null,
+            matchingHighestPriorityEventFound: !!matchingPriorityEvent,
+            matchingHighestPriorityEventId: matchingPriorityEvent?.id || null,
+            expectedNextHandoff: matchingPriorityEvent
+                ? 'highest-priority-placement-or-mandatory-flight-queue'
+                : 'request-did-not-become-highest-priority-event-before-scheduler',
+        });
+        traceRemedialMovement('lmpLookupTrace', {
+            phase: 'build-lmp-lookup-for-forced-remedial-request',
+            traineeId: request.traineeId,
+            eventCode: request.eventCode,
+            traineeFound: !!trainee,
+            traineeName: trainee?.fullName || null,
+            individualLmpFound: !!individualLmp,
+            individualLmpLength: individualLmp?.length ?? null,
+            matchedEventInBuildLmp: !!matchingLmpItem,
+            matchedEventId: matchingLmpItem?.id || null,
+            matchedEventCode: matchingLmpItem?.code || null,
+            matchedMasterEventId: matchingLmpItem?.masterEventId || null,
+            matchedEventType: matchingLmpItem?.type || null,
+            matchedEventSource: matchingLmpItem?.lmpSource || null,
+            conclusion: matchingLmpItem
+                ? 'refreshed-build-lmp-contains-selected-remedial-event'
+                : 'refreshed-build-lmp-does-not-contain-selected-remedial-event',
+        });
+    });
+
+    remedialPriorityEvents.forEach(event => {
+        const isMandatoryFlight = isMandatoryRemedialFlight(event);
+        const exclusionReasons: string[] = [];
+        if (event.date !== buildDate) exclusionReasons.push('DATE_MISMATCH');
+        if (event.isTimeFixed !== true) exclusionReasons.push('NOT_TIME_FIXED');
+        if (event.isRemedial !== true) exclusionReasons.push('NOT_MARKED_REMEDIAL');
+        if (event.type === 'flight' && isMandatoryFlight) {
+            // Mandatory remedial flights go through the remedial flight queue.
+        } else if (event.type !== 'flight') {
+            exclusionReasons.push('NON_FLIGHT_FIXED_PRIORITY_PATH');
+        }
+        traceRemedialMovement('buildInputPriorityEvents', {
+            phase: 'highest-priority-remedial-arrived-at-build',
+            priorityEventId: event.id,
+            event: event.flightNumber,
+            trainee: event.student || event.pilot || '',
+            instructor: event.instructor || '',
+            type: event.type,
+            date: event.date,
+            buildDate,
+            startTime: event.startTime,
+            duration: event.duration,
+            resourceId: event.resourceId || null,
+            isRemedial: event.isRemedial === true,
+            isTimeFixed: event.isTimeFixed === true,
+            dayNight: event.dayNight || null,
+            includedInMandatoryRemedialFlightQueue: isMandatoryFlight,
+            expectedSchedulerPath: isMandatoryFlight
+                ? 'mandatory-remedial-flight-queue'
+                : event.date === buildDate && event.isTimeFixed
+                    ? 'fixed-highest-priority-placement'
+                    : 'excluded-before-placement',
+            exclusionReasons,
+        });
+    });
 
     neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
 
@@ -2532,6 +2691,24 @@ function generateDfpInternal(
                     conflictWith,
                     ignoredInstructorConflicts,
                 });
+                traceRemedialMovement('priorityPlacementTrace', {
+                    phase: 'fixed-priority-slot-attempt',
+                    priorityEventId: candidate.id,
+                    trainee: candidate.student || candidate.pilot || '',
+                    event: candidate.flightNumber,
+                    type: candidate.type,
+                    requestedStartTime: event.startTime,
+                    attemptedStartTime: startTime,
+                    displayTime: _fmtT(startTime),
+                    duration: candidate.duration,
+                    resourceId,
+                    resourcePoolTried: resourceOptions,
+                    remedialInstructor,
+                    outcome: conflicts ? 'rejected' : 'placed',
+                    conflictReason: conflictReason || null,
+                    conflictWith,
+                    ignoredInstructorConflicts,
+                });
                 if (!conflicts) {
                     const placedCandidate = ignoredInstructorConflicts.length > 0
                         ? {
@@ -2559,14 +2736,20 @@ function generateDfpInternal(
         }
 
         buildDebugLog(`  ⚠ DEBUG could not move remedial ${event.flightNumber}; leaving original priority time/resource`);
+        traceRemedialMovement('priorityPlacementTrace', {
+            phase: 'fixed-priority-placement-fallback',
+            priorityEventId: event.id,
+            trainee: event.student || event.pilot || '',
+            event: event.flightNumber,
+            type: event.type,
+            requestedStartTime: event.startTime,
+            fallbackStartTime: searchStart,
+            duration: event.duration,
+            existingResourceId: event.resourceId || null,
+            outcome: 'left-at-original-priority-time-after-all-placement-attempts-failed',
+        });
         return { ...event, startTime: searchStart };
     };
-
-    const isMandatoryRemedialFlight = (event: ScheduleEvent): boolean =>
-        event.date === buildDate &&
-        event.isTimeFixed === true &&
-        event.isRemedial === true &&
-        event.type === 'flight';
 
     const mandatoryRemedialFlights = highestPriorityEvents.filter(isMandatoryRemedialFlight);
     neoBuildDiag.mandatoryRemedialFlights.priorityQueueAudit = highestPriorityEvents
@@ -2620,6 +2803,18 @@ function generateDfpInternal(
         if (isMandatoryRemedialFlight(event)) {
             skippedCount++;
             buildDebugLog(`  ↷ DEBUG QUEUED mandatory remedial flight for normal scheduling after 1000: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'}`);
+            traceRemedialMovement('priorityPlacementTrace', {
+                phase: 'highest-priority-remedial-queued-for-mandatory-flight-scheduler',
+                priorityEventId: event.id,
+                event: event.flightNumber,
+                trainee: event.student || event.pilot || '',
+                type: event.type,
+                date: event.date,
+                buildDate,
+                startTime: event.startTime,
+                outcome: 'not-inserted-during-fixed-priority-pass',
+                nextHandoff: 'mandatory-remedial-flight-scheduler',
+            });
             return;
         }
 
@@ -2655,11 +2850,38 @@ function generateDfpInternal(
                     _isNext: undefined,
                     _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || ''
                 };
+                if (event.isRemedial || event.id?.startsWith('remedial-')) {
+                    traceRemedialMovement('priorityPlacementTrace', {
+                        phase: 'highest-priority-remedial-updated-existing-generated-event',
+                        priorityEventId: event.id,
+                        event: event.flightNumber,
+                        trainee: event.student || event.pilot || '',
+                        type: event.type,
+                        startTime: eventWithoutDate.startTime,
+                        resourceId: eventWithoutDate.resourceId || null,
+                        generatedEventIndex: existingEventIndex,
+                        outcome: 'updated-existing-generated-event',
+                    });
+                }
                 buildDebugLog(`  ↻ DEBUG UPDATED existing Active DFP event as highest priority (ID: ${event.id})`);
                 return;
             }
 
             generatedEvents.push({ ...eventWithoutDate, _source: 'highest-priority', _isNext: undefined, _traineeName: eventWithoutDate.student || eventWithoutDate.pilot || '' });
+            if (event.isRemedial || event.id?.startsWith('remedial-')) {
+                traceRemedialMovement('priorityPlacementTrace', {
+                    phase: 'highest-priority-remedial-inserted-into-generated-events',
+                    priorityEventId: event.id,
+                    event: event.flightNumber,
+                    trainee: event.student || event.pilot || '',
+                    type: event.type,
+                    startTime: eventWithoutDate.startTime,
+                    resourceId: eventWithoutDate.resourceId || null,
+                    generatedEventsCountAfterInsert: generatedEvents.length,
+                    outcome: 'inserted',
+                    nextHandoff: 'resource-assignment-and-final-sort',
+                });
+            }
             includedCount++;
             buildDebugLog(`  ✓ DEBUG INCLUDED in build (ID: ${event.id})`);
             buildDebugLog(`  - pilot: ${eventWithoutDate.pilot}, instructor: ${eventWithoutDate.instructor}, student: ${eventWithoutDate.student}`);
@@ -2672,6 +2894,20 @@ function generateDfpInternal(
         } else {
             skippedCount++;
             buildDebugLog(`  ✗ DEBUG SKIPPED - Reason: ${event.date !== buildDate ? 'date mismatch' : 'isTimeFixed is false'}`);
+            if (event.isRemedial || event.id?.startsWith('remedial-')) {
+                traceRemedialMovement('priorityPlacementTrace', {
+                    phase: 'highest-priority-remedial-skipped-before-placement',
+                    priorityEventId: event.id,
+                    event: event.flightNumber,
+                    trainee: event.student || event.pilot || '',
+                    type: event.type,
+                    date: event.date,
+                    buildDate,
+                    isTimeFixed: event.isTimeFixed === true,
+                    outcome: 'skipped',
+                    reason: event.date !== buildDate ? 'DATE_MISMATCH' : 'NOT_TIME_FIXED',
+                });
+            }
         }
     });
 
@@ -2708,8 +2944,37 @@ function generateDfpInternal(
 
             if (assignedResource) {
                 event.resourceId = assignedResource;
+                if (event.isRemedial || event.id?.startsWith('remedial-')) {
+                    traceRemedialMovement('priorityPlacementTrace', {
+                        phase: 'remedial-resource-assigned-after-highest-priority-pass',
+                        priorityEventId: event.id,
+                        event: event.flightNumber,
+                        trainee: event.student || event.pilot || '',
+                        type: event.type,
+                        startTime: event.startTime,
+                        duration: event.duration,
+                        assignedResource,
+                        resourcePrefix,
+                        resourceCount,
+                        outcome: 'resource-assigned',
+                    });
+                }
                 buildDebugLog(`DEBUG Assigned ${assignedResource} to highest priority event: ${event.flightNumber} - ${event.student || event.pilot || 'N/A'}`);
             } else {
+                if (event.isRemedial || event.id?.startsWith('remedial-')) {
+                    traceRemedialMovement('priorityPlacementTrace', {
+                        phase: 'remedial-resource-assignment-failed-after-highest-priority-pass',
+                        priorityEventId: event.id,
+                        event: event.flightNumber,
+                        trainee: event.student || event.pilot || '',
+                        type: event.type,
+                        startTime: event.startTime,
+                        duration: event.duration,
+                        resourcePrefix,
+                        resourceCount,
+                        outcome: 'no-resource-available',
+                    });
+                }
                 if (neoBuildVerboseDiagnostics) console.warn(`DEBUG Could not find available resource for: ${event.flightNumber}`);
             }
         }
@@ -7137,6 +7402,94 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     };
 
     generateBuildConflictDiagnostic(sortedEvents);
+    remedialPriorityEvents.forEach(priorityEvent => {
+        const eventTrainee = priorityEvent.student || priorityEvent.pilot || '';
+        const priorityCodes = new Set([
+            normalizeLmpEventId(priorityEvent.flightNumber),
+            normalizeLmpEventId(getRemedialBaseEventCode({ code: priorityEvent.flightNumber })),
+        ].filter(Boolean));
+        const directIdMatch = sortedEvents.find(scheduleEvent => scheduleEvent.id === priorityEvent.id);
+        const traineeEvents = sortedEvents.filter(scheduleEvent => eventHasPerson(scheduleEvent, eventTrainee));
+        const codeAndTraineeMatch = traineeEvents.find(scheduleEvent =>
+            priorityCodes.has(normalizeLmpEventId(scheduleEvent.flightNumber)) ||
+            priorityCodes.has(normalizeLmpEventId(getRemedialBaseEventCode({ code: scheduleEvent.flightNumber })))
+        );
+        const scheduledEvent = directIdMatch || codeAndTraineeMatch || null;
+        traceRemedialMovement('finalScheduleTrace', {
+            phase: 'final-schedule-remedial-priority-reconciliation',
+            priorityEventId: priorityEvent.id,
+            priorityEvent: priorityEvent.flightNumber,
+            priorityType: priorityEvent.type,
+            trainee: eventTrainee,
+            instructor: priorityEvent.instructor || null,
+            priorityStartTime: priorityEvent.startTime,
+            priorityResourceId: priorityEvent.resourceId || null,
+            scheduled: !!scheduledEvent,
+            matchMethod: directIdMatch ? 'event-id' : codeAndTraineeMatch ? 'trainee-and-event-code' : null,
+            scheduledEvent: scheduledEvent ? {
+                id: scheduledEvent.id,
+                flightNumber: scheduledEvent.flightNumber,
+                type: scheduledEvent.type,
+                startTime: scheduledEvent.startTime,
+                duration: scheduledEvent.duration,
+                resourceId: scheduledEvent.resourceId || null,
+                instructor: scheduledEvent.instructor || null,
+                pilot: scheduledEvent.pilot || null,
+                student: scheduledEvent.student || null,
+                source: (scheduledEvent as any)._source || null,
+            } : null,
+            allFinalEventsForTrainee: traineeEvents.map(scheduleEvent => ({
+                id: scheduleEvent.id,
+                flightNumber: scheduleEvent.flightNumber,
+                type: scheduleEvent.type,
+                startTime: scheduleEvent.startTime,
+                duration: scheduleEvent.duration,
+                resourceId: scheduleEvent.resourceId || null,
+                instructor: scheduleEvent.instructor || null,
+                pilot: scheduleEvent.pilot || null,
+                student: scheduleEvent.student || null,
+                source: (scheduleEvent as any)._source || null,
+            })),
+        });
+        traceRemedialMovement('conclusion', {
+            phase: 'remedial-priority-event-final-outcome',
+            priorityEventId: priorityEvent.id,
+            event: priorityEvent.flightNumber,
+            trainee: eventTrainee,
+            type: priorityEvent.type,
+            scheduled: !!scheduledEvent,
+            likelyFailurePoint: scheduledEvent
+                ? null
+                : priorityEvent.date !== buildDate
+                    ? 'date-mismatch-before-placement'
+                    : priorityEvent.isTimeFixed !== true
+                        ? 'not-time-fixed-before-placement'
+                        : 'lost-between-highest-priority-placement-and-final-schedule',
+        });
+    });
+    remedialRequests.forEach(request => {
+        const priorityEventId = `remedial-${request.traineeId}-${request.eventCode}`;
+        const priorityEvent = remedialPriorityEvents.find(event => event.id === priorityEventId);
+        if (!priorityEvent) {
+            traceRemedialMovement('conclusion', {
+                phase: 'remedial-request-final-outcome',
+                traineeId: request.traineeId,
+                eventCode: request.eventCode,
+                forceSchedule: request.forceSchedule === true,
+                scheduled: false,
+                likelyFailurePoint: 'request-did-not-become-highest-priority-event',
+            });
+        }
+    });
+    if (remedialRequests.length === 0 && remedialPriorityEvents.length === 0) {
+        traceRemedialMovement('conclusion', {
+            phase: 'no-remedial-data-arrived-at-scheduler',
+            scheduled: false,
+            likelyFailurePoint: 'selection-not-present-in-build-inputs',
+            detail: 'The build received zero remedialRequests and zero remedial highestPriorityEvents.',
+        });
+    }
+
     neoBuildDiag.mandatoryRemedialFlights.finalAssignments = mandatoryRemedialFlights.map(event => {
         const eventTrainee = event.student || event.pilot || '';
         const priorityCodes = new Set([
@@ -13629,6 +13982,14 @@ const App: React.FC = () => {
         let added = 0;
         const newPriorityEvents = [...highestPriorityEvents];
         const remedialPrioritySyncTrace: any[] = [];
+        const remedialDataMovementTrace: any[] = [];
+        const traceRemedialSyncMovement = (entry: Record<string, any>) => {
+            remedialDataMovementTrace.push({
+                sequence: remedialDataMovementTrace.length + 1,
+                timestamp: new Date().toISOString(),
+                ...entry,
+            });
+        };
 
         // 1. Auto-add HIGH priority SCT requests AND MEDIUM/LOW with includeInBuild=true
         console.log('🔍 SCT Sync - buildDfpDate:', buildDfpDate);
@@ -13797,6 +14158,19 @@ const App: React.FC = () => {
         // 2. Auto-add Force Schedule remedial events
         const storedRemedialRequests = loadStoredRemedialRequests();
         const remedialRequestsForSync = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequests;
+        traceRemedialSyncMovement({
+            phase: 'pre-build-sync-source-summary',
+            buildDate: buildDfpDate,
+            inMemoryRemedialRequests: remedialRequests.length,
+            inMemoryForcedRemedialRequests: remedialRequests.filter(r => r.forceSchedule).length,
+            storedRemedialRequests: storedRemedialRequests.length,
+            storedForcedRemedialRequests: storedRemedialRequests.filter(r => r.forceSchedule).length,
+            selectedSource: remedialRequests.length > 0 ? 'react-state' : storedRemedialRequests.length > 0 ? 'localStorage-fallback' : 'none',
+            selectedRequestsForSync: remedialRequestsForSync.length,
+            highestPriorityBeforeSync: highestPriorityEvents.length,
+            remedialHighestPriorityBeforeSync: highestPriorityEvents.filter(e => e.isRemedial || e.id?.startsWith('remedial-')).length,
+            nextDayBuildEventsBeforeSync: nextDayBuildEvents.length,
+        });
         console.log(`🔍 Checking ${remedialRequestsForSync.length} remedial requests for Force Schedule...`);
         if (remedialRequests.length === 0 && storedRemedialRequests.length > 0) {
             console.log(`📦 Using ${storedRemedialRequests.length} persisted Force Schedule remedial request(s) for pre-build sync`);
@@ -13806,6 +14180,14 @@ const App: React.FC = () => {
 
         remedialRequestsForSync.forEach(remedialReq => {
             if (!remedialReq.forceSchedule) {
+                traceRemedialSyncMovement({
+                    phase: 'remedial-request-skipped-before-priority-sync',
+                    traineeId: remedialReq.traineeId,
+                    eventCode: remedialReq.eventCode,
+                    forceSchedule: remedialReq.forceSchedule,
+                    outcome: 'skipped',
+                    reason: 'FORCE_SCHEDULE_FALSE',
+                });
                 remedialPrioritySyncTrace.push({
                     phase: 'remedial-request-skipped',
                     traineeId: remedialReq.traineeId,
@@ -13858,6 +14240,32 @@ const App: React.FC = () => {
                 const allocatedInstructor = syllabusItem?.resourcesHuman && syllabusItem.resourcesHuman.length > 0
                     ? syllabusItem.resourcesHuman[0]
                     : existingEvent?.instructor || '';
+                traceRemedialSyncMovement({
+                    phase: existingEvent ? 'force-remedial-refresh-lookup' : 'force-remedial-create-lookup',
+                    traineeId: remedialReq.traineeId,
+                    eventCode: remedialReq.eventCode,
+                    priorityEventId: remedialPriorityEventId,
+                    existingPriorityEvent: !!existingEvent,
+                    traineeFound: !!trainee,
+                    traineeName: trainee?.fullName || null,
+                    traineeCourse: trainee?.course || null,
+                    individualLmpLength,
+                    syllabusFound: !!syllabusItem,
+                    syllabusSource,
+                    syllabusId: syllabusItem?.id || null,
+                    syllabusCode: syllabusItem?.code || null,
+                    rawSyllabusType: syllabusItem?.type || null,
+                    mappedScheduleType,
+                    isGroundOrTutorial: mappedScheduleType === 'ground',
+                    methodOfDelivery: syllabusItem?.methodOfDelivery || [],
+                    dayNight: syllabusItem?.dayNight || null,
+                    duration,
+                    resourcesHuman: syllabusItem?.resourcesHuman || [],
+                    allocatedInstructor,
+                    expectedOutcome: trainee && syllabusItem
+                        ? existingEvent ? 'refresh-existing-highest-priority-event' : 'create-highest-priority-event'
+                        : 'skip-missing-trainee-or-syllabus',
+                });
                 remedialPrioritySyncTrace.push({
                     phase: existingEvent ? 'force-remedial-refresh-check' : 'force-remedial-create-check',
                     traineeId: remedialReq.traineeId,
@@ -13907,8 +14315,29 @@ const App: React.FC = () => {
                             isRemedial: true,
                             isTimeFixed: true,
                         };
+                        traceRemedialSyncMovement({
+                            phase: 'highest-priority-remedial-refreshed',
+                            traineeId: remedialReq.traineeId,
+                            eventCode: remedialReq.eventCode,
+                            priorityEventId: remedialPriorityEventId,
+                            type: newPriorityEvents[existingEventIndex].type,
+                            startTime: newPriorityEvents[existingEventIndex].startTime,
+                            date: newPriorityEvents[existingEventIndex].date,
+                            isTimeFixed: newPriorityEvents[existingEventIndex].isTimeFixed === true,
+                            isRemedial: newPriorityEvents[existingEventIndex].isRemedial === true,
+                            outcome: 'refreshed-existing-highest-priority-event',
+                            nextHandoff: 'runBuildAlgorithm.highestPriorityEvents',
+                        });
                         console.log(`🔄 Refreshed Force Schedule remedial from Individual LMP: ${syllabusItem.code} for ${trainee.fullName}`);
                     } else {
+                        traceRemedialSyncMovement({
+                            phase: 'highest-priority-remedial-refresh-skipped',
+                            traineeId: remedialReq.traineeId,
+                            eventCode: remedialReq.eventCode,
+                            priorityEventId: remedialPriorityEventId,
+                            outcome: 'skipped',
+                            reason: !trainee ? 'TRAINEE_NOT_FOUND' : 'SYLLABUS_ITEM_NOT_FOUND',
+                        });
                         console.log(`⚠️ Event already exists in priority list but current LMP details were not found: ${remedialReq.eventCode} for trainee ${remedialReq.traineeId}`);
                     }
                 } else if (!existingEvent) {
@@ -13948,8 +14377,39 @@ const App: React.FC = () => {
                         };
 
                         newPriorityEvents.push(newEvent);
+                        traceRemedialSyncMovement({
+                            phase: 'highest-priority-remedial-created',
+                            traineeId: remedialReq.traineeId,
+                            traineeName: trainee.fullName,
+                            eventCode: remedialReq.eventCode,
+                            priorityEventId: remedialPriorityEventId,
+                            createdEvent: {
+                                id: newEvent.id,
+                                date: newEvent.date,
+                                type: newEvent.type,
+                                flightNumber: newEvent.flightNumber,
+                                instructor: newEvent.instructor || null,
+                                student: newEvent.student || null,
+                                duration: newEvent.duration,
+                                startTime: newEvent.startTime,
+                                resourceId: newEvent.resourceId || null,
+                                isTimeFixed: newEvent.isTimeFixed === true,
+                                isRemedial: newEvent.isRemedial === true,
+                            },
+                            outcome: 'created-highest-priority-event',
+                            nextHandoff: 'runBuildAlgorithm.highestPriorityEvents',
+                        });
                         added++;
                         console.log('\u2705 Added Force Schedule remedial:', syllabusItem.code, 'for', trainee.fullName);
+                    } else {
+                        traceRemedialSyncMovement({
+                            phase: 'highest-priority-remedial-create-skipped',
+                            traineeId: remedialReq.traineeId,
+                            eventCode: remedialReq.eventCode,
+                            priorityEventId: remedialPriorityEventId,
+                            outcome: 'skipped',
+                            reason: !trainee ? 'TRAINEE_NOT_FOUND' : 'SYLLABUS_ITEM_NOT_FOUND',
+                        });
                     }
                 }
             }
@@ -13968,13 +14428,23 @@ const App: React.FC = () => {
         } else {
             console.log('\\u2705 No changes to priority events');
         }
+        traceRemedialSyncMovement({
+            phase: 'pre-build-sync-complete',
+            buildDate: buildDfpDate,
+            highestPriorityAfterSync: newPriorityEvents.length,
+            remedialHighestPriorityAfterSync: newPriorityEvents.filter(e => e.isRemedial || e.id?.startsWith('remedial-')).length,
+            addedAutoGeneratedEvents: added,
+            stateWillBeUpdated: hasChanges,
+        });
 
         try {
             (window as any).__lastRemedialPrioritySyncTrace = remedialPrioritySyncTrace;
+            (window as any).__lastRemedialDataMovementTrace = remedialDataMovementTrace;
             localStorage.setItem('remedial_priority_sync_diag', JSON.stringify({
                 timestamp: new Date().toISOString(),
                 buildDate: buildDfpDate,
                 trace: remedialPrioritySyncTrace,
+                dataMovementTrace: remedialDataMovementTrace,
             }));
         } catch (error) {
             console.warn('[REMEDIAL-SYNC-DIAG] Failed to save remedial sync diagnostics:', error);
@@ -14559,6 +15029,7 @@ const App: React.FC = () => {
             formationCallsigns,
             resourceDisplayNames,
             remedialPrioritySyncTrace: (window as any).__lastRemedialPrioritySyncTrace || [],
+            remedialDataMovementTrace: (window as any).__lastRemedialDataMovementTrace || [],
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
             staffSharingUnits: organisationSettings.staffSharingUnits,
