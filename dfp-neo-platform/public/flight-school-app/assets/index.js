@@ -15177,10 +15177,11 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1", children: "Recipients" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: alertData.recipients.map((r) => {
             const response = alertData?.responses?.[r];
+            const status = response?.status || "pending";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: r }),
-              response ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-bold ${response.status === "accepted" ? "text-green-400" : "text-red-400"}`, children: response.status === "accepted" ? "✓ Accepted" : "✗ Rejected" }),
+              status !== "pending" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-bold ${status === "accepted" ? "text-green-400" : "text-red-400"}`, children: status === "accepted" ? "✓ Accepted" : "✗ Rejected" }),
                 response.respondedAt && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-[10px]", children: new Date(response.respondedAt).toLocaleString("en-AU", {
                   day: "2-digit",
                   month: "short",

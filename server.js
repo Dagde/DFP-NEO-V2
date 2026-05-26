@@ -9950,6 +9950,79 @@ app.delete('/api/daily-snapshot/seed-cleanup', async (req, res) => {
 // ALERTS API - Change notification workflow
 // ============================================================
 
+const normalizeAlertIdentity = (value) => String(value || '')
+  .replace(/\s*[–-]\s*\w+\d+\s*$/, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLowerCase();
+
+const addAlertAlias = (aliases, value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return;
+  aliases.add(raw);
+  const normalised = normalizeAlertIdentity(raw);
+  if (normalised) aliases.add(normalised);
+};
+
+async function getAlertUserAliases(db, userId) {
+  const aliases = new Set();
+  addAlertAlias(aliases, userId);
+
+  try {
+    const userRows = await db.$queryRawUnsafe(
+      `SELECT id, "userId", username, "firstName", "lastName", email
+       FROM "User"
+       WHERE "userId" = $1 OR username = $1 OR id = $1
+       LIMIT 1`,
+      userId
+    );
+    if (userRows && userRows.length > 0) {
+      const u = userRows[0];
+      addAlertAlias(aliases, u.id);
+      addAlertAlias(aliases, u.userId);
+      addAlertAlias(aliases, u.username);
+      addAlertAlias(aliases, u.email);
+
+      const first = String(u.firstName || '').trim();
+      const last = String(u.lastName || '').trim();
+      if (first || last) {
+        addAlertAlias(aliases, `${first} ${last}`.trim());
+        addAlertAlias(aliases, `${last}, ${first}`.trim());
+      }
+
+      const peopleRows = await db.$queryRawUnsafe(
+        `SELECT name, NULL::text AS "fullName" FROM "Personnel" WHERE "userId" = $1
+         UNION ALL
+         SELECT name, "fullName" FROM "Trainee" WHERE "userId" = $1`,
+        u.id
+      );
+      for (const person of peopleRows || []) {
+        addAlertAlias(aliases, person.name);
+        addAlertAlias(aliases, person.fullName);
+      }
+    }
+  } catch (e) {
+    console.warn(`🔔 [Alerts] Could not resolve alert aliases for ${userId}:`, e.message);
+  }
+
+  return aliases;
+}
+
+const alertListContainsAlias = (list, aliases) => {
+  if (!Array.isArray(list)) return false;
+  return list.some(item => aliases.has(item) || aliases.has(normalizeAlertIdentity(item)));
+};
+
+const findAlertResponseForAliases = (responses, aliases) => {
+  if (!responses || typeof responses !== 'object') return undefined;
+  for (const [key, response] of Object.entries(responses)) {
+    if (aliases.has(key) || aliases.has(normalizeAlertIdentity(key))) {
+      return { key, response };
+    }
+  }
+  return undefined;
+};
+
 // POST /api/alerts/send - Send an alert to pilots about a changed event
 app.post('/api/alerts/send', async (req, res) => {
   try {
@@ -9988,7 +10061,7 @@ app.post('/api/alerts/send', async (req, res) => {
       responses[r] = { status: 'pending', respondedAt: null };
     });
 
-    alertsData[eventId] = {
+    const alertEntry = {
       alertId,
       sentAt,
       sentBy,
@@ -9997,6 +10070,7 @@ app.post('/api/alerts/send', async (req, res) => {
       eventDetails: eventDetails || {},
       responses
     };
+    alertsData[eventId] = alertEntry;
 
     // Save updated alertsData back to snapshot
     await db.$executeRawUnsafe(
@@ -10010,7 +10084,7 @@ app.post('/api/alerts/send', async (req, res) => {
     // TODO: Send APNs push notification here when credentials are available
     // For now, pilots poll GET /api/alerts/:userId
 
-    res.json({ success: true, alertId, sentAt });
+    res.json({ success: true, alertId, sentAt, alertEntry });
   } catch (error) {
     console.error('❌ POST /api/alerts/send error:', error);
     res.status(500).json({ error: 'Failed to send alert', details: error.message });
@@ -10029,24 +10103,8 @@ app.get('/api/alerts/:userId', async (req, res) => {
       return res.status(400).json({ error: 'userId is required' });
     }
 
-    // Look up the user's full name so we can match against event recipient names
-    // Recipients in alerts are stored as "Last, First" (full name from event tiles)
-    let userFullNameReversed = null; // "Burns, Alexander"
-    let userFullName = null;         // "Alexander Burns"
-    try {
-      const userRows = await db.$queryRawUnsafe(
-        `SELECT "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
-        userId
-      );
-      if (userRows && userRows.length > 0) {
-        const u = userRows[0];
-        userFullName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim();
-        userFullNameReversed = ((u.lastName || '') + ', ' + (u.firstName || '')).trim();
-        console.log(`🔔 [Alerts] Resolved userId=${userId} => "${userFullName}" / "${userFullNameReversed}"`);
-      }
-    } catch (e) {
-      console.warn(`🔔 [Alerts] Could not resolve user name for ${userId}:`, e.message);
-    }
+    const aliases = await getAlertUserAliases(db, userId);
+    console.log(`🔔 [Alerts] Resolved userId=${userId} aliases=[${Array.from(aliases).join(', ')}]`);
 
     // Load last 14 days of snapshots to find alerts
     const rows = await db.$queryRawUnsafe(
@@ -10065,23 +10123,13 @@ app.get('/api/alerts/:userId', async (req, res) => {
 
       for (const [eventId, alert] of Object.entries(alertsData)) {
         console.log(`🔔 [Alerts]   Event ${eventId}: recipients=[${alert.recipients?.join(', ')}]`);
-        // Match by userId, full name "First Last", or reversed "Last, First"
-        const isRecipient = alert.recipients && (
-          alert.recipients.includes(userId) ||
-          (userFullName && alert.recipients.includes(userFullName)) ||
-          (userFullNameReversed && alert.recipients.includes(userFullNameReversed))
-        );
+        const isRecipient = alertListContainsAlias(alert.recipients, aliases);
         if (isRecipient) {
-          // Response key may be stored under userId, fullName, or reversed name - check all
-          const myResponse = alert.responses?.[userId]
-            || (userFullName ? alert.responses?.[userFullName] : undefined)
-            || (userFullNameReversed ? alert.responses?.[userFullNameReversed] : undefined);
+          const matchedResponse = findAlertResponseForAliases(alert.responses, aliases);
+          const myResponse = matchedResponse?.response;
           console.log(`🔔 [Alerts]   Match for ${userId}: status=${myResponse?.status || 'pending'}`);
           // Skip if user has dismissed this alert
-          if (alert.dismissed && alert.dismissed.includes(userId)) {
-            continue;
-          }
-          if (alert.dismissed && userFullNameReversed && alert.dismissed.includes(userFullNameReversed)) {
+          if (alertListContainsAlias(alert.dismissed, aliases)) {
             continue;
           }
 
@@ -10156,42 +10204,25 @@ app.post('/api/alerts/:alertId/respond', async (req, res) => {
 
     const alert = alertsData[targetEventId];
 
-    // Resolve user full name for recipient matching
-    let responseKey = userId; // default key for storing response
-    let userFullName = null;
-    let userFullNameReversed = null;
-    try {
-      const userRows = await db.$queryRawUnsafe(
-        `SELECT "firstName", "lastName" FROM "User" WHERE "userId" = $1 LIMIT 1`,
-        userId
-      );
-      if (userRows && userRows.length > 0) {
-        const u = userRows[0];
-        userFullName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim();
-        userFullNameReversed = ((u.lastName || '') + ', ' + (u.firstName || '')).trim();
-      }
-    } catch (e) {
-      console.warn(`[Alerts respond] Could not resolve name for ${userId}`);
-    }
+    const aliases = await getAlertUserAliases(db, userId);
+    let responseKey = userId;
 
     // Verify this pilot is a recipient - check userId, full name, and reversed name
-    const isRecipient = alert.recipients.includes(userId) ||
-      (userFullName && alert.recipients.includes(userFullName)) ||
-      (userFullNameReversed && alert.recipients.includes(userFullNameReversed));
+    const isRecipient = alertListContainsAlias(alert.recipients, aliases);
 
     if (!isRecipient) {
       return res.status(403).json({ error: 'User is not a recipient of this alert' });
     }
 
-    // Find which key is used in responses (could be stored under full name)
-    if (alert.recipients.includes(userFullNameReversed)) {
-      responseKey = userFullNameReversed;
-    } else if (alert.recipients.includes(userFullName)) {
-      responseKey = userFullName;
+    const matchedResponse = findAlertResponseForAliases(alert.responses, aliases);
+    if (matchedResponse?.key) responseKey = matchedResponse.key;
+    else {
+      const matchedRecipient = (alert.recipients || []).find(r => aliases.has(r) || aliases.has(normalizeAlertIdentity(r)));
+      if (matchedRecipient) responseKey = matchedRecipient;
     }
 
     // Check if already responded
-    const existingResponse = alert.responses[responseKey] || alert.responses[userId];
+    const existingResponse = alert.responses[responseKey] || matchedResponse?.response;
     if (existingResponse?.status !== 'pending') {
       return res.status(409).json({ 
         error: 'Already responded to this alert',

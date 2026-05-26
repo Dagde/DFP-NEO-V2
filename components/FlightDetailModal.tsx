@@ -2587,13 +2587,14 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             <div className="space-y-1">
                                                 {alertData.recipients.map((r: string) => {
                                                     const response = alertData?.responses?.[r];
+                                                    const status = response?.status || 'pending';
                                                     return (
                                                         <div key={r} className="flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg">
                                                             <span className="text-white text-sm">{r}</span>
-                                                            {response ? (
+                                                            {status !== 'pending' ? (
                                                                 <div className="text-right">
-                                                                    <span className={`text-xs font-bold ${response.status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
-                                                                        {response.status === 'accepted' ? '\u2713 Accepted' : '\u2717 Rejected'}
+                                                                    <span className={`text-xs font-bold ${status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>
+                                                                        {status === 'accepted' ? '\u2713 Accepted' : '\u2717 Rejected'}
                                                                     </span>
                                                                     {response.respondedAt && (
                                                                         <p className="text-gray-400 text-[10px]">
