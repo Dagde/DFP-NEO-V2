@@ -30,13 +30,13 @@ export const INITIAL_CURRENCY_REQUIREMENTS: CurrencyRequirement[] = [
   { id: 'pc21-instrument-rating', name: 'PC21 Instrument Rating Test', description: 'Annual PC21 instrument rating test.', type: 'primitive', isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: 'LAST_EVENT_PLUS_PERIOD', showInPostFlight: false, postFlightInputTypes: ['date'] },
 
   // 30 day currencies
-  { id: 'pc21-day-gf-30d', name: 'PC21 Day General Flying 30D', description: 'At least one general flying event in last 30 days.', type: 'primitive', isVisible: true, validityDays: 30, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, postFlightInputTypes: ['count'] },
+  { id: 'pc21-day-gf-30d', name: 'PC21 Day General Flying 30D', description: 'At least one general flying event in last 30 days.', type: 'primitive', isVisible: true, validityDays: 30, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ['count'] },
 
   // 90 day currencies
-  { id: 'pc21-3-ia-90d', name: 'PC21 3 Instrument Approach in 90 Days', description: 'Three instrument approaches in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 3, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, postFlightInputTypes: ['count'] },
-  { id: 'ia-3d-90d', name: 'IA 3D PC21 90D', description: '3D instrument approach in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, postFlightInputTypes: ['count'] },
-  { id: 'ia-2d-90d', name: 'IA 2D PC21 90D', description: '2D instrument approach in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, postFlightInputTypes: ['count'] },
-  { id: 'pc21-night-90d', name: 'PC21 Night Flying 90D', description: 'Night flying event in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, postFlightInputTypes: ['count'] },
+  { id: 'pc21-3-ia-90d', name: 'PC21 3 Instrument Approach in 90 Days', description: 'Three instrument approaches in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 3, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ['count'] },
+  { id: 'ia-3d-90d', name: 'IA 3D PC21 90D', description: '3D instrument approach in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ['count'] },
+  { id: 'ia-2d-90d', name: 'IA 2D PC21 90D', description: '2D instrument approach in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ['count'] },
+  { id: 'pc21-night-90d', name: 'PC21 Night Flying 90D', description: 'Night flying event in last 90 days.', type: 'primitive', isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: 'ROLLING_WINDOW', showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ['count'] },
 
   // Hidden/Subordinate currencies
   { id: 'wpn-9mm', name: '9mm Qualification', description: 'Qualification on 9mm pistol.', type: 'primitive', isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: 'LAST_EVENT_PLUS_PERIOD', showInPostFlight: false, postFlightInputTypes: ['date'] },
@@ -112,7 +112,7 @@ export const INITIAL_MASTER_CURRENCIES: MasterCurrency[] = [
  * - Any currency in the DB retains its DB values (user edits preserved).
  * - Any initial currency NOT in the DB is added (ensures new defaults are always available).
  * - Any currency in the DB that isn't in the initial list is kept (user-created currencies).
- * - New fields (showInPostFlight, postFlightInputType) are back-filled onto existing DB records that lack them.
+ * - New fields (showInPostFlight, showInPostFlightRecency, postFlightInputType) are back-filled onto existing DB records that lack them.
  */
 export const mergeWithInitialCurrencies = (
     dbRequirements: CurrencyRequirement[],
@@ -131,10 +131,14 @@ export const mergeWithInitialCurrencies = (
         const showInPostFlight = dbCur.showInPostFlight !== undefined && dbCur.showInPostFlight !== null
             ? Boolean(dbCur.showInPostFlight)
             : false;
+        const showInPostFlightRecency = dbCur.showInPostFlightRecency !== undefined && dbCur.showInPostFlightRecency !== null
+            ? Boolean(dbCur.showInPostFlightRecency)
+            : Boolean(initial?.showInPostFlightRecency);
         return {
             postFlightInputTypes: initial?.postFlightInputTypes ?? (dbCur.expiryRule === 'ROLLING_WINDOW' ? ['count'] : ['date']),
             ...dbCur,
             showInPostFlight,
+            showInPostFlightRecency,
             ...(migratedTypes ? { postFlightInputTypes: migratedTypes } : {}),
         } as CurrencyRequirement;
     });
@@ -148,10 +152,15 @@ export const mergeWithInitialCurrencies = (
         const showInPostFlight = dbCur.showInPostFlight !== undefined && dbCur.showInPostFlight !== null
             ? Boolean(dbCur.showInPostFlight)
             : false;
+        const initial = INITIAL_MASTER_CURRENCIES.find(i => i.id === dbCur.id);
+        const showInPostFlightRecency = dbCur.showInPostFlightRecency !== undefined && dbCur.showInPostFlightRecency !== null
+            ? Boolean(dbCur.showInPostFlightRecency)
+            : Boolean(initial?.showInPostFlightRecency);
         return {
             postFlightInputTypes: ['checkbox'] as PostFlightInputType[],
             ...dbCur,
             showInPostFlight,
+            showInPostFlightRecency,
             ...(migratedTypes ? { postFlightInputTypes: migratedTypes } : {}),
         } as MasterCurrency;
     });

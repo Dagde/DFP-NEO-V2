@@ -2231,6 +2231,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                         <label className="text-sm font-medium text-gray-400 block mb-1">Visible</label>
                                         <p className="text-gray-200">{selectedCurrency.isVisible ? 'Yes' : 'No'}</p>
                                     </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-400 block mb-1">Post-Flight Currency Panel</label>
+                                        <p className="text-gray-200">{selectedCurrency.showInPostFlight ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-400 block mb-1">Post-Flight Recency Checklist</label>
+                                        <p className="text-gray-200">{selectedCurrency.showInPostFlightRecency ? 'Yes' : 'No'}</p>
+                                    </div>
                                     {selectedCurrency.type === 'primitive' && (
                                         <>
                                             <div>

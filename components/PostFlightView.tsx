@@ -46,6 +46,12 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         return [...composites, ...primitives];
     }, [masterCurrencies, currencyRequirements]);
 
+    const postFlightRecencyItems = useMemo<CurrencyDefinition[]>(() => {
+        const primitives = currencyRequirements.filter(c => c.showInPostFlightRecency);
+        const composites = masterCurrencies.filter(c => c.showInPostFlightRecency);
+        return [...primitives, ...composites].sort((a, b) => a.name.localeCompare(b.name));
+    }, [currencyRequirements, masterCurrencies]);
+
     // Map: currencyId → value (string for date/count, 'true'/'false' for checkbox)
     const [currencyValues, setCurrencyValues] = useState<Record<string, string>>({});
 
@@ -194,6 +200,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                 tacanCount: 0,
                 vorChecked: false,
                 vorCount: 0,
+                currencyValues: {},
             };
         }
     }, [event, school]);
@@ -453,7 +460,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         if (!initialFormState.current) return;
 
         const currentState = {
-            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0,
+            result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount: ilsChecked ? ilsCount : 0, rnpChecked, rnpCount: rnpChecked ? rnpCount : 0, tacanChecked, tacanCount: tacanChecked ? tacanCount : 0, vorChecked, vorCount: vorChecked ? vorCount : 0, currencyValues,
         };
         const initialStateForCompare = {
             ...initialFormState.current,
@@ -467,7 +474,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             setIsDirty(true);
             setSaveStatus('Saving...');
         }
-    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+    }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
 
     const aircraftNumberOptions = useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, '0')), []);
 
@@ -603,7 +610,7 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+    }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
 
     const handleAttemptReturn = () => {
         if (isDirty) {
@@ -1276,6 +1283,37 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
                         <ApproachInput label="RNP" isChecked={rnpChecked} setIsChecked={setRnpChecked} count={rnpCount} setCount={setRnpCount} />
                         <ApproachInput label="TACAN" isChecked={tacanChecked} setIsChecked={setTacanChecked} count={tacanCount} setCount={setTacanCount} />
                         <ApproachInput label="VOR/DME" isChecked={vorChecked} setIsChecked={setVorChecked} count={vorCount} setCount={setVorCount} />
+
+                        {postFlightRecencyItems.length > 0 && (
+                            <div className="flex-shrink-0 min-w-[18rem] max-w-[26rem]">
+                                <label className="block text-sm font-medium text-gray-400">Recency</label>
+                                <div className="mt-1 flex flex-wrap gap-1 max-h-[76px] overflow-y-auto rounded-md border border-gray-600 bg-gray-800/40 p-1">
+                                    {postFlightRecencyItems.map(item => {
+                                        const flightDate = event.date ?? new Date().toISOString().slice(0, 10);
+                                        const isChecked = !!currencyValues[item.id];
+                                        return (
+                                            <label
+                                                key={item.id}
+                                                className={`flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded border px-2 text-xs font-semibold cursor-pointer transition-colors ${
+                                                    isChecked
+                                                        ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-100'
+                                                        : 'border-gray-600 bg-gray-700/70 text-gray-200 hover:border-sky-500/60'
+                                                }`}
+                                                title={item.name}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={e => handleCurrencyChange(item.id, e.target.checked ? flightDate : '')}
+                                                    className="h-3.5 w-3.5 flex-shrink-0 rounded accent-sky-500 cursor-pointer"
+                                                />
+                                                <span className="truncate">{item.name}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </fieldset>
 

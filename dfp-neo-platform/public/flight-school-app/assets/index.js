@@ -2874,7 +2874,10 @@ const getNewPrimitive = () => ({
   validityDays: 365,
   eventCodes: [],
   requiredCount: 1,
-  expiryRule: "LAST_EVENT_PLUS_PERIOD"
+  expiryRule: "LAST_EVENT_PLUS_PERIOD",
+  showInPostFlight: false,
+  showInPostFlightRecency: false,
+  postFlightInputTypes: ["date"]
 });
 const getNewComposite = () => ({
   id: v4(),
@@ -2883,7 +2886,10 @@ const getNewComposite = () => ({
   type: "composite",
   isVisible: true,
   expiryCalculation: "EARLIEST_CHILD",
-  logicTree: { operator: "AND", children: [] }
+  logicTree: { operator: "AND", children: [] },
+  showInPostFlight: false,
+  showInPostFlightRecency: false,
+  postFlightInputTypes: ["checkbox"]
 });
 const CurrencyBuilderView = ({ onBack, masterCurrencies, currencyRequirements, onSave, onDelete }) => {
   const [allCurrencies, setAllCurrencies] = reactExports.useState([]);
@@ -3053,9 +3059,17 @@ const PrimitiveEditor = ({ currency, onUpdate }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         CheckboxField,
         {
-          label: "Show in Post-Flight entry page",
+          label: "Show in Post-Flight currency panel",
           checked: currency.showInPostFlight ?? false,
           onChange: (v) => handleChange("showInPostFlight", v)
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CheckboxField,
+        {
+          label: "Show in Post-Flight Recency checklist",
+          checked: currency.showInPostFlightRecency ?? false,
+          onChange: (v) => handleChange("showInPostFlightRecency", v)
         }
       ),
       currency.showInPostFlight && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -3126,9 +3140,17 @@ const CompositeEditor = ({ currency, onUpdate, allCurrencies }) => {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         CheckboxField,
         {
-          label: "Show in Post-Flight entry page",
+          label: "Show in Post-Flight currency panel",
           checked: currency.showInPostFlight ?? false,
           onChange: (v) => handleChange("showInPostFlight", v)
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CheckboxField,
+        {
+          label: "Show in Post-Flight Recency checklist",
+          checked: currency.showInPostFlightRecency ?? false,
+          onChange: (v) => handleChange("showInPostFlightRecency", v)
         }
       ),
       currency.showInPostFlight && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -54222,6 +54244,14 @@ const SettingsView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Visible" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.isVisible ? "Yes" : "No" })
             ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Post-Flight Currency Panel" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.showInPostFlight ? "Yes" : "No" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Post-Flight Recency Checklist" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-200", children: selectedCurrency.showInPostFlightRecency ? "Yes" : "No" })
+            ] }),
             selectedCurrency.type === "primitive" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "text-sm font-medium text-gray-400 block mb-1", children: "Validity Days" }),
@@ -62703,6 +62733,11 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
     const primitives = currencyRequirements.filter((c) => c.showInPostFlight);
     return [...composites, ...primitives];
   }, [masterCurrencies, currencyRequirements]);
+  const postFlightRecencyItems = reactExports.useMemo(() => {
+    const primitives = currencyRequirements.filter((c) => c.showInPostFlightRecency);
+    const composites = masterCurrencies.filter((c) => c.showInPostFlightRecency);
+    return [...primitives, ...composites].sort((a, b) => a.name.localeCompare(b.name));
+  }, [currencyRequirements, masterCurrencies]);
   const [currencyValues, setCurrencyValues] = reactExports.useState({});
   const handleCurrencyChange = (id, value) => {
     setCurrencyValues((prev) => ({ ...prev, [id]: value }));
@@ -62820,7 +62855,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
         tacanChecked: false,
         tacanCount: 0,
         vorChecked: false,
-        vorCount: 0
+        vorCount: 0,
+        currencyValues: {}
       };
     }
   }, [event, school]);
@@ -63086,7 +63122,8 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       tacanChecked,
       tacanCount: tacanChecked ? tacanCount : 0,
       vorChecked,
-      vorCount: vorChecked ? vorCount : 0
+      vorCount: vorChecked ? vorCount : 0,
+      currencyValues
     };
     const initialStateForCompare = {
       ...initialFormState.current,
@@ -63099,7 +63136,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       setIsDirty(true);
       setSaveStatus("Saving...");
     }
-  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+  }, [result, aircraftNumber, aircraftNumberPrefix, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
   const aircraftNumberOptions = reactExports.useMemo(() => Array.from({ length: 49 }, (_, i) => String(i + 1).padStart(3, "0")), []);
   const handleResultChange = (newResult) => {
     const oldResult = result;
@@ -63208,7 +63245,7 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
       }, 1e3);
       return () => clearTimeout(timer);
     }
-  }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount]);
+  }, [isDirty, result, aircraftNumber, aircraftNumberPrefix, aircraftNumberSettings, from, to, isFlightLog, isFtdLog, isSolo, isDual, duty, takeoffTime, landTime, captainTime, instructorTime, nightTime, ifActualTime, ifSimTime, ineffectiveTime, ilsChecked, ilsCount, rnpChecked, rnpCount, tacanChecked, tacanCount, vorChecked, vorCount, currencyValues]);
   const handleAttemptReturn = () => {
     if (isDirty) {
       setShowUnsavedWarning(true);
@@ -63679,7 +63716,34 @@ const PostFlightView = ({ event, onReturn, onSave, school, traineesData, instruc
             /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "ILS/GLS", isChecked: ilsChecked, setIsChecked: setIlsChecked, count: ilsCount, setCount: setIlsCount }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "RNP", isChecked: rnpChecked, setIsChecked: setRnpChecked, count: rnpCount, setCount: setRnpCount }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "TACAN", isChecked: tacanChecked, setIsChecked: setTacanChecked, count: tacanCount, setCount: setTacanCount }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(ApproachInput, { label: "VOR/DME", isChecked: vorChecked, setIsChecked: setVorChecked, count: vorCount, setCount: setVorCount }),
+            postFlightRecencyItems.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-shrink-0 min-w-[18rem] max-w-[26rem]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("label", { className: "block text-sm font-medium text-gray-400", children: "Recency" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-1 flex flex-wrap gap-1 max-h-[76px] overflow-y-auto rounded-md border border-gray-600 bg-gray-800/40 p-1", children: postFlightRecencyItems.map((item) => {
+                const flightDate = event.date ?? (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+                const isChecked = !!currencyValues[item.id];
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "label",
+                  {
+                    className: `flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded border px-2 text-xs font-semibold cursor-pointer transition-colors ${isChecked ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100" : "border-gray-600 bg-gray-700/70 text-gray-200 hover:border-sky-500/60"}`,
+                    title: item.name,
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "input",
+                        {
+                          type: "checkbox",
+                          checked: isChecked,
+                          onChange: (e) => handleCurrencyChange(item.id, e.target.checked ? flightDate : ""),
+                          className: "h-3.5 w-3.5 flex-shrink-0 rounded accent-sky-500 cursor-pointer"
+                        }
+                      ),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate", children: item.name })
+                    ]
+                  },
+                  item.id
+                );
+              }) })
+            ] })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "overflow-x-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col bg-gray-900 border border-gray-600 rounded-md min-w-max", children: [
@@ -70475,12 +70539,12 @@ const INITIAL_CURRENCY_REQUIREMENTS = [
   { id: "pc21-emergency-check", name: "PC21 Emergency Check", description: "Annual PC21 emergency check.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
   { id: "pc21-instrument-rating", name: "PC21 Instrument Rating Test", description: "Annual PC21 instrument rating test.", type: "primitive", isVisible: true, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
   // 30 day currencies
-  { id: "pc21-day-gf-30d", name: "PC21 Day General Flying 30D", description: "At least one general flying event in last 30 days.", type: "primitive", isVisible: true, validityDays: 30, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
+  { id: "pc21-day-gf-30d", name: "PC21 Day General Flying 30D", description: "At least one general flying event in last 30 days.", type: "primitive", isVisible: true, validityDays: 30, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ["count"] },
   // 90 day currencies
-  { id: "pc21-3-ia-90d", name: "PC21 3 Instrument Approach in 90 Days", description: "Three instrument approaches in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 3, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
-  { id: "ia-3d-90d", name: "IA 3D PC21 90D", description: "3D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
-  { id: "ia-2d-90d", name: "IA 2D PC21 90D", description: "2D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
-  { id: "pc21-night-90d", name: "PC21 Night Flying 90D", description: "Night flying event in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, postFlightInputTypes: ["count"] },
+  { id: "pc21-3-ia-90d", name: "PC21 3 Instrument Approach in 90 Days", description: "Three instrument approaches in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 3, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ["count"] },
+  { id: "ia-3d-90d", name: "IA 3D PC21 90D", description: "3D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ["count"] },
+  { id: "ia-2d-90d", name: "IA 2D PC21 90D", description: "2D instrument approach in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ["count"] },
+  { id: "pc21-night-90d", name: "PC21 Night Flying 90D", description: "Night flying event in last 90 days.", type: "primitive", isVisible: true, validityDays: 90, eventCodes: [], requiredCount: 1, expiryRule: "ROLLING_WINDOW", showInPostFlight: false, showInPostFlightRecency: true, postFlightInputTypes: ["count"] },
   // Hidden/Subordinate currencies
   { id: "wpn-9mm", name: "9mm Qualification", description: "Qualification on 9mm pistol.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
   { id: "wpn-glock", name: "Glock Qualification", description: "Qualification on Glock pistol.", type: "primitive", isVisible: false, validityDays: 365, eventCodes: [], requiredCount: 1, expiryRule: "LAST_EVENT_PLUS_PERIOD", showInPostFlight: false, postFlightInputTypes: ["date"] },
@@ -70554,10 +70618,12 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
     const legacy = dbCur;
     const migratedTypes = dbCur.postFlightInputTypes ?? (legacy.postFlightInputType ? [legacy.postFlightInputType] : void 0);
     const showInPostFlight = dbCur.showInPostFlight !== void 0 && dbCur.showInPostFlight !== null ? Boolean(dbCur.showInPostFlight) : false;
+    const showInPostFlightRecency = dbCur.showInPostFlightRecency !== void 0 && dbCur.showInPostFlightRecency !== null ? Boolean(dbCur.showInPostFlightRecency) : Boolean(initial?.showInPostFlightRecency);
     return {
       postFlightInputTypes: initial?.postFlightInputTypes ?? (dbCur.expiryRule === "ROLLING_WINDOW" ? ["count"] : ["date"]),
       ...dbCur,
       showInPostFlight,
+      showInPostFlightRecency,
       ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
     };
   });
@@ -70565,10 +70631,13 @@ const mergeWithInitialCurrencies = (dbRequirements, dbMasters) => {
     const legacy = dbCur;
     const migratedTypes = dbCur.postFlightInputTypes ?? (legacy.postFlightInputType ? [legacy.postFlightInputType] : void 0);
     const showInPostFlight = dbCur.showInPostFlight !== void 0 && dbCur.showInPostFlight !== null ? Boolean(dbCur.showInPostFlight) : false;
+    const initial = INITIAL_MASTER_CURRENCIES.find((i) => i.id === dbCur.id);
+    const showInPostFlightRecency = dbCur.showInPostFlightRecency !== void 0 && dbCur.showInPostFlightRecency !== null ? Boolean(dbCur.showInPostFlightRecency) : Boolean(initial?.showInPostFlightRecency);
     return {
       postFlightInputTypes: ["checkbox"],
       ...dbCur,
       showInPostFlight,
+      showInPostFlightRecency,
       ...migratedTypes ? { postFlightInputTypes: migratedTypes } : {}
     };
   });

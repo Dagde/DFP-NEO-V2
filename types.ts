@@ -31,6 +31,7 @@ export interface CurrencyRequirement {
   expiryRule: ExpiryRuleType;
   // Post-flight integration
   showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
+  showInPostFlightRecency?: boolean;   // Whether this currency appears in the post-flight recency checklist
   postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
 }
 
@@ -44,6 +45,7 @@ export interface MasterCurrency {
   expiryCalculation: ExpiryCalculation;
   // Post-flight integration
   showInPostFlight?: boolean;          // Whether this currency appears on the post-flight page
+  showInPostFlightRecency?: boolean;   // Whether this currency appears in the post-flight recency checklist
   postFlightInputTypes?: PostFlightInputType[]; // Which input types to show (multiple allowed)
 }
 

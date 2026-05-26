@@ -21,6 +21,9 @@ const getNewPrimitive = (): CurrencyRequirement => ({
     eventCodes: [],
     requiredCount: 1,
     expiryRule: 'LAST_EVENT_PLUS_PERIOD',
+    showInPostFlight: false,
+    showInPostFlightRecency: false,
+    postFlightInputTypes: ['date'],
 });
 
 const getNewComposite = (): MasterCurrency => ({
@@ -31,6 +34,9 @@ const getNewComposite = (): MasterCurrency => ({
     isVisible: true,
     expiryCalculation: 'EARLIEST_CHILD',
     logicTree: { operator: 'AND', children: [] },
+    showInPostFlight: false,
+    showInPostFlightRecency: false,
+    postFlightInputTypes: ['checkbox'],
 });
 
 const CurrencyBuilderView: React.FC<CurrencyBuilderViewProps> = ({ onBack, masterCurrencies, currencyRequirements, onSave, onDelete }) => {
@@ -246,9 +252,14 @@ const PrimitiveEditor: React.FC<{ currency: CurrencyRequirement; onUpdate: (c: C
             <div className="p-4 border border-amber-600/40 rounded-lg bg-amber-900/10 space-y-3">
                 <h3 className="text-sm font-bold text-amber-400 uppercase tracking-wide">Post-Flight Page</h3>
                 <CheckboxField
-                    label="Show in Post-Flight entry page"
+                    label="Show in Post-Flight currency panel"
                     checked={currency.showInPostFlight ?? false}
                     onChange={v => handleChange('showInPostFlight', v)}
+                />
+                <CheckboxField
+                    label="Show in Post-Flight Recency checklist"
+                    checked={currency.showInPostFlightRecency ?? false}
+                    onChange={v => handleChange('showInPostFlightRecency', v)}
                 />
                 {currency.showInPostFlight && (
                     <div>
@@ -325,9 +336,14 @@ const CompositeEditor: React.FC<{ currency: MasterCurrency; onUpdate: (c: Master
             <div className="p-4 border border-purple-600/40 rounded-lg bg-purple-900/10 space-y-3">
                 <h3 className="text-sm font-bold text-purple-400 uppercase tracking-wide">Post-Flight Page</h3>
                 <CheckboxField
-                    label="Show in Post-Flight entry page"
+                    label="Show in Post-Flight currency panel"
                     checked={currency.showInPostFlight ?? false}
                     onChange={v => handleChange('showInPostFlight', v)}
+                />
+                <CheckboxField
+                    label="Show in Post-Flight Recency checklist"
+                    checked={currency.showInPostFlightRecency ?? false}
+                    onChange={v => handleChange('showInPostFlightRecency', v)}
                 />
                 {currency.showInPostFlight && (
                     <div>
