@@ -72441,7 +72441,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (explicitResourceNumbers.length > 0) {
       return Math.max(...explicitResourceNumbers);
     }
-    return Math.max(getLmpResourceNumber(group.item), group.trainees.length);
+    return getLmpResourceNumber(group.item);
   };
   neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
     const resourceNumber = getFormationGroupResourceNumber(group);

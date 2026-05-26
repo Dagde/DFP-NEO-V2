@@ -2847,7 +2847,7 @@ function generateDfpInternal(
             return Math.max(...explicitResourceNumbers);
         }
 
-        return Math.max(getLmpResourceNumber(group.item), group.trainees.length);
+        return getLmpResourceNumber(group.item);
     };
     neoBuildDiag.formationResourceDiagnostics.groups = Array.from(formationGroups.entries()).map(([eventKey, group]) => {
         const resourceNumber = getFormationGroupResourceNumber(group);
