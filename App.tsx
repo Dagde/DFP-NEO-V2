@@ -4539,7 +4539,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 }
             }
 
-            area = findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
+            const existingFormationArea = options.formationGroupId
+                ? generatedEvents.find(event =>
+                    event.formationId === options.formationGroupId &&
+                    event.type === 'flight' &&
+                    !!event.area
+                )?.area
+                : undefined;
+            area = existingFormationArea || findAvailableArea(startTime, syllabusItem.duration, generatedEvents);
             if (!area) {
                 _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'NO_AREA_AVAILABLE');
                 return traceScheduleReject('NO_AREA_AVAILABLE');
