@@ -400,6 +400,11 @@ const isRemedialLmpItem = (item: SyllabusItemDetail): boolean =>
     REMEDIAL_EVENT_CODE_REGEX.test(item.id || '') ||
     REMEDIAL_EVENT_CODE_REGEX.test(item.code || '');
 
+const formatHours = (value: unknown): string => {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue.toFixed(1) : '0.0';
+};
+
 const DetailView: React.FC<{
     item: SyllabusItemDetail;
     score: Score | undefined;
@@ -443,8 +448,8 @@ const DetailView: React.FC<{
                 <DetailCard label="Type" value={formatDisplayType(getDisplayType(item), resourceDisplayNames)} />
                 <DetailCard label="Day/Night" value={item.dayNight || 'Day'} />
                 <DetailCard label="Dual/Solo" value={item.sortieType || 'Dual'} />
-                <DetailCard label="Total Event Hours" value={<>{item.totalEventHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
-                <DetailCard label="Flight/Sim Hours" value={<>{item.flightOrSimHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></>} />
+                <DetailCard label="Total Event Hours" value={<>{formatHours(item.totalEventHours)} <span className="text-sm font-normal">hrs</span></>} />
+                <DetailCard label="Flight/Sim Hours" value={<>{formatHours(item.flightOrSimHours)} <span className="text-sm font-normal">hrs</span></>} />
                 <DetailCard label="Resource Number" value={item.resourceNumber ?? (item.resourcesPhysical?.length ? 1 : 0)} />
             </div>
         </fieldset>
