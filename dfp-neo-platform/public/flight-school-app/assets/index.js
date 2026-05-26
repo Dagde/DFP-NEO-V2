@@ -74118,10 +74118,54 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (event.resourceId.startsWith("STBY") || event.resourceId.startsWith("BNF-STBY")) return false;
     return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
   });
-  const getFormationCallsignBase = (leadEvent) => {
+  const getFallbackFormationCallsignBase = (leadEvent) => {
     const instructorCallsign = instructors.find((ip) => ip.name === leadEvent.instructor)?.callsign || "";
     const prefix = instructorCallsign.match(/^[A-Za-z]+/)?.[0];
     return (prefix || school || "FORM").slice(0, 4).toUpperCase();
+  };
+  const normalizeFormationCallsignCode = (callsign) => String(callsign || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  const eventUsesFormationCallsignBase = (eventCallsign, callsignBase) => {
+    const normalizedCallsign = normalizeFormationCallsignCode(eventCallsign);
+    const normalizedBase = normalizeFormationCallsignCode(callsignBase);
+    if (!normalizedCallsign || !normalizedBase) return false;
+    return new RegExp(`^${normalizedBase}\\d+$`).test(normalizedCallsign);
+  };
+  const isFormationCallsignBaseAvailable = (callsignBase, startTime, duration) => {
+    const endTime = startTime + duration;
+    return !generatedEvents.some((event) => {
+      if (!event.callsign) return false;
+      const eventEnd = event.startTime + event.duration;
+      const overlaps = event.startTime < endTime && eventEnd > startTime;
+      return overlaps && eventUsesFormationCallsignBase(event.callsign, callsignBase);
+    });
+  };
+  const selectFormationCallsignBase = (selectedTrainees, stagedEvents, startTime, duration) => {
+    const leadEvent = stagedEvents[0];
+    const formationUnit = selectedTrainees.find((trainee) => String(trainee.unit || "").trim())?.unit || "";
+    const locationCode = school;
+    const configuredCandidates = config.formationCallsigns.filter((callsign) => normalizeFormationCallsignCode(callsign.code)).filter((callsign) => !formationUnit || callsign.unit === formationUnit).filter((callsign) => !callsign.locationCode || callsign.locationCode === locationCode).map((callsign) => ({
+      ...callsign,
+      code: normalizeFormationCallsignCode(callsign.code)
+    }));
+    const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+    const available = shuffledCandidates.find(
+      (callsign) => isFormationCallsignBaseAvailable(callsign.code, startTime, duration)
+    );
+    if (available) {
+      return {
+        base: available.code,
+        source: "configured",
+        name: available.name,
+        unit: available.unit,
+        candidates: configuredCandidates.map((callsign) => callsign.code)
+      };
+    }
+    return {
+      base: getFallbackFormationCallsignBase(leadEvent),
+      source: "fallback",
+      unit: formationUnit,
+      candidates: configuredCandidates.map((callsign) => callsign.code)
+    };
   };
   const scheduleFormationGroups = (groups, startTimeBoundary, endTimeBoundary, diagnosticLabel) => {
     const placedFormationKeys = /* @__PURE__ */ new Set();
@@ -74340,7 +74384,13 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           }, 4e3);
           continue;
         }
-        const callsignBase = getFormationCallsignBase(stagedEvents[0]);
+        const callsignSelection = selectFormationCallsignBase(
+          selectedTrainees,
+          stagedEvents,
+          time,
+          group.item.duration
+        );
+        const callsignBase = callsignSelection.base;
         stagedEvents.forEach((event, index) => {
           event.callsign = `${callsignBase}${index + 1}`;
           const trainee = selectedTrainees[index];
@@ -74360,7 +74410,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           trainees: selectedTrainees.map((trainee) => trainee.fullName),
           instructors: stagedEvents.map((event) => event.instructor),
           resources: stagedEvents.map((event) => event.resourceId),
-          callsigns: stagedEvents.map((event) => event.callsign)
+          callsigns: stagedEvents.map((event) => event.callsign),
+          callsignSource: callsignSelection.source,
+          callsignName: callsignSelection.name || null,
+          callsignUnit: callsignSelection.unit || null
         });
         traceFormation("groupBuildTrace", {
           phase: "formation-group-placed",
@@ -74373,7 +74426,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           trainees: selectedTrainees.map((trainee) => trainee.fullName),
           instructors: stagedEvents.map((event) => event.instructor),
           resources: stagedEvents.map((event) => event.resourceId),
-          callsigns: stagedEvents.map((event) => event.callsign)
+          callsigns: stagedEvents.map((event) => event.callsign),
+          callsignSource: callsignSelection.source,
+          callsignName: callsignSelection.name || null,
+          callsignUnit: callsignSelection.unit || null,
+          callsignCandidates: callsignSelection.candidates
         });
         placed = true;
         placedFormationKeys.add(eventKey);
@@ -81282,6 +81339,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       sctFlights,
       remedialRequests,
       sctEvents,
+      formationCallsigns,
       resourceDisplayNames,
       getEventDayNightClassification,
       staffSharingEnabled: organisationSettings.staffSharingEnabled,

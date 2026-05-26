@@ -854,6 +854,7 @@ interface DfpConfig {
   sctFtds: SctRequest[];
   remedialRequests: RemedialRequest[];
   sctEvents: string[];
+  formationCallsigns: FormationCallsign[];
   resourceDisplayNames?: ResourceDisplayNames;
   getEventDayNightClassification: (event: { flightNumber: string }, syllabusDetails: SyllabusItemDetail[], sctEvents?: string[]) => 'Day' | 'Night' | 'Day/Night';
   staffSharingEnabled: boolean;
@@ -4971,10 +4972,74 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return Math.round(Math.abs(event.startTime - startTime) * 60) < 5;
         });
 
-    const getFormationCallsignBase = (leadEvent: Omit<ScheduleEvent, 'date'>): string => {
+    const getFallbackFormationCallsignBase = (leadEvent: Omit<ScheduleEvent, 'date'>): string => {
         const instructorCallsign = instructors.find(ip => ip.name === leadEvent.instructor)?.callsign || '';
         const prefix = instructorCallsign.match(/^[A-Za-z]+/)?.[0];
         return (prefix || school || 'FORM').slice(0, 4).toUpperCase();
+    };
+
+    const normalizeFormationCallsignCode = (callsign?: string | null): string =>
+        String(callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+
+    const eventUsesFormationCallsignBase = (eventCallsign: string | undefined, callsignBase: string): boolean => {
+        const normalizedCallsign = normalizeFormationCallsignCode(eventCallsign);
+        const normalizedBase = normalizeFormationCallsignCode(callsignBase);
+        if (!normalizedCallsign || !normalizedBase) return false;
+        return new RegExp(`^${normalizedBase}\\d+$`).test(normalizedCallsign);
+    };
+
+    const isFormationCallsignBaseAvailable = (
+        callsignBase: string,
+        startTime: number,
+        duration: number
+    ): boolean => {
+        const endTime = startTime + duration;
+        return !generatedEvents.some(event => {
+            if (!event.callsign) return false;
+            const eventEnd = event.startTime + event.duration;
+            const overlaps = event.startTime < endTime && eventEnd > startTime;
+            return overlaps && eventUsesFormationCallsignBase(event.callsign, callsignBase);
+        });
+    };
+
+    const selectFormationCallsignBase = (
+        selectedTrainees: Trainee[],
+        stagedEvents: Omit<ScheduleEvent, 'date'>[],
+        startTime: number,
+        duration: number
+    ): { base: string; source: 'configured' | 'fallback'; name?: string; unit?: string; candidates: string[] } => {
+        const leadEvent = stagedEvents[0];
+        const formationUnit = selectedTrainees.find(trainee => String(trainee.unit || '').trim())?.unit || '';
+        const locationCode = school;
+        const configuredCandidates = config.formationCallsigns
+            .filter(callsign => normalizeFormationCallsignCode(callsign.code))
+            .filter(callsign => !formationUnit || callsign.unit === formationUnit)
+            .filter(callsign => !callsign.locationCode || callsign.locationCode === locationCode)
+            .map(callsign => ({
+                ...callsign,
+                code: normalizeFormationCallsignCode(callsign.code),
+            }));
+        const shuffledCandidates = [...configuredCandidates].sort(() => Math.random() - 0.5);
+        const available = shuffledCandidates.find(callsign =>
+            isFormationCallsignBaseAvailable(callsign.code, startTime, duration)
+        );
+
+        if (available) {
+            return {
+                base: available.code,
+                source: 'configured',
+                name: available.name,
+                unit: available.unit,
+                candidates: configuredCandidates.map(callsign => callsign.code),
+            };
+        }
+
+        return {
+            base: getFallbackFormationCallsignBase(leadEvent),
+            source: 'fallback',
+            unit: formationUnit,
+            candidates: configuredCandidates.map(callsign => callsign.code),
+        };
     };
 
     const scheduleFormationGroups = (
@@ -5215,7 +5280,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     continue;
                 }
 
-                const callsignBase = getFormationCallsignBase(stagedEvents[0]);
+                const callsignSelection = selectFormationCallsignBase(
+                    selectedTrainees,
+                    stagedEvents,
+                    time,
+                    group.item.duration
+                );
+                const callsignBase = callsignSelection.base;
                 stagedEvents.forEach((event, index) => {
                     event.callsign = `${callsignBase}${index + 1}`;
                     const trainee = selectedTrainees[index];
@@ -5237,6 +5308,9 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     instructors: stagedEvents.map(event => event.instructor),
                     resources: stagedEvents.map(event => event.resourceId),
                     callsigns: stagedEvents.map(event => event.callsign),
+                    callsignSource: callsignSelection.source,
+                    callsignName: callsignSelection.name || null,
+                    callsignUnit: callsignSelection.unit || null,
                 });
                 traceFormation('groupBuildTrace', {
                     phase: 'formation-group-placed',
@@ -5250,6 +5324,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     instructors: stagedEvents.map(event => event.instructor),
                     resources: stagedEvents.map(event => event.resourceId),
                     callsigns: stagedEvents.map(event => event.callsign),
+                    callsignSource: callsignSelection.source,
+                    callsignName: callsignSelection.name || null,
+                    callsignUnit: callsignSelection.unit || null,
+                    callsignCandidates: callsignSelection.candidates,
                 });
                 placed = true;
                 placedFormationKeys.add(eventKey);
@@ -14285,6 +14363,7 @@ const App: React.FC = () => {
             sctFlights: sctFlights,
             remedialRequests: remedialRequests,
             sctEvents: sctEvents,
+            formationCallsigns,
             resourceDisplayNames,
             getEventDayNightClassification: getEventDayNightClassification,
             staffSharingEnabled: organisationSettings.staffSharingEnabled,
