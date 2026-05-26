@@ -61831,6 +61831,8 @@ const LocaleSettingsSection = ({
   onUpdateLocationOpAreas,
   timezoneOffset,
   onUpdateTimezoneOffset,
+  formationCallsigns,
+  onUpdateFormationCallsigns,
   currentUserPermission,
   onShowSuccess
 }) => {
@@ -62175,7 +62177,18 @@ const LocaleSettingsSection = ({
           /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: addService, className: "rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700", children: "Add" })
         ] })
       ] })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      FormationCallsignsSection,
+      {
+        callsigns: formationCallsigns,
+        onUpdateCallsigns: onUpdateFormationCallsigns,
+        units,
+        locations,
+        canEditSettings,
+        onAuditLog: logAudit
+      }
+    )
   ] });
 };
 const SettingsViewWithMenu = (props) => {
@@ -62518,6 +62531,8 @@ const SettingsViewWithMenu = (props) => {
             onUpdateLocationOpAreas: props.onUpdateLocationOpAreas,
             timezoneOffset: props.timezoneOffset,
             onUpdateTimezoneOffset: props.onUpdateTimezoneOffset,
+            formationCallsigns: props.formationCallsigns,
+            onUpdateFormationCallsigns: props.onUpdateFormationCallsigns,
             currentUserPermission: props.currentUserPermission,
             onShowSuccess: props.onShowSuccess
           }

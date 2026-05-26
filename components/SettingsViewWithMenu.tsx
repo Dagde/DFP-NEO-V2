@@ -14,6 +14,7 @@ import AppearanceSettings from './AppearanceSettings';
 import PlatformConfigurationSettings from './PlatformConfigurationSettings';
 import { HistoricalDataSeeder } from './HistoricalDataSeeder';
 import PeopleProfilePage from './PeopleProfilePage';
+import FormationCallsignsSection from './FormationCallsignsSection';
 import { Instructor, Trainee, SyllabusItemDetail, EventLimits, PhraseBank, MasterCurrency, CurrencyRequirement, FormationCallsign, CancellationRecord, CancellationCode } from '../types';
 import { logAudit } from '../utils/auditLogger';
 import type { ResourceDisplayNames } from '../utils/resourceDisplayNames';
@@ -687,6 +688,8 @@ const LocaleSettingsSection: React.FC<{
     onUpdateLocationOpAreas?: (areas: Record<string, string[]>) => void;
     timezoneOffset: number;
     onUpdateTimezoneOffset: (offset: number) => void;
+    formationCallsigns: FormationCallsign[];
+    onUpdateFormationCallsigns: (callsigns: FormationCallsign[]) => void;
     currentUserPermission: SettingsViewWithMenuProps['currentUserPermission'];
     onShowSuccess: (message: string) => void;
 }> = ({
@@ -708,6 +711,8 @@ const LocaleSettingsSection: React.FC<{
     onUpdateLocationOpAreas,
     timezoneOffset,
     onUpdateTimezoneOffset,
+    formationCallsigns,
+    onUpdateFormationCallsigns,
     currentUserPermission,
     onShowSuccess,
 }) => {
@@ -1096,6 +1101,15 @@ const LocaleSettingsSection: React.FC<{
                     )}
                 </div>
             </section>
+
+            <FormationCallsignsSection
+                callsigns={formationCallsigns}
+                onUpdateCallsigns={onUpdateFormationCallsigns}
+                units={units}
+                locations={locations}
+                canEditSettings={canEditSettings}
+                onAuditLog={logAudit}
+            />
         </div>
     );
 };
@@ -1533,6 +1547,8 @@ export const SettingsViewWithMenu: React.FC<SettingsViewWithMenuProps> = (props)
                             onUpdateLocationOpAreas={props.onUpdateLocationOpAreas}
                             timezoneOffset={props.timezoneOffset}
                             onUpdateTimezoneOffset={props.onUpdateTimezoneOffset}
+                            formationCallsigns={props.formationCallsigns}
+                            onUpdateFormationCallsigns={props.onUpdateFormationCallsigns}
                             currentUserPermission={props.currentUserPermission}
                             onShowSuccess={props.onShowSuccess}
                         />
