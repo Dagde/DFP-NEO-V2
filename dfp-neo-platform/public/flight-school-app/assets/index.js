@@ -9585,7 +9585,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
           trainee.course
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -9792,7 +9792,7 @@ const LmpEventEditModal = ({ item, onCancel, onSave }) => {
       ] })
     ] }),
     validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-5 py-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-px border-t border-gray-700 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Save" })
     ] })
@@ -9919,7 +9919,7 @@ const InsertEventModal = ({ traineeLmp, insertEventTypes, onCancel, onSave }) =>
       ] })
     ] }),
     validationMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "px-5 pb-2 text-sm font-semibold text-red-300", children: validationMessage }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-2 border-t border-gray-700 px-5 py-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-end gap-px border-t border-gray-700 px-5 py-4", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: onCancel, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { type: "button", onClick: handleSave, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Insert" })
     ] })
@@ -10263,7 +10263,7 @@ const AcademicLmpTab = ({
           lessonScore.notes && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(DetailCard$1, { label: "Notes", value: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "whitespace-pre-wrap text-sm", children: lessonScore.notes }) }) })
         ] });
       })(),
-      onOpenPt051ForLesson && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 pt-2", children: [
+      onOpenPt051ForLesson && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px pt-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -10368,7 +10368,7 @@ const TraineeLmpView = ({
           trainee.course
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-px", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "button",
           {
@@ -64024,7 +64024,7 @@ const AddRemedialPackageFlyout = ({
       /* @__PURE__ */ jsxRuntimeExports.jsxs("fieldset", { className: "p-4 border border-gray-600 rounded-lg", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("legend", { className: "px-2 text-sm font-semibold text-gray-300", children: "Step 1: Select Event" }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mt-2 space-y-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-px", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
@@ -64120,7 +64120,7 @@ const AddRemedialPackageFlyout = ({
         ] })
       ] })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end gap-px", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: onClose, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed", children: "Cancel" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("button", { onClick: handleSavePackage, disabled: !eventToRemediate || remedialEvents.length === 0, className: "w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed", children: "Save Package" })
     ] })

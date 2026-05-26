@@ -417,7 +417,7 @@ const HateSheetView: React.FC<HateSheetViewProps> = ({ trainee, lmpScores, asses
                     <p className="text-sm text-gray-400">{trainee.rank} {trainee.name || trainee.fullName} - {trainee.course}</p>
                     
                 </div>
-                   <div className="flex items-center gap-2">
+                   <div className="flex items-center gap-px">
                 <button
                     onClick={onBackToRoster}
                     className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"

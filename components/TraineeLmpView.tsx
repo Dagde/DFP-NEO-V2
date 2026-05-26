@@ -200,7 +200,7 @@ const LmpEventEditModal: React.FC<{
                     </label>
                 </div>
                 {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
-                <div className="flex justify-end gap-2 border-t border-gray-700 px-5 py-4">
+                <div className="flex justify-end gap-px border-t border-gray-700 px-5 py-4">
                     <button type="button" onClick={onCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
                     <button type="button" onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Save</button>
                 </div>
@@ -356,7 +356,7 @@ const InsertEventModal: React.FC<{
                     </label>
                 </div>
                 {validationMessage && <div className="px-5 pb-2 text-sm font-semibold text-red-300">{validationMessage}</div>}
-                <div className="flex justify-end gap-2 border-t border-gray-700 px-5 py-4">
+                <div className="flex justify-end gap-px border-t border-gray-700 px-5 py-4">
                     <button type="button" onClick={onCancel} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
                     <button type="button" onClick={handleSave} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Insert</button>
                 </div>
@@ -794,7 +794,7 @@ const AcademicLmpTab: React.FC<AcademicLmpTabProps> = ({
 
                         {/* Open PT-051 button */}
                         {onOpenPt051ForLesson && (
-                            <div className="flex items-center gap-3 pt-2">
+                            <div className="flex items-center gap-px pt-2">
                                 <button
                                     onClick={() => {
                                         if (!canOpenPt051) {
@@ -934,7 +934,7 @@ const TraineeLmpView: React.FC<TraineeLmpViewProps> = ({
                     <h1 className="text-2xl font-bold text-white">Individual LMP</h1>
                     <p className="text-sm text-gray-400">{trainee.rank} {trainee.name} - {trainee.course}</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-px">
                     <button
                         onClick={onBack}
                         className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed"

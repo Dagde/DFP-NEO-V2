@@ -329,7 +329,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
           <fieldset className="p-4 border border-gray-600 rounded-lg">
             <legend className="px-2 text-sm font-semibold text-gray-300">Step 1: Select Event</legend>
             <div className="mt-2 space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-px">
                 <button
                   type="button"
                   onClick={() => {
@@ -437,7 +437,7 @@ const AddRemedialPackageFlyout: React.FC<AddRemedialPackageFlyoutProps> = ({
           )}
         </div>
         
-        <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end space-x-3">
+        <div className="px-6 py-4 bg-gray-800/50 border-t border-gray-700 flex justify-end gap-px">
             <button onClick={onClose} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed">Cancel</button>
             <button onClick={handleSavePackage} disabled={!eventToRemediate || remedialEvents.length === 0} className="w-[56px] h-[41px] flex items-center justify-center text-center px-1 py-1 text-[10px] font-semibold rounded-md btn-aluminium-brushed disabled:opacity-40 disabled:cursor-not-allowed">Save Package</button>
         </div>
