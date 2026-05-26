@@ -2671,7 +2671,7 @@ function generateDfpInternal(
 
                     if (onlyRemedialInstructorConflict) {
                         ignoredInstructorConflicts.push(
-                            `${remedialInstructor} overlaps ${existing.flightNumber} (${existing.type}) ${_fmtT(existing.startTime)}-${_fmtT(existing.startTime + existing.duration)}`
+                            `${remedialInstructor} overlaps ${existing.flightNumber} (${existing.type}) ${formatDecimalHourToString(existing.startTime)}-${formatDecimalHourToString(existing.startTime + existing.duration)}`
                         );
                         return false;
                     }
@@ -2692,7 +2692,7 @@ function generateDfpInternal(
                     trainee: candidate.student || candidate.pilot || '',
                     event: candidate.flightNumber,
                     startTime,
-                    displayTime: _fmtT(startTime),
+                    displayTime: formatDecimalHourToString(startTime),
                     resourceId,
                     remedialInstructor,
                     outcome: conflicts ? 'rejected' : 'placed',
@@ -2708,7 +2708,7 @@ function generateDfpInternal(
                     type: candidate.type,
                     requestedStartTime: event.startTime,
                     attemptedStartTime: startTime,
-                    displayTime: _fmtT(startTime),
+                    displayTime: formatDecimalHourToString(startTime),
                     duration: candidate.duration,
                     resourceId,
                     resourcePoolTried: resourceOptions,
@@ -2839,7 +2839,7 @@ function generateDfpInternal(
                     type: event.type,
                     originalStartTime: event.startTime,
                     placedStartTime: eventWithoutDate.startTime,
-                    displayTime: _fmtT(eventWithoutDate.startTime),
+                    displayTime: formatDecimalHourToString(eventWithoutDate.startTime),
                     duration: eventWithoutDate.duration,
                     resourceId: eventWithoutDate.resourceId || null,
                     instructor: eventWithoutDate.instructor || null,
