@@ -1721,6 +1721,14 @@ function _diagFinalizeInstructors() {
     const raw = localStorage.getItem('neo_build_diag_report');
     if (!raw) { console.error('No NEO Build diagnostic report found. Run a build first.'); return; }
     const report = JSON.parse(raw);
+    try {
+        const timingRaw = localStorage.getItem('neo_build_timing_report');
+        const runtimeRaw = localStorage.getItem('neo_build_runtime_error_report');
+        if (timingRaw) report.timingReport = JSON.parse(timingRaw);
+        if (runtimeRaw) report.runtimeErrorReport = JSON.parse(runtimeRaw);
+    } catch (error) {
+        console.warn('[NEO-BUILD-DIAG] Failed to merge timing/runtime diagnostic context:', error);
+    }
     const ts = (report.timestamp || new Date().toISOString()).replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -2610,6 +2618,7 @@ function generateDfpInternal(
             exclusionReasons,
         });
     });
+    saveNeoBuildDiag('build-start');
 
     neoBuildDiag.mandatoryRemedialFlights.remedialInstructorOverrides = Array.from(remedialInstructorOverrides.values());
 
@@ -15135,7 +15144,44 @@ const App: React.FC = () => {
                 markNeoBuildTiming(timingReport, 'notifications:complete', { notifications: notifications.length });
 
             } catch (error) {
-                markNeoBuildTiming(timingReport, 'build:error', { message: error instanceof Error ? error.message : String(error) });
+                const runtimeErrorReport = {
+                    timestamp: new Date().toISOString(),
+                    stage: 'build-error',
+                    buildDate: buildDfpDate,
+                    message: error instanceof Error ? error.message : String(error),
+                    stack: error instanceof Error ? error.stack : null,
+                    configSummary: {
+                        highestPriorityEvents: config.highestPriorityEvents.length,
+                        remedialRequests: config.remedialRequests.length,
+                        remedialHighestPriorityEvents: config.highestPriorityEvents.filter(event => event.isRemedial || event.id?.startsWith('remedial-')).map(event => ({
+                            id: event.id,
+                            flightNumber: event.flightNumber,
+                            type: event.type,
+                            date: event.date,
+                            startTime: event.startTime,
+                            duration: event.duration,
+                            student: event.student || null,
+                            pilot: event.pilot || null,
+                            instructor: event.instructor || null,
+                            isTimeFixed: event.isTimeFixed === true,
+                            isRemedial: event.isRemedial === true,
+                        })),
+                    },
+                };
+                markNeoBuildTiming(timingReport, 'build:error', { message: runtimeErrorReport.message });
+                try {
+                    localStorage.setItem('neo_build_runtime_error_report', JSON.stringify(runtimeErrorReport));
+                    const existingDiagRaw = localStorage.getItem('neo_build_diag_report');
+                    const existingDiag = existingDiagRaw ? JSON.parse(existingDiagRaw) : {};
+                    localStorage.setItem('neo_build_diag_report', JSON.stringify({
+                        ...existingDiag,
+                        stage: 'build-error',
+                        updatedAt: runtimeErrorReport.timestamp,
+                        runtimeError: runtimeErrorReport,
+                    }));
+                } catch (diagError) {
+                    console.warn('[NEO-BUILD-DIAG] Failed to persist runtime error diagnostic:', diagError);
+                }
                 console.error("🚀 [NEO-Build] DFP Build Failed:", error);
                 console.error("🚀 [NEO-Build] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
                 setDfpBuildProgress({ message: 'Error during build!', percentage: 100 });
