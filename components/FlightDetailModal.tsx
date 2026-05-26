@@ -2585,12 +2585,21 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                         <div>
                                             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1">Recipients</p>
                                             <div className="space-y-1">
-                                                {alertData.recipients.map((r: string) => {
-                                                    const response = alertData?.responses?.[r];
+                                                {alertData.recipients.map((r: any) => {
+                                                    const isStructuredRecipient = r && typeof r === 'object';
+                                                    const recipientKey = isStructuredRecipient
+                                                        ? (r.userId || r.reversedName || r.displayName)
+                                                        : r;
+                                                    const recipientLabel = isStructuredRecipient
+                                                        ? (r.displayName || r.reversedName || r.userId)
+                                                        : r;
+                                                    const response = isStructuredRecipient
+                                                        ? { status: r.status || 'pending', respondedAt: r.respondedAt || null }
+                                                        : alertData?.responses?.[r];
                                                     const status = response?.status || 'pending';
                                                     return (
-                                                        <div key={r} className="flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg">
-                                                            <span className="text-white text-sm">{r}</span>
+                                                        <div key={recipientKey} className="flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg">
+                                                            <span className="text-white text-sm">{recipientLabel}</span>
                                                             {status !== 'pending' ? (
                                                                 <div className="text-right">
                                                                     <span className={`text-xs font-bold ${status === 'accepted' ? 'text-green-400' : 'text-red-400'}`}>

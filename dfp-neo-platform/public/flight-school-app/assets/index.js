@@ -15176,10 +15176,13 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         alertData?.recipients && alertData.recipients.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-xs font-semibold uppercase tracking-wide mb-1", children: "Recipients" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-1", children: alertData.recipients.map((r) => {
-            const response = alertData?.responses?.[r];
+            const isStructuredRecipient = r && typeof r === "object";
+            const recipientKey = isStructuredRecipient ? r.userId || r.reversedName || r.displayName : r;
+            const recipientLabel = isStructuredRecipient ? r.displayName || r.reversedName || r.userId : r;
+            const response = isStructuredRecipient ? { status: r.status || "pending", respondedAt: r.respondedAt || null } : alertData?.responses?.[r];
             const status = response?.status || "pending";
             return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between px-3 py-2 bg-gray-700/50 rounded-lg", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: r }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-white text-sm", children: recipientLabel }),
               status !== "pending" ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-right", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: `text-xs font-bold ${status === "accepted" ? "text-green-400" : "text-red-400"}`, children: status === "accepted" ? "✓ Accepted" : "✗ Rejected" }),
                 response.respondedAt && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-gray-400 text-[10px]", children: new Date(response.respondedAt).toLocaleString("en-AU", {
@@ -15190,7 +15193,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
                   hour12: false
                 }) })
               ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-amber-400 text-xs", children: "Pending..." })
-            ] }, r);
+            ] }, recipientKey);
           }) })
         ] }),
         alertSent && !alertData && alertRecipients.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
