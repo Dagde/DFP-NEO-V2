@@ -15069,6 +15069,23 @@ const App: React.FC = () => {
                 setNextDayBuildEvents(generated);
                 markNeoBuildTiming(timingReport, 'state:setNextDayBuildEvents', { generated: generated.length });
                 console.log('🚀 [NEO-Build] setNextDayBuildEvents called with', generated.length, 'events');
+
+                const consumedRemedialPriorityIds = new Set(
+                    config.remedialRequests
+                        .filter(request => request.forceSchedule)
+                        .map(request => `remedial-${request.traineeId}-${request.eventCode}`)
+                );
+                if (consumedRemedialPriorityIds.size > 0) {
+                    setRemedialRequests([]);
+                    storeRemedialRequests([]);
+                    setHighestPriorityEvents(prevEvents =>
+                        prevEvents.filter(event => !consumedRemedialPriorityIds.has(event.id))
+                    );
+                    markNeoBuildTiming(timingReport, 'state:clear-consumed-remedial-priority', {
+                        clearedRequests: consumedRemedialPriorityIds.size,
+                    });
+                }
+
                 const remedialInstructorConflictEvents = generated.filter(event => event.forcedInstructorConflict);
                 if (remedialInstructorConflictEvents.length > 0) {
                     const conflictLines = remedialInstructorConflictEvents.slice(0, 5).map(event => {
