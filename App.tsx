@@ -471,6 +471,7 @@ const getMasterEventId = (item: Partial<SyllabusItemDetail>): string =>
 
 const createLmpOrderKey = (index: number): string => String(index + 1).padStart(5, '0');
 const REMEDIAL_EARLIEST_START = 10.0;
+const REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY = 'neo_remedial_force_schedule_requests';
 const REMEDIAL_EVENT_CODE_REGEX = /-(?:REM-[A-Z]+\d+|RFTD\d+|RRF\d+|RT\d+|RF\d+|FTD\d+|F\d+|T\d+)$/i;
 
 const isRemedialEventCode = (value?: string): boolean =>
@@ -486,6 +487,36 @@ const isRemedialSyllabusItem = (item?: Partial<SyllabusItemDetail>): boolean =>
         isRemedialEventCode(item.id) ||
         isRemedialEventCode(item.code)
     );
+
+const normaliseRemedialRequests = (value: unknown): RemedialRequest[] => {
+    if (!Array.isArray(value)) return [];
+    return value
+        .map((item: any) => ({
+            traineeId: Number(item?.traineeId),
+            eventCode: String(item?.eventCode || ''),
+            forceSchedule: item?.forceSchedule === true,
+        }))
+        .filter(item => Number.isFinite(item.traineeId) && item.eventCode && item.forceSchedule);
+};
+
+const loadStoredRemedialRequests = (): RemedialRequest[] => {
+    try {
+        return normaliseRemedialRequests(JSON.parse(localStorage.getItem(REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY) || '[]'));
+    } catch {
+        return [];
+    }
+};
+
+const storeRemedialRequests = (requests: RemedialRequest[]) => {
+    try {
+        localStorage.setItem(
+            REMEDIAL_FORCE_SCHEDULE_STORAGE_KEY,
+            JSON.stringify(normaliseRemedialRequests(requests))
+        );
+    } catch (error) {
+        console.warn('[REMEDIAL-SYNC] Failed to persist Force Schedule selections:', error);
+    }
+};
 
 const stampMasterLmpItems = (masterLMP: SyllabusItemDetail[]): SyllabusItemDetail[] =>
     masterLMP.map((item, index) => ({
@@ -2167,6 +2198,8 @@ function generateDfpInternal(
             scoresTrainees: scores.size,
             traineeLmps: traineeLMPs.size,
             highestPriorityEvents: highestPriorityEvents.length,
+            remedialRequests: remedialRequests.length,
+            forcedRemedialRequests: remedialRequests.filter(r => r.forceSchedule).length,
             activeDfpEvents: activeDfpEventsWithoutDate.length,
         },
         activeTrainees: {
@@ -9472,7 +9505,11 @@ const App: React.FC = () => {
     const [showSctRequest, setShowSctRequest] = useState(false);
     const [instructorForSct, setInstructorForSct] = useState<Instructor | null>(null);
     const [traineeForSct, setTraineeForSct] = useState<Trainee | null>(null);
-    const [remedialRequests, setRemedialRequests] = useState<RemedialRequest[]>([]);
+    const [remedialRequests, setRemedialRequests] = useState<RemedialRequest[]>(() => loadStoredRemedialRequests());
+
+    useEffect(() => {
+        storeRemedialRequests(remedialRequests);
+    }, [remedialRequests]);
 
 
     // NEO State
@@ -13758,11 +13795,16 @@ const App: React.FC = () => {
         });
 
         // 2. Auto-add Force Schedule remedial events
-        console.log(`🔍 Checking ${remedialRequests.length} remedial requests for Force Schedule...`);
-        const forceScheduledRemedials = remedialRequests.filter(r => r.forceSchedule);
+        const storedRemedialRequests = loadStoredRemedialRequests();
+        const remedialRequestsForSync = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequests;
+        console.log(`🔍 Checking ${remedialRequestsForSync.length} remedial requests for Force Schedule...`);
+        if (remedialRequests.length === 0 && storedRemedialRequests.length > 0) {
+            console.log(`📦 Using ${storedRemedialRequests.length} persisted Force Schedule remedial request(s) for pre-build sync`);
+        }
+        const forceScheduledRemedials = remedialRequestsForSync.filter(r => r.forceSchedule);
         console.log(`📌 Found ${forceScheduledRemedials.length} Force Scheduled remedial events`);
 
-        remedialRequests.forEach(remedialReq => {
+        remedialRequestsForSync.forEach(remedialReq => {
             if (!remedialReq.forceSchedule) {
                 remedialPrioritySyncTrace.push({
                     phase: 'remedial-request-skipped',
@@ -14474,6 +14516,8 @@ const App: React.FC = () => {
 
         const instructorsInBuild = instructorsData;
         const traineesInBuild = traineesData;
+        const storedRemedialRequestsForBuild = loadStoredRemedialRequests();
+        const remedialRequestsForBuild = remedialRequests.length > 0 ? remedialRequests : storedRemedialRequestsForBuild;
         console.log('🔍 [NEO BUILD CONFIG DEBUG] Data source settings:', dataSourceSettings);
         console.log('🔍 [NEO BUILD CONFIG DEBUG] instructorsData (filtered):', instructorsInBuild.length, '| mockData count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource !== 'database').length, '| DB count:', instructorsInBuild.filter((i: any) => (i as any)._dataSource === 'database').length);
         console.log('🔍 [NEO BUILD CONFIG DEBUG] traineesData (filtered):', traineesInBuild.length, '| mockData count:', traineesInBuild.filter((t: any) => (t as any)._dataSource !== 'database').length, '| DB count:', traineesInBuild.filter((t: any) => (t as any)._dataSource === 'database').length);
@@ -14510,7 +14554,7 @@ const App: React.FC = () => {
             eventLimits,
             sctFtds: sctFtds,
             sctFlights: sctFlights,
-            remedialRequests: remedialRequests,
+            remedialRequests: remedialRequestsForBuild,
             sctEvents: sctEvents,
             formationCallsigns,
             resourceDisplayNames,
@@ -18816,6 +18860,7 @@ updates.forEach(update => {
                             }
 
                             console.log(`📋 Updated remedialRequests:`, newRequests.filter(r => r.forceSchedule));
+                            storeRemedialRequests(newRequests);
                             return newRequests;
                         });
                     }}
