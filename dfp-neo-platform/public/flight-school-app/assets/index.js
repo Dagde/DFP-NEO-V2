@@ -15316,8 +15316,12 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
               const finalDesc = alertDescription && alertUserNote ? alertDescription + " | " + alertUserNote : alertDescription || alertUserNote || "";
               console.log("🔔 [Alert] Send button clicked - eventId:", event.id, "recipients:", alertRecipients);
               logAudit("Alert:" + event.id, "Add", `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(", ")} | Description: ${finalDesc}`);
-              await onSendAlert(event.id, alertRecipients, finalDesc);
-              setAlertSent(true);
+              const sent = await onSendAlert(event.id, alertRecipients, finalDesc);
+              if (sent) {
+                setAlertSent(true);
+              } else {
+                await showDarkAlert("The alert was not saved to the backend. Please check that this schedule has been published for the selected location, then try again.", "Alert Not Sent", "error");
+              }
             },
             className: `w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`,
             children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-center leading-tight", style: { color: "#000000" }, children: [
@@ -81069,20 +81073,24 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     const apiBase2 = "/api";
     const userId = getCurrentUserId() || currentUserName;
     const eventForAlert = events.find((e) => e.id === eventId) || selectedEvent;
+    const snapshotDate = getDailySnapshotKey(date);
     console.log("🔔 [Alert] ========== SEND ALERT START ==========");
     console.log("🔔 [Alert] eventId:", eventId);
     console.log("🔔 [Alert] date:", date);
+    console.log("🔔 [Alert] snapshotDate:", snapshotDate);
     console.log("🔔 [Alert] sentBy:", userId);
     console.log("🔔 [Alert] recipients:", recipients);
     console.log("🔔 [Alert] URL:", `${apiBase2}/alerts/send`);
     console.log("🔔 [Alert] eventForAlert:", eventForAlert ? eventForAlert.flightNumber || eventForAlert.type : "NOT FOUND");
     if (!recipients || recipients.length === 0) {
       console.warn("🔔 [Alert] No recipients - alert not sent");
-      return;
+      return false;
     }
     try {
       const payload = {
-        date,
+        date: snapshotDate,
+        eventDate: date,
+        school,
         eventId,
         sentBy: userId,
         recipients,
@@ -81116,13 +81124,17 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
           }
         }));
         console.log("🔔 [Alert] Alert sent successfully! alertId:", data.alertId);
+        return true;
       } else {
         console.warn("🔔 [Alert] Failed to send alert. Status:", res.status, "Body:", responseText);
+        return false;
       }
     } catch (err) {
       console.error("🔔 [Alert] Exception sending alert:", err);
+      return false;
+    } finally {
+      console.log("🔔 [Alert] ========== SEND ALERT END ==========");
     }
-    console.log("🔔 [Alert] ========== SEND ALERT END ==========");
   };
   const handleClearAlert = async (eventId) => {
     const apiBase2 = "/api";

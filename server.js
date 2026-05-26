@@ -9956,6 +9956,11 @@ const normalizeAlertIdentity = (value) => String(value || '')
   .trim()
   .toLowerCase();
 
+const getAlertEventDate = (snapshotDate, explicitEventDate) => {
+  if (explicitEventDate) return explicitEventDate;
+  return String(snapshotDate || '').replace(/__(ESL|PEA)$/i, '');
+};
+
 const addAlertAlias = (aliases, value) => {
   const raw = String(value || '').trim();
   if (!raw) return;
@@ -10192,17 +10197,33 @@ const getAlertRecipientStatus = (alert, aliases) => {
 app.post('/api/alerts/send', async (req, res) => {
   try {
     const db = await getPrisma();
-    const { eventId, date, sentBy, recipients, description, eventDetails } = req.body;
+    const { eventId, date, eventDate, school, sentBy, recipients, description, eventDetails } = req.body;
 
     if (!eventId || !date || !sentBy || !recipients || recipients.length === 0) {
       return res.status(400).json({ error: 'eventId, date, sentBy, and recipients are required' });
     }
 
     // Load existing snapshot for this date
-    const rows = await db.$queryRawUnsafe(
+    let snapshotDate = date;
+    let rows = await db.$queryRawUnsafe(
       `SELECT "alertsData" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
-      date
+      snapshotDate
     );
+    if ((!rows || rows.length === 0) && !String(date).includes('__')) {
+      const candidateDates = school
+        ? [`${date}__${String(school).toUpperCase()}`]
+        : [`${date}__ESL`, `${date}__PEA`];
+      for (const candidateDate of candidateDates) {
+        rows = await db.$queryRawUnsafe(
+          `SELECT "alertsData" FROM "DailySnapshot" WHERE date = $1::text LIMIT 1`,
+          candidateDate
+        );
+        if (rows && rows.length > 0) {
+          snapshotDate = candidateDate;
+          break;
+        }
+      }
+    }
     if (!rows || rows.length === 0) {
       return res.status(404).json({ error: `No snapshot found for date ${date}` });
     }
@@ -10243,7 +10264,8 @@ app.post('/api/alerts/send', async (req, res) => {
     const alertEntry = {
       alertId,
       eventId,
-      date,
+      date: getAlertEventDate(snapshotDate, eventDate),
+      snapshotDate,
       sentAt,
       sentBy,
       recipients: resolvedRecipients,
@@ -10258,10 +10280,10 @@ app.post('/api/alerts/send', async (req, res) => {
     await db.$executeRawUnsafe(
       `UPDATE "DailySnapshot" SET "alertsData" = $1::jsonb WHERE date = $2::text`,
       JSON.stringify(alertsData),
-      date
+      snapshotDate
     );
 
-    console.log(`✅ POST /api/alerts/send - Alert ${alertId} sent for event ${eventId} on ${date} to ${resolvedRecipients.map(r => r.userId || r.reversedName || r.displayName).join(', ')}`);
+    console.log(`✅ POST /api/alerts/send - Alert ${alertId} sent for event ${eventId} on ${snapshotDate} to ${resolvedRecipients.map(r => r.userId || r.reversedName || r.displayName).join(', ')}`);
 
     // TODO: Send APNs push notification here when credentials are available
     // For now, pilots poll GET /api/alerts/:userId
@@ -10318,7 +10340,8 @@ app.get('/api/alerts/:userId', async (req, res) => {
           alerts.push({
             alertId: alert.alertId,
             eventId,
-            date: row.date,
+            date: getAlertEventDate(row.date, alert.date),
+            snapshotDate: row.date,
             sentAt: alert.sentAt,
             sentBy: alert.sentBy,
             recipients: alert.recipients || [],
@@ -10487,7 +10510,8 @@ app.get('/api/alerts/event/:eventId', async (req, res) => {
       alert: {
         alertId: alert.alertId,
         eventId,
-        date,
+        date: getAlertEventDate(date, alert.date),
+        snapshotDate: date,
         sentAt: alert.sentAt,
         sentBy: alert.sentBy,
         recipients: alert.recipients,

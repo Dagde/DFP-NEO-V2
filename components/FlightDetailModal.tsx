@@ -381,7 +381,7 @@ interface EventDetailModalProps {
     cancellationCodes?: CancellationCode[];
     onCancelEvent?: (eventId: string, cancellationCode: string, manualCodeEntry?: string) => void;
     onRestoreEvent?: (eventId: string) => void;
-    onSendAlert?: (eventId: string, recipients: string[], description: string) => void;
+    onSendAlert?: (eventId: string, recipients: string[], description: string) => Promise<boolean> | boolean;
     canSendAlert?: boolean;
     alertData?: any | null;
     baselineEvent?: any | null;
@@ -2751,8 +2751,12 @@ const renderCrewFields = (crewMember: CrewMember, index: number) => {
                                             : alertDescription || alertUserNote || '';
                                         console.log('\ud83d\udd14 [Alert] Send button clicked - eventId:', event.id, 'recipients:', alertRecipients);
                                         logAudit('Alert:' + event.id, 'Add', `Alert sent for event ${event.flightNumber || event.id}`, `Recipients: ${alertRecipients.join(', ')} | Description: ${finalDesc}`);
-                                        await onSendAlert(event.id, alertRecipients, finalDesc);
-                                        setAlertSent(true);
+                                        const sent = await onSendAlert(event.id, alertRecipients, finalDesc);
+                                        if (sent) {
+                                            setAlertSent(true);
+                                        } else {
+                                            await showDarkAlert('The alert was not saved to the backend. Please check that this schedule has been published for the selected location, then try again.', 'Alert Not Sent', 'error');
+                                        }
                                     }}
                                     className={`w-[75px] h-[55px] flex items-center justify-center text-[12px] font-semibold btn-aluminium-brushed rounded-md ${alertRecipients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >

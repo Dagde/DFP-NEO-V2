@@ -13865,15 +13865,17 @@ const App: React.FC = () => {
 
 
     // handleSendAlert
-    const handleSendAlert = async (eventId: string, recipients: string[], description: string = '') => {
+    const handleSendAlert = async (eventId: string, recipients: string[], description: string = ''): Promise<boolean> => {
         // Always use relative /api - works on any domain
         const apiBase = '/api';
         const userId = getCurrentUserId() || currentUserName;
         const eventForAlert = events.find(e => e.id === eventId) || selectedEvent;
+        const snapshotDate = getDailySnapshotKey(date);
 
         console.log('🔔 [Alert] ========== SEND ALERT START ==========');
         console.log('🔔 [Alert] eventId:', eventId);
         console.log('🔔 [Alert] date:', date);
+        console.log('🔔 [Alert] snapshotDate:', snapshotDate);
         console.log('🔔 [Alert] sentBy:', userId);
         console.log('🔔 [Alert] recipients:', recipients);
         console.log('🔔 [Alert] URL:', `${apiBase}/alerts/send`);
@@ -13881,12 +13883,14 @@ const App: React.FC = () => {
 
         if (!recipients || recipients.length === 0) {
             console.warn('🔔 [Alert] No recipients - alert not sent');
-            return;
+            return false;
         }
 
         try {
             const payload = {
-                date,
+                date: snapshotDate,
+                eventDate: date,
+                school,
                 eventId,
                 sentBy: userId,
                 recipients,
@@ -13924,13 +13928,18 @@ const App: React.FC = () => {
                     },
                 }));
                 console.log('🔔 [Alert] Alert sent successfully! alertId:', data.alertId);
+                return true;
             } else {
                 console.warn('🔔 [Alert] Failed to send alert. Status:', res.status, 'Body:', responseText);
+                return false;
             }
         } catch (err) {
             console.error('🔔 [Alert] Exception sending alert:', err);
+            return false;
         }
-        console.log('🔔 [Alert] ========== SEND ALERT END ==========');
+        finally {
+            console.log('🔔 [Alert] ========== SEND ALERT END ==========');
+        }
     };
 
     // handleClearAlert - Clear alert history for an event to allow re-sending
