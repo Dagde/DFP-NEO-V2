@@ -5017,7 +5017,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             const resourceIsOccupied = generatedEvents.some(e => {
                 if (e.resourceId !== id) return false;
 
-                let turnaround = 0;
+                const getResourceTurnaroundAfter = (event: Pick<ScheduleEvent, 'type' | 'flightNumber'>): number => {
+                    if (event.type === 'flight') return flightTurnaround;
+                    if (event.type === 'ftd') return ftdTurnaround;
+                    if (event.type === 'cpt' || (event.type === 'ground' && event.flightNumber.includes('CPT'))) return cptTurnaround;
+                    return 0;
+                };
+
+                let existingTurnaround = getResourceTurnaroundAfter(e);
                 if (e.type === 'flight') {
                     const isExistingEventNight = e.flightNumber.startsWith('BNF');
                     if (isNightPass && isExistingEventNight) {
@@ -5028,22 +5035,18 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         if (hasCommonCrew) {
                             const existingSyllabus = syllabusDetails.find(s => s.id === e.flightNumber || s.code === e.flightNumber);
                             const lmpCrewTurnaround = (existingSyllabus?.postFlightTime || 0) + (syllabusItem.preFlightTime || 0);
-                            turnaround = Math.max(flightTurnaround, lmpCrewTurnaround);
+                            existingTurnaround = Math.max(flightTurnaround, lmpCrewTurnaround);
                         } else {
-                            turnaround = flightTurnaround;
+                            existingTurnaround = flightTurnaround;
                         }
-                    } else {
-                        turnaround = flightTurnaround;
                     }
-                } else if (e.type === 'ftd') {
-                    turnaround = ftdTurnaround;
-                } else if (e.type === 'cpt' || (e.type === 'ground' && e.flightNumber.includes('CPT'))) {
-                    turnaround = cptTurnaround;
                 }
 
-                const existingEventEnd = e.startTime + e.duration + turnaround;
+                const proposedTurnaround = getResourceTurnaroundAfter({ type, flightNumber: syllabusItem.code });
+                const existingEventEnd = e.startTime + e.duration + existingTurnaround;
                 const newEventStart = startTime;
-                return newEventStart < existingEventEnd && (startTime + syllabusItem.duration) > e.startTime;
+                const proposedEventEnd = startTime + syllabusItem.duration + proposedTurnaround;
+                return newEventStart < existingEventEnd && proposedEventEnd > e.startTime;
             });
             if (!resourceIsOccupied) { resourceId = id; break; }
         }
