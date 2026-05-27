@@ -74085,22 +74085,31 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
     const isBnfEvent = isNightPass && syllabusItem.code.startsWith("BNF") && syllabusItem.type === "Flight" && !isRemedialSyllabusItem(syllabusItem);
     const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
+    const traineeFlightFtdLimit = options.traineeFlightFtdLimitOverride ?? bnfFlightLimit;
     if (type === "flight" || type === "ftd") {
-      if (traineeCounts.flightFtd >= bnfFlightLimit) {
+      if (traineeCounts.flightFtd >= traineeFlightFtdLimit) {
         if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_EVENT_LIMIT_EXCEEDED");
-        return traceScheduleReject("TRAINEE_FLIGHT_FTD_LIMIT", { count: traineeCounts.flightFtd, limit: bnfFlightLimit });
+        return traceScheduleReject("TRAINEE_FLIGHT_FTD_LIMIT", {
+          count: traineeCounts.flightFtd,
+          limit: traineeFlightFtdLimit,
+          configuredLimit: bnfFlightLimit,
+          overrideApplied: options.traineeFlightFtdLimitOverride !== void 0
+        });
       }
     } else {
       if (traineeCounts.ground >= 2) return traceScheduleReject("TRAINEE_GROUND_LIMIT", { count: traineeCounts.ground, limit: 2 });
     }
     const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
-    if (traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt >= bnfTotalLimit) {
+    const traineeTotalLimit = options.traineeTotalLimitOverride ?? bnfTotalLimit;
+    if (traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt >= traineeTotalLimit) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TOTAL_LIMIT_EXCEEDED");
       return traceScheduleReject("TRAINEE_TOTAL_LIMIT", {
         flightFtd: traineeCounts.flightFtd,
         ground: traineeCounts.ground,
         cpt: traineeCounts.cpt,
-        limit: bnfTotalLimit
+        limit: traineeTotalLimit,
+        configuredLimit: bnfTotalLimit,
+        overrideApplied: options.traineeTotalLimitOverride !== void 0
       });
     }
     const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.code, duration: syllabusItem.duration }, syllabusDetails);
@@ -75164,6 +75173,14 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const scheduleCurrencyPriorityEvents = (eventsToSchedule) => {
     const scheduledCurrencyDraftIds = new Set(generatedEvents.map((event) => event.currencyDraftId).filter(Boolean));
     const getCurrencyEventPersonName = (event) => event.student || event.pilot || event.instructor || "";
+    const getCurrencyEventPersonKey = (event) => normalizeBuildPersonnelName(getCurrencyEventPersonName(event));
+    const currencyEventCountByPersonKey = eventsToSchedule.reduce((counts, event) => {
+      const key = getCurrencyEventPersonKey(event);
+      if (!key) return counts;
+      counts.set(key, (counts.get(key) || 0) + 1);
+      return counts;
+    }, /* @__PURE__ */ new Map());
+    const startingFlightFtdCountByPersonKey = /* @__PURE__ */ new Map();
     const getCurrencyEventIdentity = (event) => ({
       id: event.id,
       type: event.type,
@@ -75183,6 +75200,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       total: eventsToSchedule.length,
       generatedEventsBeforeCurrencyPriority: generatedEvents.length,
       scheduledCurrencyDraftIdsAtStart: Array.from(scheduledCurrencyDraftIds),
+      selectedCurrencyEventCountByPerson: Array.from(currencyEventCountByPersonKey.entries()).map(([personKey2, count]) => ({ personKey: personKey2, count })),
       byType: {
         flight: eventsToSchedule.filter((event) => event.type === "flight").map(getCurrencyEventIdentity),
         ftd: eventsToSchedule.filter((event) => event.type === "ftd").map(getCurrencyEventIdentity)
@@ -75283,6 +75301,23 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           if (!eventCounts.has(resolved.trainee.fullName)) {
             eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
           }
+          const resolvedPersonKey = normalizeBuildPersonnelName(resolved.trainee.fullName);
+          if (!startingFlightFtdCountByPersonKey.has(resolvedPersonKey)) {
+            startingFlightFtdCountByPersonKey.set(
+              resolvedPersonKey,
+              eventCounts.get(resolved.trainee.fullName)?.flightFtd || 0
+            );
+          }
+          const selectedCurrencyEventsForPerson = currencyEventCountByPersonKey.get(resolvedPersonKey) || 1;
+          const startingFlightFtdCount = startingFlightFtdCountByPersonKey.get(resolvedPersonKey) || 0;
+          const traineeFlightFtdLimitOverride = Math.max(
+            eventLimits.trainee.maxFlightFtd,
+            startingFlightFtdCount + selectedCurrencyEventsForPerson
+          );
+          const traineeTotalLimitOverride = Math.max(
+            eventLimits.trainee.maxTotal,
+            startingFlightFtdCount + selectedCurrencyEventsForPerson
+          );
           const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
           traceCurrencyPriority("candidateTrace", {
             phase: "syllabus-item-generated",
@@ -75298,6 +75333,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               preFlightTime: syllabusItem.preFlightTime,
               postFlightTime: syllabusItem.postFlightTime,
               sortieType: syllabusItem.sortieType
+            },
+            traineeEventLimitOverrides: {
+              startingFlightFtdCount,
+              selectedCurrencyEventsForPerson,
+              traineeFlightFtdLimitOverride,
+              traineeTotalLimitOverride
             }
           }, 3e3);
           if (time > endBoundary - syllabusItem.duration + 1e-3) {
@@ -75327,6 +75368,12 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               candidate: getCurrencyEventIdentity(priorityEvent),
               trainee: resolved.trainee.fullName,
               excludeInstructorNames: resolved.excludeInstructorNames,
+              traineeEventLimitOverrides: {
+                startingFlightFtdCount,
+                selectedCurrencyEventsForPerson,
+                traineeFlightFtdLimitOverride,
+                traineeTotalLimitOverride
+              },
               generatedEventsBeforeAttempt
             }, 3500);
             const result = scheduleEvent(
@@ -75345,6 +75392,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 priority: priorityEvent.priority,
                 excludeInstructorNames: resolved.excludeInstructorNames,
                 randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+                traineeFlightFtdLimitOverride,
+                traineeTotalLimitOverride,
                 diagnosticTrace: (entry) => {
                   scheduleEventTrace = entry;
                   traceCurrencyPriority("scheduleAttempts", {

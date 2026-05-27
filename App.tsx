@@ -4054,6 +4054,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         excludeInstructorNames?: string[];
         randomizeInstructorCandidates?: boolean;
         diagnosticTrace?: (entry: Record<string, any>) => void;
+        traineeFlightFtdLimitOverride?: number;
+        traineeTotalLimitOverride?: number;
     };
 
     const scheduleEvent = (
@@ -4173,11 +4175,17 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // the normal day-flight path rather than the BNF night pairing/window rules.
         const isBnfEvent = isNightPass && syllabusItem.code.startsWith('BNF') && syllabusItem.type === 'Flight' && !isRemedialSyllabusItem(syllabusItem);
         const bnfFlightLimit = isBnfEvent ? 2 : eventLimits.trainee.maxFlightFtd;
+        const traineeFlightFtdLimit = options.traineeFlightFtdLimitOverride ?? bnfFlightLimit;
 
         if (type === 'flight' || type === 'ftd') {
-             if (traineeCounts.flightFtd >= bnfFlightLimit) {
+             if (traineeCounts.flightFtd >= traineeFlightFtdLimit) {
                  if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_EVENT_LIMIT_EXCEEDED');
-                 return traceScheduleReject('TRAINEE_FLIGHT_FTD_LIMIT', { count: traineeCounts.flightFtd, limit: bnfFlightLimit });
+                 return traceScheduleReject('TRAINEE_FLIGHT_FTD_LIMIT', {
+                     count: traineeCounts.flightFtd,
+                     limit: traineeFlightFtdLimit,
+                     configuredLimit: bnfFlightLimit,
+                     overrideApplied: options.traineeFlightFtdLimitOverride !== undefined,
+                 });
              }
         } else {
              if (traineeCounts.ground >= 2) return traceScheduleReject('TRAINEE_GROUND_LIMIT', { count: traineeCounts.ground, limit: 2 });
@@ -4186,13 +4194,16 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         // Also check total event count for trainees (Flight + FTD + CPT + Ground = max 3 events for staff)
         // For BNF events, allow higher total limit to accommodate 2 night flights
         const bnfTotalLimit = isBnfEvent ? 4 : eventLimits.trainee.maxTotal;
-        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= bnfTotalLimit) {
+        const traineeTotalLimit = options.traineeTotalLimitOverride ?? bnfTotalLimit;
+        if ((traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt) >= traineeTotalLimit) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TOTAL_LIMIT_EXCEEDED');
             return traceScheduleReject('TRAINEE_TOTAL_LIMIT', {
                 flightFtd: traineeCounts.flightFtd,
                 ground: traineeCounts.ground,
                 cpt: traineeCounts.cpt,
-                limit: bnfTotalLimit,
+                limit: traineeTotalLimit,
+                configuredLimit: bnfTotalLimit,
+                overrideApplied: options.traineeTotalLimitOverride !== undefined,
             });
         }
 
@@ -5506,6 +5517,14 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const scheduleCurrencyPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
         const scheduledCurrencyDraftIds = new Set(generatedEvents.map(event => event.currencyDraftId).filter(Boolean));
         const getCurrencyEventPersonName = (event: ScheduleEvent): string => event.student || event.pilot || event.instructor || '';
+        const getCurrencyEventPersonKey = (event: ScheduleEvent): string => normalizeBuildPersonnelName(getCurrencyEventPersonName(event));
+        const currencyEventCountByPersonKey = eventsToSchedule.reduce<Map<string, number>>((counts, event) => {
+            const key = getCurrencyEventPersonKey(event);
+            if (!key) return counts;
+            counts.set(key, (counts.get(key) || 0) + 1);
+            return counts;
+        }, new Map());
+        const startingFlightFtdCountByPersonKey = new Map<string, number>();
         const getCurrencyEventIdentity = (event: ScheduleEvent) => ({
             id: event.id,
             type: event.type,
@@ -5532,6 +5551,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             total: eventsToSchedule.length,
             generatedEventsBeforeCurrencyPriority: generatedEvents.length,
             scheduledCurrencyDraftIdsAtStart: Array.from(scheduledCurrencyDraftIds),
+            selectedCurrencyEventCountByPerson: Array.from(currencyEventCountByPersonKey.entries()).map(([personKey, count]) => ({ personKey, count })),
             byType: {
                 flight: eventsToSchedule.filter(event => event.type === 'flight').map(getCurrencyEventIdentity),
                 ftd: eventsToSchedule.filter(event => event.type === 'ftd').map(getCurrencyEventIdentity),
@@ -5633,6 +5653,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                     if (!eventCounts.has(resolved.trainee.fullName)) {
                         eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
                     }
+                    const resolvedPersonKey = normalizeBuildPersonnelName(resolved.trainee.fullName);
+                    if (!startingFlightFtdCountByPersonKey.has(resolvedPersonKey)) {
+                        startingFlightFtdCountByPersonKey.set(
+                            resolvedPersonKey,
+                            eventCounts.get(resolved.trainee.fullName)?.flightFtd || 0
+                        );
+                    }
+                    const selectedCurrencyEventsForPerson = currencyEventCountByPersonKey.get(resolvedPersonKey) || 1;
+                    const startingFlightFtdCount = startingFlightFtdCountByPersonKey.get(resolvedPersonKey) || 0;
+                    const traineeFlightFtdLimitOverride = Math.max(
+                        eventLimits.trainee.maxFlightFtd,
+                        startingFlightFtdCount + selectedCurrencyEventsForPerson
+                    );
+                    const traineeTotalLimitOverride = Math.max(
+                        eventLimits.trainee.maxTotal,
+                        startingFlightFtdCount + selectedCurrencyEventsForPerson
+                    );
                     const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
                     traceCurrencyPriority('candidateTrace', {
                         phase: 'syllabus-item-generated',
@@ -5648,6 +5685,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             preFlightTime: syllabusItem.preFlightTime,
                             postFlightTime: syllabusItem.postFlightTime,
                             sortieType: syllabusItem.sortieType,
+                        },
+                        traineeEventLimitOverrides: {
+                            startingFlightFtdCount,
+                            selectedCurrencyEventsForPerson,
+                            traineeFlightFtdLimitOverride,
+                            traineeTotalLimitOverride,
                         },
                     }, 3000);
                     if (time > endBoundary - syllabusItem.duration + 0.001) {
@@ -5679,6 +5722,12 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             candidate: getCurrencyEventIdentity(priorityEvent),
                             trainee: resolved.trainee.fullName,
                             excludeInstructorNames: resolved.excludeInstructorNames,
+                            traineeEventLimitOverrides: {
+                                startingFlightFtdCount,
+                                selectedCurrencyEventsForPerson,
+                                traineeFlightFtdLimitOverride,
+                                traineeTotalLimitOverride,
+                            },
                             generatedEventsBeforeAttempt,
                         }, 3500);
                         const result = scheduleEvent(
@@ -5697,6 +5746,8 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 priority: priorityEvent.priority,
                                 excludeInstructorNames: resolved.excludeInstructorNames,
                                 randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+                                traineeFlightFtdLimitOverride,
+                                traineeTotalLimitOverride,
                                 diagnosticTrace: entry => {
                                     scheduleEventTrace = entry;
                                     traceCurrencyPriority('scheduleAttempts', {
