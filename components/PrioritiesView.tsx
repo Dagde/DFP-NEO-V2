@@ -40,6 +40,7 @@ interface PrioritiesViewProps {
   buildDfpDate: string;
   highestPriorityEvents: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
+  onAddPriorityEvents: (events: ScheduleEvent[]) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
   onDeletePriorityEvent: (eventId: string) => void;
   instructorPriority: InstructorPriorityConfig;
@@ -93,6 +94,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   buildDfpDate,
   highestPriorityEvents,
   onSelectEvent,
+  onAddPriorityEvents,
   onUpdatePriorityEvent,
   onDeletePriorityEvent,
   instructorPriority,
@@ -115,6 +117,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const aircraftLabel = resourceDisplayNames.aircraft;
   const ftdLabel = resourceDisplayNames.ftd;
   const cptLabel = resourceDisplayNames.cpt;
+  const staffRankOrder = ['WGCDR', 'SQNLDR', 'FLTLT', 'FLGOFF', 'PLTOFF', 'Mr'];
 
   // State for Course Priorities
   const courseDragItem = useRef<number | null>(null);
@@ -168,6 +171,141 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     }
     return options;
   }, []);
+
+  const [traineeCurrencyCourseSelection, setTraineeCurrencyCourseSelection] = useState<Set<string>>(new Set());
+  const [traineeCurrencySelection, setTraineeCurrencySelection] = useState<Set<number>>(new Set());
+  const [traineeCurrencyIncludeFlights, setTraineeCurrencyIncludeFlights] = useState(true);
+  const [traineeCurrencyIncludeSims, setTraineeCurrencyIncludeSims] = useState(true);
+  const [traineeCurrencyCrewMode, setTraineeCurrencyCrewMode] = useState<'withInstructor' | 'solo'>('withInstructor');
+  const [staffCurrencySelection, setStaffCurrencySelection] = useState<Set<number>>(new Set());
+  const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = useState(true);
+  const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = useState(true);
+  const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
+
+  const availableCurrencyCourses = useMemo(() => {
+    return Array.from(new Set(traineesData.map(t => t.course).filter(Boolean))).sort();
+  }, [traineesData]);
+
+  const isCurrencyDue = (person: { currencyStatus?: any[] }, currencyName: string) => {
+    const status = person.currencyStatus?.find(c => c.currencyName === currencyName);
+    if (!status) return true;
+    if (status.isInactive) return true;
+    if (status.isCurrent === false) return true;
+    if (status.calculatedExpiry && status.calculatedExpiry <= buildDfpDate) return true;
+    return false;
+  };
+
+  const getDueCurrencies = (person: { currencyStatus?: any[] }) => {
+    return currencyNames.filter(name => isCurrencyDue(person, name));
+  };
+
+  const traineeCurrencyRows = useMemo(() => {
+    return traineesData
+      .filter(t => !t.isPaused && traineeCurrencyCourseSelection.has(t.course))
+      .map(trainee => ({ trainee, dueCurrencies: getDueCurrencies(trainee) }))
+      .filter(row => row.dueCurrencies.length > 0)
+      .sort((a, b) => a.trainee.course.localeCompare(b.trainee.course) || a.trainee.name.localeCompare(b.trainee.name));
+  }, [traineesData, traineeCurrencyCourseSelection, currencyNames, buildDfpDate]);
+
+  const staffCurrencyRows = useMemo(() => {
+    return instructorsData
+      .map(instructor => ({ instructor, dueCurrencies: getDueCurrencies(instructor) }))
+      .filter(row => row.dueCurrencies.length > 0)
+      .sort((a, b) => {
+        const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
+        return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
+      });
+  }, [instructorsData, currencyNames, buildDfpDate]);
+
+  useEffect(() => {
+    setTraineeCurrencySelection(prev => {
+      const validIds = new Set(traineeCurrencyRows.map(row => row.trainee.idNumber));
+      return new Set(Array.from(prev).filter(id => validIds.has(id)));
+    });
+  }, [traineeCurrencyRows]);
+
+  useEffect(() => {
+    setStaffCurrencySelection(prev => {
+      if (prev.size > 0) {
+        const validIds = new Set(staffCurrencyRows.map(row => row.instructor.idNumber));
+        return new Set(Array.from(prev).filter(id => validIds.has(id)));
+      }
+      return prev;
+    });
+  }, [staffCurrencyRows]);
+
+  const toggleSetValue = <T,>(set: Set<T>, value: T) => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    return next;
+  };
+
+  const buildCurrencyPriorityEvents = (
+    audience: 'trainee' | 'staff',
+    people: { idNumber: number; name: string; fullName?: string; dueCurrencies: string[] }[],
+    includeFlights: boolean,
+    includeSims: boolean,
+    crewMode: 'withInstructor' | 'solo' | 'withOtherPilot'
+  ): ScheduleEvent[] => {
+    const events: ScheduleEvent[] = [];
+    people.forEach((person, personIndex) => {
+      const displayName = person.fullName || person.name;
+      const modeList: ('flight' | 'ftd')[] = [
+        ...(includeFlights ? ['flight' as const] : []),
+        ...(includeSims ? ['ftd' as const] : []),
+      ];
+      modeList.forEach((type, typeIndex) => {
+        const isSolo = crewMode === 'solo';
+        const startBase = type === 'flight' ? flyingStartTime : ftdStartTime;
+        const startTime = startBase + ((personIndex + typeIndex) % 6) * 0.25;
+        const event: ScheduleEvent = {
+          id: `currency-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${uuidv4()}`,
+          date: buildDfpDate,
+          type,
+          instructor: audience === 'trainee' && !isSolo ? 'TBA' : audience === 'staff' ? displayName : '',
+          student: audience === 'trainee' ? displayName : (!isSolo ? 'TBA' : ''),
+          pilot: audience === 'staff' || isSolo ? displayName : 'TBA',
+          flightNumber: 'CURR',
+          duration: type === 'flight' ? 1.2 : 1.5,
+          startTime,
+          resourceId: '',
+          color: 'bg-amber-500/80',
+          flightType: isSolo ? 'Solo' : 'Dual',
+          locationType: 'Local',
+          origin: school,
+          destination: school,
+          isTimeFixed: true,
+          eventCategory: 'currency',
+          currency: 'Currency',
+          priority: 'Medium',
+          notes: `Currency event required: ${person.dueCurrencies.join(', ')}`,
+        };
+        events.push(event);
+      });
+    });
+    return events;
+  };
+
+  const addTraineeCurrencyEventsToPriority = () => {
+    const selectedPeople = traineeCurrencyRows
+      .filter(row => traineeCurrencySelection.has(row.trainee.idNumber))
+      .map(row => ({ idNumber: row.trainee.idNumber, name: row.trainee.name, fullName: row.trainee.fullName, dueCurrencies: row.dueCurrencies }));
+    const events = buildCurrencyPriorityEvents('trainee', selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
+    if (events.length === 0) return;
+    onAddPriorityEvents(events);
+    logAudit('Priorities', 'Add', 'Added trainee currency events to Highest Priority queue', `${events.length} Currency event(s) added`);
+  };
+
+  const addStaffCurrencyEventsToPriority = () => {
+    const selectedPeople = staffCurrencyRows
+      .filter(row => staffCurrencySelection.has(row.instructor.idNumber))
+      .map(row => ({ idNumber: row.instructor.idNumber, name: row.instructor.name, dueCurrencies: row.dueCurrencies }));
+    const events = buildCurrencyPriorityEvents('staff', selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
+    if (events.length === 0) return;
+    onAddPriorityEvents(events);
+    logAudit('Priorities', 'Add', 'Added staff currency events to Highest Priority queue', `${events.length} Currency event(s) added`);
+  };
 
   // --- Course Priority Handlers ---
   const handleCourseDragStart = (index: number) => { courseDragItem.current = index; };
@@ -430,7 +568,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <td className="py-2 px-2 text-gray-300 font-semibold">{event.flightNumber}</td>
                         <td className="py-2 px-2 text-gray-300">{event.soloOrDual || event.flightType || 'N/A'}</td>
                         <td className="py-2 px-2 text-gray-300">{event.currency || 'N/A'}</td>
-                        <td className="py-2 px-2 text-gray-300 bg-yellow-100 text-gray-800 font-semibold">High</td>
+                        <td className={`py-2 px-2 font-semibold ${
+                            event.priority === 'Medium'
+                                ? 'text-amber-300'
+                                : event.priority === 'Low'
+                                    ? 'text-green-300'
+                                    : 'text-red-300'
+                        }`}>{event.priority || 'High'}</td>
                         <td className="py-2 px-2">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onDeletePriorityEvent(event.id); }} 
@@ -762,6 +906,191 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <div className="space-y-6">
                 <SctRequestTable type="flight" requests={sctFlights} />
                 <SctRequestTable type="ftd" requests={sctFtds} />
+            </div>
+        </div>
+
+        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div>
+                    <h2 className="text-xl font-semibold text-sky-400">Trainee Currency Events</h2>
+                    <p className="mt-1 text-xs text-slate-400">Select courses, review trainees with due currencies, then push selected Currency events into the Highest Priority queue.</p>
+                </div>
+                <button
+                    onClick={addTraineeCurrencyEventsToPriority}
+                    disabled={traineeCurrencySelection.size === 0 || (!traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims)}
+                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                    Add Selected to Queue
+                </button>
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+                <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Courses</p>
+                    <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1">
+                        {availableCurrencyCourses.map(course => {
+                            const courseRows = traineeCurrencyRows.filter(row => row.trainee.course === course);
+                            const courseIds = courseRows.map(row => row.trainee.idNumber);
+                            const selectedInCourse = courseIds.filter(id => traineeCurrencySelection.has(id)).length;
+                            const courseEnabled = traineeCurrencyCourseSelection.has(course);
+                            return (
+                                <label key={course} className="flex cursor-pointer items-start gap-2 rounded-md border border-slate-700 bg-slate-900/80 p-2 text-sm text-slate-200 hover:border-cyan-500/50">
+                                    <input
+                                        type="checkbox"
+                                        checked={courseEnabled}
+                                        onChange={() => {
+                                            setTraineeCurrencyCourseSelection(prev => {
+                                                const next = toggleSetValue(prev, course);
+                                                setTraineeCurrencySelection(current => {
+                                                    const updated = new Set(current);
+                                                    traineesData.filter(t => t.course === course).forEach(t => {
+                                                        if (next.has(course)) updated.add(t.idNumber);
+                                                        else updated.delete(t.idNumber);
+                                                    });
+                                                    return updated;
+                                                });
+                                                return next;
+                                            });
+                                        }}
+                                        className="mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                    />
+                                    <span>
+                                        <span className="block font-semibold">{course}</span>
+                                        <span className="text-xs text-slate-500">{courseEnabled ? `${selectedInCourse}/${courseIds.length} selected` : 'Not selected'}</span>
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <div className="mt-4 space-y-3 border-t border-slate-700 pt-4">
+                        <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Event Types</p>
+                            <label className="mr-4 inline-flex items-center gap-2 text-sm text-slate-300">
+                                <input type="checkbox" checked={traineeCurrencyIncludeFlights} onChange={e => setTraineeCurrencyIncludeFlights(e.target.checked)} className="h-4 w-4 rounded bg-slate-800 accent-cyan-500" />
+                                Flights
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                                <input type="checkbox" checked={traineeCurrencyIncludeSims} onChange={e => setTraineeCurrencyIncludeSims(e.target.checked)} className="h-4 w-4 rounded bg-slate-800 accent-cyan-500" />
+                                {ftdLabel}
+                            </label>
+                        </div>
+                        <div>
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Crew Mode</p>
+                            <select value={traineeCurrencyCrewMode} onChange={e => setTraineeCurrencyCrewMode(e.target.value as any)} className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white">
+                                <option value="withInstructor">With instructor</option>
+                                <option value="solo">Solo</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-slate-700">
+                    <table className="min-w-full text-sm">
+                        <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
+                            <tr>
+                                <th className="px-2 py-2 text-center">Add</th>
+                                <th className="px-2 py-2 text-left">Course</th>
+                                <th className="px-2 py-2 text-left">Trainee</th>
+                                <th className="px-2 py-2 text-left">Due Currencies</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700/60">
+                            {traineeCurrencyRows.length === 0 && (
+                                <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">Select a course to show trainees requiring Currency events.</td></tr>
+                            )}
+                            {traineeCurrencyRows.map(row => (
+                                <tr key={row.trainee.idNumber} className="hover:bg-sky-900/40">
+                                    <td className="px-2 py-2 text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={traineeCurrencySelection.has(row.trainee.idNumber)}
+                                            onChange={() => setTraineeCurrencySelection(prev => toggleSetValue(prev, row.trainee.idNumber))}
+                                            className="h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                        />
+                                    </td>
+                                    <td className="px-2 py-2 text-slate-300">{row.trainee.course}</td>
+                                    <td className="px-2 py-2 font-semibold text-white">{row.trainee.name}</td>
+                                    <td className="px-2 py-2 text-amber-200">{row.dueCurrencies.join(', ')}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                <div>
+                    <h2 className="text-xl font-semibold text-sky-400">Staff Currency Events</h2>
+                    <p className="mt-1 text-xs text-slate-400">Select staff with due currencies, then push selected Currency events into the Highest Priority queue.</p>
+                </div>
+                <button
+                    onClick={addStaffCurrencyEventsToPriority}
+                    disabled={staffCurrencySelection.size === 0 || (!staffCurrencyIncludeFlights && !staffCurrencyIncludeSims)}
+                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                    Add Selected to Queue
+                </button>
+            </div>
+            <div className="mb-4 flex flex-wrap items-end gap-4 rounded-lg border border-slate-700 bg-slate-950/70 p-4">
+                <button
+                    onClick={() => setStaffCurrencySelection(new Set(staffCurrencyRows.map(row => row.instructor.idNumber)))}
+                    className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
+                >
+                    Select All Staff
+                </button>
+                <button
+                    onClick={() => setStaffCurrencySelection(new Set())}
+                    className="rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
+                >
+                    Clear Staff
+                </button>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" checked={staffCurrencyIncludeFlights} onChange={e => setStaffCurrencyIncludeFlights(e.target.checked)} className="h-4 w-4 rounded bg-slate-800 accent-cyan-500" />
+                    Flights
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" checked={staffCurrencyIncludeSims} onChange={e => setStaffCurrencyIncludeSims(e.target.checked)} className="h-4 w-4 rounded bg-slate-800 accent-cyan-500" />
+                    {ftdLabel}
+                </label>
+                <label className="text-sm text-slate-300">
+                    <span className="mr-2 text-xs uppercase tracking-[0.16em] text-slate-500">Crew Mode</span>
+                    <select value={staffCurrencyCrewMode} onChange={e => setStaffCurrencyCrewMode(e.target.value as any)} className="rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white">
+                        <option value="withOtherPilot">With other pilot</option>
+                        <option value="solo">Solo</option>
+                    </select>
+                </label>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-slate-700">
+                <table className="min-w-full text-sm">
+                    <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
+                        <tr>
+                            <th className="px-2 py-2 text-center">Add</th>
+                            <th className="px-2 py-2 text-left">Rank</th>
+                            <th className="px-2 py-2 text-left">Staff</th>
+                            <th className="px-2 py-2 text-left">Due Currencies</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/60">
+                        {staffCurrencyRows.length === 0 && (
+                            <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">No staff currently require Currency events.</td></tr>
+                        )}
+                        {staffCurrencyRows.map(row => (
+                            <tr key={row.instructor.idNumber} className="hover:bg-sky-900/40">
+                                <td className="px-2 py-2 text-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={staffCurrencySelection.has(row.instructor.idNumber)}
+                                        onChange={() => setStaffCurrencySelection(prev => toggleSetValue(prev, row.instructor.idNumber))}
+                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                    />
+                                </td>
+                                <td className="px-2 py-2 text-slate-300">{row.instructor.rank}</td>
+                                <td className="px-2 py-2 font-semibold text-white">{row.instructor.name}</td>
+                                <td className="px-2 py-2 text-amber-200">{row.dueCurrencies.join(', ')}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
 

@@ -212,11 +212,14 @@ export interface ScheduleEvent {
     deploymentAircraftCount?: number;
       
       // Event Category field (for progressive display)
-      eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di';
+      eventCategory?: 'lmp_event' | 'lmp_currency' | 'sct' | 'staff_cat' | 'twr_di' | 'currency';
       
       // Additional fields for enhanced priority events display
       dateCreated?: string;
       notes?: string;
+      currency?: string;
+      priority?: 'High' | 'Medium' | 'Low';
+      soloOrDual?: 'Solo' | 'Dual';
       isSctRequest?: boolean;
   isAcademic?: boolean;   // Academic (theory) events — never modified or deleted by NEO Build
       academicTiles?: { lessonCode: string; label: string; startTime: number; duration: number; color: string; isStandard?: boolean }[]; // Inset lesson tiles for academic day tile

@@ -19265,6 +19265,9 @@ updates.forEach(update => {
                     buildDfpDate={buildDfpDate}
                     highestPriorityEvents={highestPriorityEvents}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
+                    onAddPriorityEvents={(eventsToAdd) => {
+                        setHighestPriorityEvents(prev => [...prev, ...eventsToAdd]);
+                    }}
                     onUpdatePriorityEvent={handleUpdatePriorityEvent}
                     onDeletePriorityEvent={handleDeletePriorityEvent}
                     instructorPriority={instructorPriority}
