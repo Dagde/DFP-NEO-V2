@@ -39,6 +39,7 @@ interface PrioritiesViewProps {
   traineesData: Trainee[];
   buildDfpDate: string;
   highestPriorityEvents: ScheduleEvent[];
+  activeScheduleEvents?: ScheduleEvent[];
   onSelectEvent: (event: ScheduleEvent) => void;
   onAddPriorityEvents: (events: ScheduleEvent[]) => void;
   onUpdatePriorityEvent: (eventId: string, updates: Partial<ScheduleEvent>) => void;
@@ -93,6 +94,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   traineesData,
   buildDfpDate,
   highestPriorityEvents,
+  activeScheduleEvents = [],
   onSelectEvent,
   onAddPriorityEvents,
   onUpdatePriorityEvent,
@@ -213,6 +215,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return Array.from(new Set(traineesData.map(t => t.course).filter(Boolean))).sort();
   }, [traineesData]);
 
+  const activeCurrencyDraftIds = useMemo(() => {
+    return new Set(
+      activeScheduleEvents
+        .filter(event => event.date === buildDfpDate && !!event.currencyDraftId)
+        .map(event => event.currencyDraftId as string)
+    );
+  }, [activeScheduleEvents, buildDfpDate]);
+
   const isCurrencyDue = (person: { currencyStatus?: any[] }, currencyName: string) => {
     const status = person.currencyStatus?.find(c => c.currencyName === currencyName);
     if (!status) return true;
@@ -311,19 +321,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return drafts.map((draft, index) => {
       const isSolo = draft.crewMode === 'solo';
       const startBase = draft.eventType === 'flight' ? flyingStartTime : ftdStartTime;
-      const startTime = startBase + (index % 6) * 0.25;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${uuidv4()}`,
         currencyDraftId: draft.id,
         date: buildDfpDate,
         type: draft.eventType,
-        instructor: draft.audience === 'trainee' && !isSolo ? 'TBA' : draft.audience === 'staff' ? draft.personName : '',
-        student: draft.audience === 'trainee' ? draft.personName : (!isSolo ? 'TBA' : ''),
-        pilot: draft.audience === 'staff' || isSolo ? draft.personName : 'TBA',
+        instructor: '',
+        student: draft.personName,
+        pilot: isSolo ? draft.personName : '',
         flightNumber: 'CURR',
         duration: draft.eventType === 'flight' ? 1.2 : 1.5,
-        startTime,
+        startTime: startBase,
         resourceId: '',
         color: 'bg-amber-500/80',
         flightType: isSolo ? 'Solo' : 'Dual',
@@ -1230,21 +1239,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         {currencyDraftEvents.length === 0 && (
                             <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
                         )}
-                        {currencyDraftEvents.map(draft => (
-                            <tr key={draft.id} className={`align-top hover:bg-sky-900/40 ${draft.pushed ? 'text-green-300' : ''}`}>
+                        {currencyDraftEvents.map(draft => {
+                            const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
+                            return (
+                            <tr key={draft.id} className={`align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? 'text-green-300' : ''}`}>
                                 <td className="px-2 py-2 text-center">
                                     <input
                                         type="checkbox"
                                         checked={draft.selected}
-                                        disabled={draft.pushed}
+                                        disabled={isPublishedInActiveSchedule}
                                         onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
                                         className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                                     />
                                 </td>
-                                <td className={`px-2 py-2 ${draft.pushed ? 'text-green-300' : 'text-slate-300'}`}>{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
-                                <td className={`px-2 py-2 font-semibold ${draft.pushed ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
-                                <td className={`px-2 py-2 ${draft.pushed ? 'text-green-300' : 'text-amber-200'}`}>{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
-                                <td className={`px-2 py-2 ${draft.pushed ? 'text-green-300' : 'text-slate-300'}`}>{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
+                                <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
+                                <td className={`px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
+                                <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-amber-200'}`}>{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
+                                <td className={`px-2 py-2 ${isPublishedInActiveSchedule ? 'text-green-300' : 'text-slate-300'}`}>{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
                                 <td className="px-2 py-2">
                                     <div className="relative">
                                         <button
@@ -1281,7 +1292,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </button>
                                 </td>
                             </tr>
-                        ))}
+                        )})}
                     </tbody>
                 </table>
             </div>

@@ -20552,6 +20552,7 @@ const PrioritiesView = ({
   traineesData,
   buildDfpDate,
   highestPriorityEvents,
+  activeScheduleEvents = [],
   onSelectEvent,
   onAddPriorityEvents,
   onUpdatePriorityEvent,
@@ -20640,6 +20641,11 @@ const PrioritiesView = ({
   const availableCurrencyCourses = reactExports.useMemo(() => {
     return Array.from(new Set(traineesData.map((t) => t.course).filter(Boolean))).sort();
   }, [traineesData]);
+  const activeCurrencyDraftIds = reactExports.useMemo(() => {
+    return new Set(
+      activeScheduleEvents.filter((event) => event.date === buildDfpDate && !!event.currencyDraftId).map((event) => event.currencyDraftId)
+    );
+  }, [activeScheduleEvents, buildDfpDate]);
   const isCurrencyDue = (person, currencyName) => {
     const status = person.currencyStatus?.find((c) => c.currencyName === currencyName);
     if (!status) return true;
@@ -20716,19 +20722,18 @@ const PrioritiesView = ({
     return drafts.map((draft, index) => {
       const isSolo = draft.crewMode === "solo";
       const startBase = draft.eventType === "flight" ? flyingStartTime : ftdStartTime;
-      const startTime = startBase + index % 6 * 0.25;
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(", ") : "";
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${v4()}`,
         currencyDraftId: draft.id,
         date: buildDfpDate,
         type: draft.eventType,
-        instructor: draft.audience === "trainee" && !isSolo ? "TBA" : draft.audience === "staff" ? draft.personName : "",
-        student: draft.audience === "trainee" ? draft.personName : !isSolo ? "TBA" : "",
-        pilot: draft.audience === "staff" || isSolo ? draft.personName : "TBA",
+        instructor: "",
+        student: draft.personName,
+        pilot: isSolo ? draft.personName : "",
         flightNumber: "CURR",
         duration: draft.eventType === "flight" ? 1.2 : 1.5,
-        startTime,
+        startTime: startBase,
         resourceId: "",
         color: "bg-amber-500/80",
         flightType: isSolo ? "Solo" : "Dual",
@@ -21550,52 +21555,55 @@ const PrioritiesView = ({
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
             currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
-            currencyDraftEvents.map((draft) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${draft.pushed ? "text-green-300" : ""}`, children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "input",
-                {
-                  type: "checkbox",
-                  checked: draft.selected,
-                  disabled: draft.pushed,
-                  onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
-                  className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
-                }
-              ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${draft.pushed ? "text-green-300" : "text-slate-300"}`, children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${draft.pushed ? "text-green-300" : "text-white"}`, children: draft.personName }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${draft.pushed ? "text-green-300" : "text-amber-200"}`, children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${draft.pushed ? "text-green-300" : "text-slate-300"}`, children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  "button",
+            currencyDraftEvents.map((draft) => {
+              const isPublishedInActiveSchedule = activeCurrencyDraftIds.has(draft.id);
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${isPublishedInActiveSchedule ? "text-green-300" : ""}`, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "input",
                   {
-                    onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
-                    className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-cyan-500/60",
-                    children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select currencies"
+                    type: "checkbox",
+                    checked: draft.selected,
+                    disabled: isPublishedInActiveSchedule,
+                    onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
+                    className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                   }
-                ),
-                openCurrencyDraftId === draft.id && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
+                ) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${isPublishedInActiveSchedule ? "text-green-300" : "text-white"}`, children: draft.personName }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-amber-200"}`, children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${isPublishedInActiveSchedule ? "text-green-300" : "text-slate-300"}`, children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
-                    "input",
+                    "button",
                     {
-                      type: "checkbox",
-                      checked: draft.selectedCurrencies.includes(currency),
-                      onChange: () => toggleDraftCurrency(draft.id, currency),
-                      className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                      onClick: () => setOpenCurrencyDraftId((prev) => prev === draft.id ? null : draft.id),
+                      className: "rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-cyan-500/60",
+                      children: draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : "Select currencies"
                     }
                   ),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currency })
-                ] }, currency)) })
-              ] }) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
-                  className: "rounded-md border border-red-500/30 px-2 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10",
-                  children: "Remove"
-                }
-              ) })
-            ] }, draft.id))
+                  openCurrencyDraftId === draft.id && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl", children: draft.dueCurrencies.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-slate-500", children: "No due currencies listed." }) : draft.dueCurrencies.map((currency) => /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "input",
+                      {
+                        type: "checkbox",
+                        checked: draft.selectedCurrencies.includes(currency),
+                        onChange: () => toggleDraftCurrency(draft.id, currency),
+                        className: "mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: currency })
+                  ] }, currency)) })
+                ] }) }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-right", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => setCurrencyDraftEvents((prev) => prev.filter((event) => event.id !== draft.id)),
+                    className: "rounded-md border border-red-500/30 px-2 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10",
+                    children: "Remove"
+                  }
+                ) })
+              ] }, draft.id);
+            })
           ] })
         ] }) })
       ] }),
@@ -72629,6 +72637,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     const existingWindow = getPriorityBookingWindow(existing);
     return candidateWindow.start < existingWindow.end && candidateWindow.end > existingWindow.start;
   };
+  const isCurrencyPriorityEvent = (event) => {
+    return event.eventCategory === "currency" || !!event.currencyDraftId || event.flightNumber === "CURR";
+  };
   const remedialInstructorOverrideKey = (traineeName, eventCode) => `${normalizeBuildPersonnelName(traineeName)}::${normalizeLmpEventId(eventCode || "")}`;
   const remedialInstructorOverrides = /* @__PURE__ */ new Map();
   highestPriorityEvents.forEach((event) => {
@@ -72951,6 +72962,11 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     buildDebugLog(`DEBUG Checking event: ${event.flightNumber} - ${event.student || event.pilot || "N/A"} (ID: ${event.id})`);
     buildDebugLog(`  - event.date: ${event.date}, buildDate: ${buildDate}, match: ${event.date === buildDate}`);
     buildDebugLog(`  - event.isTimeFixed: ${event.isTimeFixed}`);
+    if (isCurrencyPriorityEvent(event)) {
+      skippedCount++;
+      buildDebugLog(`  ↷ DEBUG QUEUED currency priority event for normal rule scheduling: ${event.flightNumber} - ${event.student || event.pilot || "N/A"}`);
+      return;
+    }
     if (isMandatoryRemedialFlight(event)) {
       skippedCount++;
       buildDebugLog(`  ↷ DEBUG QUEUED mandatory remedial flight for normal scheduling after 1000: ${event.flightNumber} - ${event.student || event.pilot || "N/A"}`);
@@ -74179,6 +74195,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       if (!requiredRemedialInstructor) {
         candidates = candidates.filter((ip) => isInstructorEligibleByUnit(ip, traineeForCheck));
       }
+      if (options.excludeInstructorNames && options.excludeInstructorNames.length > 0) {
+        const excludedNames = new Set(options.excludeInstructorNames.map(normalizeBuildPersonnelName));
+        candidates = candidates.filter((ip) => !excludedNames.has(normalizeBuildPersonnelName(ip.name)));
+      }
       const _afterUnitFilter = candidates.length;
       const workloadOf = (i) => {
         const c = eventCounts.get(i.name);
@@ -74234,6 +74254,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         const sameUnit = candidates.filter((i) => normalizeUnit(i.unit || "") === traineeBase).sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
         const otherUnit = candidates.filter((i) => normalizeUnit(i.unit || "") !== traineeBase).sort((a, b) => workloadOf(a) - workloadOf(b) || a.name.localeCompare(b.name));
         candidates = [...sameUnit, ...otherUnit];
+      }
+      if (options.randomizeInstructorCandidates) {
+        candidates = [...candidates].sort(() => Math.random() - 0.5);
       }
       const _candidatesEnteringLoop = candidates.length;
       if (isTracedRemedialAttempt) {
@@ -74703,7 +74726,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
     }
     const result = {
-      id: v4(),
+      id: options.eventId || v4(),
       type,
       instructor: isSoloFlight ? "" : instructor?.name || "",
       student: trainee.fullName,
@@ -74721,6 +74744,9 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       preStart: syllabusItem.preFlightTime,
       postEnd: syllabusItem.postFlightTime,
       dayNight: syllabusItem.dayNight,
+      currencyDraftId: options.currencyDraftId,
+      currency: options.currency,
+      priority: options.priority,
       formationId: options.formationGroupId,
       formationType: options.formationGroupId ? "Multi-Resource" : void 0,
       formationPosition: options.formationPosition,
@@ -74987,6 +75013,122 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     }
   } else if (nextEventLists.bnf.length >= 2 && !nightDutySup) {
     buildDebugLog("WARNING: Night flying scheduled but no night duty supervisor available!");
+  }
+  const currencyPriorityEvents = highestPriorityEvents.filter(
+    (event) => isCurrencyPriorityEvent(event) && event.date === buildDate && (event.type === "flight" || event.type === "ftd")
+  );
+  const getCurrencyPriorityPerson = (event) => {
+    const personName = event.student || event.pilot || event.instructor || "";
+    if (!personName) return null;
+    const trainee = trainees.find((t) => t.fullName === personName || t.name === personName);
+    if (trainee) return { trainee, excludeInstructorNames: [] };
+    const staff = instructors.find((i) => i.name === personName);
+    if (!staff) return null;
+    return {
+      trainee: {
+        idNumber: staff.idNumber,
+        fullName: staff.name,
+        name: staff.name,
+        rank: "FLTLT",
+        course: "Staff",
+        seatConfig: staff.seatConfig,
+        isPaused: false,
+        unit: staff.unit || "",
+        flight: staff.flight,
+        service: staff.service,
+        unavailability: staff.unavailability || [],
+        location: staff.location
+      },
+      excludeInstructorNames: [staff.name]
+    };
+  };
+  const makeCurrencySyllabusItem = (event) => ({
+    id: "CURR",
+    code: "CURR",
+    phase: "Currency",
+    module: "Currency",
+    dayNight: "Day",
+    eventDescription: "Currency",
+    prerequisites: [],
+    prerequisitesGround: [],
+    prerequisitesFlying: [],
+    eventDetailsCommon: [],
+    eventDetailsSortie: [],
+    totalEventHours: event.duration || (event.type === "flight" ? 1.2 : 1.5),
+    flightOrSimHours: event.duration || (event.type === "flight" ? 1.2 : 1.5),
+    duration: event.duration || (event.type === "flight" ? 1.2 : 1.5),
+    preFlightTime: event.preStart || 0,
+    postFlightTime: event.postEnd || 0,
+    type: event.type === "flight" ? "Flight" : "FTD",
+    sortieType: event.flightType || "Dual",
+    twrDiReqd: "NO",
+    methodOfDelivery: [],
+    methodOfAssessment: [],
+    resourcesPhysical: [],
+    resourcesHuman: [],
+    location: school,
+    courses: []
+  });
+  const scheduleCurrencyPriorityEvents = (eventsToSchedule) => {
+    const scheduledCurrencyDraftIds = new Set(generatedEvents.map((event) => event.currencyDraftId).filter(Boolean));
+    for (const priorityEvent of eventsToSchedule) {
+      if (priorityEvent.currencyDraftId && scheduledCurrencyDraftIds.has(priorityEvent.currencyDraftId)) continue;
+      const resolved = getCurrencyPriorityPerson(priorityEvent);
+      if (!resolved) {
+        buildDebugLog(`[Currency Priority] Skipped ${priorityEvent.id}: no matching trainee/staff person found`);
+        continue;
+      }
+      if (!eventCounts.has(resolved.trainee.fullName)) {
+        eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
+      }
+      const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
+      const startBoundary = priorityEvent.type === "flight" ? flyingStartTime : ftdStartTime;
+      const endBoundary = priorityEvent.type === "flight" ? flyingEndTime : ftdEndTime;
+      const timeIncrement = priorityEvent.type === "flight" ? 5 / 60 : 15 / 60;
+      const passModes = priorityEnabled && (anySoftGroup || anyHardGroup) && priorityEvent.type !== "ftd" ? [true, false] : [false];
+      let placed = false;
+      for (const primaryOnly of passModes) {
+        if (placed) break;
+        for (let time = startBoundary; time <= endBoundary - syllabusItem.duration + 1e-3; time += timeIncrement) {
+          const result = scheduleEvent(
+            resolved.trainee,
+            syllabusItem,
+            time,
+            priorityEvent.type,
+            false,
+            false,
+            primaryOnly,
+            false,
+            {
+              eventId: priorityEvent.id,
+              currencyDraftId: priorityEvent.currencyDraftId,
+              currency: priorityEvent.currency,
+              priority: priorityEvent.priority,
+              excludeInstructorNames: resolved.excludeInstructorNames,
+              randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0
+            }
+          );
+          if (result && typeof result === "object" && "id" in result) {
+            generatedEvents.push({ ...result, _source: "highest-priority-currency", _isNext: true, _traineeName: resolved.trainee.fullName });
+            const tCounts = eventCounts.get(resolved.trainee.fullName);
+            const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+            if (tCounts) tCounts.flightFtd++;
+            if (ipCounts) ipCounts.flightFtd++;
+            if (priorityEvent.currencyDraftId) scheduledCurrencyDraftIds.add(priorityEvent.currencyDraftId);
+            placed = true;
+            buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${priorityEvent.type} at ${time.toFixed(2)} on ${result.resourceId}`);
+            break;
+          }
+        }
+      }
+      if (!placed) {
+        buildDebugLog(`[Currency Priority] Unable to schedule ${resolved.trainee.fullName} ${priorityEvent.type} under normal scheduling rules`);
+      }
+    }
+  };
+  if (currencyPriorityEvents.length > 0) {
+    recordProgress({ message: "Scheduling Currency Priority Events...", percentage: 44 });
+    scheduleCurrencyPriorityEvents(currencyPriorityEvents);
   }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
@@ -85880,6 +86022,7 @@ ${conflictLines.join("\n")}${moreText}`,
             traineesData,
             buildDfpDate,
             highestPriorityEvents,
+            activeScheduleEvents: events,
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             onAddPriorityEvents: (eventsToAdd) => {
               setHighestPriorityEvents((prev) => [...prev, ...eventsToAdd]);
