@@ -177,10 +177,26 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [traineeCurrencyIncludeFlights, setTraineeCurrencyIncludeFlights] = useState(true);
   const [traineeCurrencyIncludeSims, setTraineeCurrencyIncludeSims] = useState(true);
   const [traineeCurrencyCrewMode, setTraineeCurrencyCrewMode] = useState<'withInstructor' | 'solo'>('withInstructor');
+  const [isTraineeCurrencyBuilderOpen, setIsTraineeCurrencyBuilderOpen] = useState(false);
   const [staffCurrencySelection, setStaffCurrencySelection] = useState<Set<number>>(new Set());
   const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = useState(true);
   const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = useState(true);
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
+  const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = useState(false);
+  const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
+  const [currencyDraftEvents, setCurrencyDraftEvents] = useState<Array<{
+    id: string;
+    audience: 'trainee' | 'staff';
+    personId: number;
+    personName: string;
+    course?: string;
+    rank?: string;
+    eventType: 'flight' | 'ftd';
+    crewMode: 'withInstructor' | 'solo' | 'withOtherPilot';
+    dueCurrencies: string[];
+    selectedCurrencies: string[];
+    selected: boolean;
+  }>>([]);
 
   const availableCurrencyCourses = useMemo(() => {
     return Array.from(new Set(traineesData.map(t => t.course).filter(Boolean))).sort();
@@ -241,14 +257,14 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     return next;
   };
 
-  const buildCurrencyPriorityEvents = (
+  const buildCurrencyDraftEvents = (
     audience: 'trainee' | 'staff',
-    people: { idNumber: number; name: string; fullName?: string; dueCurrencies: string[] }[],
+    people: { idNumber: number; name: string; fullName?: string; course?: string; rank?: string; dueCurrencies: string[] }[],
     includeFlights: boolean,
     includeSims: boolean,
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot'
-  ): ScheduleEvent[] => {
-    const events: ScheduleEvent[] = [];
+  ) => {
+    const events: typeof currencyDraftEvents = [];
     people.forEach((person, personIndex) => {
       const displayName = person.fullName || person.name;
       const modeList: ('flight' | 'ftd')[] = [
@@ -256,55 +272,91 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
         ...(includeSims ? ['ftd' as const] : []),
       ];
       modeList.forEach((type, typeIndex) => {
-        const isSolo = crewMode === 'solo';
-        const startBase = type === 'flight' ? flyingStartTime : ftdStartTime;
-        const startTime = startBase + ((personIndex + typeIndex) % 6) * 0.25;
-        const event: ScheduleEvent = {
-          id: `currency-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${uuidv4()}`,
-          date: buildDfpDate,
-          type,
-          instructor: audience === 'trainee' && !isSolo ? 'TBA' : audience === 'staff' ? displayName : '',
-          student: audience === 'trainee' ? displayName : (!isSolo ? 'TBA' : ''),
-          pilot: audience === 'staff' || isSolo ? displayName : 'TBA',
-          flightNumber: 'CURR',
-          duration: type === 'flight' ? 1.2 : 1.5,
-          startTime,
-          resourceId: '',
-          color: 'bg-amber-500/80',
-          flightType: isSolo ? 'Solo' : 'Dual',
-          locationType: 'Local',
-          origin: school,
-          destination: school,
-          isTimeFixed: true,
-          eventCategory: 'currency',
-          currency: 'Currency',
-          priority: 'Medium',
-          notes: `Currency event required: ${person.dueCurrencies.join(', ')}`,
-        };
-        events.push(event);
+        events.push({
+          id: `currency-draft-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${uuidv4()}`,
+          audience,
+          personId: person.idNumber,
+          personName: displayName,
+          course: person.course,
+          rank: person.rank,
+          eventType: type,
+          crewMode,
+          dueCurrencies: person.dueCurrencies,
+          selectedCurrencies: [],
+          selected: true,
+        });
       });
     });
     return events;
   };
 
+  const buildCurrencyPriorityEventsFromDrafts = (drafts: typeof currencyDraftEvents): ScheduleEvent[] => {
+    return drafts.map((draft, index) => {
+      const isSolo = draft.crewMode === 'solo';
+      const startBase = draft.eventType === 'flight' ? flyingStartTime : ftdStartTime;
+      const startTime = startBase + (index % 6) * 0.25;
+      const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
+      return {
+        id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${uuidv4()}`,
+        date: buildDfpDate,
+        type: draft.eventType,
+        instructor: draft.audience === 'trainee' && !isSolo ? 'TBA' : draft.audience === 'staff' ? draft.personName : '',
+        student: draft.audience === 'trainee' ? draft.personName : (!isSolo ? 'TBA' : ''),
+        pilot: draft.audience === 'staff' || isSolo ? draft.personName : 'TBA',
+        flightNumber: 'CURR',
+        duration: draft.eventType === 'flight' ? 1.2 : 1.5,
+        startTime,
+        resourceId: '',
+        color: 'bg-amber-500/80',
+        flightType: isSolo ? 'Solo' : 'Dual',
+        locationType: 'Local',
+        origin: school,
+        destination: school,
+        isTimeFixed: true,
+        eventCategory: 'currency',
+        currency: selectedCurrencyText || 'Currency',
+        priority: 'Medium',
+        notes: selectedCurrencyText ? `Currency event required: ${selectedCurrencyText}` : 'Currency event required',
+      };
+    });
+  };
+
   const addTraineeCurrencyEventsToPriority = () => {
     const selectedPeople = traineeCurrencyRows
       .filter(row => traineeCurrencySelection.has(row.trainee.idNumber))
-      .map(row => ({ idNumber: row.trainee.idNumber, name: row.trainee.name, fullName: row.trainee.fullName, dueCurrencies: row.dueCurrencies }));
-    const events = buildCurrencyPriorityEvents('trainee', selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
+      .map(row => ({ idNumber: row.trainee.idNumber, name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
+    const events = buildCurrencyDraftEvents('trainee', selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
     if (events.length === 0) return;
-    onAddPriorityEvents(events);
-    logAudit('Priorities', 'Add', 'Added trainee currency events to Highest Priority queue', `${events.length} Currency event(s) added`);
+    setCurrencyDraftEvents(prev => [...prev, ...events]);
+    logAudit('Priorities', 'Build', 'Built trainee currency event review list', `${events.length} Currency event(s) staged`);
   };
 
   const addStaffCurrencyEventsToPriority = () => {
     const selectedPeople = staffCurrencyRows
       .filter(row => staffCurrencySelection.has(row.instructor.idNumber))
-      .map(row => ({ idNumber: row.instructor.idNumber, name: row.instructor.name, dueCurrencies: row.dueCurrencies }));
-    const events = buildCurrencyPriorityEvents('staff', selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
+      .map(row => ({ idNumber: row.instructor.idNumber, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
+    const events = buildCurrencyDraftEvents('staff', selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
     if (events.length === 0) return;
-    onAddPriorityEvents(events);
-    logAudit('Priorities', 'Add', 'Added staff currency events to Highest Priority queue', `${events.length} Currency event(s) added`);
+    setCurrencyDraftEvents(prev => [...prev, ...events]);
+    logAudit('Priorities', 'Build', 'Built staff currency event review list', `${events.length} Currency event(s) staged`);
+  };
+
+  const pushSelectedCurrencyDraftsToPriority = () => {
+    const selectedDrafts = currencyDraftEvents.filter(event => event.selected);
+    const priorityEvents = buildCurrencyPriorityEventsFromDrafts(selectedDrafts);
+    if (priorityEvents.length === 0) return;
+    onAddPriorityEvents(priorityEvents);
+    setCurrencyDraftEvents(prev => prev.filter(event => !event.selected));
+    setOpenCurrencyDraftId(null);
+    logAudit('Priorities', 'Add', 'Added reviewed currency events to Highest Priority queue', `${priorityEvents.length} Currency event(s) added`);
+  };
+
+  const toggleDraftCurrency = (draftId: string, currencyName: string) => {
+    setCurrencyDraftEvents(prev => prev.map(event => {
+      if (event.id !== draftId) return event;
+      const nextCurrencies = toggleSetValue(new Set(event.selectedCurrencies), currencyName);
+      return { ...event, selectedCurrencies: Array.from(nextCurrencies) };
+    }));
   };
 
   // --- Course Priority Handlers ---
@@ -913,17 +965,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Trainee Currency Events</h2>
-                    <p className="mt-1 text-xs text-slate-400">Select courses, review trainees with due currencies, then push selected Currency events into the Highest Priority queue.</p>
+                    <p className="mt-1 text-xs text-slate-400">Open the builder, select courses and trainees, then build a consolidated currency event review list.</p>
                 </div>
                 <button
-                    onClick={addTraineeCurrencyEventsToPriority}
-                    disabled={traineeCurrencySelection.size === 0 || (!traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims)}
-                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                    onClick={() => setIsTraineeCurrencyBuilderOpen(prev => !prev)}
+                    className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
                 >
-                    Add Selected to Queue
+                    {isTraineeCurrencyBuilderOpen ? 'Hide Builder' : 'Build Trainee Currency Events'}
                 </button>
             </div>
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
+            {isTraineeCurrencyBuilderOpen && <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
                 <div className="rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Courses</p>
                     <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1">
@@ -983,6 +1034,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     </div>
                 </div>
                 <div className="overflow-x-auto rounded-lg border border-slate-700">
+                    <div className="flex items-center justify-between border-b border-slate-700 bg-slate-950/60 px-3 py-2">
+                        <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Selected Trainees</span>
+                        <button
+                            onClick={addTraineeCurrencyEventsToPriority}
+                            disabled={traineeCurrencySelection.size === 0 || (!traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims)}
+                            className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                        >
+                            Add to Consolidated List
+                        </button>
+                    </div>
                     <table className="min-w-full text-sm">
                         <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
                             <tr>
@@ -1014,23 +1075,23 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div>}
         </div>
 
         <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                     <h2 className="text-xl font-semibold text-sky-400">Staff Currency Events</h2>
-                    <p className="mt-1 text-xs text-slate-400">Select staff with due currencies, then push selected Currency events into the Highest Priority queue.</p>
+                    <p className="mt-1 text-xs text-slate-400">Open the builder, select staff, then build a consolidated currency event review list.</p>
                 </div>
                 <button
-                    onClick={addStaffCurrencyEventsToPriority}
-                    disabled={staffCurrencySelection.size === 0 || (!staffCurrencyIncludeFlights && !staffCurrencyIncludeSims)}
-                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                    onClick={() => setIsStaffCurrencyBuilderOpen(prev => !prev)}
+                    className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
                 >
-                    Add Selected to Queue
+                    {isStaffCurrencyBuilderOpen ? 'Hide Builder' : 'Build Staff Currency Events'}
                 </button>
             </div>
+            {isStaffCurrencyBuilderOpen && <>
             <div className="mb-4 flex flex-wrap items-end gap-4 rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                 <button
                     onClick={() => setStaffCurrencySelection(new Set(staffCurrencyRows.map(row => row.instructor.idNumber)))}
@@ -1059,6 +1120,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <option value="solo">Solo</option>
                     </select>
                 </label>
+                <button
+                    onClick={addStaffCurrencyEventsToPriority}
+                    disabled={staffCurrencySelection.size === 0 || (!staffCurrencyIncludeFlights && !staffCurrencyIncludeSims)}
+                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                    Add to Consolidated List
+                </button>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-700">
                 <table className="min-w-full text-sm">
@@ -1087,6 +1155,94 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <td className="px-2 py-2 text-slate-300">{row.instructor.rank}</td>
                                 <td className="px-2 py-2 font-semibold text-white">{row.instructor.name}</td>
                                 <td className="px-2 py-2 text-amber-200">{row.dueCurrencies.join(', ')}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            </>}
+        </div>
+
+        <div className="rounded-lg border border-cyan-500/25 bg-slate-900 shadow-lg p-6">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h2 className="text-xl font-semibold text-sky-400">Consolidated Currency Event Build</h2>
+                    <p className="mt-1 text-xs text-slate-400">Review built Currency events, optionally tick the currencies being satisfied, then send selected rows to Highest Priority.</p>
+                </div>
+                <button
+                    onClick={pushSelectedCurrencyDraftsToPriority}
+                    disabled={currencyDraftEvents.filter(event => event.selected).length === 0}
+                    className="rounded-md bg-amber-500 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                    Push Selected to Highest Priority
+                </button>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-slate-700">
+                <table className="min-w-full text-sm">
+                    <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
+                        <tr>
+                            <th className="px-2 py-2 text-center">Push</th>
+                            <th className="px-2 py-2 text-left">Group</th>
+                            <th className="px-2 py-2 text-left">Person</th>
+                            <th className="px-2 py-2 text-left">Event</th>
+                            <th className="px-2 py-2 text-left">Crew</th>
+                            <th className="px-2 py-2 text-left">Currencies</th>
+                            <th className="px-2 py-2 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/60">
+                        {currencyDraftEvents.length === 0 && (
+                            <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
+                        )}
+                        {currencyDraftEvents.map(draft => (
+                            <tr key={draft.id} className="align-top hover:bg-sky-900/40">
+                                <td className="px-2 py-2 text-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={draft.selected}
+                                        onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
+                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                    />
+                                </td>
+                                <td className="px-2 py-2 text-slate-300">{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
+                                <td className="px-2 py-2 font-semibold text-white">{draft.personName}</td>
+                                <td className="px-2 py-2 text-amber-200">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
+                                <td className="px-2 py-2 text-slate-300">{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'With instructor' : 'With other pilot'}</td>
+                                <td className="px-2 py-2">
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setOpenCurrencyDraftId(prev => prev === draft.id ? null : draft.id)}
+                                            className="rounded-md border border-slate-600 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-cyan-500/60"
+                                        >
+                                            {draft.selectedCurrencies.length > 0 ? `${draft.selectedCurrencies.length} selected` : 'Select currencies'}
+                                        </button>
+                                        {openCurrencyDraftId === draft.id && (
+                                            <div className="absolute z-20 mt-2 max-h-56 w-72 overflow-y-auto rounded-lg border border-slate-600 bg-slate-950 p-3 shadow-xl">
+                                                {draft.dueCurrencies.length === 0 ? (
+                                                    <p className="text-xs text-slate-500">No due currencies listed.</p>
+                                                ) : draft.dueCurrencies.map(currency => (
+                                                    <label key={currency} className="mb-2 flex cursor-pointer items-start gap-2 text-xs text-slate-200 last:mb-0">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={draft.selectedCurrencies.includes(currency)}
+                                                            onChange={() => toggleDraftCurrency(draft.id, currency)}
+                                                            className="mt-0.5 h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                                        />
+                                                        <span>{currency}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="px-2 py-2 text-right">
+                                    <button
+                                        onClick={() => setCurrencyDraftEvents(prev => prev.filter(event => event.id !== draft.id))}
+                                        className="rounded-md border border-red-500/30 px-2 py-1 text-xs font-semibold text-red-300 hover:bg-red-500/10"
+                                    >
+                                        Remove
+                                    </button>
+                                </td>
                             </tr>
                         ))}
                     </tbody>
