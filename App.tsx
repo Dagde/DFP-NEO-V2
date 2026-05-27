@@ -11366,6 +11366,12 @@ const App: React.FC = () => {
 
         // ── DATA TRACKING: log what's causing red tiles ──────────────────────────────────
         if (newConflicts.size > 0) {
+            const allPersonnel: (Instructor | Trainee)[] = [...allInstructorsData, ...allTraineesData];
+            const personMap = new Map<string, Instructor | Trainee>();
+            allPersonnel.forEach(p => {
+                personMap.set('fullName' in p ? p.fullName : p.name, p);
+            });
+
             console.group('[UnavailConflicts] ' + newConflicts.size + ' tile(s) are red on ' + (eventsForDate?.[0]?.date || 'unknown date'));
             newConflicts.forEach((names, eventId) => {
                 const evt = eventsToCheck.find(e => e.id === eventId);
@@ -11393,7 +11399,7 @@ const App: React.FC = () => {
         // ─────────────────────────────────────────────────────────────────────────────────
 
         return newConflicts;
-    }, [eventsForDate, calculateUnavailabilityConflictsForEvents]);
+    }, [eventsForDate, calculateUnavailabilityConflictsForEvents, allInstructorsData, allTraineesData]);
 
     const nextDayUnavailabilityConflicts = useMemo(() => {
         const eventsToCheck = (nextDayBuildEvents || []).map(event => ({

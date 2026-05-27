@@ -79008,9 +79008,9 @@ ${"=".repeat(60)}`);
   const calculateUnavailabilityConflictsForEvents = reactExports.useCallback((eventsToCheck) => {
     const newConflicts = /* @__PURE__ */ new Map();
     const allPersonnel = [...allInstructorsData, ...allTraineesData];
-    const personMap2 = /* @__PURE__ */ new Map();
+    const personMap = /* @__PURE__ */ new Map();
     allPersonnel.forEach((p) => {
-      personMap2.set("fullName" in p ? p.fullName : p.name, p);
+      personMap.set("fullName" in p ? p.fullName : p.name, p);
     });
     for (const event of eventsToCheck) {
       if (event.type === "deployment") {
@@ -79023,7 +79023,7 @@ ${"=".repeat(60)}`);
       const eventStartUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.start * 60));
       const eventEndUTC = new Date(Date.UTC(eventYear, eventMonth - 1, eventDay, 0, eventWindow.end * 60));
       for (const name of personnelNames) {
-        const person = personMap2.get(name);
+        const person = personMap.get(name);
         if (!person || !person.unavailability || person.unavailability.length === 0) continue;
         for (const period of person.unavailability) {
           const [startYear, startMonth, startDay] = period.startDate.split("-").map(Number);
@@ -79064,6 +79064,11 @@ ${"=".repeat(60)}`);
     const eventsToCheck = eventsForDate || [];
     const newConflicts = calculateUnavailabilityConflictsForEvents(eventsToCheck);
     if (newConflicts.size > 0) {
+      const allPersonnel = [...allInstructorsData, ...allTraineesData];
+      const personMap = /* @__PURE__ */ new Map();
+      allPersonnel.forEach((p) => {
+        personMap.set("fullName" in p ? p.fullName : p.name, p);
+      });
       console.group("[UnavailConflicts] " + newConflicts.size + " tile(s) are red on " + (eventsForDate?.[0]?.date || "unknown date"));
       newConflicts.forEach((names, eventId) => {
         const evt = eventsToCheck.find((e) => e.id === eventId);
@@ -79086,7 +79091,7 @@ ${"=".repeat(60)}`);
       console.log("[UnavailConflicts] No conflicts on", eventsForDate?.[0]?.date || "unknown date");
     }
     return newConflicts;
-  }, [eventsForDate, calculateUnavailabilityConflictsForEvents]);
+  }, [eventsForDate, calculateUnavailabilityConflictsForEvents, allInstructorsData, allTraineesData]);
   const nextDayUnavailabilityConflicts = reactExports.useMemo(() => {
     const eventsToCheck = (nextDayBuildEvents || []).map((event) => ({
       ...event,
