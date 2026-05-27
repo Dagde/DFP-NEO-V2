@@ -20627,7 +20627,16 @@ const PrioritiesView = ({
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = reactExports.useState("withOtherPilot");
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = reactExports.useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = reactExports.useState(null);
-  const [currencyDraftEvents, setCurrencyDraftEvents] = reactExports.useState([]);
+  const currencyDraftStorageKey = "neoCurrencyDraftEvents";
+  const [currencyDraftEvents, setCurrencyDraftEvents] = reactExports.useState(() => {
+    try {
+      const stored = localStorage.getItem(currencyDraftStorageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const availableCurrencyCourses = reactExports.useMemo(() => {
     return Array.from(new Set(traineesData.map((t) => t.course).filter(Boolean))).sort();
   }, [traineesData]);
@@ -20646,11 +20655,14 @@ const PrioritiesView = ({
     return traineesData.filter((t) => !t.isPaused && traineeCurrencyCourseSelection.has(t.course)).map((trainee) => ({ trainee, dueCurrencies: getDueCurrencies(trainee) })).filter((row) => row.dueCurrencies.length > 0).sort((a, b) => a.trainee.course.localeCompare(b.trainee.course) || a.trainee.name.localeCompare(b.trainee.name));
   }, [traineesData, traineeCurrencyCourseSelection, currencyNames, buildDfpDate]);
   const staffCurrencyRows = reactExports.useMemo(() => {
-    return instructorsData.map((instructor) => ({ instructor, dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).sort((a, b) => {
+    return instructorsData.map((instructor) => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) })).filter((row) => row.dueCurrencies.length > 0).sort((a, b) => {
       const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
       return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
     });
   }, [instructorsData, currencyNames, buildDfpDate]);
+  reactExports.useEffect(() => {
+    localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
+  }, [currencyDraftEvents]);
   reactExports.useEffect(() => {
     setTraineeCurrencySelection((prev) => {
       const validIds = new Set(traineeCurrencyRows.map((row) => row.trainee.idNumber));
@@ -20660,7 +20672,7 @@ const PrioritiesView = ({
   reactExports.useEffect(() => {
     setStaffCurrencySelection((prev) => {
       if (prev.size > 0) {
-        const validIds = new Set(staffCurrencyRows.map((row) => row.instructor.idNumber));
+        const validIds = new Set(staffCurrencyRows.map((row) => row.personKey));
         return new Set(Array.from(prev).filter((id) => validIds.has(id)));
       }
       return prev;
@@ -20685,6 +20697,7 @@ const PrioritiesView = ({
           id: `currency-draft-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${v4()}`,
           audience,
           personId: person.idNumber,
+          personKey: person.personKey,
           personName: displayName,
           course: person.course,
           rank: person.rank,
@@ -20692,7 +20705,8 @@ const PrioritiesView = ({
           crewMode,
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: [],
-          selected: true
+          selected: true,
+          pushed: false
         });
       });
     });
@@ -20706,6 +20720,7 @@ const PrioritiesView = ({
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(", ") : "";
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${v4()}`,
+        currencyDraftId: draft.id,
         date: buildDfpDate,
         type: draft.eventType,
         instructor: draft.audience === "trainee" && !isSolo ? "TBA" : draft.audience === "staff" ? draft.personName : "",
@@ -20729,14 +20744,14 @@ const PrioritiesView = ({
     });
   };
   const addTraineeCurrencyEventsToPriority = () => {
-    const selectedPeople = traineeCurrencyRows.filter((row) => traineeCurrencySelection.has(row.trainee.idNumber)).map((row) => ({ idNumber: row.trainee.idNumber, name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
+    const selectedPeople = traineeCurrencyRows.filter((row) => traineeCurrencySelection.has(row.trainee.idNumber)).map((row) => ({ idNumber: row.trainee.idNumber, personKey: String(row.trainee.idNumber), name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
     const events = buildCurrencyDraftEvents("trainee", selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
     if (events.length === 0) return;
     setCurrencyDraftEvents((prev) => [...prev, ...events]);
     logAudit("Priorities", "Build", "Built trainee currency event review list", `${events.length} Currency event(s) staged`);
   };
   const addStaffCurrencyEventsToPriority = () => {
-    const selectedPeople = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.instructor.idNumber)).map((row) => ({ idNumber: row.instructor.idNumber, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
+    const selectedPeople = staffCurrencyRows.filter((row) => staffCurrencySelection.has(row.personKey)).map((row) => ({ idNumber: row.instructor.idNumber, personKey: row.personKey, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
     const events = buildCurrencyDraftEvents("staff", selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
     if (events.length === 0) return;
     setCurrencyDraftEvents((prev) => [...prev, ...events]);
@@ -20747,7 +20762,10 @@ const PrioritiesView = ({
     const priorityEvents = buildCurrencyPriorityEventsFromDrafts(selectedDrafts);
     if (priorityEvents.length === 0) return;
     onAddPriorityEvents(priorityEvents);
-    setCurrencyDraftEvents((prev) => prev.filter((event) => !event.selected));
+    const pushedIds = new Set(selectedDrafts.map((event) => event.id));
+    setCurrencyDraftEvents((prev) => prev.map(
+      (event) => pushedIds.has(event.id) ? { ...event, selected: false, pushed: true } : event
+    ));
     setOpenCurrencyDraftId(null);
     logAudit("Priorities", "Add", "Added reviewed currency events to Highest Priority queue", `${priorityEvents.length} Currency event(s) added`);
   };
@@ -21399,11 +21417,10 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Add" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Course" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Trainee" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Due Currencies" })
+                /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Trainee" })
               ] }) }),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-                traineeCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, className: "px-3 py-6 text-center text-sm text-slate-500", children: "Select a course to show trainees requiring Currency events." }) }),
+                traineeCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 3, className: "px-3 py-6 text-center text-sm text-slate-500", children: "Select a course to show trainees requiring Currency events." }) }),
                 traineeCurrencyRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/40", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "input",
@@ -21415,8 +21432,7 @@ const PrioritiesView = ({
                     }
                   ) }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: row.trainee.course }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.trainee.name }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-amber-200", children: row.dueCurrencies.join(", ") })
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.trainee.name })
                 ] }, row.trainee.idNumber))
               ] })
             ] })
@@ -21443,7 +21459,7 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
-                onClick: () => setStaffCurrencySelection(new Set(staffCurrencyRows.map((row) => row.instructor.idNumber))),
+                onClick: () => setStaffCurrencySelection(new Set(staffCurrencyRows.map((row) => row.personKey))),
                 className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20",
                 children: "Select All"
               }
@@ -21485,25 +21501,23 @@ const PrioritiesView = ({
             /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-center", children: "Add" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Rank" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Due Currencies" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("th", { className: "px-2 py-2 text-left", children: "Staff" })
             ] }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
-              staffCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 4, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No staff currently require Currency events." }) }),
+              staffCurrencyRows.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 3, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No staff currently require Currency events." }) }),
               staffCurrencyRows.map((row) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "hover:bg-sky-900/40", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "input",
                   {
                     type: "checkbox",
-                    checked: staffCurrencySelection.has(row.instructor.idNumber),
-                    onChange: () => setStaffCurrencySelection((prev) => toggleSetValue(prev, row.instructor.idNumber)),
+                    checked: staffCurrencySelection.has(row.personKey),
+                    onChange: () => setStaffCurrencySelection((prev) => toggleSetValue(prev, row.personKey)),
                     className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500"
                   }
                 ) }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: row.instructor.rank }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.instructor.name }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-amber-200", children: row.dueCurrencies.join(", ") })
-              ] }, row.instructor.idNumber))
+                /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: row.instructor.name })
+              ] }, row.personKey))
             ] })
           ] }) })
         ] })
@@ -21536,20 +21550,21 @@ const PrioritiesView = ({
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("tbody", { className: "divide-y divide-slate-700/60", children: [
             currencyDraftEvents.length === 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("tr", { children: /* @__PURE__ */ jsxRuntimeExports.jsx("td", { colSpan: 7, className: "px-3 py-6 text-center text-sm text-slate-500", children: "No Currency events built yet. Open a trainee or staff builder above to create the review list." }) }),
-            currencyDraftEvents.map((draft) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: "align-top hover:bg-sky-900/40", children: [
+            currencyDraftEvents.map((draft) => /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { className: `align-top hover:bg-sky-900/40 ${draft.pushed ? "text-green-300" : ""}`, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "input",
                 {
                   type: "checkbox",
                   checked: draft.selected,
+                  disabled: draft.pushed,
                   onChange: () => setCurrencyDraftEvents((prev) => prev.map((event) => event.id === draft.id ? { ...event, selected: !event.selected } : event)),
-                  className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                  className: "h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                 }
               ) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: draft.personName }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-amber-200", children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${draft.pushed ? "text-green-300" : "text-slate-300"}`, children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 font-semibold ${draft.pushed ? "text-green-300" : "text-white"}`, children: draft.personName }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${draft.pushed ? "text-green-300" : "text-amber-200"}`, children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: `px-2 py-2 ${draft.pushed ? "text-green-300" : "text-slate-300"}`, children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",
@@ -86907,6 +86922,22 @@ ${err instanceof Error ? err.message : String(err)}`, "PT-051 Save Failed", "err
                     }
                   } catch (ecErr) {
                     console.warn("[PostFlight] EventCompletion fetch threw:", ecErr);
+                  }
+                }
+                if (data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight?.currencyDraftId) {
+                  try {
+                    const currencyDraftStorageKey = "neoCurrencyDraftEvents";
+                    const storedDrafts = localStorage.getItem(currencyDraftStorageKey);
+                    const drafts = storedDrafts ? JSON.parse(storedDrafts) : [];
+                    if (Array.isArray(drafts)) {
+                      const nextDrafts = data.result === "DCO" ? drafts.filter((draft) => draft.id !== eventForPostFlight.currencyDraftId) : drafts.map(
+                        (draft) => draft.id === eventForPostFlight.currencyDraftId ? { ...draft, pushed: false, selected: true } : draft
+                      );
+                      localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
+                      console.log(`[PostFlight] Currency draft ${data.result === "DCO" ? "cleared" : "reset for rescheduling"}:`, eventForPostFlight.currencyDraftId);
+                    }
+                  } catch (currencyDraftErr) {
+                    console.warn("[PostFlight] Currency draft update failed:", currencyDraftErr);
                   }
                 }
                 if (data.currencyUpdates && Object.keys(data.currencyUpdates).length > 0) {

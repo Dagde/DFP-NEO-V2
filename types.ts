@@ -218,6 +218,7 @@ export interface ScheduleEvent {
       dateCreated?: string;
       notes?: string;
       currency?: string;
+      currencyDraftId?: string;
       priority?: 'High' | 'Medium' | 'Low';
       soloOrDual?: 'Solo' | 'Dual';
       isSctRequest?: boolean;

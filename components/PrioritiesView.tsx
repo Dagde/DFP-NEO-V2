@@ -178,16 +178,18 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const [traineeCurrencyIncludeSims, setTraineeCurrencyIncludeSims] = useState(true);
   const [traineeCurrencyCrewMode, setTraineeCurrencyCrewMode] = useState<'withInstructor' | 'solo'>('withInstructor');
   const [isTraineeCurrencyBuilderOpen, setIsTraineeCurrencyBuilderOpen] = useState(false);
-  const [staffCurrencySelection, setStaffCurrencySelection] = useState<Set<number>>(new Set());
+  const [staffCurrencySelection, setStaffCurrencySelection] = useState<Set<string>>(new Set());
   const [staffCurrencyIncludeFlights, setStaffCurrencyIncludeFlights] = useState(true);
   const [staffCurrencyIncludeSims, setStaffCurrencyIncludeSims] = useState(true);
   const [staffCurrencyCrewMode, setStaffCurrencyCrewMode] = useState<'withOtherPilot' | 'solo'>('withOtherPilot');
   const [isStaffCurrencyBuilderOpen, setIsStaffCurrencyBuilderOpen] = useState(false);
   const [openCurrencyDraftId, setOpenCurrencyDraftId] = useState<string | null>(null);
+  const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
   const [currencyDraftEvents, setCurrencyDraftEvents] = useState<Array<{
     id: string;
     audience: 'trainee' | 'staff';
     personId: number;
+    personKey: string;
     personName: string;
     course?: string;
     rank?: string;
@@ -196,7 +198,16 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     dueCurrencies: string[];
     selectedCurrencies: string[];
     selected: boolean;
-  }>>([]);
+    pushed: boolean;
+  }>>(() => {
+    try {
+      const stored = localStorage.getItem(currencyDraftStorageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
 
   const availableCurrencyCourses = useMemo(() => {
     return Array.from(new Set(traineesData.map(t => t.course).filter(Boolean))).sort();
@@ -225,13 +236,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const staffCurrencyRows = useMemo(() => {
     return instructorsData
-      .map(instructor => ({ instructor, dueCurrencies: getDueCurrencies(instructor) }))
+      .map(instructor => ({ instructor, personKey: String(instructor.id || instructor.idNumber || instructor.name), dueCurrencies: getDueCurrencies(instructor) }))
       .filter(row => row.dueCurrencies.length > 0)
       .sort((a, b) => {
         const rankDiff = staffRankOrder.indexOf(a.instructor.rank) - staffRankOrder.indexOf(b.instructor.rank);
         return rankDiff !== 0 ? rankDiff : a.instructor.name.localeCompare(b.instructor.name);
       });
   }, [instructorsData, currencyNames, buildDfpDate]);
+
+  useEffect(() => {
+    localStorage.setItem(currencyDraftStorageKey, JSON.stringify(currencyDraftEvents));
+  }, [currencyDraftEvents]);
 
   useEffect(() => {
     setTraineeCurrencySelection(prev => {
@@ -243,7 +258,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   useEffect(() => {
     setStaffCurrencySelection(prev => {
       if (prev.size > 0) {
-        const validIds = new Set(staffCurrencyRows.map(row => row.instructor.idNumber));
+        const validIds = new Set(staffCurrencyRows.map(row => row.personKey));
         return new Set(Array.from(prev).filter(id => validIds.has(id)));
       }
       return prev;
@@ -259,7 +274,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const buildCurrencyDraftEvents = (
     audience: 'trainee' | 'staff',
-    people: { idNumber: number; name: string; fullName?: string; course?: string; rank?: string; dueCurrencies: string[] }[],
+    people: { idNumber: number; personKey: string; name: string; fullName?: string; course?: string; rank?: string; dueCurrencies: string[] }[],
     includeFlights: boolean,
     includeSims: boolean,
     crewMode: 'withInstructor' | 'solo' | 'withOtherPilot'
@@ -276,6 +291,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           id: `currency-draft-${audience}-${type}-${person.idNumber}-${buildDfpDate}-${uuidv4()}`,
           audience,
           personId: person.idNumber,
+          personKey: person.personKey,
           personName: displayName,
           course: person.course,
           rank: person.rank,
@@ -284,6 +300,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
           dueCurrencies: person.dueCurrencies,
           selectedCurrencies: [],
           selected: true,
+          pushed: false,
         });
       });
     });
@@ -298,6 +315,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
       const selectedCurrencyText = draft.selectedCurrencies.length > 0 ? draft.selectedCurrencies.join(', ') : '';
       return {
         id: `currency-${draft.audience}-${draft.eventType}-${draft.personId}-${buildDfpDate}-${uuidv4()}`,
+        currencyDraftId: draft.id,
         date: buildDfpDate,
         type: draft.eventType,
         instructor: draft.audience === 'trainee' && !isSolo ? 'TBA' : draft.audience === 'staff' ? draft.personName : '',
@@ -324,7 +342,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
   const addTraineeCurrencyEventsToPriority = () => {
     const selectedPeople = traineeCurrencyRows
       .filter(row => traineeCurrencySelection.has(row.trainee.idNumber))
-      .map(row => ({ idNumber: row.trainee.idNumber, name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
+      .map(row => ({ idNumber: row.trainee.idNumber, personKey: String(row.trainee.idNumber), name: row.trainee.name, fullName: row.trainee.fullName, course: row.trainee.course, dueCurrencies: row.dueCurrencies }));
     const events = buildCurrencyDraftEvents('trainee', selectedPeople, traineeCurrencyIncludeFlights, traineeCurrencyIncludeSims, traineeCurrencyCrewMode);
     if (events.length === 0) return;
     setCurrencyDraftEvents(prev => [...prev, ...events]);
@@ -333,8 +351,8 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
 
   const addStaffCurrencyEventsToPriority = () => {
     const selectedPeople = staffCurrencyRows
-      .filter(row => staffCurrencySelection.has(row.instructor.idNumber))
-      .map(row => ({ idNumber: row.instructor.idNumber, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
+      .filter(row => staffCurrencySelection.has(row.personKey))
+      .map(row => ({ idNumber: row.instructor.idNumber, personKey: row.personKey, name: row.instructor.name, rank: row.instructor.rank, dueCurrencies: row.dueCurrencies }));
     const events = buildCurrencyDraftEvents('staff', selectedPeople, staffCurrencyIncludeFlights, staffCurrencyIncludeSims, staffCurrencyCrewMode);
     if (events.length === 0) return;
     setCurrencyDraftEvents(prev => [...prev, ...events]);
@@ -346,7 +364,10 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
     const priorityEvents = buildCurrencyPriorityEventsFromDrafts(selectedDrafts);
     if (priorityEvents.length === 0) return;
     onAddPriorityEvents(priorityEvents);
-    setCurrencyDraftEvents(prev => prev.filter(event => !event.selected));
+    const pushedIds = new Set(selectedDrafts.map(event => event.id));
+    setCurrencyDraftEvents(prev => prev.map(event =>
+      pushedIds.has(event.id) ? { ...event, selected: false, pushed: true } : event
+    ));
     setOpenCurrencyDraftId(null);
     logAudit('Priorities', 'Add', 'Added reviewed currency events to Highest Priority queue', `${priorityEvents.length} Currency event(s) added`);
   };
@@ -1069,12 +1090,11 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <th className="px-2 py-2 text-center">Add</th>
                                 <th className="px-2 py-2 text-left">Course</th>
                                 <th className="px-2 py-2 text-left">Trainee</th>
-                                <th className="px-2 py-2 text-left">Due Currencies</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-700/60">
                             {traineeCurrencyRows.length === 0 && (
-                                <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">Select a course to show trainees requiring Currency events.</td></tr>
+                                <tr><td colSpan={3} className="px-3 py-6 text-center text-sm text-slate-500">Select a course to show trainees requiring Currency events.</td></tr>
                             )}
                             {traineeCurrencyRows.map(row => (
                                 <tr key={row.trainee.idNumber} className="hover:bg-sky-900/40">
@@ -1088,7 +1108,6 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                     </td>
                                     <td className="px-2 py-2 text-slate-300">{row.trainee.course}</td>
                                     <td className="px-2 py-2 font-semibold text-white">{row.trainee.name}</td>
-                                    <td className="px-2 py-2 text-amber-200">{row.dueCurrencies.join(', ')}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -1113,7 +1132,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             {isStaffCurrencyBuilderOpen && <>
             <div className="mb-4 flex flex-wrap items-end gap-4 rounded-lg border border-slate-700 bg-slate-950/70 p-4">
                 <button
-                    onClick={() => setStaffCurrencySelection(new Set(staffCurrencyRows.map(row => row.instructor.idNumber)))}
+                    onClick={() => setStaffCurrencySelection(new Set(staffCurrencyRows.map(row => row.personKey)))}
                     className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
                 >
                     Select All
@@ -1154,26 +1173,24 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             <th className="px-2 py-2 text-center">Add</th>
                             <th className="px-2 py-2 text-left">Rank</th>
                             <th className="px-2 py-2 text-left">Staff</th>
-                            <th className="px-2 py-2 text-left">Due Currencies</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700/60">
                         {staffCurrencyRows.length === 0 && (
-                            <tr><td colSpan={4} className="px-3 py-6 text-center text-sm text-slate-500">No staff currently require Currency events.</td></tr>
+                            <tr><td colSpan={3} className="px-3 py-6 text-center text-sm text-slate-500">No staff currently require Currency events.</td></tr>
                         )}
                         {staffCurrencyRows.map(row => (
-                            <tr key={row.instructor.idNumber} className="hover:bg-sky-900/40">
+                            <tr key={row.personKey} className="hover:bg-sky-900/40">
                                 <td className="px-2 py-2 text-center">
                                     <input
                                         type="checkbox"
-                                        checked={staffCurrencySelection.has(row.instructor.idNumber)}
-                                        onChange={() => setStaffCurrencySelection(prev => toggleSetValue(prev, row.instructor.idNumber))}
+                                        checked={staffCurrencySelection.has(row.personKey)}
+                                        onChange={() => setStaffCurrencySelection(prev => toggleSetValue(prev, row.personKey))}
                                         className="h-4 w-4 rounded bg-slate-800 accent-cyan-500"
                                     />
                                 </td>
                                 <td className="px-2 py-2 text-slate-300">{row.instructor.rank}</td>
                                 <td className="px-2 py-2 font-semibold text-white">{row.instructor.name}</td>
-                                <td className="px-2 py-2 text-amber-200">{row.dueCurrencies.join(', ')}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -1214,19 +1231,20 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                             <tr><td colSpan={7} className="px-3 py-6 text-center text-sm text-slate-500">No Currency events built yet. Open a trainee or staff builder above to create the review list.</td></tr>
                         )}
                         {currencyDraftEvents.map(draft => (
-                            <tr key={draft.id} className="align-top hover:bg-sky-900/40">
+                            <tr key={draft.id} className={`align-top hover:bg-sky-900/40 ${draft.pushed ? 'text-green-300' : ''}`}>
                                 <td className="px-2 py-2 text-center">
                                     <input
                                         type="checkbox"
                                         checked={draft.selected}
+                                        disabled={draft.pushed}
                                         onChange={() => setCurrencyDraftEvents(prev => prev.map(event => event.id === draft.id ? { ...event, selected: !event.selected } : event))}
-                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500"
+                                        className="h-4 w-4 rounded bg-slate-800 accent-cyan-500 disabled:opacity-40"
                                     />
                                 </td>
-                                <td className="px-2 py-2 text-slate-300">{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
-                                <td className="px-2 py-2 font-semibold text-white">{draft.personName}</td>
-                                <td className="px-2 py-2 text-amber-200">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
-                                <td className="px-2 py-2 text-slate-300">{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
+                                <td className={`px-2 py-2 ${draft.pushed ? 'text-green-300' : 'text-slate-300'}`}>{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
+                                <td className={`px-2 py-2 font-semibold ${draft.pushed ? 'text-green-300' : 'text-white'}`}>{draft.personName}</td>
+                                <td className={`px-2 py-2 ${draft.pushed ? 'text-green-300' : 'text-amber-200'}`}>{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
+                                <td className={`px-2 py-2 ${draft.pushed ? 'text-green-300' : 'text-slate-300'}`}>{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
                                 <td className="px-2 py-2">
                                     <div className="relative">
                                         <button

@@ -20381,6 +20381,27 @@ updates.forEach(update => {
                                             console.warn('[PostFlight] EventCompletion fetch threw:', ecErr);
                                         }
                                     }
+
+                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight?.currencyDraftId) {
+                                        try {
+                                            const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
+                                            const storedDrafts = localStorage.getItem(currencyDraftStorageKey);
+                                            const drafts = storedDrafts ? JSON.parse(storedDrafts) : [];
+                                            if (Array.isArray(drafts)) {
+                                                const nextDrafts = data.result === 'DCO'
+                                                    ? drafts.filter((draft: any) => draft.id !== eventForPostFlight.currencyDraftId)
+                                                    : drafts.map((draft: any) =>
+                                                        draft.id === eventForPostFlight.currencyDraftId
+                                                            ? { ...draft, pushed: false, selected: true }
+                                                            : draft
+                                                    );
+                                                localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
+                                                console.log(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared' : 'reset for rescheduling'}:`, eventForPostFlight.currencyDraftId);
+                                            }
+                                        } catch (currencyDraftErr) {
+                                            console.warn('[PostFlight] Currency draft update failed:', currencyDraftErr);
+                                        }
+                                    }
                                     // ── End DCO-based EventCompletion tracking ──────────────────────────
 
                                     // Persist currency updates to person's currency records
