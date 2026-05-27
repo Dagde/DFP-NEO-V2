@@ -21353,7 +21353,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400", children: "Crew Mode" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("select", { value: traineeCurrencyCrewMode, onChange: (e) => setTraineeCurrencyCrewMode(e.target.value), className: "w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "withInstructor", children: "With instructor" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "withInstructor", children: "Dual" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("option", { value: "solo", children: "Solo" })
                 ] })
               ] })
@@ -21362,15 +21362,38 @@ const PrioritiesView = ({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "overflow-x-auto rounded-lg border border-slate-700", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between border-b border-slate-700 bg-slate-950/60 px-3 py-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-semibold uppercase tracking-[0.16em] text-slate-400", children: "Selected Trainees" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "button",
-                {
-                  onClick: addTraineeCurrencyEventsToPriority,
-                  disabled: traineeCurrencySelection.size === 0 || !traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims,
-                  className: "rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400",
-                  children: "Add to Consolidated List"
-                }
-              )
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap justify-end gap-1", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => setTraineeCurrencySelection((prev) => /* @__PURE__ */ new Set([...Array.from(prev), ...traineeCurrencyRows.map((row) => row.trainee.idNumber)])),
+                    disabled: traineeCurrencyRows.length === 0,
+                    className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500",
+                    children: "Select All"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: () => {
+                      const visibleIds = new Set(traineeCurrencyRows.map((row) => row.trainee.idNumber));
+                      setTraineeCurrencySelection((prev) => new Set(Array.from(prev).filter((id) => !visibleIds.has(id))));
+                    },
+                    disabled: traineeCurrencyRows.length === 0,
+                    className: "rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 disabled:cursor-not-allowed disabled:text-slate-500",
+                    children: "Deselect All"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "button",
+                  {
+                    onClick: addTraineeCurrencyEventsToPriority,
+                    disabled: traineeCurrencySelection.size === 0 || !traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims,
+                    className: "rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400",
+                    children: "Add to Consolidated List"
+                  }
+                )
+              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("table", { className: "min-w-full text-sm", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx("thead", { className: "bg-slate-950/80 text-xs uppercase text-slate-400", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("tr", { children: [
@@ -21422,7 +21445,7 @@ const PrioritiesView = ({
               {
                 onClick: () => setStaffCurrencySelection(new Set(staffCurrencyRows.map((row) => row.instructor.idNumber))),
                 className: "rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20",
-                children: "Select All Staff"
+                children: "Select All"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -21430,7 +21453,7 @@ const PrioritiesView = ({
               {
                 onClick: () => setStaffCurrencySelection(/* @__PURE__ */ new Set()),
                 className: "rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700",
-                children: "Clear Staff"
+                children: "Deselect All"
               }
             ),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("label", { className: "inline-flex items-center gap-2 text-sm text-slate-300", children: [
@@ -21526,7 +21549,7 @@ const PrioritiesView = ({
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: draft.audience === "trainee" ? draft.course || "Trainee" : draft.rank || "Staff" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 font-semibold text-white", children: draft.personName }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-amber-200", children: draft.eventType === "flight" ? "CURR Flight" : `CURR ${ftdLabel}` }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "With instructor" : "With other pilot" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2 text-slate-300", children: draft.crewMode === "solo" ? "Solo" : draft.audience === "trainee" ? "Dual" : "With other pilot" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx("td", { className: "px-2 py-2", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
                   "button",

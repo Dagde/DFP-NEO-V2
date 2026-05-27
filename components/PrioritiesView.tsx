@@ -1027,7 +1027,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                         <div>
                             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Crew Mode</p>
                             <select value={traineeCurrencyCrewMode} onChange={e => setTraineeCurrencyCrewMode(e.target.value as any)} className="w-full rounded-md border border-slate-600 bg-slate-950 px-3 py-2 text-sm text-white">
-                                <option value="withInstructor">With instructor</option>
+                                <option value="withInstructor">Dual</option>
                                 <option value="solo">Solo</option>
                             </select>
                         </div>
@@ -1036,13 +1036,32 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                 <div className="overflow-x-auto rounded-lg border border-slate-700">
                     <div className="flex items-center justify-between border-b border-slate-700 bg-slate-950/60 px-3 py-2">
                         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Selected Trainees</span>
-                        <button
-                            onClick={addTraineeCurrencyEventsToPriority}
-                            disabled={traineeCurrencySelection.size === 0 || (!traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims)}
-                            className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-                        >
-                            Add to Consolidated List
-                        </button>
+                        <div className="flex flex-wrap justify-end gap-1">
+                            <button
+                                onClick={() => setTraineeCurrencySelection(prev => new Set([...Array.from(prev), ...traineeCurrencyRows.map(row => row.trainee.idNumber)]))}
+                                disabled={traineeCurrencyRows.length === 0}
+                                className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-2 py-1.5 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:border-slate-700 disabled:bg-slate-800 disabled:text-slate-500"
+                            >
+                                Select All
+                            </button>
+                            <button
+                                onClick={() => {
+                                    const visibleIds = new Set(traineeCurrencyRows.map(row => row.trainee.idNumber));
+                                    setTraineeCurrencySelection(prev => new Set(Array.from(prev).filter(id => !visibleIds.has(id))));
+                                }}
+                                disabled={traineeCurrencyRows.length === 0}
+                                className="rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700 disabled:cursor-not-allowed disabled:text-slate-500"
+                            >
+                                Deselect All
+                            </button>
+                            <button
+                                onClick={addTraineeCurrencyEventsToPriority}
+                                disabled={traineeCurrencySelection.size === 0 || (!traineeCurrencyIncludeFlights && !traineeCurrencyIncludeSims)}
+                                className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                            >
+                                Add to Consolidated List
+                            </button>
+                        </div>
                     </div>
                     <table className="min-w-full text-sm">
                         <thead className="bg-slate-950/80 text-xs uppercase text-slate-400">
@@ -1097,13 +1116,13 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                     onClick={() => setStaffCurrencySelection(new Set(staffCurrencyRows.map(row => row.instructor.idNumber)))}
                     className="rounded-md border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-200 hover:bg-cyan-500/20"
                 >
-                    Select All Staff
+                    Select All
                 </button>
                 <button
                     onClick={() => setStaffCurrencySelection(new Set())}
                     className="rounded-md border border-slate-600 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700"
                 >
-                    Clear Staff
+                    Deselect All
                 </button>
                 <label className="inline-flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={staffCurrencyIncludeFlights} onChange={e => setStaffCurrencyIncludeFlights(e.target.checked)} className="h-4 w-4 rounded bg-slate-800 accent-cyan-500" />
@@ -1207,7 +1226,7 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
                                 <td className="px-2 py-2 text-slate-300">{draft.audience === 'trainee' ? (draft.course || 'Trainee') : (draft.rank || 'Staff')}</td>
                                 <td className="px-2 py-2 font-semibold text-white">{draft.personName}</td>
                                 <td className="px-2 py-2 text-amber-200">{draft.eventType === 'flight' ? 'CURR Flight' : `CURR ${ftdLabel}`}</td>
-                                <td className="px-2 py-2 text-slate-300">{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'With instructor' : 'With other pilot'}</td>
+                                <td className="px-2 py-2 text-slate-300">{draft.crewMode === 'solo' ? 'Solo' : draft.audience === 'trainee' ? 'Dual' : 'With other pilot'}</td>
                                 <td className="px-2 py-2">
                                     <div className="relative">
                                         <button
