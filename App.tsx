@@ -2258,6 +2258,17 @@ function generateDfpInternal(
             standbyExclusions: [] as any[],
             laterScheduledEvents: [] as any[],
         },
+        currencyPriorityDiagnostics: {
+            queueAudit: [] as any[],
+            typePassTrace: [] as any[],
+            slotTrace: [] as any[],
+            candidateTrace: [] as any[],
+            scheduleAttempts: [] as any[],
+            placementTrace: [] as any[],
+            remainingTrace: [] as any[],
+            finalAssignments: [] as any[],
+            summary: null,
+        },
         final: null,
     };
 
@@ -2306,6 +2317,7 @@ function generateDfpInternal(
                     standbyExclusions: neoBuildDiag.formationResourceDiagnostics.standbyExclusions.slice(-300),
                     laterScheduledEvents: neoBuildDiag.formationResourceDiagnostics.laterScheduledEvents.slice(-500),
                 },
+                currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
             };
             try {
                 localStorage.setItem('neo_build_diag_report', JSON.stringify(compactReport));
@@ -2497,6 +2509,47 @@ function generateDfpInternal(
             ...entry,
         });
     };
+
+    const traceCurrencyPriority = (
+        bucket: 'queueAudit' | 'typePassTrace' | 'slotTrace' | 'candidateTrace' | 'scheduleAttempts' | 'placementTrace' | 'remainingTrace' | 'finalAssignments',
+        entry: Record<string, any>,
+        limit: number = 2500
+    ) => {
+        const list = neoBuildDiag.currencyPriorityDiagnostics[bucket] as any[];
+        if (list.length >= limit) return;
+        list.push({
+            sequence: list.length + 1,
+            timestamp: new Date().toISOString(),
+            ...entry,
+        });
+    };
+
+    function getCompactCurrencyPriorityDiagnostics() {
+        return {
+            ...neoBuildDiag.currencyPriorityDiagnostics,
+            queueAudit: neoBuildDiag.currencyPriorityDiagnostics.queueAudit.slice(-600),
+            typePassTrace: neoBuildDiag.currencyPriorityDiagnostics.typePassTrace.slice(-200),
+            slotTrace: neoBuildDiag.currencyPriorityDiagnostics.slotTrace.slice(-1200),
+            candidateTrace: neoBuildDiag.currencyPriorityDiagnostics.candidateTrace.slice(-1800),
+            scheduleAttempts: neoBuildDiag.currencyPriorityDiagnostics.scheduleAttempts.slice(-2500),
+            placementTrace: neoBuildDiag.currencyPriorityDiagnostics.placementTrace.slice(-1200),
+            remainingTrace: neoBuildDiag.currencyPriorityDiagnostics.remainingTrace.slice(-1200),
+            finalAssignments: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.slice(-600),
+        };
+    }
+
+    function saveCurrencyPriorityDiagnostics(stage: string) {
+        try {
+            localStorage.setItem('neo_currency_priority_diag', JSON.stringify({
+                stage,
+                buildDate,
+                updatedAt: new Date().toISOString(),
+                currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
+            }));
+        } catch (error) {
+            console.warn('[Currency Priority] Failed to save focused diagnostic report:', error);
+        }
+    }
 
     const isMandatoryRemedialFlight = (event: ScheduleEvent): boolean =>
         event.date === buildDate &&
@@ -4000,6 +4053,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         priority?: 'High' | 'Medium' | 'Low';
         excludeInstructorNames?: string[];
         randomizeInstructorCandidates?: boolean;
+        diagnosticTrace?: (entry: Record<string, any>) => void;
     };
 
     const scheduleEvent = (
@@ -4023,6 +4077,21 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const isTracedRemedialAttempt = isRemedialSyllabusItem(syllabusItem) || !!remedialInstructorOverride;
         const isDayFlightGapTraceAttempt = type === 'flight' && !isNightPass && !isPlusOne && !isTracedRemedialAttempt;
         const traceScheduleReject = (reason: string, details: Record<string, any> = {}): ScheduleEventResult => {
+            options.diagnosticTrace?.({
+                phase: 'schedule-event',
+                outcome: 'rejected',
+                reason,
+                trainee: trainee.fullName,
+                event: syllabusItem.code,
+                eventId: syllabusItem.id,
+                type,
+                startTime,
+                displayTime: _fmtT(startTime),
+                dayNight: syllabusItem.dayNight,
+                primaryPreferOnly,
+                requirePreferredNightAircraft,
+                details,
+            });
             if (isFormationTraceAttempt) {
                 traceFormation('scheduleEventTrace', {
                     phase: 'schedule-event',
@@ -4841,6 +4910,19 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                 flightType: syllabusItem.sortieType || 'Dual', locationType: 'Local', origin: school, destination: school,
                 area: undefined, preStart: syllabusItem.preFlightTime, postEnd: syllabusItem.postFlightTime,
             };
+            options.diagnosticTrace?.({
+                phase: 'schedule-event',
+                outcome: 'placed-stby',
+                trainee: trainee.fullName,
+                event: syllabusItem.code,
+                eventId: syllabusItem.id,
+                type,
+                startTime,
+                displayTime: _fmtT(startTime),
+                resourceId,
+                primaryPreferOnly,
+                requirePreferredNightAircraft,
+            });
             return stbyResult;
         }
 
@@ -5112,6 +5194,24 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         if (_isFlight) {
             _fbLogSuccess(trainee, syllabusItem, _isNext, startTime, startTime + syllabusItem.duration, result.instructor, result.resourceId || '', result.area);
         }
+        options.diagnosticTrace?.({
+            phase: 'schedule-event',
+            outcome: 'placed',
+            trainee: trainee.fullName,
+            event: syllabusItem.code,
+            eventId: syllabusItem.id,
+            type,
+            startTime,
+            displayTime: _fmtT(startTime),
+            resourceId,
+            instructor: result.instructor,
+            pilot: result.pilot,
+            student: result.student,
+            area,
+            dayNight: syllabusItem.dayNight,
+            primaryPreferOnly,
+            requirePreferredNightAircraft,
+        });
         return result;
     };
 
@@ -5405,36 +5505,182 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     });
     const scheduleCurrencyPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
         const scheduledCurrencyDraftIds = new Set(generatedEvents.map(event => event.currencyDraftId).filter(Boolean));
+        const getCurrencyEventPersonName = (event: ScheduleEvent): string => event.student || event.pilot || event.instructor || '';
+        const getCurrencyEventIdentity = (event: ScheduleEvent) => ({
+            id: event.id,
+            type: event.type,
+            personName: getCurrencyEventPersonName(event),
+            flightNumber: event.flightNumber,
+            currencyDraftId: event.currencyDraftId || null,
+            priority: event.priority || null,
+            duration: event.duration || null,
+            preStart: event.preStart || 0,
+            postEnd: event.postEnd || 0,
+        });
+        const findScheduledCurrencyEvent = (priorityEvent: ScheduleEvent) =>
+            generatedEvents.find(event => event.id === priorityEvent.id) ||
+            generatedEvents.find(event =>
+                !!priorityEvent.currencyDraftId &&
+                event.currencyDraftId === priorityEvent.currencyDraftId &&
+                event.type === priorityEvent.type &&
+                isCurrencyPriorityEvent(event as ScheduleEvent)
+            ) ||
+            null;
+
+        traceCurrencyPriority('queueAudit', {
+            phase: 'input-queue',
+            total: eventsToSchedule.length,
+            generatedEventsBeforeCurrencyPriority: generatedEvents.length,
+            scheduledCurrencyDraftIdsAtStart: Array.from(scheduledCurrencyDraftIds),
+            byType: {
+                flight: eventsToSchedule.filter(event => event.type === 'flight').map(getCurrencyEventIdentity),
+                ftd: eventsToSchedule.filter(event => event.type === 'ftd').map(getCurrencyEventIdentity),
+            },
+        }, 20);
+
         const scheduleType = (eventType: 'flight' | 'ftd') => {
             const remaining = eventsToSchedule.filter(event => event.type === eventType);
             const startBoundary = eventType === 'flight' ? flyingStartTime : ftdStartTime;
             const endBoundary = eventType === 'flight' ? flyingEndTime : ftdEndTime;
             const timeIncrement = eventType === 'flight' ? 5 / 60 : 15 / 60;
+            traceCurrencyPriority('typePassTrace', {
+                phase: 'type-pass-start',
+                eventType,
+                inputCount: remaining.length,
+                startBoundary,
+                endBoundary,
+                timeIncrement,
+                generatedEventsAtStart: generatedEvents.length,
+                scheduledCurrencyDraftIdsAtStart: Array.from(scheduledCurrencyDraftIds),
+                remaining: remaining.map(getCurrencyEventIdentity),
+            }, 200);
             for (let time = startBoundary; time <= endBoundary + 0.001 && remaining.length > 0; time += timeIncrement) {
+                const generatedEventsBeforeSlot = generatedEvents.length;
+                traceCurrencyPriority('slotTrace', {
+                    phase: 'slot-start',
+                    eventType,
+                    time,
+                    displayTime: _fmtT(time),
+                    remainingCount: remaining.length,
+                    remainingIds: remaining.map(event => event.id),
+                    scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                    generatedEventsBeforeSlot,
+                }, 2500);
                 for (let index = 0; index < remaining.length; index++) {
                     const priorityEvent = remaining[index];
+                    traceCurrencyPriority('candidateTrace', {
+                        phase: 'candidate-considered',
+                        eventType,
+                        time,
+                        displayTime: _fmtT(time),
+                        index,
+                        candidate: getCurrencyEventIdentity(priorityEvent),
+                        generatedEventsBeforeCandidate: generatedEvents.length,
+                        scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                    }, 3000);
                     if (priorityEvent.currencyDraftId && scheduledCurrencyDraftIds.has(priorityEvent.currencyDraftId)) {
+                        traceCurrencyPriority('candidateTrace', {
+                            phase: 'candidate-skipped',
+                            reason: 'CURRENCY_DRAFT_ID_ALREADY_SCHEDULED',
+                            eventType,
+                            time,
+                            displayTime: _fmtT(time),
+                            candidate: getCurrencyEventIdentity(priorityEvent),
+                            scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                        }, 3000);
+                        traceCurrencyPriority('placementTrace', {
+                            phase: 'removed-from-remaining',
+                            reason: 'CURRENCY_DRAFT_ID_ALREADY_SCHEDULED',
+                            eventType,
+                            time,
+                            displayTime: _fmtT(time),
+                            candidate: getCurrencyEventIdentity(priorityEvent),
+                            generatedEventsCount: generatedEvents.length,
+                        }, 1800);
                         remaining.splice(index, 1);
                         index--;
                         continue;
                     }
                     const resolved = getCurrencyPriorityPerson(priorityEvent);
                     if (!resolved) {
+                        traceCurrencyPriority('candidateTrace', {
+                            phase: 'candidate-skipped',
+                            reason: 'PERSON_RESOLUTION_FAILED',
+                            eventType,
+                            time,
+                            displayTime: _fmtT(time),
+                            candidate: getCurrencyEventIdentity(priorityEvent),
+                        }, 3000);
                         buildDebugLog(`[Currency Priority] Skipped ${priorityEvent.id}: no matching trainee/staff person found`);
                         remaining.splice(index, 1);
                         index--;
                         continue;
                     }
+                    traceCurrencyPriority('candidateTrace', {
+                        phase: 'person-resolved',
+                        eventType,
+                        time,
+                        displayTime: _fmtT(time),
+                        candidate: getCurrencyEventIdentity(priorityEvent),
+                        trainee: {
+                            fullName: resolved.trainee.fullName,
+                            course: resolved.trainee.course,
+                            unit: resolved.trainee.unit || '',
+                            flight: resolved.trainee.flight || '',
+                        },
+                        excludeInstructorNames: resolved.excludeInstructorNames,
+                    }, 3000);
                     if (!eventCounts.has(resolved.trainee.fullName)) {
                         eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
                     }
                     const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
-                    if (time > endBoundary - syllabusItem.duration + 0.001) continue;
+                    traceCurrencyPriority('candidateTrace', {
+                        phase: 'syllabus-item-generated',
+                        eventType,
+                        time,
+                        displayTime: _fmtT(time),
+                        candidate: getCurrencyEventIdentity(priorityEvent),
+                        syllabusItem: {
+                            id: syllabusItem.id,
+                            code: syllabusItem.code,
+                            type: syllabusItem.type,
+                            duration: syllabusItem.duration,
+                            preFlightTime: syllabusItem.preFlightTime,
+                            postFlightTime: syllabusItem.postFlightTime,
+                            sortieType: syllabusItem.sortieType,
+                        },
+                    }, 3000);
+                    if (time > endBoundary - syllabusItem.duration + 0.001) {
+                        traceCurrencyPriority('candidateTrace', {
+                            phase: 'candidate-passed-over',
+                            reason: 'OUTSIDE_TYPE_WINDOW',
+                            eventType,
+                            time,
+                            displayTime: _fmtT(time),
+                            candidate: getCurrencyEventIdentity(priorityEvent),
+                            eventEnd: time + syllabusItem.duration,
+                            endBoundary,
+                        }, 3000);
+                        continue;
+                    }
                     const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup)
                         ? [true, false]
                         : [false];
                     let placed = false;
                     for (const primaryOnly of passModes) {
+                        const generatedEventsBeforeAttempt = generatedEvents.length;
+                        let scheduleEventTrace: Record<string, any> | null = null;
+                        traceCurrencyPriority('scheduleAttempts', {
+                            phase: 'attempt-start',
+                            eventType,
+                            time,
+                            displayTime: _fmtT(time),
+                            primaryOnly,
+                            candidate: getCurrencyEventIdentity(priorityEvent),
+                            trainee: resolved.trainee.fullName,
+                            excludeInstructorNames: resolved.excludeInstructorNames,
+                            generatedEventsBeforeAttempt,
+                        }, 3500);
                         const result = scheduleEvent(
                             resolved.trainee,
                             syllabusItem,
@@ -5451,8 +5697,43 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 priority: priorityEvent.priority,
                                 excludeInstructorNames: resolved.excludeInstructorNames,
                                 randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+                                diagnosticTrace: entry => {
+                                    scheduleEventTrace = entry;
+                                    traceCurrencyPriority('scheduleAttempts', {
+                                        ...entry,
+                                        source: 'scheduleEvent',
+                                        eventType,
+                                        priorityEventId: priorityEvent.id,
+                                        currencyDraftId: priorityEvent.currencyDraftId || null,
+                                        primaryOnly,
+                                        generatedEventsAtTrace: generatedEvents.length,
+                                    }, 3500);
+                                },
                             }
                         );
+                        traceCurrencyPriority('scheduleAttempts', {
+                            phase: 'attempt-result',
+                            eventType,
+                            time,
+                            displayTime: _fmtT(time),
+                            primaryOnly,
+                            candidate: getCurrencyEventIdentity(priorityEvent),
+                            trainee: resolved.trainee.fullName,
+                            result: result && typeof result === 'object' && 'id' in result ? 'placed' : 'rejected',
+                            rejectionReason: scheduleEventTrace?.reason || null,
+                            scheduleEventOutcome: scheduleEventTrace?.outcome || null,
+                            generatedEventsBeforeAttempt,
+                            generatedEventsAfterAttempt: generatedEvents.length,
+                            resultSummary: result && typeof result === 'object' && 'id' in result ? {
+                                id: result.id,
+                                type: result.type,
+                                startTime: result.startTime,
+                                resourceId: result.resourceId,
+                                instructor: result.instructor,
+                                pilot: result.pilot,
+                                student: result.student,
+                            } : null,
+                        }, 3500);
                         if (result && typeof result === 'object' && 'id' in result) {
                             generatedEvents.push({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
                             const tCounts = eventCounts.get(resolved.trainee.fullName);
@@ -5460,6 +5741,28 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                             if (tCounts) tCounts.flightFtd++;
                             if (ipCounts) ipCounts.flightFtd++;
                             if (priorityEvent.currencyDraftId) scheduledCurrencyDraftIds.add(priorityEvent.currencyDraftId);
+                            traceCurrencyPriority('placementTrace', {
+                                phase: 'placed',
+                                eventType,
+                                time,
+                                displayTime: _fmtT(time),
+                                primaryOnly,
+                                candidate: getCurrencyEventIdentity(priorityEvent),
+                                generatedEventsBeforePush: generatedEventsBeforeAttempt,
+                                generatedEventsAfterPush: generatedEvents.length,
+                                scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                                result: {
+                                    id: result.id,
+                                    type: result.type,
+                                    flightNumber: result.flightNumber,
+                                    startTime: result.startTime,
+                                    duration: result.duration,
+                                    resourceId: result.resourceId,
+                                    instructor: result.instructor,
+                                    pilot: result.pilot,
+                                    student: result.student,
+                                },
+                            }, 1800);
                             remaining.splice(index, 1);
                             placed = true;
                             buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${eventType} at ${time.toFixed(2)} on ${result.resourceId}`);
@@ -5470,11 +5773,73 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         break;
                     }
                 }
+                traceCurrencyPriority('remainingTrace', {
+                    phase: 'slot-complete',
+                    eventType,
+                    time,
+                    displayTime: _fmtT(time),
+                    generatedEventsBeforeSlot,
+                    generatedEventsAfterSlot: generatedEvents.length,
+                    remainingCount: remaining.length,
+                    remaining: remaining.map(getCurrencyEventIdentity),
+                    scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                }, 1800);
             }
-            remaining.forEach(event => buildDebugLog(`[Currency Priority] Unable to schedule ${event.student || event.pilot || event.instructor || event.id} ${eventType} under normal scheduling rules`));
+            remaining.forEach(event => {
+                traceCurrencyPriority('placementTrace', {
+                    phase: 'unscheduled-after-type-pass',
+                    eventType,
+                    candidate: getCurrencyEventIdentity(event),
+                    generatedEventsCount: generatedEvents.length,
+                    scheduledCurrencyDraftIds: Array.from(scheduledCurrencyDraftIds),
+                }, 1800);
+                buildDebugLog(`[Currency Priority] Unable to schedule ${event.student || event.pilot || event.instructor || event.id} ${eventType} under normal scheduling rules`);
+            });
+            traceCurrencyPriority('typePassTrace', {
+                phase: 'type-pass-complete',
+                eventType,
+                remainingCount: remaining.length,
+                generatedEventsAtEnd: generatedEvents.length,
+                scheduledCurrencyDraftIdsAtEnd: Array.from(scheduledCurrencyDraftIds),
+                remaining: remaining.map(getCurrencyEventIdentity),
+            }, 200);
         };
         scheduleType('flight');
         scheduleType('ftd');
+        neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = eventsToSchedule.map(priorityEvent => {
+            const scheduledEvent = findScheduledCurrencyEvent(priorityEvent);
+            return {
+                priorityEvent: getCurrencyEventIdentity(priorityEvent),
+                scheduled: !!scheduledEvent,
+                scheduledEvent: scheduledEvent ? {
+                    id: scheduledEvent.id,
+                    type: scheduledEvent.type,
+                    flightNumber: scheduledEvent.flightNumber,
+                    startTime: scheduledEvent.startTime,
+                    duration: scheduledEvent.duration,
+                    resourceId: scheduledEvent.resourceId,
+                    instructor: scheduledEvent.instructor,
+                    pilot: scheduledEvent.pilot,
+                    student: scheduledEvent.student,
+                    source: (scheduledEvent as any)._source || null,
+                    currencyDraftId: scheduledEvent.currencyDraftId || null,
+                } : null,
+                likelySkippedBySharedDraftId: !scheduledEvent &&
+                    !!priorityEvent.currencyDraftId &&
+                    scheduledCurrencyDraftIds.has(priorityEvent.currencyDraftId),
+            };
+        });
+        neoBuildDiag.currencyPriorityDiagnostics.summary = {
+            totalInput: eventsToSchedule.length,
+            scheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry: any) => entry.scheduled).length,
+            unscheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry: any) => !entry.scheduled).length,
+            generatedEventsAfterCurrencyPriority: generatedEvents.length,
+            scheduledCurrencyDraftIdsAtEnd: Array.from(scheduledCurrencyDraftIds),
+            likelySharedDraftIdSkips: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments
+                .filter((entry: any) => entry.likelySkippedBySharedDraftId)
+                .map((entry: any) => entry.priorityEvent),
+        };
+        saveCurrencyPriorityDiagnostics('currency-priority-complete');
     };
     if (currencyPriorityEvents.length > 0) {
         recordProgress({ message: 'Scheduling Currency Priority Events...', percentage: 44 });
@@ -7735,6 +8100,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             traineeName: (event as any)._traineeName,
         })),
     };
+    saveCurrencyPriorityDiagnostics('final');
     saveNeoBuildDiag('final');
     buildDebugLog('[NEO-BUILD-DIAG] Build diagnostic saved to localStorage key "neo_build_diag_report". Run __downloadNeoBuildDiagnostic() in DevTools to export.', {
         activeTrainees: neoBuildDiag.activeTrainees,
