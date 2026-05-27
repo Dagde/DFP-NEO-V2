@@ -9406,13 +9406,13 @@ const PT051_STRUCTURE$2 = [
   { category: "Domestics", elements: ["Radio Comms", "Situational Awareness", "Lookout", "Knowledge"] }
 ];
 const ALL_ELEMENTS$2 = PT051_STRUCTURE$2.flatMap((cat) => cat.elements);
-const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
+const HateSheetView = ({ trainee, lmpScores, assessments, pt051Events, traineeLmp = [], userProfile, refreshEvents, onSelectLmpScore, onSelectPt051, onBackToRoster, onInsertPt051, canEditPt051 = true, onAccessDenied, isLoading = false, trainingReportTerminology = DEFAULT_TRAINING_REPORT_TERMINOLOGY }) => {
   const { isFrozen } = useSystemFreeze();
   const [localPt051Events, setLocalPt051Events] = reactExports.useState(pt051Events);
   const reportTerminology = normaliseTrainingReportTerminology(trainingReportTerminology);
   const trainingReportName = reportTerminology.name;
   const combinedHistory = React.useMemo(() => {
-    const completedAssessments = assessments2.filter((assessment) => {
+    const completedAssessments = assessments.filter((assessment) => {
       const hasGrade = assessment.overallGrade !== null && assessment.overallGrade !== void 0;
       const hasResult = assessment.overallResult !== null && assessment.overallResult !== void 0;
       const hasScoredElements = assessment.scores && assessment.scores.length > 0 && assessment.scores.some((s) => s.grade !== null);
@@ -9468,7 +9468,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     }).map((score) => ({ ...score, type: "LMP Score" }));
     console.log("=== Building combinedHistory ===");
     console.log("LMP Scores:", lmpScores.length, lmpScores);
-    console.log("All PT-051 Assessments:", assessments2.length, assessments2);
+    console.log("All PT-051 Assessments:", assessments.length, assessments);
     console.log("Completed PT-051 Assessments (filtered):", completedAssessments.length, completedAssessments);
     const normaliseEventCode = (value) => String(value || "").replace(/\s+/g, "").toUpperCase();
     const lmpOrder = /* @__PURE__ */ new Map();
@@ -9505,7 +9505,7 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
     });
     console.log("Combined History:", combined.length, combined);
     return combined;
-  }, [lmpScores, assessments2, traineeLmp]);
+  }, [lmpScores, assessments, traineeLmp]);
   const getTypeDisplayLabel = (type) => type === "PT-051" ? trainingReportName : type;
   const getTypeDisplayTitle = (type) => type === "PT-051" ? trainingReportName : type;
   const getScoreDisplay = (item) => {
@@ -9562,9 +9562,9 @@ const HateSheetView = ({ trainee, lmpScores, assessments: assessments2, pt051Eve
   };
   const handleRowClick = (item) => {
     if (item.type === "LMP Score") {
-      const existingAssessment = assessments2.find(
+      const existingAssessment = assessments.find(
         (assessment) => assessment.traineeFullName === trainee.fullName && assessment.flightNumber === item.event && (!item.date || !assessment.date || assessment.date === item.date)
-      ) || assessments2.find(
+      ) || assessments.find(
         (assessment) => assessment.traineeFullName === trainee.fullName && assessment.flightNumber === item.event
       );
       if (existingAssessment) {
@@ -82242,7 +82242,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
   };
   const syncPt051WithActiveDfp = (currentPublishedSchedules, currentPt051Assessments) => {
     const schedules = currentPublishedSchedules || publishedSchedules;
-    const assessments2 = currentPt051Assessments || pt051Assessments;
+    const assessments = currentPt051Assessments || pt051Assessments;
     console.log("🔄 Starting PT-051 sync with Active DFP...");
     console.log("Published schedules keys:", Object.keys(schedules));
     const activeDfpEvents = [];
@@ -82250,7 +82250,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       activeDfpEvents.push(...scheduleEvents);
     });
     console.log("Total events on Active DFP:", activeDfpEvents.length);
-    console.log("Current PT-051 count:", assessments2.size);
+    console.log("Current PT-051 count:", assessments.size);
     console.log("Sample events:", activeDfpEvents.slice(0, 3).map((e) => ({
       id: e.id,
       flightNumber: e.flightNumber,
@@ -82259,7 +82259,7 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
       pilot: e.pilot,
       instructor: e.instructor
     })));
-    const newAssessments = new Map(assessments2);
+    const newAssessments = new Map(assessments);
     let created = 0;
     let deleted = 0;
     activeDfpEvents.forEach((event) => {
@@ -86049,7 +86049,7 @@ ${conflictLines.join("\n")}${moreText}`,
             traineesData,
             buildDfpDate,
             highestPriorityEvents,
-            activeScheduleEvents: events,
+            activeScheduleEvents: Object.values(publishedSchedules).flat(),
             onSelectEvent: (e) => handleOpenModal(e, { isPriority: true }),
             onAddPriorityEvents: (eventsToAdd) => {
               setHighestPriorityEvents((prev) => [...prev, ...eventsToAdd]);
@@ -87303,12 +87303,13 @@ Do you want to replace the existing entry?`,
                     await saveFlightLogEntry(instrLogPayload, "instructor");
                   }
                 }
-                if (data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
+                const isCurrencyPostFlightEvent = !!eventForPostFlight && (eventForPostFlight.eventCategory === "currency" || !!eventForPostFlight.currencyDraftId || eventForPostFlight.flightNumber === "CURR");
+                if (!isCurrencyPostFlightEvent && data.result && ["DCO", "DPCO", "DNCO"].includes(data.result) && eventForPostFlight) {
                   const pfEvtForPt051 = eventForPostFlight;
                   const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || "";
                   const pt051FlightNumber = pfEvtForPt051.flightNumber || "";
                   if (pt051TraineeName && pt051FlightNumber) {
-                    const matchingPt051 = Array.from(assessments.values()).find(
+                    const matchingPt051 = Array.from(pt051Assessments.values()).find(
                       (a) => a.traineeFullName === pt051TraineeName && a.flightNumber === pt051FlightNumber && (a.overallResult === null || a.overallResult === void 0 || a.overallResult === "")
                     );
                     if (matchingPt051) {
@@ -87318,7 +87319,7 @@ Do you want to replace the existing entry?`,
                         date: pfEvtForPt051.date || matchingPt051.date,
                         instructor: pfEvtForPt051.instructor || matchingPt051.instructor
                       };
-                      setAssessments((prev) => {
+                      setPt051Assessments((prev) => {
                         const next = new Map(prev);
                         next.set(matchingPt051.id, updatedAssessment);
                         return next;

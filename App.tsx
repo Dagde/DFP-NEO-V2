@@ -19425,7 +19425,7 @@ updates.forEach(update => {
                     traineesData={traineesData}
                     buildDfpDate={buildDfpDate}
                     highestPriorityEvents={highestPriorityEvents}
-                    activeScheduleEvents={events}
+                    activeScheduleEvents={Object.values(publishedSchedules).flat()}
                     onSelectEvent={(e) => handleOpenModal(e, { isPriority: true })}
                     onAddPriorityEvents={(eventsToAdd) => {
                         setHighestPriorityEvents(prev => [...prev, ...eventsToAdd]);
@@ -20796,13 +20796,19 @@ updates.forEach(update => {
                                     // ── PT-051 result update ──────────────────────────────────────────────────
                                     // When a DCO/DPCO/DNCO result is saved, also update the linked PT-051
                                     // assessment record's dcoResult so Performance History shows the result.
-                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight) {
+                                    const isCurrencyPostFlightEvent = !!eventForPostFlight && (
+                                        eventForPostFlight.eventCategory === 'currency' ||
+                                        !!eventForPostFlight.currencyDraftId ||
+                                        eventForPostFlight.flightNumber === 'CURR'
+                                    );
+
+                                    if (!isCurrencyPostFlightEvent && data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight) {
                                         const pfEvtForPt051 = eventForPostFlight;
                                         const pt051TraineeName = pfEvtForPt051.student || pfEvtForPt051.pilot || '';
                                         const pt051FlightNumber = pfEvtForPt051.flightNumber || '';
                                         if (pt051TraineeName && pt051FlightNumber) {
                                             // Find the matching unassessed PT-051 for this flight + trainee
-                                            const matchingPt051 = Array.from(assessments.values()).find((a: any) =>
+                                            const matchingPt051 = Array.from(pt051Assessments.values()).find((a: any) =>
                                                 a.traineeFullName === pt051TraineeName &&
                                                 a.flightNumber === pt051FlightNumber &&
                                                 (a.overallResult === null || a.overallResult === undefined || a.overallResult === '')
@@ -20814,7 +20820,7 @@ updates.forEach(update => {
                                                     date: pfEvtForPt051.date || (matchingPt051 as any).date,
                                                     instructor: pfEvtForPt051.instructor || (matchingPt051 as any).instructor,
                                                 };
-                                                setAssessments(prev => {
+                                                setPt051Assessments(prev => {
                                                     const next = new Map(prev);
                                                     next.set((matchingPt051 as any).id, updatedAssessment);
                                                     return next;
