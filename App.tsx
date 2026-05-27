@@ -20833,26 +20833,36 @@ updates.forEach(update => {
                                     }
                                     // ── End PT-051 result update ──────────────────────────────────────────────
 
-                                    if (data.result === 'DCO' && eventForPostFlight?.currencyDraftId) {
-                                        setHighestPriorityEvents(prev =>
-                                            prev.filter(event => event.currencyDraftId !== eventForPostFlight.currencyDraftId)
-                                        );
-                                    }
-                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight?.currencyDraftId) {
+                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && isCurrencyPostFlightEvent && eventForPostFlight) {
                                         try {
                                             const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
                                             const storedDrafts = localStorage.getItem(currencyDraftStorageKey);
                                             const drafts = storedDrafts ? JSON.parse(storedDrafts) : [];
                                             if (Array.isArray(drafts)) {
+                                                const currencyPersonName = eventForPostFlight.student || eventForPostFlight.pilot || eventForPostFlight.instructor || '';
+                                                const matchingDraft = eventForPostFlight.currencyDraftId
+                                                    ? drafts.find((draft: any) => draft.id === eventForPostFlight.currencyDraftId)
+                                                    : drafts.find((draft: any) =>
+                                                        draft.personName === currencyPersonName &&
+                                                        draft.eventType === eventForPostFlight.type
+                                                    );
+                                                const completedCurrencyDraftId = eventForPostFlight.currencyDraftId || matchingDraft?.id;
+
+                                                if (data.result === 'DCO' && completedCurrencyDraftId) {
+                                                    setHighestPriorityEvents(prev =>
+                                                        prev.filter(event => event.currencyDraftId !== completedCurrencyDraftId)
+                                                    );
+                                                }
+
                                                 const nextDrafts = data.result === 'DCO'
-                                                    ? drafts.filter((draft: any) => draft.id !== eventForPostFlight.currencyDraftId)
+                                                    ? drafts.filter((draft: any) => draft.id !== completedCurrencyDraftId)
                                                     : drafts.map((draft: any) =>
-                                                        draft.id === eventForPostFlight.currencyDraftId
+                                                        draft.id === completedCurrencyDraftId
                                                             ? { ...draft, pushed: false, selected: true }
                                                             : draft
                                                     );
                                                 localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
-                                                console.log(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared' : 'reset for rescheduling'}:`, eventForPostFlight.currencyDraftId);
+                                                console.log(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared from draft and priority queues' : 'reset for rescheduling'}:`, completedCurrencyDraftId);
                                             }
                                         } catch (currencyDraftErr) {
                                             console.warn('[PostFlight] Currency draft update failed:', currencyDraftErr);
