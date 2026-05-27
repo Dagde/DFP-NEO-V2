@@ -5405,62 +5405,76 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     });
     const scheduleCurrencyPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
         const scheduledCurrencyDraftIds = new Set(generatedEvents.map(event => event.currencyDraftId).filter(Boolean));
-        for (const priorityEvent of eventsToSchedule) {
-            if (priorityEvent.currencyDraftId && scheduledCurrencyDraftIds.has(priorityEvent.currencyDraftId)) continue;
-            const resolved = getCurrencyPriorityPerson(priorityEvent);
-            if (!resolved) {
-                buildDebugLog(`[Currency Priority] Skipped ${priorityEvent.id}: no matching trainee/staff person found`);
-                continue;
-            }
-            if (!eventCounts.has(resolved.trainee.fullName)) {
-                eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
-            }
-            const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
-            const startBoundary = priorityEvent.type === 'flight' ? flyingStartTime : ftdStartTime;
-            const endBoundary = priorityEvent.type === 'flight' ? flyingEndTime : ftdEndTime;
-            const timeIncrement = priorityEvent.type === 'flight' ? 5 / 60 : 15 / 60;
-            const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup) && priorityEvent.type !== 'ftd'
-                ? [true, false]
-                : [false];
-            let placed = false;
-            for (const primaryOnly of passModes) {
-                if (placed) break;
-                for (let time = startBoundary; time <= endBoundary - syllabusItem.duration + 0.001; time += timeIncrement) {
-                    const result = scheduleEvent(
-                        resolved.trainee,
-                        syllabusItem,
-                        time,
-                        priorityEvent.type,
-                        false,
-                        false,
-                        primaryOnly,
-                        false,
-                        {
-                            eventId: priorityEvent.id,
-                            currencyDraftId: priorityEvent.currencyDraftId,
-                            currency: priorityEvent.currency,
-                            priority: priorityEvent.priority,
-                            excludeInstructorNames: resolved.excludeInstructorNames,
-                            randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+        const scheduleType = (eventType: 'flight' | 'ftd') => {
+            const remaining = eventsToSchedule.filter(event => event.type === eventType);
+            const startBoundary = eventType === 'flight' ? flyingStartTime : ftdStartTime;
+            const endBoundary = eventType === 'flight' ? flyingEndTime : ftdEndTime;
+            const timeIncrement = eventType === 'flight' ? 5 / 60 : 15 / 60;
+            for (let time = startBoundary; time <= endBoundary + 0.001 && remaining.length > 0; time += timeIncrement) {
+                for (let index = 0; index < remaining.length; index++) {
+                    const priorityEvent = remaining[index];
+                    if (priorityEvent.currencyDraftId && scheduledCurrencyDraftIds.has(priorityEvent.currencyDraftId)) {
+                        remaining.splice(index, 1);
+                        index--;
+                        continue;
+                    }
+                    const resolved = getCurrencyPriorityPerson(priorityEvent);
+                    if (!resolved) {
+                        buildDebugLog(`[Currency Priority] Skipped ${priorityEvent.id}: no matching trainee/staff person found`);
+                        remaining.splice(index, 1);
+                        index--;
+                        continue;
+                    }
+                    if (!eventCounts.has(resolved.trainee.fullName)) {
+                        eventCounts.set(resolved.trainee.fullName, { flightFtd: 0, ground: 0, cpt: 0, dutySup: 0, isStby: false });
+                    }
+                    const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
+                    if (time > endBoundary - syllabusItem.duration + 0.001) continue;
+                    const passModes: boolean[] = priorityEnabled && (anySoftGroup || anyHardGroup)
+                        ? [true, false]
+                        : [false];
+                    let placed = false;
+                    for (const primaryOnly of passModes) {
+                        const result = scheduleEvent(
+                            resolved.trainee,
+                            syllabusItem,
+                            time,
+                            eventType,
+                            false,
+                            false,
+                            primaryOnly,
+                            false,
+                            {
+                                eventId: priorityEvent.id,
+                                currencyDraftId: priorityEvent.currencyDraftId,
+                                currency: priorityEvent.currency,
+                                priority: priorityEvent.priority,
+                                excludeInstructorNames: resolved.excludeInstructorNames,
+                                randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+                            }
+                        );
+                        if (result && typeof result === 'object' && 'id' in result) {
+                            generatedEvents.push({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
+                            const tCounts = eventCounts.get(resolved.trainee.fullName);
+                            const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
+                            if (tCounts) tCounts.flightFtd++;
+                            if (ipCounts) ipCounts.flightFtd++;
+                            if (priorityEvent.currencyDraftId) scheduledCurrencyDraftIds.add(priorityEvent.currencyDraftId);
+                            remaining.splice(index, 1);
+                            placed = true;
+                            buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${eventType} at ${time.toFixed(2)} on ${result.resourceId}`);
+                            break;
                         }
-                    );
-                    if (result && typeof result === 'object' && 'id' in result) {
-                        generatedEvents.push({ ...result, _source: 'highest-priority-currency', _isNext: true, _traineeName: resolved.trainee.fullName });
-                        const tCounts = eventCounts.get(resolved.trainee.fullName);
-                        const ipCounts = result.instructor ? eventCounts.get(result.instructor) : null;
-                        if (tCounts) tCounts.flightFtd++;
-                        if (ipCounts) ipCounts.flightFtd++;
-                        if (priorityEvent.currencyDraftId) scheduledCurrencyDraftIds.add(priorityEvent.currencyDraftId);
-                        placed = true;
-                        buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${priorityEvent.type} at ${time.toFixed(2)} on ${result.resourceId}`);
+                    }
+                    if (placed) {
                         break;
                     }
                 }
             }
-            if (!placed) {
-                buildDebugLog(`[Currency Priority] Unable to schedule ${resolved.trainee.fullName} ${priorityEvent.type} under normal scheduling rules`);
-            }
-        }
+            remaining.forEach(event => buildDebugLog(`[Currency Priority] Unable to schedule ${event.student || event.pilot || event.instructor || event.id} ${eventType} under normal scheduling rules`));
+        };
+        scheduleType('flight');
+        scheduleType('ftd');
     };
     if (currencyPriorityEvents.length > 0) {
         recordProgress({ message: 'Scheduling Currency Priority Events...', percentage: 44 });
@@ -20455,6 +20469,27 @@ updates.forEach(update => {
                                     // ── END DATA TRACKING ───────────────────────────────────────────
                                     console.log('Post flight data saved:', data);
 
+                                    if (eventForPostFlight) {
+                                        try {
+                                            const duplicateRes = await fetch(`/api/flight-log?scheduleEventId=${encodeURIComponent(eventForPostFlight.id)}`, {
+                                                credentials: 'include',
+                                            });
+                                            if (duplicateRes.ok) {
+                                                const duplicateData = await duplicateRes.json();
+                                                if ((duplicateData.count || 0) > 0) {
+                                                    const replaceExisting = await showDarkConfirm(
+                                                        `A post-flight logbook entry already exists for ${eventForPostFlight.flightNumber} on ${eventForPostFlight.date} at ${formatDecimalHourToString(eventForPostFlight.startTime)}.\n\nDo you want to replace the existing entry?`,
+                                                        'Replace Existing Logbook Entry',
+                                                        'warning'
+                                                    );
+                                                    if (!replaceExisting) return false;
+                                                }
+                                            }
+                                        } catch (duplicateErr) {
+                                            console.warn('[PostFlight] Duplicate logbook check failed:', duplicateErr);
+                                        }
+                                    }
+
                                     // ── DCO-based EventCompletion tracking ──────────────────────────────
                                     // Persist a DCO result record to the EventCompletion table whenever
                                     // the post-flight form carries a dcoResult (DCO | DPCO | DNCO).
@@ -20530,26 +20565,6 @@ updates.forEach(update => {
                                         }
                                     }
 
-                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight?.currencyDraftId) {
-                                        try {
-                                            const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
-                                            const storedDrafts = localStorage.getItem(currencyDraftStorageKey);
-                                            const drafts = storedDrafts ? JSON.parse(storedDrafts) : [];
-                                            if (Array.isArray(drafts)) {
-                                                const nextDrafts = data.result === 'DCO'
-                                                    ? drafts.filter((draft: any) => draft.id !== eventForPostFlight.currencyDraftId)
-                                                    : drafts.map((draft: any) =>
-                                                        draft.id === eventForPostFlight.currencyDraftId
-                                                            ? { ...draft, pushed: false, selected: true }
-                                                            : draft
-                                                    );
-                                                localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
-                                                console.log(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared' : 'reset for rescheduling'}:`, eventForPostFlight.currencyDraftId);
-                                            }
-                                        } catch (currencyDraftErr) {
-                                            console.warn('[PostFlight] Currency draft update failed:', currencyDraftErr);
-                                        }
-                                    }
                                     // ── End DCO-based EventCompletion tracking ──────────────────────────
 
                                     // Persist currency updates to person's currency records
@@ -20688,6 +20703,21 @@ updates.forEach(update => {
                                         const pfEvt = eventForPostFlight;
                                         const isSoloFlight = !!data.isSolo;
                                         const isDualFlight = !!data.isDual;
+                                        const saveFlightLogEntry = async (payload: any, label: string) => {
+                                            const response = await fetch('/api/flight-log', {
+                                                method: 'POST',
+                                                credentials: 'include',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify(payload),
+                                            });
+                                            if (!response.ok) {
+                                                const errorText = await response.text();
+                                                throw new Error(`${label} flight log save failed (${response.status}): ${errorText}`);
+                                            }
+                                            const saved = await response.json();
+                                            console.log(`[PostFlight] ✅ FlightLogEntry saved for ${label}:`, saved.entry?.personName || payload.personName);
+                                            return saved;
+                                        };
 
                                         const parsedTotal  = parseFloat(data.totalTime  || '') || undefined;
                                         const parsedNight  = parseFloat(data.nightTime  || '') || undefined;
@@ -20740,15 +20770,7 @@ updates.forEach(update => {
                                                 crewLogSnapshot:    data.crewLog    && Object.keys(data.crewLog).length    > 0 ? data.crewLog    : undefined,
                                             };
                                             console.log('[PostFlight] Trainee FlightLog payload:', JSON.stringify(traineeLogPayload, null, 2));
-                                            fetch('/api/flight-log', {
-                                                method: 'POST',
-                                                credentials: 'include',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify(traineeLogPayload),
-                                            }).then(r => {
-                                                if (r.ok) console.log(`[PostFlight] ✅ FlightLogEntry saved for trainee: ${pfEvt.student}`);
-                                                else r.text().then(t => console.warn('[PostFlight] FlightLogEntry trainee failed:', r.status, t));
-                                            }).catch(e => console.warn('[PostFlight] FlightLogEntry trainee error:', e));
+                                            await saveFlightLogEntry(traineeLogPayload, 'trainee');
                                         }
 
                                         // Instructor row
@@ -20766,15 +20788,7 @@ updates.forEach(update => {
                                                 crewLogSnapshot:    data.crewLog    && Object.keys(data.crewLog).length    > 0 ? data.crewLog    : undefined,
                                             };
                                             console.log('[PostFlight] Instructor FlightLog payload:', JSON.stringify(instrLogPayload, null, 2));
-                                            fetch('/api/flight-log', {
-                                                method: 'POST',
-                                                credentials: 'include',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify(instrLogPayload),
-                                            }).then(r => {
-                                                if (r.ok) console.log(`[PostFlight] ✅ FlightLogEntry saved for instructor: ${pfEvt.instructor}`);
-                                                else r.text().then(t => console.warn('[PostFlight] FlightLogEntry instructor failed:', r.status, t));
-                                            }).catch(e => console.warn('[PostFlight] FlightLogEntry instructor error:', e));
+                                            await saveFlightLogEntry(instrLogPayload, 'instructor');
                                         }
                                     }
                                     // ── End FlightLogEntry ────────────────────────────────────────────────────
@@ -20812,6 +20826,32 @@ updates.forEach(update => {
                                         }
                                     }
                                     // ── End PT-051 result update ──────────────────────────────────────────────
+
+                                    if (data.result === 'DCO' && eventForPostFlight?.currencyDraftId) {
+                                        setHighestPriorityEvents(prev =>
+                                            prev.filter(event => event.currencyDraftId !== eventForPostFlight.currencyDraftId)
+                                        );
+                                    }
+                                    if (data.result && ['DCO', 'DPCO', 'DNCO'].includes(data.result) && eventForPostFlight?.currencyDraftId) {
+                                        try {
+                                            const currencyDraftStorageKey = 'neoCurrencyDraftEvents';
+                                            const storedDrafts = localStorage.getItem(currencyDraftStorageKey);
+                                            const drafts = storedDrafts ? JSON.parse(storedDrafts) : [];
+                                            if (Array.isArray(drafts)) {
+                                                const nextDrafts = data.result === 'DCO'
+                                                    ? drafts.filter((draft: any) => draft.id !== eventForPostFlight.currencyDraftId)
+                                                    : drafts.map((draft: any) =>
+                                                        draft.id === eventForPostFlight.currencyDraftId
+                                                            ? { ...draft, pushed: false, selected: true }
+                                                            : draft
+                                                    );
+                                                localStorage.setItem(currencyDraftStorageKey, JSON.stringify(nextDrafts));
+                                                console.log(`[PostFlight] Currency draft ${data.result === 'DCO' ? 'cleared' : 'reset for rescheduling'}:`, eventForPostFlight.currencyDraftId);
+                                            }
+                                        } catch (currencyDraftErr) {
+                                            console.warn('[PostFlight] Currency draft update failed:', currencyDraftErr);
+                                        }
+                                    }
 
                                     setEventForPostFlight(null);
                                     handleNavigation('Program Schedule');

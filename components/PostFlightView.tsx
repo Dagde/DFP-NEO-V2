@@ -19,7 +19,7 @@ import {
 interface PostFlightViewProps {
   event: ScheduleEvent;
   onReturn: () => void;
-  onSave: (data: any) => void;
+  onSave: (data: any) => void | boolean | Promise<void | boolean>;
   school: 'ESL' | 'PEA';
   traineesData: Trainee[];
   instructorsData: Instructor[];
@@ -557,7 +557,14 @@ export const PostFlightView: React.FC<PostFlightViewProps> = ({ event, onReturn,
         // 1. Notify parent (updates app state)
         // Only notify parent if NOT auto-saving, because parent closes the view.
         if (!isAutoSave) {
-            onSave(saveData);
+            try {
+                const saveResult = await onSave(saveData);
+                if (saveResult === false) return;
+            } catch (error) {
+                console.error('[PostFlight] Save failed:', error);
+                await showDarkAlert(`Post-flight data could not be saved.\n\n${error instanceof Error ? error.message : String(error)}`, 'Post Flight Save Failed', 'error');
+                return;
+            }
         }
 
         // 2. Persist to Data Storage (Auto-Save to File)

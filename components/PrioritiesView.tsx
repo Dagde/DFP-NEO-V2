@@ -644,12 +644,17 @@ export const PrioritiesView: React.FC<PrioritiesViewProps> = ({
             <tbody className="divide-y divide-gray-700/50">
                 {events.map(event => {
                     const personName = event.instructor || event.pilot || event.student || 'N/A';
+                        const isPublishedInActiveSchedule = activeScheduleEvents.some(activeEvent =>
+                            activeEvent.id === event.id ||
+                            (!!event.currencyDraftId && activeEvent.currencyDraftId === event.currencyDraftId)
+                        );
+                        const rowText = isPublishedInActiveSchedule ? 'text-green-300' : 'text-gray-300';
                     return (
                     <tr key={event.id} onClick={() => onSelectEvent(event)} className="hover:bg-sky-900/50 transition-colors cursor-pointer">
-                        <td className="py-2 px-2 text-gray-300">{personName}</td>
-                        <td className="py-2 px-2 text-gray-300 font-semibold">{event.flightNumber}</td>
-                        <td className="py-2 px-2 text-gray-300">{event.soloOrDual || event.flightType || 'N/A'}</td>
-                        <td className="py-2 px-2 text-gray-300">{event.currency || 'N/A'}</td>
+                        <td className={`py-2 px-2 ${rowText}`}>{personName}</td>
+                        <td className={`py-2 px-2 ${rowText} font-semibold`}>{event.flightNumber}</td>
+                        <td className={`py-2 px-2 ${rowText}`}>{event.soloOrDual || event.flightType || 'N/A'}</td>
+                        <td className={`py-2 px-2 ${rowText}`}>{event.currency || 'N/A'}</td>
                         <td className={`py-2 px-2 font-semibold ${
                             event.priority === 'Medium'
                                 ? 'text-amber-300'
