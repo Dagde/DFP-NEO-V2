@@ -71365,21 +71365,21 @@ const isDutySupervisorEvent = (event) => event.flightNumber === "Duty Sup" || ev
 const isStbyResource = (resourceId) => !!resourceId && (resourceId.startsWith("STBY") || resourceId.startsWith("BNF-STBY"));
 const getEventBookingWindow = (event, syllabusDetails) => {
   const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
-  if (syllabusItem) {
-    const start = event.startTime - (syllabusItem.preFlightTime || 0);
-    const end = event.startTime + event.duration + (syllabusItem.postFlightTime || 0);
-    return { start, end };
-  }
-  return { start: event.startTime, end: event.startTime + event.duration };
+  const preFlightTime = syllabusItem?.preFlightTime ?? event.preStart ?? 0;
+  const postFlightTime = syllabusItem?.postFlightTime ?? event.postEnd ?? 0;
+  return {
+    start: event.startTime - preFlightTime,
+    end: event.startTime + event.duration + postFlightTime
+  };
 };
 const getEventBookingWindowForAlgo = (event, syllabusDetails) => {
   const syllabusItem = syllabusDetails.find((s) => s.id === event.flightNumber || s.code === event.flightNumber);
-  if (syllabusItem) {
-    const start = event.startTime - (syllabusItem.preFlightTime || 0);
-    const end = event.startTime + event.duration + (syllabusItem.postFlightTime || 0);
-    return { start, end };
-  }
-  return { start: event.startTime, end: event.startTime + event.duration };
+  const preFlightTime = syllabusItem?.preFlightTime ?? event.preStart ?? 0;
+  const postFlightTime = syllabusItem?.postFlightTime ?? event.postEnd ?? 0;
+  return {
+    start: event.startTime - preFlightTime,
+    end: event.startTime + event.duration + postFlightTime
+  };
 };
 const getEventDayNightClassification = (event, syllabusDetails, sctEvents) => {
   if (event.dayNight) {
@@ -74112,7 +74112,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         overrideApplied: options.traineeTotalLimitOverride !== void 0
       });
     }
-    const proposedBookingWindow = getEventBookingWindowForAlgo({ startTime, flightNumber: syllabusItem.code, duration: syllabusItem.duration }, syllabusDetails);
+    const proposedBookingWindow = {
+      start: startTime - (syllabusItem.preFlightTime || 0),
+      end: startTime + syllabusItem.duration + (syllabusItem.postFlightTime || 0)
+    };
     if (isPersonStaticallyUnavailable(trainee, proposedBookingWindow.start, proposedBookingWindow.end, buildDate, type)) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_STATICALLY_UNAVAILABLE");
       return traceScheduleReject("TRAINEE_STATICALLY_UNAVAILABLE", { proposedBookingWindow });
@@ -74126,6 +74129,42 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     if (traineeHasOverlap) {
       if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, "TRAINEE_TIME_OVERLAP");
       return traceScheduleReject("TRAINEE_TIME_OVERLAP", { proposedBookingWindow });
+    }
+    if (options.enforcePersonnelTurnaround && (type === "flight" || type === "ftd" || type === "cpt")) {
+      const proposedEventForTurnaround = {
+        duration: syllabusItem.duration,
+        flightNumber: syllabusItem.code,
+        type
+      };
+      const traineeTurnaroundConflict = generatedEvents.find((existing) => {
+        if (isStbyResource(existing.resourceId)) return false;
+        if (!eventHasPerson(existing, trainee.fullName)) return false;
+        if (existing.type !== "flight" && existing.type !== "ftd" && existing.type !== "cpt") return false;
+        if (startTime >= existing.startTime) {
+          const gap2 = startTime - (existing.startTime + existing.duration);
+          return gap2 >= -1e-3 && gap2 < getPriorityTurnaround(existing) - 1e-3;
+        }
+        const gap = existing.startTime - (startTime + syllabusItem.duration);
+        return gap >= -1e-3 && gap < getPriorityTurnaround(proposedEventForTurnaround) - 1e-3;
+      });
+      if (traineeTurnaroundConflict) {
+        const proposedAfterExisting = startTime >= traineeTurnaroundConflict.startTime;
+        const actualGap = proposedAfterExisting ? startTime - (traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration) : traineeTurnaroundConflict.startTime - (startTime + syllabusItem.duration);
+        const requiredGap = proposedAfterExisting ? getPriorityTurnaround(traineeTurnaroundConflict) : getPriorityTurnaround(proposedEventForTurnaround);
+        return traceScheduleReject("TRAINEE_TURNAROUND", {
+          conflictingEvent: {
+            id: traineeTurnaroundConflict.id,
+            type: traineeTurnaroundConflict.type,
+            flightNumber: traineeTurnaroundConflict.flightNumber,
+            startTime: traineeTurnaroundConflict.startTime,
+            endTime: traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration,
+            resourceId: traineeTurnaroundConflict.resourceId
+          },
+          actualGap,
+          requiredGap,
+          proposedBookingWindow
+        });
+      }
     }
     const findAvailableInstructor = (traineeForCheck, syllabusItemForCheck, isPlusOneCheck, primaryOnlyMode = false) => {
       const isBnfEvent2 = isNightPass && syllabusItemForCheck.code.startsWith("BNF") && !isRemedialSyllabusItem(syllabusItemForCheck);
@@ -75394,6 +75433,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
                 randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
                 traineeFlightFtdLimitOverride,
                 traineeTotalLimitOverride,
+                enforcePersonnelTurnaround: true,
                 diagnosticTrace: (entry) => {
                   scheduleEventTrace = entry;
                   traceCurrencyPriority("scheduleAttempts", {
@@ -75501,8 +75541,8 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         remaining: remaining.map(getCurrencyEventIdentity)
       }, 200);
     };
-    scheduleType("flight");
     scheduleType("ftd");
+    scheduleType("flight");
     neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = eventsToSchedule.map((priorityEvent) => {
       const scheduledEvent = findScheduledCurrencyEvent(priorityEvent);
       return {
@@ -76994,6 +77034,37 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
               eventA: formatEvent(a),
               eventB: formatEvent(b)
             });
+          }
+          const aHasTurnaround = a.type === "flight" || a.type === "ftd" || a.type === "cpt";
+          const bHasTurnaround = b.type === "flight" || b.type === "ftd" || b.type === "cpt";
+          if (aHasTurnaround && bHasTurnaround) {
+            if (a.startTime >= b.startTime) {
+              const actualGap = a.startTime - (b.startTime + b.duration);
+              const requiredGap = resourceTurnaroundFor(b);
+              if (actualGap >= 0 && actualGap < requiredGap - 1e-3) {
+                conflicts.push({
+                  conflictType: "personnel-turnaround",
+                  commonPersonnel,
+                  actualGap,
+                  requiredGap,
+                  eventA: formatEvent(a),
+                  eventB: formatEvent(b)
+                });
+              }
+            } else {
+              const actualGap = b.startTime - (a.startTime + a.duration);
+              const requiredGap = resourceTurnaroundFor(a);
+              if (actualGap >= 0 && actualGap < requiredGap - 1e-3) {
+                conflicts.push({
+                  conflictType: "personnel-turnaround",
+                  commonPersonnel,
+                  actualGap,
+                  requiredGap,
+                  eventA: formatEvent(a),
+                  eventB: formatEvent(b)
+                });
+              }
+            }
           }
           const aClassification = getGeneratedEventDayNightClassification(a);
           const bClassification = getGeneratedEventDayNightClassification(b);
@@ -79691,6 +79762,12 @@ ${"=".repeat(60)}`);
     if (targetEvent.type === "flight") requiredTurnaround = flightTurnaround;
     else if (targetEvent.type === "ftd") requiredTurnaround = ftdTurnaround;
     else if (targetEvent.type === "cpt" || targetEvent.type === "ground" && targetEvent.flightNumber.includes("CPT")) requiredTurnaround = cptTurnaround;
+    const getValidationTurnaround = (event) => {
+      if (event.type === "flight") return flightTurnaround;
+      if (event.type === "ftd") return ftdTurnaround;
+      if (event.type === "cpt" || event.type === "ground" && event.flightNumber.includes("CPT")) return cptTurnaround;
+      return 0;
+    };
     const sameResourceEvents = validEvents.filter(
       (e) => e.resourceId === targetEvent.resourceId && !targetIsStby && !isStbyResource(e.resourceId)
     );
@@ -79760,6 +79837,32 @@ ${"=".repeat(60)}`);
             conflictType: "personnel",
             conflictedPersonnel: commonPersonnel[0]
           };
+        }
+        const targetHasTurnaround = targetEvent.type === "flight" || targetEvent.type === "ftd" || targetEvent.type === "cpt";
+        const eventHasTurnaround = event.type === "flight" || event.type === "ftd" || event.type === "cpt";
+        if (targetHasTurnaround && eventHasTurnaround) {
+          if (targetEvent.startTime >= event.startTime) {
+            const gap = targetEvent.startTime - (event.startTime + event.duration);
+            const eventTurnaround = getValidationTurnaround(event);
+            if (gap >= 0 && gap < eventTurnaround - 1e-3) {
+              return {
+                hasConflict: true,
+                conflictingEventId: event.id,
+                conflictType: "turnaround",
+                conflictedPersonnel: commonPersonnel[0]
+              };
+            }
+          } else {
+            const gap = event.startTime - (targetEvent.startTime + targetEvent.duration);
+            if (gap >= 0 && gap < requiredTurnaround - 1e-3) {
+              return {
+                hasConflict: true,
+                conflictingEventId: event.id,
+                conflictType: "turnaround",
+                conflictedPersonnel: commonPersonnel[0]
+              };
+            }
+          }
         }
       }
     }
