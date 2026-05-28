@@ -76838,21 +76838,71 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       }
       return { conflict: false, reason: null };
     };
-    currencyFlights.forEach((event) => {
-      const personName = event.student || event.pilot || "";
+    const priorityFlightEvents = currencyPriorityEvents.filter((priorityEvent) => priorityEvent.type === "flight");
+    const usedCurrencyFlightIds = /* @__PURE__ */ new Set();
+    const orderedCurrencyFlights = priorityFlightEvents.map((priorityEvent) => {
+      const personName = priorityEvent.student || priorityEvent.pilot || priorityEvent.instructor || "";
+      const matchedEvent = currencyFlights.find((event) => {
+        if (usedCurrencyFlightIds.has(event.id)) return false;
+        if (event.id === priorityEvent.id) return true;
+        if (priorityEvent.currencyDraftId && event.currencyDraftId === priorityEvent.currencyDraftId && event.type === priorityEvent.type && eventHasPerson(event, personName)) {
+          return true;
+        }
+        return event.type === priorityEvent.type && event.flightNumber === priorityEvent.flightNumber && eventHasPerson(event, personName);
+      }) || null;
+      if (matchedEvent) usedCurrencyFlightIds.add(matchedEvent.id);
+      return matchedEvent ? { priorityEvent, event: matchedEvent } : null;
+    }).filter((entry) => !!entry);
+    const roundUpToIncrement = (time) => {
+      const minutes = Math.ceil((time * 60 - 1e-3) / 5) * 5;
+      return Math.round(minutes / 60 * 12) / 12;
+    };
+    const decrementFlightFtdCountsForEvent = (event) => {
+      if (event.type !== "flight" && event.type !== "ftd") return;
+      const primaryPerson = event._traineeName || event.student || "";
+      const primaryCounts = primaryPerson ? eventCounts.get(primaryPerson) : null;
+      if (primaryCounts) primaryCounts.flightFtd = Math.max(0, primaryCounts.flightFtd - 1);
+      const instructorName = event.instructor || "";
+      if (instructorName && !personnelNamesMatch(instructorName, primaryPerson)) {
+        const instructorCounts = eventCounts.get(instructorName);
+        if (instructorCounts) instructorCounts.flightFtd = Math.max(0, instructorCounts.flightFtd - 1);
+      }
+    };
+    const incrementFlightFtdCountsForEvent = (event) => {
+      if (event.type !== "flight" && event.type !== "ftd") return;
+      const primaryPerson = event._traineeName || event.student || "";
+      const primaryCounts = primaryPerson ? eventCounts.get(primaryPerson) : null;
+      if (primaryCounts) primaryCounts.flightFtd++;
+      const instructorName = event.instructor || "";
+      if (instructorName && !personnelNamesMatch(instructorName, primaryPerson)) {
+        const instructorCounts = eventCounts.get(instructorName);
+        if (instructorCounts) instructorCounts.flightFtd++;
+      }
+    };
+    let nextCurrencyFlightSequenceStart = null;
+    orderedCurrencyFlights.forEach(({ priorityEvent, event }) => {
+      const personName = priorityEvent.student || priorityEvent.pilot || priorityEvent.instructor || event.student || event.pilot || "";
       const pairedFtd = generatedEvents.filter(
         (existing) => existing.type === "ftd" && existing._source === "highest-priority-currency" && isCurrencyPriorityEvent(existing) && eventHasPerson(existing, personName)
       ).sort((a, b) => b.startTime - a.startTime)[0] || null;
-      const earliestByFtd = pairedFtd ? pairedFtd.startTime + pairedFtd.duration + ftdTurnaround : flyingStartTime;
-      const searchStart = Math.max(flyingStartTime, earliestByFtd);
+      const pairedFtdBookingWindow = pairedFtd ? getEventBookingWindowForAlgo(pairedFtd, syllabusDetails) : null;
+      const earliestByFtd = pairedFtdBookingWindow ? pairedFtdBookingWindow.end + getCurrencyPreFlightTime(priorityEvent) : flyingStartTime;
+      const searchStart = roundUpToIncrement(Math.max(
+        flyingStartTime,
+        earliestByFtd,
+        nextCurrencyFlightSequenceStart ?? flyingStartTime
+      ));
       const currentStart = event.startTime;
       let moved = false;
-      let traceBudget = 80;
+      let traceBudget = 160;
+      const resolved = getCurrencyPriorityPerson(priorityEvent);
+      const syllabusItem = makeCurrencySyllabusItem(priorityEvent);
       traceCurrencyPriority("placementTrace", {
         phase: "compression-start",
         eventType: "flight",
         candidate: {
           id: event.id,
+          priorityEventId: priorityEvent.id,
           personName,
           instructor: event.instructor || event.pilot || "",
           currentStartTime: event.startTime,
@@ -76862,108 +76912,176 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
         searchStart,
         searchStartDisplayTime: _fmtT(searchStart),
         currentStart,
+        currentDisplayTime: _fmtT(currentStart),
+        nextCurrencyFlightSequenceStart,
+        nextCurrencyFlightSequenceDisplayTime: nextCurrencyFlightSequenceStart !== null ? _fmtT(nextCurrencyFlightSequenceStart) : null,
         pairedFtd: pairedFtd ? {
           id: pairedFtd.id,
           startTime: pairedFtd.startTime,
           endTime: pairedFtd.startTime + pairedFtd.duration,
+          bookingWindow: pairedFtdBookingWindow,
           resourceId: pairedFtd.resourceId
         } : null,
-        flightResources
+        flightResources,
+        resolvedPerson: resolved ? resolved.trainee.fullName : null,
+        syllabusItem: {
+          duration: syllabusItem.duration,
+          preFlightTime: syllabusItem.preFlightTime,
+          postFlightTime: syllabusItem.postFlightTime
+        }
       }, 1800);
+      if (!resolved) {
+        traceCurrencyPriority("placementTrace", {
+          phase: "compression-not-moved",
+          reason: "PERSON_RESOLUTION_FAILED",
+          eventType: "flight",
+          eventId: event.id,
+          personName,
+          startTime: event.startTime,
+          displayTime: _fmtT(event.startTime),
+          resourceId: event.resourceId
+        }, 1800);
+        nextCurrencyFlightSequenceStart = event.startTime + timeIncrement;
+        return;
+      }
       for (let time = searchStart; time < currentStart - 1e-3 && !moved; time += timeIncrement) {
         const roundedTime = Math.round(time * 12) / 12;
-        if (!canAssignPersonForScheduledWindow(personName, roundedTime)) {
-          if (traceBudget-- > 0) {
-            traceCurrencyPriority("placementTrace", {
-              phase: "compression-slot-rejected",
-              reason: "PERSON_DAY_NIGHT_SEPARATION",
-              eventType: "flight",
-              eventId: event.id,
-              personName,
-              time: roundedTime,
-              displayTime: _fmtT(roundedTime)
-            }, 1800);
-          }
-          continue;
-        }
-        const candidateForAvailability = { ...event, startTime: roundedTime };
-        const candidateWindow = getEventBookingWindowForAlgo(candidateForAvailability, syllabusDetails);
-        const traineeOrStaff = trainees.find((trainee) => personnelNamesMatch(trainee.fullName, personName)) || instructors.find((instructor) => personnelNamesMatch(instructor.name, personName));
-        const assignedInstructor = instructors.find((instructor) => personnelNamesMatch(instructor.name, event.instructor || event.pilot || ""));
-        if (traineeOrStaff && isPersonStaticallyUnavailable(traineeOrStaff, candidateWindow.start, candidateWindow.end, buildDate, "flight")) {
-          if (traceBudget-- > 0) {
-            traceCurrencyPriority("placementTrace", {
-              phase: "compression-slot-rejected",
-              reason: "PERSON_STATICALLY_UNAVAILABLE",
-              eventType: "flight",
-              eventId: event.id,
-              personName,
-              time: roundedTime,
-              displayTime: _fmtT(roundedTime),
-              candidateWindow
-            }, 1800);
-          }
-          continue;
-        }
-        if (assignedInstructor && isPersonStaticallyUnavailable(assignedInstructor, candidateWindow.start, candidateWindow.end, buildDate, "flight")) {
-          if (traceBudget-- > 0) {
-            traceCurrencyPriority("placementTrace", {
-              phase: "compression-slot-rejected",
-              reason: "INSTRUCTOR_STATICALLY_UNAVAILABLE",
-              eventType: "flight",
-              eventId: event.id,
-              personName,
-              instructor: assignedInstructor.name,
-              time: roundedTime,
-              displayTime: _fmtT(roundedTime),
-              candidateWindow
-            }, 1800);
-          }
-          continue;
-        }
+        const eventIndex = generatedEvents.findIndex((existing) => existing.id === event.id);
+        if (eventIndex < 0) break;
+        const originalEvent = generatedEvents[eventIndex];
+        generatedEvents.splice(eventIndex, 1);
+        decrementFlightFtdCountsForEvent(originalEvent);
+        const candidateWindow = getEventBookingWindowForAlgo({
+          startTime: roundedTime,
+          flightNumber: syllabusItem.code,
+          duration: syllabusItem.duration,
+          preStart: syllabusItem.preFlightTime,
+          postEnd: syllabusItem.postFlightTime
+        }, syllabusDetails);
+        const resourceReasonCounts = {};
+        const resourceExamples = [];
         for (const resourceId of flightResources) {
           const candidate = { ...event, startTime: roundedTime, resourceId };
           const conflict = getCurrencyCompressionConflict(candidate, generatedEvents);
-          if (conflict.conflict) {
-            if (traceBudget-- > 0) {
-              traceCurrencyPriority("placementTrace", {
-                phase: "compression-resource-rejected",
-                reason: conflict.reason,
-                eventType: "flight",
-                eventId: event.id,
-                personName,
-                time: roundedTime,
-                displayTime: _fmtT(roundedTime),
-                resourceId,
-                details: conflict.details || null
-              }, 1800);
-            }
-            continue;
+          const reason = conflict.reason || "AVAILABLE";
+          resourceReasonCounts[reason] = (resourceReasonCounts[reason] || 0) + 1;
+          if (resourceExamples.length < 5) {
+            resourceExamples.push({
+              resourceId,
+              reason,
+              details: conflict.details || null
+            });
           }
+        }
+        let scheduleEventTrace = null;
+        const traineeCounts = eventCounts.get(resolved.trainee.fullName);
+        const traineeFlightFtdLimitOverride = Math.max(
+          eventLimits.trainee.maxFlightFtd,
+          (traineeCounts?.flightFtd || 0) + 1
+        );
+        const traineeTotalLimitOverride = Math.max(
+          eventLimits.trainee.maxTotal,
+          (traineeCounts ? traineeCounts.flightFtd + traineeCounts.ground + traineeCounts.cpt : 0) + 1
+        );
+        const result = scheduleEvent(
+          resolved.trainee,
+          syllabusItem,
+          roundedTime,
+          "flight",
+          false,
+          false,
+          false,
+          false,
+          {
+            eventId: priorityEvent.id,
+            currencyDraftId: priorityEvent.currencyDraftId,
+            currency: priorityEvent.currency,
+            priority: priorityEvent.priority,
+            excludeInstructorNames: resolved.excludeInstructorNames,
+            randomizeInstructorCandidates: resolved.excludeInstructorNames.length > 0,
+            traineeFlightFtdLimitOverride,
+            traineeTotalLimitOverride,
+            enforcePersonnelTurnaround: true,
+            diagnosticTrace: (entry) => {
+              scheduleEventTrace = entry;
+            }
+          }
+        );
+        if (traceBudget-- > 0) {
+          traceCurrencyPriority("scheduleAttempts", {
+            phase: "compression-attempt-result",
+            eventType: "flight",
+            time: roundedTime,
+            displayTime: _fmtT(roundedTime),
+            candidate: {
+              id: event.id,
+              priorityEventId: priorityEvent.id,
+              personName,
+              previousStartTime: currentStart,
+              previousDisplayTime: _fmtT(currentStart),
+              previousResourceId: event.resourceId
+            },
+            proposedBookingWindow: candidateWindow,
+            resourceScanSummary: {
+              flightResources,
+              reasonCounts: resourceReasonCounts,
+              examples: resourceExamples
+            },
+            result: result && typeof result === "object" && "id" in result ? "placed" : "rejected",
+            rejectionReason: scheduleEventTrace?.reason || null,
+            scheduleEventOutcome: scheduleEventTrace?.outcome || null,
+            scheduleEventDetails: scheduleEventTrace?.details || null,
+            traineeEventLimitOverrides: {
+              traineeFlightFtdLimitOverride,
+              traineeTotalLimitOverride
+            },
+            resultSummary: result && typeof result === "object" && "id" in result ? {
+              id: result.id,
+              type: result.type,
+              startTime: result.startTime,
+              resourceId: result.resourceId,
+              instructor: result.instructor,
+              pilot: result.pilot,
+              student: result.student
+            } : null
+          }, 3500);
+        }
+        if (result && typeof result === "object" && "id" in result) {
+          const replacement = {
+            ...result,
+            _source: "highest-priority-currency",
+            _isNext: true,
+            _traineeName: resolved.trainee.fullName
+          };
+          generatedEvents.splice(eventIndex, 0, replacement);
+          incrementFlightFtdCountsForEvent(replacement);
           traceCurrencyPriority("placementTrace", {
             phase: "compressed-earlier",
             eventType: "flight",
             candidate: {
               id: event.id,
+              priorityEventId: priorityEvent.id,
               personName,
-              instructor: event.instructor || event.pilot || "",
               previousStartTime: event.startTime,
               previousDisplayTime: _fmtT(event.startTime),
-              previousResourceId: event.resourceId
+              previousResourceId: event.resourceId,
+              previousInstructor: event.instructor || event.pilot || ""
             },
-            newStartTime: roundedTime,
-            newDisplayTime: _fmtT(roundedTime),
-            newResourceId: resourceId,
+            newStartTime: result.startTime,
+            newDisplayTime: _fmtT(result.startTime),
+            newResourceId: result.resourceId,
+            newInstructor: result.instructor,
             pairedFtd: pairedFtd ? {
               id: pairedFtd.id,
               startTime: pairedFtd.startTime,
               resourceId: pairedFtd.resourceId
             } : null
           }, 1800);
-          event.startTime = roundedTime;
-          event.resourceId = resourceId;
+          Object.assign(event, replacement);
           moved = true;
-          break;
+        } else {
+          generatedEvents.splice(eventIndex, 0, originalEvent);
+          incrementFlightFtdCountsForEvent(originalEvent);
         }
       }
       if (!moved) {
@@ -76978,6 +77096,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
           traceBudgetExhausted: traceBudget <= 0
         }, 1800);
       }
+      nextCurrencyFlightSequenceStart = event.startTime + timeIncrement;
     });
     neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map((priorityEvent) => {
       const scheduledEvent = generatedEvents.find((event) => event.id === priorityEvent.id) || generatedEvents.find(
