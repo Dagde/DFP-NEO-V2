@@ -4077,6 +4077,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         traineeFlightFtdLimitOverride?: number;
         traineeTotalLimitOverride?: number;
         enforcePersonnelTurnaround?: boolean;
+        traineeOverlapRole?: 'any' | 'trainee';
     };
 
     const scheduleEvent = (
@@ -4237,15 +4238,35 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             return traceScheduleReject('TRAINEE_STATICALLY_UNAVAILABLE', { proposedBookingWindow });
         }
 
-        const traineeHasOverlap = generatedEvents.some(e => {
+        const traineeOverlapEvents = generatedEvents.filter(e => {
             if (e.resourceId.startsWith('STBY') || e.resourceId.startsWith('BNF-STBY')) return false;
-            if (!eventHasPerson(e, trainee.fullName)) return false;
+            const hasTraineeConflict = options.traineeOverlapRole === 'trainee'
+                ? eventHasPersonWithRole(e, trainee.fullName, 'trainee')
+                : eventHasPerson(e, trainee.fullName);
+            if (!hasTraineeConflict) return false;
             const existingBookingWindow = getEventBookingWindowForAlgo(e, syllabusDetails);
             return proposedBookingWindow.start < existingBookingWindow.end && proposedBookingWindow.end > existingBookingWindow.start;
         });
-        if (traineeHasOverlap) {
+        if (traineeOverlapEvents.length > 0) {
             if (_isFlight) _fbLogFailure(trainee, syllabusItem, _isNext, startTime, _fbEnd, 'TRAINEE_TIME_OVERLAP');
-            return traceScheduleReject('TRAINEE_TIME_OVERLAP', { proposedBookingWindow });
+            return traceScheduleReject('TRAINEE_TIME_OVERLAP', {
+                proposedBookingWindow,
+                traineeOverlapRole: options.traineeOverlapRole || 'any',
+                overlappingEvents: traineeOverlapEvents.slice(0, 8).map(existing => ({
+                    id: existing.id,
+                    type: existing.type,
+                    flightNumber: existing.flightNumber,
+                    startTime: existing.startTime,
+                    endTime: existing.startTime + existing.duration,
+                    bookingWindow: getEventBookingWindowForAlgo(existing, syllabusDetails),
+                    resourceId: existing.resourceId,
+                    instructor: existing.instructor || null,
+                    student: existing.student || null,
+                    pilot: existing.pilot || null,
+                    source: (existing as any)._source || null,
+                    personRoleRefs: getPersonnelIdentityRefs(existing).filter(ref => personnelNamesMatch(ref.label, trainee.fullName)),
+                })),
+            });
         }
         if (options.enforcePersonnelTurnaround && (type === 'flight' || type === 'ftd' || type === 'cpt')) {
             const proposedEventForTurnaround = {
@@ -5837,6 +5858,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 traineeFlightFtdLimitOverride,
                                 traineeTotalLimitOverride,
                                 enforcePersonnelTurnaround: true,
+                                traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? 'trainee' : 'any',
                                 diagnosticTrace: entry => {
                                     scheduleEventTrace = entry;
                                     traceCurrencyPriority('scheduleAttempts', {
@@ -7805,6 +7827,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         traineeFlightFtdLimitOverride,
                         traineeTotalLimitOverride,
                         enforcePersonnelTurnaround: true,
+                        traineeOverlapRole: resolved.excludeInstructorNames.length > 0 ? 'trainee' : 'any',
                         diagnosticTrace: entry => {
                             scheduleEventTrace = entry;
                         },
