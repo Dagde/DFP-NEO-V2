@@ -6031,10 +6031,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
     }
-    if (deferredCurrencyFlightPriorityEvents.length > 0) {
-        recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 44 });
-        scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
-    }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
     // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
@@ -6535,6 +6531,35 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     const _soloFlightList = _normalFlightList.filter(t => _isSoloTrainee(t));
     const _formationGroupByKey = new Map(_formationFlightGroups.map(group => [getFormationEventKey(group.item), group]));
     const _placedFormationKeys = new Set<string>();
+    const roundUpToFlightSlot = (time: number): number => Math.ceil((time - 1e-9) * 12) / 12;
+    const getDeferredCurrencyFlightInsertionStart = (): number | null => {
+        if (deferredCurrencyFlightPriorityEvents.length === 0) return null;
+        const candidateStarts = deferredCurrencyFlightPriorityEvents.map(priorityEvent => {
+            const personName = priorityEvent.student || priorityEvent.pilot || priorityEvent.instructor || '';
+            const pairedFtd = generatedEvents
+                .filter(event =>
+                    event.type === 'ftd' &&
+                    event._source === 'highest-priority-currency' &&
+                    isCurrencyPriorityEvent(event as ScheduleEvent) &&
+                    eventHasPerson(event, personName)
+                )
+                .sort((a, b) => b.startTime - a.startTime)[0] || null;
+            if (!pairedFtd) return flyingStartTime;
+            const pairedFtdWindow = getEventBookingWindowForAlgo(pairedFtd, syllabusDetails);
+            return roundUpToFlightSlot(Math.max(
+                flyingStartTime,
+                pairedFtdWindow.end + getCurrencyPreFlightTime(priorityEvent)
+            ));
+        }).filter(time => Number.isFinite(time));
+        return candidateStarts.length > 0 ? Math.min(...candidateStarts) : null;
+    };
+    let deferredCurrencyFlightsScheduled = false;
+    const scheduleDeferredCurrencyFlights = () => {
+        if (deferredCurrencyFlightsScheduled || deferredCurrencyFlightPriorityEvents.length === 0) return;
+        recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 54 });
+        scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
+        deferredCurrencyFlightsScheduled = true;
+    };
     const _schedulePrioritizedDualsAndFormations = (
         prioritizedFlightList: Trainee[],
         startTimeBoundary: number,
@@ -6663,7 +6688,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
     // a dedicated grouped pass so matching trainees are pulled together by event code.
     if (_mandatoryDayFlightList.length > 0) {
         const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + (5 / 60);
-        const roundUpToFlightSlot = (time: number): number => Math.ceil((time - 1e-9) * 12) / 12;
         if (flyingStartTime < REMEDIAL_EARLIEST_START) {
             _schedulePrioritizedDualsAndFormations(
                 _allFlightList,
@@ -6699,21 +6723,54 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             mandatoryRemedialFlightItems
         );
 
+        const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
+        if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 0.001) {
+            _schedulePrioritizedDualsAndFormations(
+                _allFlightList,
+                alignedPostMandatoryStart,
+                flyingEndTime,
+                'FLIGHT Next Pre-Currency Normal Dual',
+                'FLIGHT Formation Groups Pre-Currency',
+                currencyInsertionStart
+            );
+        }
+        scheduleDeferredCurrencyFlights();
         _schedulePrioritizedDualsAndFormations(
             _allFlightList,
-            alignedPostMandatoryStart,
+            Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
             flyingEndTime,
             'FLIGHT Next Post-1000 Normal Dual',
             'FLIGHT Formation Groups Post-1000'
         );
     } else {
-        _schedulePrioritizedDualsAndFormations(
-            _allFlightList,
-            flyingStartTime,
-            flyingEndTime,
-            'FLIGHT Next Normal Dual',
-            'FLIGHT Formation Groups'
-        );
+        const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
+        if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 0.001) {
+            _schedulePrioritizedDualsAndFormations(
+                _allFlightList,
+                flyingStartTime,
+                flyingEndTime,
+                'FLIGHT Next Pre-Currency Normal Dual',
+                'FLIGHT Formation Groups Pre-Currency',
+                currencyInsertionStart
+            );
+            scheduleDeferredCurrencyFlights();
+            _schedulePrioritizedDualsAndFormations(
+                _allFlightList,
+                currencyInsertionStart,
+                flyingEndTime,
+                'FLIGHT Next Normal Dual',
+                'FLIGHT Formation Groups'
+            );
+        } else {
+            scheduleDeferredCurrencyFlights();
+            _schedulePrioritizedDualsAndFormations(
+                _allFlightList,
+                flyingStartTime,
+                flyingEndTime,
+                'FLIGHT Next Normal Dual',
+                'FLIGHT Formation Groups'
+            );
+        }
     }
 
     // Step 3b: Schedule SOLO flights using grouped dispatch logic.

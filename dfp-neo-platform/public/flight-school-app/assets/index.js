@@ -75656,10 +75656,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
     scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
   }
-  if (deferredCurrencyFlightPriorityEvents.length > 0) {
-    recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 44 });
-    scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
-  }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
@@ -76085,6 +76081,30 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   const _soloFlightList = _normalFlightList.filter((t) => _isSoloTrainee(t));
   const _formationGroupByKey = new Map(_formationFlightGroups.map((group) => [getFormationEventKey(group.item), group]));
   const _placedFormationKeys = /* @__PURE__ */ new Set();
+  const roundUpToFlightSlot = (time) => Math.ceil((time - 1e-9) * 12) / 12;
+  const getDeferredCurrencyFlightInsertionStart = () => {
+    if (deferredCurrencyFlightPriorityEvents.length === 0) return null;
+    const candidateStarts = deferredCurrencyFlightPriorityEvents.map((priorityEvent) => {
+      const personName = priorityEvent.student || priorityEvent.pilot || priorityEvent.instructor || "";
+      const pairedFtd = generatedEvents.filter(
+        (event) => event.type === "ftd" && event._source === "highest-priority-currency" && isCurrencyPriorityEvent(event) && eventHasPerson(event, personName)
+      ).sort((a, b) => b.startTime - a.startTime)[0] || null;
+      if (!pairedFtd) return flyingStartTime;
+      const pairedFtdWindow = getEventBookingWindowForAlgo(pairedFtd, syllabusDetails);
+      return roundUpToFlightSlot(Math.max(
+        flyingStartTime,
+        pairedFtdWindow.end + getCurrencyPreFlightTime(priorityEvent)
+      ));
+    }).filter((time) => Number.isFinite(time));
+    return candidateStarts.length > 0 ? Math.min(...candidateStarts) : null;
+  };
+  let deferredCurrencyFlightsScheduled = false;
+  const scheduleDeferredCurrencyFlights = () => {
+    if (deferredCurrencyFlightsScheduled || deferredCurrencyFlightPriorityEvents.length === 0) return;
+    recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 54 });
+    scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
+    deferredCurrencyFlightsScheduled = true;
+  };
   const _schedulePrioritizedDualsAndFormations = (prioritizedFlightList, startTimeBoundary, endTimeBoundary, normalLabel, formationLabel, latestStartBefore) => {
     const pendingNormalDuals = [];
     const attemptedFormationKeys = /* @__PURE__ */ new Set();
@@ -76195,7 +76215,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
   window.__fbFlightListSize = _allFlightList.length;
   if (_mandatoryDayFlightList.length > 0) {
     const firstRemedialFlightStart = REMEDIAL_EARLIEST_START + 5 / 60;
-    const roundUpToFlightSlot = (time) => Math.ceil((time - 1e-9) * 12) / 12;
     if (flyingStartTime < REMEDIAL_EARLIEST_START) {
       _schedulePrioritizedDualsAndFormations(
         _allFlightList,
@@ -76226,21 +76245,54 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       "FLIGHT Mandatory Remedial",
       mandatoryRemedialFlightItems
     );
+    const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
+    if (currencyInsertionStart !== null && currencyInsertionStart > alignedPostMandatoryStart + 1e-3) {
+      _schedulePrioritizedDualsAndFormations(
+        _allFlightList,
+        alignedPostMandatoryStart,
+        flyingEndTime,
+        "FLIGHT Next Pre-Currency Normal Dual",
+        "FLIGHT Formation Groups Pre-Currency",
+        currencyInsertionStart
+      );
+    }
+    scheduleDeferredCurrencyFlights();
     _schedulePrioritizedDualsAndFormations(
       _allFlightList,
-      alignedPostMandatoryStart,
+      Math.max(alignedPostMandatoryStart, currencyInsertionStart ?? alignedPostMandatoryStart),
       flyingEndTime,
       "FLIGHT Next Post-1000 Normal Dual",
       "FLIGHT Formation Groups Post-1000"
     );
   } else {
-    _schedulePrioritizedDualsAndFormations(
-      _allFlightList,
-      flyingStartTime,
-      flyingEndTime,
-      "FLIGHT Next Normal Dual",
-      "FLIGHT Formation Groups"
-    );
+    const currencyInsertionStart = getDeferredCurrencyFlightInsertionStart();
+    if (currencyInsertionStart !== null && currencyInsertionStart > flyingStartTime + 1e-3) {
+      _schedulePrioritizedDualsAndFormations(
+        _allFlightList,
+        flyingStartTime,
+        flyingEndTime,
+        "FLIGHT Next Pre-Currency Normal Dual",
+        "FLIGHT Formation Groups Pre-Currency",
+        currencyInsertionStart
+      );
+      scheduleDeferredCurrencyFlights();
+      _schedulePrioritizedDualsAndFormations(
+        _allFlightList,
+        currencyInsertionStart,
+        flyingEndTime,
+        "FLIGHT Next Normal Dual",
+        "FLIGHT Formation Groups"
+      );
+    } else {
+      scheduleDeferredCurrencyFlights();
+      _schedulePrioritizedDualsAndFormations(
+        _allFlightList,
+        flyingStartTime,
+        flyingEndTime,
+        "FLIGHT Next Normal Dual",
+        "FLIGHT Formation Groups"
+      );
+    }
   }
   if (_soloFlightList.length > 0) {
     const MAX_SOLO_GROUP_SIZE = 4;
