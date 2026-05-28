@@ -4277,7 +4277,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             } as Omit<ScheduleEvent, 'date'>;
             const traineeTurnaroundConflict = generatedEvents.find(existing => {
                 if (isStbyResource(existing.resourceId)) return false;
-                if (!eventHasPerson(existing, trainee.fullName)) return false;
+                const hasTraineeTurnaroundConflict = options.traineeOverlapRole === 'trainee'
+                    ? eventHasPersonWithRole(existing, trainee.fullName, 'trainee')
+                    : eventHasPerson(existing, trainee.fullName);
+                if (!hasTraineeTurnaroundConflict) return false;
                 if (existing.type !== 'flight' && existing.type !== 'ftd' && existing.type !== 'cpt') return false;
                 if (startTime >= existing.startTime) {
                     const gap = startTime - (existing.startTime + existing.duration);
@@ -4302,9 +4305,15 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                         startTime: traineeTurnaroundConflict.startTime,
                         endTime: traineeTurnaroundConflict.startTime + traineeTurnaroundConflict.duration,
                         resourceId: traineeTurnaroundConflict.resourceId,
+                        instructor: traineeTurnaroundConflict.instructor || null,
+                        student: traineeTurnaroundConflict.student || null,
+                        pilot: traineeTurnaroundConflict.pilot || null,
+                        source: (traineeTurnaroundConflict as any)._source || null,
+                        personRoleRefs: getPersonnelIdentityRefs(traineeTurnaroundConflict).filter(ref => personnelNamesMatch(ref.label, trainee.fullName)),
                     },
                     actualGap,
                     requiredGap,
+                    traineeOverlapRole: options.traineeOverlapRole || 'any',
                     proposedBookingWindow,
                 });
             }
