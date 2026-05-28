@@ -2539,15 +2539,35 @@ function generateDfpInternal(
     }
 
     function saveCurrencyPriorityDiagnostics(stage: string) {
+        const payload = {
+            stage,
+            buildDate,
+            updatedAt: new Date().toISOString(),
+            currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
+        };
         try {
-            localStorage.setItem('neo_currency_priority_diag', JSON.stringify({
-                stage,
-                buildDate,
-                updatedAt: new Date().toISOString(),
-                currencyPriorityDiagnostics: getCompactCurrencyPriorityDiagnostics(),
-            }));
+            localStorage.setItem('neo_currency_priority_diag', JSON.stringify(payload));
         } catch (error) {
-            console.warn('[Currency Priority] Failed to save focused diagnostic report:', error);
+            try {
+                localStorage.setItem('neo_currency_priority_diag', JSON.stringify({
+                    ...payload,
+                    storageCompacted: true,
+                    storageCompactedReason: error instanceof Error ? error.message : String(error),
+                    currencyPriorityDiagnostics: {
+                        ...neoBuildDiag.currencyPriorityDiagnostics,
+                        queueAudit: neoBuildDiag.currencyPriorityDiagnostics.queueAudit.slice(-50),
+                        typePassTrace: neoBuildDiag.currencyPriorityDiagnostics.typePassTrace.slice(-80),
+                        slotTrace: neoBuildDiag.currencyPriorityDiagnostics.slotTrace.slice(-120),
+                        candidateTrace: neoBuildDiag.currencyPriorityDiagnostics.candidateTrace.slice(-120),
+                        scheduleAttempts: neoBuildDiag.currencyPriorityDiagnostics.scheduleAttempts.slice(-500),
+                        placementTrace: neoBuildDiag.currencyPriorityDiagnostics.placementTrace.slice(-300),
+                        remainingTrace: neoBuildDiag.currencyPriorityDiagnostics.remainingTrace.slice(-120),
+                        finalAssignments: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.slice(-100),
+                    },
+                }));
+            } catch (compactError) {
+                console.warn('[Currency Priority] Failed to save focused diagnostic report:', error, compactError);
+            }
         }
     }
 
@@ -7468,6 +7488,159 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         const ftdStbyEvents = generatedEvents.filter(e => e.type === 'ftd' && e.resourceId.startsWith('STBY'));
         buildDebugLog(`FTD STBY complete: Placed ${ftdStbyEvents.length} events across ${currentStbyLine - 1} STBY lines`);
     }
+
+    const compressCurrencyFlightPlacements = () => {
+        const currencyFlights = generatedEvents
+            .filter(event => event.type === 'flight' && event._source === 'highest-priority-currency' && isCurrencyPriorityEvent(event as ScheduleEvent))
+            .sort((a, b) => a.startTime - b.startTime);
+        if (currencyFlights.length === 0) return;
+
+        const timeIncrement = 5 / 60;
+        const flightResources = getPriorityResourceOptions({
+            id: 'currency-flight-resource-options',
+            type: 'flight',
+            flightNumber: 'CURR',
+            startTime: flyingStartTime,
+            duration: 1.2,
+            resourceId: '',
+            instructor: '',
+            student: '',
+            pilot: '',
+        } as Omit<ScheduleEvent, 'date'>);
+
+        const hasCurrencyCompressionConflict = (
+            candidate: Omit<ScheduleEvent, 'date'>,
+            existingEvents: Omit<ScheduleEvent, 'date'>[]
+        ): boolean => {
+            const candidateWindow = getEventBookingWindowForAlgo(candidate, syllabusDetails);
+            if (candidateWindow.start < flyingStartTime - 0.001 || candidate.startTime + candidate.duration > flyingEndTime + 0.001) return true;
+
+            return existingEvents.some(existing => {
+                if (existing.id === candidate.id) return false;
+                if (priorityResourceConflict(candidate, existing)) return true;
+                if (priorityPersonnelConflict(candidate, existing)) return true;
+
+                const commonPersonnel = getCommonPersonnel(candidate, existing);
+                if (commonPersonnel.length > 0 && (existing.type === 'flight' || existing.type === 'ftd' || existing.type === 'cpt')) {
+                    if (candidate.startTime >= existing.startTime) {
+                        const actualGap = candidate.startTime - (existing.startTime + existing.duration);
+                        if (actualGap >= -0.001 && actualGap < getPriorityTurnaround(existing) - 0.001) return true;
+                    } else {
+                        const actualGap = existing.startTime - (candidate.startTime + candidate.duration);
+                        if (actualGap >= -0.001 && actualGap < getPriorityTurnaround(candidate) - 0.001) return true;
+                    }
+                }
+
+                return false;
+            });
+        };
+
+        currencyFlights.forEach(event => {
+            const personName = event.student || event.pilot || '';
+            const pairedFtd = generatedEvents
+                .filter(existing =>
+                    existing.type === 'ftd' &&
+                    existing._source === 'highest-priority-currency' &&
+                    isCurrencyPriorityEvent(existing as ScheduleEvent) &&
+                    eventHasPerson(existing, personName)
+                )
+                .sort((a, b) => b.startTime - a.startTime)[0] || null;
+            const earliestByFtd = pairedFtd
+                ? pairedFtd.startTime + pairedFtd.duration + ftdTurnaround
+                : flyingStartTime;
+            const searchStart = Math.max(flyingStartTime, earliestByFtd);
+            const currentStart = event.startTime;
+            let moved = false;
+
+            for (let time = searchStart; time < currentStart - 0.001 && !moved; time += timeIncrement) {
+                const roundedTime = Math.round(time * 12) / 12;
+                if (!canAssignPersonForScheduledWindow(personName, roundedTime)) continue;
+
+                const candidateForAvailability = { ...event, startTime: roundedTime };
+                const candidateWindow = getEventBookingWindowForAlgo(candidateForAvailability, syllabusDetails);
+                const traineeOrStaff =
+                    trainees.find(trainee => personnelNamesMatch(trainee.fullName, personName)) ||
+                    instructors.find(instructor => personnelNamesMatch(instructor.name, personName));
+                const assignedInstructor = instructors.find(instructor => personnelNamesMatch(instructor.name, event.instructor || event.pilot || ''));
+                if (traineeOrStaff && isPersonStaticallyUnavailable(traineeOrStaff as any, candidateWindow.start, candidateWindow.end, buildDate, 'flight')) continue;
+                if (assignedInstructor && isPersonStaticallyUnavailable(assignedInstructor, candidateWindow.start, candidateWindow.end, buildDate, 'flight')) continue;
+
+                for (const resourceId of flightResources) {
+                    const candidate = { ...event, startTime: roundedTime, resourceId };
+                    if (hasCurrencyCompressionConflict(candidate, generatedEvents)) continue;
+
+                    traceCurrencyPriority('placementTrace', {
+                        phase: 'compressed-earlier',
+                        eventType: 'flight',
+                        candidate: {
+                            id: event.id,
+                            personName,
+                            instructor: event.instructor || event.pilot || '',
+                            previousStartTime: event.startTime,
+                            previousDisplayTime: _fmtT(event.startTime),
+                            previousResourceId: event.resourceId,
+                        },
+                        newStartTime: roundedTime,
+                        newDisplayTime: _fmtT(roundedTime),
+                        newResourceId: resourceId,
+                        pairedFtd: pairedFtd ? {
+                            id: pairedFtd.id,
+                            startTime: pairedFtd.startTime,
+                            resourceId: pairedFtd.resourceId,
+                        } : null,
+                    }, 1800);
+                    event.startTime = roundedTime;
+                    event.resourceId = resourceId;
+                    moved = true;
+                    break;
+                }
+            }
+        });
+
+        neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map(priorityEvent => {
+            const scheduledEvent = generatedEvents.find(event => event.id === priorityEvent.id) ||
+                generatedEvents.find(event =>
+                    !!priorityEvent.currencyDraftId &&
+                    event.currencyDraftId === priorityEvent.currencyDraftId &&
+                    event.type === priorityEvent.type &&
+                    isCurrencyPriorityEvent(event as ScheduleEvent)
+                ) ||
+                null;
+            return {
+                priorityEvent: {
+                    id: priorityEvent.id,
+                    type: priorityEvent.type,
+                    personName: priorityEvent.student || priorityEvent.pilot || priorityEvent.instructor || '',
+                    flightNumber: priorityEvent.flightNumber,
+                    currencyDraftId: priorityEvent.currencyDraftId || null,
+                    priority: priorityEvent.priority || null,
+                    duration: priorityEvent.duration || null,
+                    preStart: getCurrencyPreFlightTime(priorityEvent),
+                    postEnd: getCurrencyPostFlightTime(priorityEvent),
+                    rawPreStart: priorityEvent.preStart ?? null,
+                    rawPostEnd: priorityEvent.postEnd ?? null,
+                },
+                scheduled: !!scheduledEvent,
+                scheduledEvent: scheduledEvent ? {
+                    id: scheduledEvent.id,
+                    type: scheduledEvent.type,
+                    flightNumber: scheduledEvent.flightNumber,
+                    startTime: scheduledEvent.startTime,
+                    duration: scheduledEvent.duration,
+                    resourceId: scheduledEvent.resourceId,
+                    instructor: scheduledEvent.instructor,
+                    pilot: scheduledEvent.pilot,
+                    student: scheduledEvent.student,
+                    source: (scheduledEvent as any)._source || null,
+                    currencyDraftId: scheduledEvent.currencyDraftId || null,
+                } : null,
+                likelySkippedBySharedDraftId: false,
+            };
+        });
+        saveCurrencyPriorityDiagnostics('currency-priority-compression-complete');
+    };
+
+    compressCurrencyFlightPlacements();
 
     recordProgress({ message: 'Shuffling events for distribution...', percentage: 95 });
 
