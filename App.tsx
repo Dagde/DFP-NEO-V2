@@ -6031,6 +6031,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
         scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
     }
+    if (deferredCurrencyFlightPriorityEvents.length > 0) {
+        recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 44 });
+        scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
+    }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
     // 3. Schedule Day Flight Events: a) Highest Priority, b) Next Events
@@ -6710,11 +6714,6 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             'FLIGHT Next Normal Dual',
             'FLIGHT Formation Groups'
         );
-    }
-
-    if (deferredCurrencyFlightPriorityEvents.length > 0) {
-        recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 54 });
-        scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
     }
 
     // Step 3b: Schedule SOLO flights using grouped dispatch logic.

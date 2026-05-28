@@ -75656,6 +75656,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
     scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
   }
+  if (deferredCurrencyFlightPriorityEvents.length > 0) {
+    recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 44 });
+    scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
+  }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
   const _isSoloTrainee = (trainee) => {
@@ -76237,10 +76241,6 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       "FLIGHT Next Normal Dual",
       "FLIGHT Formation Groups"
     );
-  }
-  if (deferredCurrencyFlightPriorityEvents.length > 0) {
-    recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 54 });
-    scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
   }
   if (_soloFlightList.length > 0) {
     const MAX_SOLO_GROUP_SIZE = 4;
