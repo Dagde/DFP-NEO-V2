@@ -75184,33 +75184,51 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       excludeInstructorNames: [staff.name]
     };
   };
-  const makeCurrencySyllabusItem = (event) => ({
-    id: "CURR",
-    code: "CURR",
-    phase: "Currency",
-    module: "Currency",
-    dayNight: "Day",
-    eventDescription: "Currency",
-    prerequisites: [],
-    prerequisitesGround: [],
-    prerequisitesFlying: [],
-    eventDetailsCommon: [],
-    eventDetailsSortie: [],
-    totalEventHours: event.duration || (event.type === "flight" ? 1.2 : 1.5),
-    flightOrSimHours: event.duration || (event.type === "flight" ? 1.2 : 1.5),
-    duration: event.duration || (event.type === "flight" ? 1.2 : 1.5),
-    preFlightTime: event.preStart || 0,
-    postFlightTime: event.postEnd || 0,
-    type: event.type === "flight" ? "Flight" : "FTD",
-    sortieType: event.flightType || "Dual",
-    twrDiReqd: "NO",
-    methodOfDelivery: [],
-    methodOfAssessment: [],
-    resourcesPhysical: [],
-    resourcesHuman: [],
-    location: school,
-    courses: []
-  });
+  const getCurrencyPrePostDefaults = (eventType) => {
+    if (eventType === "ftd") return { preFlightTime: 0.5, postFlightTime: 0.5 };
+    if (eventType === "flight") return { preFlightTime: 1, postFlightTime: 0.5 };
+    return { preFlightTime: 0, postFlightTime: 0 };
+  };
+  const getCurrencyPreFlightTime = (event) => {
+    const defaults = getCurrencyPrePostDefaults(event.type);
+    return typeof event.preStart === "number" && event.preStart > 0 ? event.preStart : defaults.preFlightTime;
+  };
+  const getCurrencyPostFlightTime = (event) => {
+    const defaults = getCurrencyPrePostDefaults(event.type);
+    return typeof event.postEnd === "number" && event.postEnd > 0 ? event.postEnd : defaults.postFlightTime;
+  };
+  const makeCurrencySyllabusItem = (event) => {
+    const preFlightTime = getCurrencyPreFlightTime(event);
+    const postFlightTime = getCurrencyPostFlightTime(event);
+    const duration = event.duration || (event.type === "flight" ? 1.2 : 1.5);
+    return {
+      id: "CURR",
+      code: "CURR",
+      phase: "Currency",
+      module: "Currency",
+      dayNight: "Day",
+      eventDescription: "Currency",
+      prerequisites: [],
+      prerequisitesGround: [],
+      prerequisitesFlying: [],
+      eventDetailsCommon: [],
+      eventDetailsSortie: [],
+      totalEventHours: duration + preFlightTime + postFlightTime,
+      flightOrSimHours: duration,
+      duration,
+      preFlightTime,
+      postFlightTime,
+      type: event.type === "flight" ? "Flight" : "FTD",
+      sortieType: event.flightType || "Dual",
+      twrDiReqd: "NO",
+      methodOfDelivery: [],
+      methodOfAssessment: [],
+      resourcesPhysical: [],
+      resourcesHuman: [],
+      location: school,
+      courses: []
+    };
+  };
   const scheduleCurrencyPriorityEvents = (eventsToSchedule) => {
     const scheduledCurrencyDraftIds = new Set(generatedEvents.map((event) => event.currencyDraftId).filter(Boolean));
     const getCurrencyEventPersonName = (event) => event.student || event.pilot || event.instructor || "";
@@ -75230,8 +75248,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       currencyDraftId: event.currencyDraftId || null,
       priority: event.priority || null,
       duration: event.duration || null,
-      preStart: event.preStart || 0,
-      postEnd: event.postEnd || 0
+      preStart: getCurrencyPreFlightTime(event),
+      postEnd: getCurrencyPostFlightTime(event),
+      rawPreStart: event.preStart ?? null,
+      rawPostEnd: event.postEnd ?? null
     });
     const findScheduledCurrencyEvent = (priorityEvent) => generatedEvents.find((event) => event.id === priorityEvent.id) || generatedEvents.find(
       (event) => !!priorityEvent.currencyDraftId && event.currencyDraftId === priorityEvent.currencyDraftId && event.type === priorityEvent.type && isCurrencyPriorityEvent(event)
@@ -75545,7 +75565,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     scheduleType("ftd");
     scheduleType("flight");
-    neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = eventsToSchedule.map((priorityEvent) => {
+    neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map((priorityEvent) => {
       const scheduledEvent = findScheduledCurrencyEvent(priorityEvent);
       return {
         priorityEvent: getCurrencyEventIdentity(priorityEvent),
@@ -75567,7 +75587,7 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       };
     });
     neoBuildDiag.currencyPriorityDiagnostics.summary = {
-      totalInput: eventsToSchedule.length,
+      totalInput: currencyPriorityEvents.length,
       scheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry) => entry.scheduled).length,
       unscheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry) => !entry.scheduled).length,
       generatedEventsAfterCurrencyPriority: generatedEvents.length,
@@ -75576,9 +75596,18 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
     };
     saveCurrencyPriorityDiagnostics("currency-priority-complete");
   };
-  if (currencyPriorityEvents.length > 0) {
-    recordProgress({ message: "Scheduling Currency Priority Events...", percentage: 44 });
-    scheduleCurrencyPriorityEvents(currencyPriorityEvents);
+  const currencyFtdPersonKeys = new Set(
+    currencyPriorityEvents.filter((event) => event.type === "ftd").map((event) => normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || "")).filter(Boolean)
+  );
+  const earlyCurrencyPriorityEvents = currencyPriorityEvents.filter(
+    (event) => event.type === "ftd" || !currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ""))
+  );
+  const deferredCurrencyFlightPriorityEvents = currencyPriorityEvents.filter(
+    (event) => event.type === "flight" && currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ""))
+  );
+  if (earlyCurrencyPriorityEvents.length > 0) {
+    recordProgress({ message: "Scheduling Currency FTD Priority Events...", percentage: 44 });
+    scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
   }
   recordProgress({ message: "Scheduling Day Flight Events (Priority)...", percentage: 45 });
   recordProgress({ message: "Scheduling Day Flight Events (Next)...", percentage: 50 });
@@ -76161,6 +76190,10 @@ function generateDfpInternal(config, setProgress, publishedSchedules) {
       "FLIGHT Next Normal Dual",
       "FLIGHT Formation Groups"
     );
+  }
+  if (deferredCurrencyFlightPriorityEvents.length > 0) {
+    recordProgress({ message: "Scheduling Currency Flight Priority Events...", percentage: 54 });
+    scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
   }
   if (_soloFlightList.length > 0) {
     const MAX_SOLO_GROUP_SIZE = 4;

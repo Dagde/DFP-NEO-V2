@@ -5535,33 +5535,51 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             excludeInstructorNames: [staff.name],
         };
     };
-    const makeCurrencySyllabusItem = (event: ScheduleEvent): SyllabusItemDetail => ({
-        id: 'CURR',
-        code: 'CURR',
-        phase: 'Currency',
-        module: 'Currency',
-        dayNight: 'Day',
-        eventDescription: 'Currency',
-        prerequisites: [],
-        prerequisitesGround: [],
-        prerequisitesFlying: [],
-        eventDetailsCommon: [],
-        eventDetailsSortie: [],
-        totalEventHours: event.duration || (event.type === 'flight' ? 1.2 : 1.5),
-        flightOrSimHours: event.duration || (event.type === 'flight' ? 1.2 : 1.5),
-        duration: event.duration || (event.type === 'flight' ? 1.2 : 1.5),
-        preFlightTime: event.preStart || 0,
-        postFlightTime: event.postEnd || 0,
-        type: event.type === 'flight' ? 'Flight' : 'FTD',
-        sortieType: event.flightType || 'Dual',
-        twrDiReqd: 'NO',
-        methodOfDelivery: [],
-        methodOfAssessment: [],
-        resourcesPhysical: [],
-        resourcesHuman: [],
-        location: school,
-        courses: [],
-    });
+    const getCurrencyPrePostDefaults = (eventType: ScheduleEvent['type']): { preFlightTime: number; postFlightTime: number } => {
+        if (eventType === 'ftd') return { preFlightTime: 0.5, postFlightTime: 0.5 };
+        if (eventType === 'flight') return { preFlightTime: 1.0, postFlightTime: 0.5 };
+        return { preFlightTime: 0, postFlightTime: 0 };
+    };
+    const getCurrencyPreFlightTime = (event: ScheduleEvent): number => {
+        const defaults = getCurrencyPrePostDefaults(event.type);
+        return typeof event.preStart === 'number' && event.preStart > 0 ? event.preStart : defaults.preFlightTime;
+    };
+    const getCurrencyPostFlightTime = (event: ScheduleEvent): number => {
+        const defaults = getCurrencyPrePostDefaults(event.type);
+        return typeof event.postEnd === 'number' && event.postEnd > 0 ? event.postEnd : defaults.postFlightTime;
+    };
+    const makeCurrencySyllabusItem = (event: ScheduleEvent): SyllabusItemDetail => {
+        const preFlightTime = getCurrencyPreFlightTime(event);
+        const postFlightTime = getCurrencyPostFlightTime(event);
+        const duration = event.duration || (event.type === 'flight' ? 1.2 : 1.5);
+        return {
+            id: 'CURR',
+            code: 'CURR',
+            phase: 'Currency',
+            module: 'Currency',
+            dayNight: 'Day',
+            eventDescription: 'Currency',
+            prerequisites: [],
+            prerequisitesGround: [],
+            prerequisitesFlying: [],
+            eventDetailsCommon: [],
+            eventDetailsSortie: [],
+            totalEventHours: duration + preFlightTime + postFlightTime,
+            flightOrSimHours: duration,
+            duration,
+            preFlightTime,
+            postFlightTime,
+            type: event.type === 'flight' ? 'Flight' : 'FTD',
+            sortieType: event.flightType || 'Dual',
+            twrDiReqd: 'NO',
+            methodOfDelivery: [],
+            methodOfAssessment: [],
+            resourcesPhysical: [],
+            resourcesHuman: [],
+            location: school,
+            courses: [],
+        };
+    };
     const scheduleCurrencyPriorityEvents = (eventsToSchedule: ScheduleEvent[]) => {
         const scheduledCurrencyDraftIds = new Set(generatedEvents.map(event => event.currencyDraftId).filter(Boolean));
         const getCurrencyEventPersonName = (event: ScheduleEvent): string => event.student || event.pilot || event.instructor || '';
@@ -5581,8 +5599,10 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             currencyDraftId: event.currencyDraftId || null,
             priority: event.priority || null,
             duration: event.duration || null,
-            preStart: event.preStart || 0,
-            postEnd: event.postEnd || 0,
+            preStart: getCurrencyPreFlightTime(event),
+            postEnd: getCurrencyPostFlightTime(event),
+            rawPreStart: event.preStart ?? null,
+            rawPostEnd: event.postEnd ?? null,
         });
         const findScheduledCurrencyEvent = (priorityEvent: ScheduleEvent) =>
             generatedEvents.find(event => event.id === priorityEvent.id) ||
@@ -5906,7 +5926,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         scheduleType('ftd');
         scheduleType('flight');
-        neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = eventsToSchedule.map(priorityEvent => {
+        neoBuildDiag.currencyPriorityDiagnostics.finalAssignments = currencyPriorityEvents.map(priorityEvent => {
             const scheduledEvent = findScheduledCurrencyEvent(priorityEvent);
             return {
                 priorityEvent: getCurrencyEventIdentity(priorityEvent),
@@ -5930,7 +5950,7 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             };
         });
         neoBuildDiag.currencyPriorityDiagnostics.summary = {
-            totalInput: eventsToSchedule.length,
+            totalInput: currencyPriorityEvents.length,
             scheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry: any) => entry.scheduled).length,
             unscheduledCount: neoBuildDiag.currencyPriorityDiagnostics.finalAssignments.filter((entry: any) => !entry.scheduled).length,
             generatedEventsAfterCurrencyPriority: generatedEvents.length,
@@ -5941,9 +5961,23 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
         };
         saveCurrencyPriorityDiagnostics('currency-priority-complete');
     };
-    if (currencyPriorityEvents.length > 0) {
-        recordProgress({ message: 'Scheduling Currency Priority Events...', percentage: 44 });
-        scheduleCurrencyPriorityEvents(currencyPriorityEvents);
+    const currencyFtdPersonKeys = new Set(
+        currencyPriorityEvents
+            .filter(event => event.type === 'ftd')
+            .map(event => normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ''))
+            .filter(Boolean)
+    );
+    const earlyCurrencyPriorityEvents = currencyPriorityEvents.filter(event =>
+        event.type === 'ftd' ||
+        !currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ''))
+    );
+    const deferredCurrencyFlightPriorityEvents = currencyPriorityEvents.filter(event =>
+        event.type === 'flight' &&
+        currencyFtdPersonKeys.has(normalizeBuildPersonnelName(event.student || event.pilot || event.instructor || ''))
+    );
+    if (earlyCurrencyPriorityEvents.length > 0) {
+        recordProgress({ message: 'Scheduling Currency FTD Priority Events...', percentage: 44 });
+        scheduleCurrencyPriorityEvents(earlyCurrencyPriorityEvents);
     }
 
     // NEW SCHEDULING ORDER (Lines 105-126 from DFP Build Rules)
@@ -6624,6 +6658,11 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
             'FLIGHT Next Normal Dual',
             'FLIGHT Formation Groups'
         );
+    }
+
+    if (deferredCurrencyFlightPriorityEvents.length > 0) {
+        recordProgress({ message: 'Scheduling Currency Flight Priority Events...', percentage: 54 });
+        scheduleCurrencyPriorityEvents(deferredCurrencyFlightPriorityEvents);
     }
 
     // Step 3b: Schedule SOLO flights using grouped dispatch logic.
