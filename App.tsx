@@ -5884,12 +5884,13 @@ const applyCoursePriority = (rankedList: Trainee[]): Trainee[] => {
                                 },
                             }, 1800);
                             remaining.splice(index, 1);
+                            index--;
                             placed = true;
                             buildDebugLog(`[Currency Priority] Scheduled ${resolved.trainee.fullName} ${eventType} at ${time.toFixed(2)} on ${result.resourceId}`);
                             break;
                         }
                     }
-                    if (placed) {
+                    if (placed && eventType === 'flight') {
                         break;
                     }
                 }
