@@ -15323,11 +15323,24 @@ const App: React.FC = () => {
     };
 
     const handleVisualAdjustEnd = (event: ScheduleEvent) => {
+        const finalEvent = visualAdjustEvent && visualAdjustEvent.id === event.id
+            ? visualAdjustEvent
+            : event;
+        const eventDate = finalEvent.date || date;
+
+        setPublishedSchedules(prev => {
+            const scheduleForDate = prev[eventDate] || [];
+            const updatedSchedule = scheduleForDate.map(e =>
+                e.id === finalEvent.id ? finalEvent : e
+            );
+            persistScheduleForDate(eventDate, updatedSchedule);
+            return { ...prev, [eventDate]: updatedSchedule };
+        });
+
         setIsVisualAdjustMode(false);
         setVisualAdjustEvent(null);
         // Close the modal completely when visual adjust ends
         setSelectedEvent(null);
-        // The event has already been updated in the events array during dragging
     };
 
     // SCT & REMEDIAL AUTO-ADD SYSTEM

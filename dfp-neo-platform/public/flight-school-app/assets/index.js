@@ -82858,6 +82858,16 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     console.log("Visual Adjust Mode set to true");
   };
   const handleVisualAdjustEnd = (event) => {
+    const finalEvent = visualAdjustEvent && visualAdjustEvent.id === event.id ? visualAdjustEvent : event;
+    const eventDate = finalEvent.date || date;
+    setPublishedSchedules((prev) => {
+      const scheduleForDate = prev[eventDate] || [];
+      const updatedSchedule = scheduleForDate.map(
+        (e) => e.id === finalEvent.id ? finalEvent : e
+      );
+      persistScheduleForDate(eventDate, updatedSchedule);
+      return { ...prev, [eventDate]: updatedSchedule };
+    });
     setIsVisualAdjustMode(false);
     setVisualAdjustEvent(null);
     setSelectedEvent(null);
