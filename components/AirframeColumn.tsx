@@ -125,6 +125,10 @@ const AirframeColumn: React.FC<AirframeColumnProps> = ({ resources, onReorder, r
                       </span>
                       <span>{formatResourceLabel ? formatResourceLabel('PC-21') : 'PC-21'}</span>
                   </div>
+              ) : resource.startsWith('Deployed') ? (
+                  <div className="w-full text-left pl-1 pr-1 overflow-hidden">
+                      <span className="block truncate">{displayText.replace(/\s+\d+$/, '')}</span>
+                  </div>
               ) : (
                   <div className="w-full text-center">
                       <span>{displayText.replace(/\s+\d+$/, '')}</span>

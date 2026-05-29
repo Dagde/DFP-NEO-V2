@@ -5453,7 +5453,7 @@ const AirframeColumn = ({ resources, onReorder, rowHeight, airframeCount, standb
         children: resource.startsWith("PC-21") ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative w-full text-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-xs", children: resource.match(/\d+$/)?.[0] || "" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: formatResourceLabel2 ? formatResourceLabel2("PC-21") : "PC-21" })
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
+        ] }) : resource.startsWith("Deployed") ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-left pl-1 pr-1 overflow-hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "block truncate", children: displayText.replace(/\s+\d+$/, "") }) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-full text-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: displayText.replace(/\s+\d+$/, "") }) })
       },
       `${resource}-${index}`
     );
@@ -14278,6 +14278,7 @@ const EventDetailModal = ({ event, onClose, onSave, onDeleteRequest, isEditingDe
         deploymentEndDate: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentEndDate : void 0,
         deploymentEndTime: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentEndTime : void 0,
         deploymentAircraftCount: eventType === "flight" && locationType === "Land Away" && isDeploy ? deploymentAircraftCount : void 0,
+        assignedDeploymentId: selectedDeploymentId || void 0,
         // Save event category for LMP Currency handling
         eventCategory
       };
@@ -78422,29 +78423,10 @@ const App = () => {
     const loadInitialData = async () => {
       try {
         const data = await initializeData();
-        const stripDeployTags = (person) => {
-          if (!person.unavailability || !Array.isArray(person.unavailability)) return person;
-          const cleaned = person.unavailability.filter((p) => !p?.notes?.startsWith("__deploy__"));
-          if (cleaned.length !== person.unavailability.length) {
-            console.log("[StartupCleanup] Stripped", person.unavailability.length - cleaned.length, "__deploy__ tag(s) from", person.name || person.fullName);
-          }
-          return { ...person, unavailability: cleaned };
-        };
-        const cleanedInstructors = data.instructors.map(stripDeployTags);
-        const cleanedTrainees = data.trainees.map(stripDeployTags);
-        setInstructorsData(cleanedInstructors);
+        setInstructorsData(data.instructors);
         setIsStaffLoaded(true);
-        setTraineesData(cleanedTrainees);
+        setTraineesData(data.trainees);
         setIsTraineeLoaded(true);
-        fetch("/api/cleanup-deploy-unavailability", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include"
-        }).then((r) => r.json()).then((d) => {
-          if (d.personnelFixed > 0 || d.traineesFixed > 0) {
-            console.log("[StartupCleanup] DB cleanup fixed", d.personnelFixed, "personnel and", d.traineesFixed, "trainees");
-          }
-        }).catch((e) => console.warn("[StartupCleanup] DB cleanup failed:", e));
         setEvents(data.events);
         if (data.courses && data.courses.length > 0) {
           console.log("🎓 Loading", data.courses.length, "courses from DB");
@@ -82715,14 +82697,11 @@ This is a hard rule that cannot be violated. The event will not be saved.`, "Day
     if (isNextDay) {
       setNextDayBuildEvents((prev) => prev.filter((e) => e.id !== selectedEvent.id));
     } else {
+      const deletedEventId = selectedEvent.id;
       setPublishedSchedules((prev) => {
-        const newScheduleForDate = (prev[eventDate] || []).filter((e) => e.id !== selectedEvent.id);
+        const newScheduleForDate = (prev[eventDate] || []).filter((e) => e.id !== deletedEventId);
+        persistScheduleForDate(eventDate, newScheduleForDate);
         return { ...prev, [eventDate]: newScheduleForDate };
-      });
-      setPublishedSchedules((prev) => {
-        const _updated = (prev[eventDate] || []).filter((e) => e.id !== selectedEvent.id);
-        persistScheduleForDate(eventDate, _updated);
-        return prev;
       });
     }
     if (!isNextDay) {
@@ -84656,6 +84635,8 @@ ${conflictLines.join("\n")}${moreText}`,
     const dateTimeMs = (dateStr, hours) => (/* @__PURE__ */ new Date(`${dateStr}T00:00:00Z`)).getTime() + hours * 60 * 60 * 1e3;
     for (const flight of flightTiles) {
       const overlappingDeploy = deploymentTiles.find((dep) => {
+        const assignedDeploymentId = flight.assignedDeploymentId || flight.deploymentId;
+        if (assignedDeploymentId && assignedDeploymentId === dep.id) return true;
         if (!flight.resourceId?.startsWith("Deployed")) return false;
         if (dep.resourceId && flight.resourceId !== dep.resourceId) return false;
         const depStartDate = dep.deploymentStartDate || dep.date;
@@ -84680,10 +84661,17 @@ ${conflictLines.join("\n")}${moreText}`,
     }
   };
   const upsertDeployedUnavailability = async (flight, deployment) => {
-    const flightDateStr = flight.date;
-    const flightStartHour = Math.floor(flight.startTime);
-    const flightStartMin = Math.round(flight.startTime % 1 * 60);
-    const startTime = `${String(flightStartHour).padStart(2, "0")}${String(flightStartMin).padStart(2, "0")}`;
+    const parseDeploymentClock = (clock) => {
+      if (!clock) return null;
+      const match = clock.match(/^(\d{1,2}):?(\d{2})$/);
+      if (!match) return null;
+      return Number(match[1]) + Number(match[2]) / 60;
+    };
+    const deploymentStartDate = deployment.deploymentStartDate || deployment.date || flight.date;
+    const deploymentStartHour = parseDeploymentClock(deployment.deploymentStartTime) ?? deployment.startTime ?? flight.startTime;
+    const startHour = Math.floor(deploymentStartHour);
+    const startMin = Math.round(deploymentStartHour % 1 * 60);
+    const startTime = `${String(startHour).padStart(2, "0")}${String(startMin).padStart(2, "0")}`;
     let endDateStr;
     let endTime;
     if (deployment.deploymentEndDate && deployment.deploymentEndTime) {
@@ -84702,7 +84690,7 @@ ${conflictLines.join("\n")}${moreText}`,
     const tag = `__deploy__${flight.id}`;
     const newPeriod = {
       id: `deploy-${flight.id}`,
-      startDate: flightDateStr,
+      startDate: deploymentStartDate,
       endDate: endDateStr,
       startTime,
       endTime,
@@ -85139,9 +85127,7 @@ ${conflictLines.join("\n")}${moreText}`,
           // Extract qualifications.currencyStatus to top-level so Post Flight
           // and other in-memory reads can find it at person.currencyStatus
           currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
-          _dataSource: "database",
-          // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
-          unavailability: Array.isArray(p.unavailability) ? p.unavailability.filter((u) => !u?.notes?.startsWith("__deploy__")) : p.unavailability
+          _dataSource: "database"
         }));
         setInstructorsData((prev) => {
           const nonDbInstructors = prev.filter((i) => i._dataSource !== "database");
@@ -85154,9 +85140,7 @@ ${conflictLines.join("\n")}${moreText}`,
         const traineesData2 = await traineesRes.json();
         const dbTrainees = (traineesData2.trainees || []).map((t) => ({
           ...t,
-          _dataSource: "database",
-          // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
-          unavailability: Array.isArray(t.unavailability) ? t.unavailability.filter((u) => !u?.notes?.startsWith("__deploy__")) : t.unavailability
+          _dataSource: "database"
         }));
         setTraineesData((prev) => {
           const mockTrainees = prev.filter((t) => t._dataSource === "mockdata");
@@ -85310,8 +85294,7 @@ ${conflictLines.join("\n")}${moreText}`,
         const dbPersonnel = (personnelData2.personnel || []).map((p) => ({
           ...normalisePersonnelRecord(p),
           currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
-          _dataSource: "database",
-          unavailability: Array.isArray(p.unavailability) ? p.unavailability.filter((u) => !u?.notes?.startsWith("__deploy__")) : p.unavailability
+          _dataSource: "database"
         }));
         console.log("[Poll] Fetched", dbPersonnel.length, "personnel. Unavailability total:", dbPersonnel.reduce((sum, p) => sum + (p.unavailability?.length || 0), 0));
         setInstructorsData((prev) => {
@@ -85329,8 +85312,7 @@ ${conflictLines.join("\n")}${moreText}`,
         const traineesData2 = await traineesRes.json();
         const dbTrainees = (traineesData2.trainees || []).map((t) => ({
           ...t,
-          _dataSource: "database",
-          unavailability: Array.isArray(t.unavailability) ? t.unavailability.filter((u) => !u?.notes?.startsWith("__deploy__")) : t.unavailability
+          _dataSource: "database"
         }));
         console.log("[Poll] Fetched", dbTrainees.length, "trainees. Unavailability total:", dbTrainees.reduce((sum, t) => sum + (t.unavailability?.length || 0), 0));
         setTraineesData((prev) => {

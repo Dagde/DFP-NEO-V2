@@ -9646,30 +9646,10 @@ const App: React.FC = () => {
             try {
                 const data = await initializeData();
 
-                // Strip any leftover __deploy__ tags from DB data at load time
-                // (These may have been left in DB if cleanup failed in a previous session)
-                const stripDeployTags = (person: any) => {
-                    if (!person.unavailability || !Array.isArray(person.unavailability)) return person;
-                    const cleaned = person.unavailability.filter((p: any) => !p?.notes?.startsWith('__deploy__'));
-                    if (cleaned.length !== person.unavailability.length) {
-                        console.log('[StartupCleanup] Stripped', person.unavailability.length - cleaned.length, '__deploy__ tag(s) from', person.name || person.fullName);
-                    }
-                    return { ...person, unavailability: cleaned };
-                };
-                const cleanedInstructors = data.instructors.map(stripDeployTags);
-                const cleanedTrainees    = data.trainees.map(stripDeployTags);
-                setInstructorsData(cleanedInstructors);
+                setInstructorsData(data.instructors);
                 setIsStaffLoaded(true);
-                setTraineesData(cleanedTrainees);
+                setTraineesData(data.trainees);
                 setIsTraineeLoaded(true);
-                // Also clean the DB asynchronously so future loads are clean too
-                fetch('/api/cleanup-deploy-unavailability', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include'
-                }).then(r => r.json()).then(d => {
-                    if (d.personnelFixed > 0 || d.traineesFixed > 0) {
-                        console.log('[StartupCleanup] DB cleanup fixed', d.personnelFixed, 'personnel and', d.traineesFixed, 'trainees');
-                    }
-                }).catch(e => console.warn('[StartupCleanup] DB cleanup failed:', e));
                 setEvents(data.events);
 
                 // Load courses from DB if any exist
@@ -15104,15 +15084,11 @@ const App: React.FC = () => {
         if (isNextDay) {
             setNextDayBuildEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
         } else {
+            const deletedEventId = selectedEvent.id;
             setPublishedSchedules((prev: Record<string, ScheduleEvent[]>) => {
-                const newScheduleForDate = (prev[eventDate] || []).filter(e => e.id !== selectedEvent.id);
+                const newScheduleForDate = (prev[eventDate] || []).filter(e => e.id !== deletedEventId);
+                persistScheduleForDate(eventDate, newScheduleForDate);
                 return { ...prev, [eventDate]: newScheduleForDate };
-            });
-            // Persist deletion to database immediately
-            setPublishedSchedules(prev => {
-                const _updated = (prev[eventDate] || []).filter((e: ScheduleEvent) => e.id !== selectedEvent.id);
-                persistScheduleForDate(eventDate, _updated);
-                return prev; // no state change here — already updated above
             });
         }
 
@@ -17522,6 +17498,8 @@ const App: React.FC = () => {
             // deployment tile. Date range alone is too broad and marks unrelated
             // same-day events as deployed.
             const overlappingDeploy = deploymentTiles.find(dep => {
+                const assignedDeploymentId = (flight as any).assignedDeploymentId || (flight as any).deploymentId;
+                if (assignedDeploymentId && assignedDeploymentId === dep.id) return true;
                 if (!flight.resourceId?.startsWith('Deployed')) return false;
                 if (dep.resourceId && flight.resourceId !== dep.resourceId) return false;
 
@@ -17552,11 +17530,18 @@ const App: React.FC = () => {
     };
 
     const upsertDeployedUnavailability = async (flight: ScheduleEvent, deployment: ScheduleEvent) => {
-        // Calculate unavailability period: flight startTime on flight.date → deployment end
-        const flightDateStr = flight.date; // YYYY-MM-DD
-        const flightStartHour = Math.floor(flight.startTime);
-        const flightStartMin  = Math.round((flight.startTime % 1) * 60);
-        const startTime = `${String(flightStartHour).padStart(2, '0')}${String(flightStartMin).padStart(2, '0')}`;
+        // Calculate unavailability period: deployment start → deployment end.
+        const parseDeploymentClock = (clock?: string): number | null => {
+            if (!clock) return null;
+            const match = clock.match(/^(\d{1,2}):?(\d{2})$/);
+            if (!match) return null;
+            return Number(match[1]) + Number(match[2]) / 60;
+        };
+        const deploymentStartDate = deployment.deploymentStartDate || deployment.date || flight.date;
+        const deploymentStartHour = parseDeploymentClock(deployment.deploymentStartTime) ?? deployment.startTime ?? flight.startTime;
+        const startHour = Math.floor(deploymentStartHour);
+        const startMin  = Math.round((deploymentStartHour % 1) * 60);
+        const startTime = `${String(startHour).padStart(2, '0')}${String(startMin).padStart(2, '0')}`;
 
         // Deployment end: use deploymentEndDate/Time if available, else calculate from startTime+duration
         let endDateStr: string;
@@ -17580,7 +17565,7 @@ const App: React.FC = () => {
         const tag = `__deploy__${flight.id}`;
         const newPeriod: Omit<UnavailabilityPeriod, 'id'> & { id: string } = {
             id: `deploy-${flight.id}`,
-            startDate: flightDateStr,
+            startDate: deploymentStartDate,
             endDate: endDateStr,
             startTime,
             endTime,
@@ -18109,10 +18094,6 @@ updates.forEach(update => {
                     // and other in-memory reads can find it at person.currencyStatus
                     currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
-                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
-                    unavailability: Array.isArray(p.unavailability)
-                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                        : p.unavailability,
                 }));
 
                 // Update instructors - remove old database entries and add fresh ones
@@ -18130,10 +18111,6 @@ updates.forEach(update => {
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
                     ...t,
                     _dataSource: 'database' as const,
-                    // Strip any leftover __deploy__ tags (cleanup in case DB has stale data)
-                    unavailability: Array.isArray(t.unavailability)
-                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                        : t.unavailability,
                 }));
 
                 // Update trainees - replace old database entries with fresh ones, preserve mock
@@ -18339,9 +18316,6 @@ updates.forEach(update => {
                     ...normalisePersonnelRecord(p),
                     currencyStatus: p.qualifications?.currencyStatus || p.currencyStatus || [],
                     _dataSource: 'database' as const,
-                    unavailability: Array.isArray(p.unavailability)
-                        ? p.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                        : p.unavailability,
                 }));
                 console.log('[Poll] Fetched', dbPersonnel.length, 'personnel. Unavailability total:', dbPersonnel.reduce((sum: number, p: any) => sum + (p.unavailability?.length || 0), 0));
                 setInstructorsData(prev => {
@@ -18360,9 +18334,6 @@ updates.forEach(update => {
                 const dbTrainees = (traineesData.trainees || []).map((t: any) => ({
                     ...t,
                     _dataSource: 'database' as const,
-                    unavailability: Array.isArray(t.unavailability)
-                        ? t.unavailability.filter((u: any) => !u?.notes?.startsWith('__deploy__'))
-                        : t.unavailability,
                 }));
                 console.log('[Poll] Fetched', dbTrainees.length, 'trainees. Unavailability total:', dbTrainees.reduce((sum: number, t: any) => sum + (t.unavailability?.length || 0), 0));
                 setTraineesData(prev => {

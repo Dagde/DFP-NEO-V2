@@ -1533,6 +1533,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({ event, onClo
                 deploymentEndDate: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentEndDate : undefined,
                 deploymentEndTime: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentEndTime : undefined,
                 deploymentAircraftCount: (eventType === 'flight' && locationType === 'Land Away' && isDeploy) ? deploymentAircraftCount : undefined,
+                assignedDeploymentId: selectedDeploymentId || undefined,
                 
                 // Save event category for LMP Currency handling
                 eventCategory: eventCategory,
