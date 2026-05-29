@@ -2263,6 +2263,7 @@ const getInsertEventTypes = (config) => {
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const OFFICIAL_SUNRISE_ZENITH = 90.833;
+const CIVIL_TWILIGHT_ZENITH = 96;
 const MINUTES_PER_DAY = 1440;
 const DEFAULT_AIRFIELD_SOLAR_PROFILES = {
   ESL: { code: "ESL", name: "East Sale", latitude: -38.0989, longitude: 147.1494, timezone: "Australia/Melbourne" },
@@ -2410,7 +2411,8 @@ function getSunTimes(date, latitude, longitude, timezone, options = {}) {
   const lat = Number(latitude);
   const lon = Number(longitude);
   const tz = String(timezone || "").trim();
-  const zenith = Number(options.zenith ?? OFFICIAL_SUNRISE_ZENITH);
+  const sunZenith = Number(options.sunZenith ?? options.zenith ?? OFFICIAL_SUNRISE_ZENITH);
+  const twilightZenith = Number(options.twilightZenith ?? CIVIL_TWILIGHT_ZENITH);
   if (!isValidLatitude(lat)) {
     throw new Error(`Invalid latitude for solar calculation: ${latitude}`);
   }
@@ -2421,51 +2423,81 @@ function getSunTimes(date, latitude, longitude, timezone, options = {}) {
     throw new Error(`Invalid IANA timezone for solar calculation: ${timezone}`);
   }
   const dateParts = parseDateParts(date);
-  const sunrise = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, zenith);
-  const sunset = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, zenith);
+  const sunrise = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, sunZenith);
+  const sunset = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, sunZenith);
+  const firstLight = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, twilightZenith);
+  const lastLight = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, twilightZenith);
   const polarState = sunrise.polarState || sunset.polarState || null;
-  if (polarState) {
-    return {
-      sunrise: null,
-      sunset: null,
-      sunriseDecimal: null,
-      sunsetDecimal: null,
-      sunriseUtc: null,
-      sunsetUtc: null,
-      dayLengthMinutes: polarState === "sun_always_up" ? MINUTES_PER_DAY : 0,
-      hasSunrise: false,
-      hasSunset: false,
-      polarState,
-      timezone: tz
-    };
-  }
-  const sunriseUtc = buildUtcDateForLocalSolarDate(dateParts, sunrise.utcMinutes, tz);
-  const sunsetUtc = buildUtcDateForLocalSolarDate(dateParts, sunset.utcMinutes, tz);
-  const sunriseLocal = formatTimeInZone(sunriseUtc, tz);
-  const sunsetLocal = formatTimeInZone(sunsetUtc, tz);
-  let dayLengthMinutes = Math.round((sunsetUtc.getTime() - sunriseUtc.getTime()) / 6e4);
-  if (dayLengthMinutes < 0) dayLengthMinutes += MINUTES_PER_DAY;
-  return {
-    sunrise: sunriseLocal,
-    sunset: sunsetLocal,
-    sunriseDecimal: timeStringToDecimalHours(sunriseLocal),
-    sunsetDecimal: timeStringToDecimalHours(sunsetLocal),
-    sunriseUtc: sunriseUtc.toISOString(),
-    sunsetUtc: sunsetUtc.toISOString(),
-    dayLengthMinutes,
-    hasSunrise: true,
-    hasSunset: true,
-    polarState: null,
+  const twilightPolarState = firstLight.polarState || lastLight.polarState || null;
+  const result = {
+    sunrise: null,
+    sunset: null,
+    firstLight: null,
+    lastLight: null,
+    sunriseDecimal: null,
+    sunsetDecimal: null,
+    firstLightDecimal: null,
+    lastLightDecimal: null,
+    sunriseUtc: null,
+    sunsetUtc: null,
+    firstLightUtc: null,
+    lastLightUtc: null,
+    dayLengthMinutes: polarState === "sun_always_up" ? MINUTES_PER_DAY : 0,
+    usableLightMinutes: twilightPolarState === "sun_always_up" ? MINUTES_PER_DAY : 0,
+    hasSunrise: false,
+    hasSunset: false,
+    hasFirstLight: false,
+    hasLastLight: false,
+    polarState,
+    twilightPolarState,
     timezone: tz
   };
+  if (!polarState) {
+    const sunriseUtc = buildUtcDateForLocalSolarDate(dateParts, sunrise.utcMinutes, tz);
+    const sunsetUtc = buildUtcDateForLocalSolarDate(dateParts, sunset.utcMinutes, tz);
+    const sunriseLocal = formatTimeInZone(sunriseUtc, tz);
+    const sunsetLocal = formatTimeInZone(sunsetUtc, tz);
+    let dayLengthMinutes = Math.round((sunsetUtc.getTime() - sunriseUtc.getTime()) / 6e4);
+    if (dayLengthMinutes < 0) dayLengthMinutes += MINUTES_PER_DAY;
+    result.sunrise = sunriseLocal;
+    result.sunset = sunsetLocal;
+    result.sunriseDecimal = timeStringToDecimalHours(sunriseLocal);
+    result.sunsetDecimal = timeStringToDecimalHours(sunsetLocal);
+    result.sunriseUtc = sunriseUtc.toISOString();
+    result.sunsetUtc = sunsetUtc.toISOString();
+    result.dayLengthMinutes = dayLengthMinutes;
+    result.hasSunrise = true;
+    result.hasSunset = true;
+  }
+  if (!twilightPolarState) {
+    const firstLightUtc = buildUtcDateForLocalSolarDate(dateParts, firstLight.utcMinutes, tz);
+    const lastLightUtc = buildUtcDateForLocalSolarDate(dateParts, lastLight.utcMinutes, tz);
+    const firstLightLocal = formatTimeInZone(firstLightUtc, tz);
+    const lastLightLocal = formatTimeInZone(lastLightUtc, tz);
+    let usableLightMinutes = Math.round((lastLightUtc.getTime() - firstLightUtc.getTime()) / 6e4);
+    if (usableLightMinutes < 0) usableLightMinutes += MINUTES_PER_DAY;
+    result.firstLight = firstLightLocal;
+    result.lastLight = lastLightLocal;
+    result.firstLightDecimal = timeStringToDecimalHours(firstLightLocal);
+    result.lastLightDecimal = timeStringToDecimalHours(lastLightLocal);
+    result.firstLightUtc = firstLightUtc.toISOString();
+    result.lastLightUtc = lastLightUtc.toISOString();
+    result.usableLightMinutes = usableLightMinutes;
+    result.hasFirstLight = true;
+    result.hasLastLight = true;
+  }
+  return result;
 }
 function classifyDayNightBySunTimes(decimalHour, sunTimes) {
   if (!Number.isFinite(decimalHour) || !sunTimes) return null;
+  if (sunTimes.twilightPolarState === "sun_always_up") return "Day";
+  if (sunTimes.twilightPolarState === "sun_always_down") return "Night";
   if (sunTimes.polarState === "sun_always_up") return "Day";
   if (sunTimes.polarState === "sun_always_down") return "Night";
-  if (!sunTimes.hasSunrise || !sunTimes.hasSunset) return null;
-  if (!Number.isFinite(sunTimes.sunriseDecimal) || !Number.isFinite(sunTimes.sunsetDecimal)) return null;
-  return decimalHour >= sunTimes.sunriseDecimal && decimalHour < sunTimes.sunsetDecimal ? "Day" : "Night";
+  const dayStart = Number.isFinite(sunTimes.firstLightDecimal) ? sunTimes.firstLightDecimal : sunTimes.sunriseDecimal;
+  const dayEnd = Number.isFinite(sunTimes.lastLightDecimal) ? sunTimes.lastLightDecimal : sunTimes.sunsetDecimal;
+  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return null;
+  return decimalHour >= dayStart && decimalHour < dayEnd ? "Day" : "Night";
 }
 const CALLSIGN_LIMIT = 50;
 const norm = (value) => String(value || "").trim().toUpperCase();
@@ -60943,8 +60975,8 @@ const App = () => {
   }, [activeLocationSolarProfile]);
   const selectedDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
   const selectedDfpDaylightTimes = reactExports.useMemo(() => ({
-    firstLight: selectedDfpSunTimes?.hasSunrise ? selectedDfpSunTimes.sunrise : null,
-    lastLight: selectedDfpSunTimes?.hasSunset ? selectedDfpSunTimes.sunset : null
+    firstLight: selectedDfpSunTimes?.hasFirstLight ? selectedDfpSunTimes.firstLight : null,
+    lastLight: selectedDfpSunTimes?.hasLastLight ? selectedDfpSunTimes.lastLight : null
   }), [selectedDfpSunTimes]);
   reactExports.useEffect(() => {
     if (!platformConfigLoaded) return;
@@ -61917,8 +61949,8 @@ const App = () => {
   });
   const buildDfpSunTimes = reactExports.useMemo(() => getSunTimesForDate(buildDfpDate), [buildDfpDate, getSunTimesForDate]);
   const buildDfpDaylightTimes = reactExports.useMemo(() => ({
-    firstLight: buildDfpSunTimes?.hasSunrise ? buildDfpSunTimes.sunrise : null,
-    lastLight: buildDfpSunTimes?.hasSunset ? buildDfpSunTimes.sunset : null
+    firstLight: buildDfpSunTimes?.hasFirstLight ? buildDfpSunTimes.firstLight : null,
+    lastLight: buildDfpSunTimes?.hasLastLight ? buildDfpSunTimes.lastLight : null
   }), [buildDfpSunTimes]);
   const [lastBuildAnalysis, setLastBuildAnalysis] = reactExports.useState(null);
   const [availableAircraftCount, setAvailableAircraftCount] = reactExports.useState(15);

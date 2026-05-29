@@ -9271,8 +9271,8 @@ const App: React.FC = () => {
     const selectedDfpSunTimes = useMemo(() => getSunTimesForDate(date), [date, getSunTimesForDate]);
 
     const selectedDfpDaylightTimes = useMemo(() => ({
-        firstLight: selectedDfpSunTimes?.hasSunrise ? selectedDfpSunTimes.sunrise : null,
-        lastLight: selectedDfpSunTimes?.hasSunset ? selectedDfpSunTimes.sunset : null,
+        firstLight: selectedDfpSunTimes?.hasFirstLight ? selectedDfpSunTimes.firstLight : null,
+        lastLight: selectedDfpSunTimes?.hasLastLight ? selectedDfpSunTimes.lastLight : null,
     }), [selectedDfpSunTimes]);
 
     useEffect(() => {
@@ -10563,8 +10563,8 @@ const App: React.FC = () => {
     });
     const buildDfpSunTimes = useMemo(() => getSunTimesForDate(buildDfpDate), [buildDfpDate, getSunTimesForDate]);
     const buildDfpDaylightTimes = useMemo(() => ({
-        firstLight: buildDfpSunTimes?.hasSunrise ? buildDfpSunTimes.sunrise : null,
-        lastLight: buildDfpSunTimes?.hasSunset ? buildDfpSunTimes.sunset : null,
+        firstLight: buildDfpSunTimes?.hasFirstLight ? buildDfpSunTimes.firstLight : null,
+        lastLight: buildDfpSunTimes?.hasLastLight ? buildDfpSunTimes.lastLight : null,
     }), [buildDfpSunTimes]);
     const [lastBuildAnalysis, setLastBuildAnalysis] = useState<BuildAnalysis | null>(null);
     const [availableAircraftCount, setAvailableAircraftCount] = useState(15);

@@ -1,6 +1,7 @@
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const OFFICIAL_SUNRISE_ZENITH = 90.833;
+const CIVIL_TWILIGHT_ZENITH = 96;
 const MINUTES_PER_DAY = 1440;
 
 export const DEFAULT_AIRFIELD_SOLAR_PROFILES = {
@@ -198,7 +199,8 @@ export function getSunTimes(date, latitude, longitude, timezone, options = {}) {
   const lat = Number(latitude);
   const lon = Number(longitude);
   const tz = String(timezone || '').trim();
-  const zenith = Number(options.zenith ?? OFFICIAL_SUNRISE_ZENITH);
+  const sunZenith = Number(options.sunZenith ?? options.zenith ?? OFFICIAL_SUNRISE_ZENITH);
+  const twilightZenith = Number(options.twilightZenith ?? CIVIL_TWILIGHT_ZENITH);
 
   if (!isValidLatitude(lat)) {
     throw new Error(`Invalid latitude for solar calculation: ${latitude}`);
@@ -211,53 +213,86 @@ export function getSunTimes(date, latitude, longitude, timezone, options = {}) {
   }
 
   const dateParts = parseDateParts(date);
-  const sunrise = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, zenith);
-  const sunset = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, zenith);
+  const sunrise = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, sunZenith);
+  const sunset = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, sunZenith);
+  const firstLight = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, true, twilightZenith);
+  const lastLight = calculateUtcMinutesForSolarEvent(dateParts, lat, lon, false, twilightZenith);
   const polarState = sunrise.polarState || sunset.polarState || null;
+  const twilightPolarState = firstLight.polarState || lastLight.polarState || null;
 
-  if (polarState) {
-    return {
-      sunrise: null,
-      sunset: null,
-      sunriseDecimal: null,
-      sunsetDecimal: null,
-      sunriseUtc: null,
-      sunsetUtc: null,
-      dayLengthMinutes: polarState === 'sun_always_up' ? MINUTES_PER_DAY : 0,
-      hasSunrise: false,
-      hasSunset: false,
-      polarState,
-      timezone: tz,
-    };
-  }
-
-  const sunriseUtc = buildUtcDateForLocalSolarDate(dateParts, sunrise.utcMinutes, tz);
-  const sunsetUtc = buildUtcDateForLocalSolarDate(dateParts, sunset.utcMinutes, tz);
-  const sunriseLocal = formatTimeInZone(sunriseUtc, tz);
-  const sunsetLocal = formatTimeInZone(sunsetUtc, tz);
-  let dayLengthMinutes = Math.round((sunsetUtc.getTime() - sunriseUtc.getTime()) / 60000);
-  if (dayLengthMinutes < 0) dayLengthMinutes += MINUTES_PER_DAY;
-
-  return {
-    sunrise: sunriseLocal,
-    sunset: sunsetLocal,
-    sunriseDecimal: timeStringToDecimalHours(sunriseLocal),
-    sunsetDecimal: timeStringToDecimalHours(sunsetLocal),
-    sunriseUtc: sunriseUtc.toISOString(),
-    sunsetUtc: sunsetUtc.toISOString(),
-    dayLengthMinutes,
-    hasSunrise: true,
-    hasSunset: true,
-    polarState: null,
+  const result = {
+    sunrise: null,
+    sunset: null,
+    firstLight: null,
+    lastLight: null,
+    sunriseDecimal: null,
+    sunsetDecimal: null,
+    firstLightDecimal: null,
+    lastLightDecimal: null,
+    sunriseUtc: null,
+    sunsetUtc: null,
+    firstLightUtc: null,
+    lastLightUtc: null,
+    dayLengthMinutes: polarState === 'sun_always_up' ? MINUTES_PER_DAY : 0,
+    usableLightMinutes: twilightPolarState === 'sun_always_up' ? MINUTES_PER_DAY : 0,
+    hasSunrise: false,
+    hasSunset: false,
+    hasFirstLight: false,
+    hasLastLight: false,
+    polarState,
+    twilightPolarState,
     timezone: tz,
   };
+
+  if (!polarState) {
+    const sunriseUtc = buildUtcDateForLocalSolarDate(dateParts, sunrise.utcMinutes, tz);
+    const sunsetUtc = buildUtcDateForLocalSolarDate(dateParts, sunset.utcMinutes, tz);
+    const sunriseLocal = formatTimeInZone(sunriseUtc, tz);
+    const sunsetLocal = formatTimeInZone(sunsetUtc, tz);
+    let dayLengthMinutes = Math.round((sunsetUtc.getTime() - sunriseUtc.getTime()) / 60000);
+    if (dayLengthMinutes < 0) dayLengthMinutes += MINUTES_PER_DAY;
+
+    result.sunrise = sunriseLocal;
+    result.sunset = sunsetLocal;
+    result.sunriseDecimal = timeStringToDecimalHours(sunriseLocal);
+    result.sunsetDecimal = timeStringToDecimalHours(sunsetLocal);
+    result.sunriseUtc = sunriseUtc.toISOString();
+    result.sunsetUtc = sunsetUtc.toISOString();
+    result.dayLengthMinutes = dayLengthMinutes;
+    result.hasSunrise = true;
+    result.hasSunset = true;
+  }
+
+  if (!twilightPolarState) {
+    const firstLightUtc = buildUtcDateForLocalSolarDate(dateParts, firstLight.utcMinutes, tz);
+    const lastLightUtc = buildUtcDateForLocalSolarDate(dateParts, lastLight.utcMinutes, tz);
+    const firstLightLocal = formatTimeInZone(firstLightUtc, tz);
+    const lastLightLocal = formatTimeInZone(lastLightUtc, tz);
+    let usableLightMinutes = Math.round((lastLightUtc.getTime() - firstLightUtc.getTime()) / 60000);
+    if (usableLightMinutes < 0) usableLightMinutes += MINUTES_PER_DAY;
+
+    result.firstLight = firstLightLocal;
+    result.lastLight = lastLightLocal;
+    result.firstLightDecimal = timeStringToDecimalHours(firstLightLocal);
+    result.lastLightDecimal = timeStringToDecimalHours(lastLightLocal);
+    result.firstLightUtc = firstLightUtc.toISOString();
+    result.lastLightUtc = lastLightUtc.toISOString();
+    result.usableLightMinutes = usableLightMinutes;
+    result.hasFirstLight = true;
+    result.hasLastLight = true;
+  }
+
+  return result;
 }
 
 export function classifyDayNightBySunTimes(decimalHour, sunTimes) {
   if (!Number.isFinite(decimalHour) || !sunTimes) return null;
+  if (sunTimes.twilightPolarState === 'sun_always_up') return 'Day';
+  if (sunTimes.twilightPolarState === 'sun_always_down') return 'Night';
   if (sunTimes.polarState === 'sun_always_up') return 'Day';
   if (sunTimes.polarState === 'sun_always_down') return 'Night';
-  if (!sunTimes.hasSunrise || !sunTimes.hasSunset) return null;
-  if (!Number.isFinite(sunTimes.sunriseDecimal) || !Number.isFinite(sunTimes.sunsetDecimal)) return null;
-  return decimalHour >= sunTimes.sunriseDecimal && decimalHour < sunTimes.sunsetDecimal ? 'Day' : 'Night';
+  const dayStart = Number.isFinite(sunTimes.firstLightDecimal) ? sunTimes.firstLightDecimal : sunTimes.sunriseDecimal;
+  const dayEnd = Number.isFinite(sunTimes.lastLightDecimal) ? sunTimes.lastLightDecimal : sunTimes.sunsetDecimal;
+  if (!Number.isFinite(dayStart) || !Number.isFinite(dayEnd)) return null;
+  return decimalHour >= dayStart && decimalHour < dayEnd ? 'Day' : 'Night';
 }
