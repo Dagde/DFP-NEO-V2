@@ -66,6 +66,28 @@ type LicenseRuntimeStatus = {
 
 type PermissionProfile = PlatformPermissionProfile;
 
+type AirfieldCatalogueEntry = {
+  c?: string;
+  i?: string;
+  l?: string;
+  n: string;
+  m?: string;
+  y?: string;
+  a: number;
+  o: number;
+  t: string;
+};
+
+type AirfieldCatalogueLookup = {
+  exact: Map<string, AirfieldCatalogueEntry>;
+  searchable: Array<{
+    entry: AirfieldCatalogueEntry;
+    searchText: string;
+    codeText: string;
+    nameText: string;
+  }>;
+};
+
 const PERMISSION_CATALOG = PLATFORM_PERMISSION_CATALOG;
 const DEFAULT_PERMISSION_PROFILES = DEFAULT_PLATFORM_PERMISSION_PROFILES;
 
@@ -153,6 +175,9 @@ const COMMON_IANA_TIMEZONES = [
   'America/Anchorage',
   'UTC',
 ];
+
+const AIRFIELD_CATALOGUE_FILE = 'airfield-location-catalog.json';
+const MAX_AIRFIELD_SUGGESTIONS = 6;
 
 const ACCREDITATION_STATUS_OPTIONS = [
   'Not started',
@@ -372,6 +397,153 @@ const validateSolarLocation = (location: any): string | null => {
   if (!isValidLongitude(location?.longitude)) return `${label}: longitude must be between -180 and 180.`;
   if (!isValidTimeZone(location?.timezone)) return `${label}: timezone must be a valid IANA timezone, for example Australia/Melbourne.`;
   return null;
+};
+
+const normaliseAirfieldLookupToken = (value: any): string => (
+  String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '')
+);
+
+const getAirfieldCatalogueUrl = (): string => {
+  const baseUrl = new URL((import.meta as any)?.env?.BASE_URL || './', window.location.href);
+  return new URL(AIRFIELD_CATALOGUE_FILE, baseUrl).toString();
+};
+
+const getAirfieldPrimaryCode = (entry: AirfieldCatalogueEntry): string => (
+  entry.c || entry.i || entry.l || ''
+);
+
+const getAirfieldDisplayCode = (entry: AirfieldCatalogueEntry): string => {
+  const codes = [entry.c, entry.i, entry.l].filter(Boolean);
+  return codes.length ? codes.join(' / ') : 'No code';
+};
+
+const getAirfieldDisplayLabel = (entry: AirfieldCatalogueEntry): string => {
+  const city = entry.m && entry.m !== entry.n ? `, ${entry.m}` : '';
+  const country = entry.y ? ` (${entry.y})` : '';
+  return `${getAirfieldDisplayCode(entry)} - ${entry.n}${city}${country}`;
+};
+
+const buildAirfieldCatalogueLookup = (entries: AirfieldCatalogueEntry[]): AirfieldCatalogueLookup => {
+  const exact = new Map<string, AirfieldCatalogueEntry>();
+  const searchable = entries.map((entry) => {
+    const codeText = [entry.c, entry.i, entry.l].filter(Boolean).join(' ');
+    const nameText = [entry.n, entry.m, entry.y].filter(Boolean).join(' ');
+    const tokens = [entry.c, entry.i, entry.l, entry.n].map(normaliseAirfieldLookupToken).filter(Boolean);
+    tokens.forEach((token) => {
+      if (!exact.has(token)) exact.set(token, entry);
+    });
+    return {
+      entry,
+      searchText: normaliseAirfieldLookupToken(`${codeText} ${nameText}`),
+      codeText: normaliseAirfieldLookupToken(codeText),
+      nameText: normaliseAirfieldLookupToken(nameText),
+    };
+  });
+  return { exact, searchable };
+};
+
+const emptyAirfieldCatalogueLookup: AirfieldCatalogueLookup = {
+  exact: new Map(),
+  searchable: [],
+};
+
+const findAirfieldCatalogueExact = (
+  value: any,
+  lookup: AirfieldCatalogueLookup,
+): AirfieldCatalogueEntry | null => {
+  const token = normaliseAirfieldLookupToken(value);
+  return token ? lookup.exact.get(token) || null : null;
+};
+
+const getAirfieldCatalogueSuggestions = (
+  location: any,
+  lookup: AirfieldCatalogueLookup,
+): AirfieldCatalogueEntry[] => {
+  const rawQueries = [location?.code, location?.name]
+    .map((value) => String(value || '').trim())
+    .filter((value) => value.length >= 2);
+  const queries = rawQueries.map(normaliseAirfieldLookupToken).filter((value) => value.length >= 2);
+  if (!queries.length || lookup.searchable.length === 0) return [];
+
+  const scored = lookup.searchable
+    .map((item) => {
+      let score = 0;
+      queries.forEach((query) => {
+        if (!query) return;
+        if (item.codeText === query) score = Math.max(score, 100);
+        else if (item.nameText === query) score = Math.max(score, 95);
+        else if (item.codeText.startsWith(query)) score = Math.max(score, 85);
+        else if (item.nameText.startsWith(query)) score = Math.max(score, 75);
+        else if (item.searchText.includes(query)) score = Math.max(score, 55);
+      });
+      return { ...item, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => (
+      right.score - left.score
+      || getAirfieldPrimaryCode(left.entry).localeCompare(getAirfieldPrimaryCode(right.entry))
+      || left.entry.n.localeCompare(right.entry.n)
+    ));
+
+  const seen = new Set<string>();
+  const suggestions: AirfieldCatalogueEntry[] = [];
+  scored.forEach(({ entry }) => {
+    const key = `${entry.c}|${entry.i}|${entry.l}|${entry.n}|${entry.a}|${entry.o}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    suggestions.push(entry);
+  });
+  return suggestions.slice(0, MAX_AIRFIELD_SUGGESTIONS);
+};
+
+const getCurrentTimezoneOffsetHours = (timezone: string): number | null => {
+  try {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(now);
+    const getPart = (type: string) => Number(parts.find((part) => part.type === type)?.value);
+    const localAsUtc = Date.UTC(
+      getPart('year'),
+      getPart('month') - 1,
+      getPart('day'),
+      getPart('hour'),
+      getPart('minute'),
+      getPart('second'),
+    );
+    return Math.round(((localAsUtc - now.getTime()) / (60 * 60 * 1000)) * 4) / 4;
+  } catch {
+    return null;
+  }
+};
+
+const getAirfieldCatalogueLocationChanges = (
+  entry: AirfieldCatalogueEntry,
+  currentLocation: any,
+  fillIdentity = true,
+): Record<string, any> => {
+  const changes: Record<string, any> = {
+    latitude: entry.a,
+    longitude: entry.o,
+    timezone: entry.t,
+  };
+  const currentOffset = getCurrentTimezoneOffsetHours(entry.t);
+  if (currentOffset !== null) changes.timezoneOffset = currentOffset;
+  if (fillIdentity) {
+    if (!String(currentLocation?.code || '').trim()) {
+      const primaryCode = getAirfieldPrimaryCode(entry);
+      if (primaryCode) changes.code = primaryCode;
+    }
+    if (!String(currentLocation?.name || '').trim()) changes.name = entry.n;
+  }
+  return changes;
 };
 
 const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
@@ -709,6 +881,9 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const [licenseImportMessage, setLicenseImportMessage] = useState('');
   const [licenseImportError, setLicenseImportError] = useState('');
   const [licenseActionLoading, setLicenseActionLoading] = useState(false);
+  const [airfieldCatalogue, setAirfieldCatalogue] = useState<AirfieldCatalogueEntry[]>([]);
+  const [airfieldCatalogueStatus, setAirfieldCatalogueStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [airfieldCatalogueError, setAirfieldCatalogueError] = useState('');
 
   const canEdit = ['Super Admin', 'Admin'].includes(currentUserPermission);
   const hasRankTerminologyEditPermission = canUsePlatformPermission?.('settings.rankTerminology.edit') ?? canEdit;
@@ -798,6 +973,44 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const loadAirfieldCatalogue = async () => {
+      setAirfieldCatalogueStatus('loading');
+      setAirfieldCatalogueError('');
+      try {
+        const res = await fetch(getAirfieldCatalogueUrl(), { cache: 'force-cache' });
+        if (!res.ok) throw new Error(`Airfield catalogue load failed (${res.status})`);
+        const data = await res.json();
+        if (!Array.isArray(data)) throw new Error('Airfield catalogue format was not recognised.');
+        const entries = data.filter((entry) => (
+          entry
+          && typeof entry.n === 'string'
+          && Number.isFinite(Number(entry.a))
+          && Number.isFinite(Number(entry.o))
+          && typeof entry.t === 'string'
+        )).map((entry) => ({
+          ...entry,
+          a: Number(entry.a),
+          o: Number(entry.o),
+        }));
+        if (!cancelled) {
+          setAirfieldCatalogue(entries);
+          setAirfieldCatalogueStatus('loaded');
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setAirfieldCatalogue([]);
+          setAirfieldCatalogueStatus('error');
+          setAirfieldCatalogueError(err?.message || 'Airfield catalogue could not be loaded.');
+        }
+      }
+    };
+
+    loadAirfieldCatalogue();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     if (!scrollTarget || loading) return;
     const frame = window.requestAnimationFrame(() => {
       const target = document.getElementById(scrollTarget);
@@ -814,6 +1027,11 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
   const activeLicenseCount = useMemo(
     () => config.licenses.filter((license) => String(license.status || '').toUpperCase() === 'ACTIVE').length,
     [config.licenses],
+  );
+
+  const airfieldCatalogueLookup = useMemo(
+    () => (airfieldCatalogue.length ? buildAirfieldCatalogueLookup(airfieldCatalogue) : emptyAirfieldCatalogueLookup),
+    [airfieldCatalogue],
   );
 
   const activeModules = useMemo(
@@ -1002,6 +1220,34 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
         itemIndex === index ? { ...item, ...changes } : item
       )),
     }));
+  };
+
+  const applyKnownAirfieldToLocation = (
+    index: number,
+    entry: AirfieldCatalogueEntry,
+    currentLocation = config.locations[index],
+  ) => {
+    updateRow('locations', index, getAirfieldCatalogueLocationChanges(entry, currentLocation, true));
+  };
+
+  const updateLocationIdentity = (index: number, field: 'code' | 'name', value: string) => {
+    const currentLocation = config.locations[index] || {};
+    const nextLocation = { ...currentLocation, [field]: value };
+    const changes: Record<string, any> = { [field]: value };
+    const defaultProfile = getDefaultAirfieldSolarProfile(value);
+    if (defaultProfile) {
+      changes.latitude = defaultProfile.latitude;
+      changes.longitude = defaultProfile.longitude;
+      changes.timezone = defaultProfile.timezone;
+      const offset = getCurrentTimezoneOffsetHours(defaultProfile.timezone);
+      if (offset !== null) changes.timezoneOffset = offset;
+    } else {
+      const catalogueMatch = findAirfieldCatalogueExact(value, airfieldCatalogueLookup);
+      if (catalogueMatch) {
+        Object.assign(changes, getAirfieldCatalogueLocationChanges(catalogueMatch, nextLocation, true));
+      }
+    }
+    updateRow('locations', index, changes);
   };
 
   const addUnit = () => {
@@ -1592,35 +1838,81 @@ const PlatformConfigurationSettings: React.FC<PlatformConfigurationSettingsProps
               <SelectField label="Status" value={org.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('organisations', index, { status: value })} />
             </div>
           ))}
-          {config.locations.map((location, index) => (
-            <div key={location.id || location.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8">
-              <Field label="Location Code" value={location.code} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { code: value })} />
-              <Field label="Location Name" value={location.name} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { name: value })} />
-              <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
-              <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
-              <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
-              <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
-              <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
-              <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
-              {canEdit && (getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name)) ? (
-                <button
-                  type="button"
-                  className="self-end rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-500/20"
-                  onClick={() => {
-                    const defaults = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
-                    if (!defaults) return;
-                    updateRow('locations', index, {
-                      latitude: defaults.latitude,
-                      longitude: defaults.longitude,
-                      timezone: defaults.timezone,
-                    });
-                  }}
-                >
-                  Use Known Base Defaults
-                </button>
-              ) : null}
-            </div>
-          ))}
+          <div className="rounded-lg border border-cyan-500/25 bg-cyan-500/10 px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
+            Offline airfield catalogue:{' '}
+            {airfieldCatalogueStatus === 'loaded'
+              ? `${airfieldCatalogue.length.toLocaleString()} local entries available for code or name lookup.`
+              : airfieldCatalogueStatus === 'loading'
+                ? 'loading local catalogue...'
+                : airfieldCatalogueStatus === 'error'
+                  ? `local catalogue unavailable (${airfieldCatalogueError}). Manual latitude, longitude and timezone entry still works.`
+                  : 'preparing lookup.'}
+          </div>
+          {config.locations.map((location, index) => {
+            const defaultProfile = getDefaultAirfieldSolarProfile(location.code) || getDefaultAirfieldSolarProfile(location.name);
+            const exactCatalogueMatch = findAirfieldCatalogueExact(location.code, airfieldCatalogueLookup)
+              || findAirfieldCatalogueExact(location.name, airfieldCatalogueLookup);
+            const suggestions = getAirfieldCatalogueSuggestions(location, airfieldCatalogueLookup);
+            return (
+              <div key={location.id || location.code || index} className="grid gap-3 rounded border border-gray-700 bg-gray-900 p-3 md:grid-cols-2 xl:grid-cols-8">
+                <Field label="Location Code" value={location.code} disabled={!canEdit} onChange={(value) => updateLocationIdentity(index, 'code', value.toUpperCase())} />
+                <Field label="Location Name" value={location.name} disabled={!canEdit} onChange={(value) => updateLocationIdentity(index, 'name', value)} />
+                <NumberField label="UTC Offset" value={location.timezoneOffset ?? 10} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezoneOffset: value })} />
+                <OptionalNumberField label="Latitude" value={toNullableNumber(location.latitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { latitude: value })} info="Decimal degrees. South is negative." />
+                <OptionalNumberField label="Longitude" value={toNullableNumber(location.longitude)} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { longitude: value })} info="Decimal degrees. West is negative." />
+                <TimeZoneField label="IANA Timezone" value={location.timezone || ''} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { timezone: value })} info="Use an IANA timezone so daylight saving is handled offline, for example Australia/Melbourne." />
+                <Field label="Training Areas" value={(location.trainingAreas || []).join(', ')} disabled={!canEdit} onChange={(value) => updateRow('locations', index, { trainingAreas: value.split(',').map((item) => item.trim()).filter(Boolean) })} />
+                <SelectField label="Status" value={location.status || 'ACTIVE'} disabled={!canEdit} options={['ACTIVE', 'INACTIVE']} onChange={(value) => updateRow('locations', index, { status: value })} />
+                {canEdit && defaultProfile ? (
+                  <button
+                    type="button"
+                    className="self-end rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-2 text-sm font-bold text-cyan-100 hover:bg-cyan-500/20"
+                    onClick={() => {
+                      const offset = getCurrentTimezoneOffsetHours(defaultProfile.timezone);
+                      updateRow('locations', index, {
+                        latitude: defaultProfile.latitude,
+                        longitude: defaultProfile.longitude,
+                        timezone: defaultProfile.timezone,
+                        ...(offset !== null ? { timezoneOffset: offset } : {}),
+                      });
+                    }}
+                  >
+                    Use Known Base Defaults
+                  </button>
+                ) : null}
+                {canEdit && exactCatalogueMatch ? (
+                  <button
+                    type="button"
+                    className="self-end rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-100 hover:bg-emerald-500/20"
+                    onClick={() => applyKnownAirfieldToLocation(index, exactCatalogueMatch, location)}
+                  >
+                    Apply Catalogue Match
+                  </button>
+                ) : null}
+                {canEdit && suggestions.length > 0 ? (
+                  <div className="rounded-lg border border-gray-700 bg-gray-950/70 p-3 md:col-span-2 xl:col-span-8">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wide text-cyan-100">Airfield matches</span>
+                      <span className="text-xs text-gray-400">Select one to fill latitude, longitude and timezone.</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {suggestions.map((entry) => (
+                        <button
+                          key={`${entry.c}-${entry.i}-${entry.l}-${entry.n}-${entry.a}-${entry.o}`}
+                          type="button"
+                          className="rounded border border-gray-600 bg-gray-800 px-3 py-2 text-left text-xs font-semibold text-gray-100 hover:border-cyan-400 hover:bg-cyan-500/10"
+                          onClick={() => applyKnownAirfieldToLocation(index, entry, location)}
+                          title={`${entry.a}, ${entry.o} - ${entry.t}`}
+                        >
+                          {getAirfieldDisplayLabel(entry)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
       </section>
 

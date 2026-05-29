@@ -8,6 +8,7 @@
     "build": "prisma generate && vite build --outDir dfp-neo-platform/public/flight-school-app --emptyOutDir && cp dfp-neo-platform/public/flight-school-app/index.html dfp-neo-platform/public/flight-school-app/index-v2.html && node update_css.js",
     "preview": "vite preview",
     "start": "node server.js",
+    "generate:airfield-catalog": "node scripts/generate-airfield-catalog.mjs",
     "test:sun-times": "node scripts/test-sun-times.mjs",
     "git-sync": "node git-automation.js",
     "git-sync-once": "node git-sync-once.js",
